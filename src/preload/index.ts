@@ -3,7 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 const api = {
   getFiles: (path: string) => ipcRenderer.invoke('api:files', path),
   runCommand: (command: string, cwd?: string) => ipcRenderer.invoke('api:command', { command, cwd }),
-  readFile: (path: string) => ipcRenderer.invoke('api:read-file', path)
+  readFile: (path: string) => ipcRenderer.invoke('api:read-file', path),
+  loadConfig: () => ipcRenderer.invoke('api:load-config'),
+  saveConfig: (config: any) => ipcRenderer.invoke('api:save-config', config)
 };
 
 if (process.contextIsolated) {

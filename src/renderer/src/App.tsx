@@ -27,13 +27,15 @@ const DEFAULT_SETTINGS: SettingsState = {
 };
 
 export default function App() {
-  const [settings, setSettings] = useState<SettingsState>(() => {
-    const saved = localStorage.getItem('obsidian_settings');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return DEFAULT_SETTINGS;
-  });
+  const [settings, setSettings] = useState<SettingsState | null>(null);
+
+  useEffect(() => {
+    // @ts-ignore
+    window.api.loadConfig().then((res: any) => {
+      if (res.data) setSettings(res.data);
+      else setSettings(DEFAULT_SETTINGS);
+    }).catch(() => setSettings(DEFAULT_SETTINGS));
+  }, []);
 
   const [activeTabId, setActiveTabId] = useState<string>(() => {
     return localStorage.getItem('obsidian_active_tab') || '';
@@ -128,7 +130,9 @@ export default function App() {
   };
 
   useEffect(() => {
-    localStorage.setItem('obsidian_settings', JSON.stringify(settings));
+    if (!settings) return;
+    // @ts-ignore
+    window.api.saveConfig(settings);
     document.documentElement.classList.remove('dark', 'nord', 'solarized');
     if (settings.theme !== 'light') {
       document.documentElement.classList.add(settings.theme);
@@ -162,6 +166,7 @@ export default function App() {
       const isMeta = e.metaKey || e.ctrlKey;
       const key = e.key.toUpperCase();
       
+      if (!settings) return;
       const cmdMatch = settings.keybindings.commandTab.toUpperCase().split('+');
       const chatMatch = settings.keybindings.chatTab.toUpperCase().split('+');
 
@@ -219,6 +224,10 @@ export default function App() {
   };
 
   const activeTab = tabs.find(t => t.id === activeTabId);
+
+  if (!settings) {
+    return <div className="h-screen w-full bg-background flex items-center justify-center text-muted-foreground">Loading configs...</div>;
+  }
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans">

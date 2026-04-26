@@ -3,6 +3,7 @@ import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import { initAppFolders, loadConfig, saveConfig } from './config';
 
 const execAsync = promisify(exec);
 
@@ -12,6 +13,7 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 800,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -24,9 +26,12 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
+  
+  mainWindow.setMenuBarVisibility(false);
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await initAppFolders();
   createWindow();
 
   app.on('activate', () => {
@@ -79,6 +84,24 @@ ipcMain.handle('api:read-file', async (event, filePath: string) => {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     return { data: content };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:load-config', async () => {
+  try {
+    const config = await loadConfig();
+    return { data: config };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:save-config', async (event, config) => {
+  try {
+    await saveConfig(config);
+    return { data: true };
   } catch (error: any) {
     return { error: error.message };
   }
