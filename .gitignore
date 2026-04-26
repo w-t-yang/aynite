@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-electron
+out
+.env
+.env.*
+!.env.example
+.DS_Store
+tmp/
+.vscode

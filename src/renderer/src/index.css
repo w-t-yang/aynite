@@ -1,0 +1,203 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #09090b;
+
+    --sidebar: #f4f4f5;
+    
+    --card: #ffffff;
+    --card-foreground: #09090b;
+
+    --popover: #ffffff;
+    --popover-foreground: #09090b;
+
+    --primary: #18181b;
+    --primary-foreground: #fafafa;
+
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+
+    --accent: #f4f4f5;
+    --accent-foreground: #18181b;
+
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --ring: #18181b;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: #09090b;
+    --foreground: #fafafa;
+
+    --sidebar: #121214;
+
+    --card: #09090b;
+    --card-foreground: #fafafa;
+
+    --popover: #09090b;
+    --popover-foreground: #fafafa;
+
+    --primary: #fafafa;
+    --primary-foreground: #18181b;
+
+    --secondary: #27272a;
+    --secondary-foreground: #fafafa;
+
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+
+    --accent: #27272a;
+    --accent-foreground: #fafafa;
+
+    --destructive: #7f1d1d;
+    --destructive-foreground: #fafafa;
+
+    --border: #27272a;
+    --input: #27272a;
+    --ring: #d4d4d8;
+  }
+
+  .nord {
+    --background: #2e3440;
+    --foreground: #d8dee9;
+
+    --sidebar: #242831;
+
+    --card: #3b4252;
+    --card-foreground: #e5e9f0;
+
+    --popover: #3b4252;
+    --popover-foreground: #e5e9f0;
+
+    --primary: #88c0d0;
+    --primary-foreground: #2e3440;
+
+    --secondary: #434c5e;
+    --secondary-foreground: #eceff4;
+
+    --muted: #3b4252;
+    --muted-foreground: #a1a1aa;
+
+    --accent: #434c5e;
+    --accent-foreground: #eceff4;
+
+    --destructive: #bf616a;
+    --destructive-foreground: #eceff4;
+
+    --border: #4c566a;
+    --input: #434c5e;
+    --ring: #88c0d0;
+  }
+
+  .solarized {
+    --background: #002b36;
+    --foreground: #839496;
+
+    --sidebar: #00212b;
+
+    --card: #073642;
+    --card-foreground: #93a1a1;
+
+    --popover: #073642;
+    --popover-foreground: #93a1a1;
+
+    --primary: #b58900;
+    --primary-foreground: #002b36;
+
+    --secondary: #073642;
+    --secondary-foreground: #93a1a1;
+
+    --muted: #073642;
+    --muted-foreground: #586e75;
+
+    --accent: #073642;
+    --accent-foreground: #93a1a1;
+
+    --destructive: #dc322f;
+    --destructive-foreground: #fdf6e3;
+
+    --border: #586e75;
+    --input: #073642;
+    --ring: #b58900;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .num-scrollbar::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+  }
+  .num-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .num-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  .num-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+}
+
+@theme {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-sidebar: var(--sidebar);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  /* Set typography defaults */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
