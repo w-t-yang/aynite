@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Pencil, Eye, Save } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface FileViewerProps {
   filename: string;
@@ -18,6 +19,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<number[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const [scrollPos, setScrollPos] = useState({ top: 0, left: 0 });
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumRef = useRef<HTMLDivElement>(null);
@@ -166,6 +168,34 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
           e.preventDefault();
           setShowSearch(true);
           setTimeout(() => searchInputRef.current?.focus(), 50);
+        } else if (isCmd && key === 'P') { // Prev Line
+          e.preventDefault(); moveCursor('up');
+        } else if (isCmd && key === 'N') { // Next Line
+          e.preventDefault(); moveCursor('down');
+        } else if (isCmd && key === 'F') { // Forward char
+          e.preventDefault(); moveCursor('right');
+        } else if (isCmd && key === 'B') { // Backward char
+          e.preventDefault(); moveCursor('left');
+        } else if (isCmd && key === 'A') { // Start of Line
+          e.preventDefault();
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const start = localContent.lastIndexOf('\n', textarea.selectionStart - 1);
+            const newPos = start === -1 ? 0 : start + 1;
+            textarea.selectionStart = textarea.selectionEnd = newPos;
+            textarea.focus();
+            updateCursor();
+          }
+        } else if (isCmd && key === 'E') { // End of Line
+          e.preventDefault();
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const end = localContent.indexOf('\n', textarea.selectionStart);
+            const newPos = end === -1 ? localContent.length : end;
+            textarea.selectionStart = textarea.selectionEnd = newPos;
+            textarea.focus();
+            updateCursor();
+          }
         }
       } else {
         // EDIT MODE BINDINGS
@@ -239,8 +269,10 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
   };
 
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    const { scrollTop, scrollLeft } = e.currentTarget;
+    setScrollPos({ top: scrollTop, left: scrollLeft });
     if (lineNumRef.current) {
-      lineNumRef.current.scrollTop = e.currentTarget.scrollTop;
+      lineNumRef.current.scrollTop = scrollTop;
     }
   };
 
@@ -279,7 +311,10 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
             <textarea
               ref={textareaRef}
               value={localContent}
-              readOnly={!isEditing}
+              readOnly={false}
+              onBeforeInput={(e) => {
+                if (!isEditing) e.preventDefault();
+              }}
               onScroll={handleScroll}
               onSelect={updateCursor}
               onKeyUp={updateCursor}
@@ -287,8 +322,8 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
               onChange={handleContentChange}
               className={cn(
                 "flex-1 resize-none bg-transparent outline-none p-4 leading-relaxed whitespace-pre font-mono text-foreground transition-all",
-                "caret-blue-500 selection:bg-blue-500/30",
-                !isEditing && "caret-gray-400"
+                isEditing ? "caret-blue-500" : "caret-muted-foreground/60",
+                "selection:bg-blue-500/30"
               )}
               style={{ lineHeight: '1.5rem', tabSize: 4 }}
               track-cursor="true"

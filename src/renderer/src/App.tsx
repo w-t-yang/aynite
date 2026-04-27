@@ -32,7 +32,13 @@ const DEFAULT_SETTINGS: SettingsState = {
       moveUp: 'K',
       moveLeft: 'H',
       moveRight: 'L',
-      search: '/'
+      search: '/',
+      prevLine: 'CTRL+P',
+      nextLine: 'CTRL+N',
+      forwardChar: 'CTRL+F',
+      backwardChar: 'CTRL+B',
+      startOfLine: 'CTRL+A',
+      endOfLine: 'CTRL+E'
     },
     editMode: {
       exitEdit: 'ESCAPE',

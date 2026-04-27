@@ -22,6 +22,12 @@ export interface SettingsState {
       moveLeft: string;
       moveRight: string;
       search: string;
+      prevLine: string;
+      nextLine: string;
+      forwardChar: string;
+      backwardChar: string;
+      startOfLine: string;
+      endOfLine: string;
     };
     editMode: {
       exitEdit: string;
@@ -288,6 +294,12 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                       <KeyRow label="Vim Move Left" value={localSettings.keybindings.viewMode.moveLeft} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveLeft', v)} />
                       <KeyRow label="Vim Move Right" value={localSettings.keybindings.viewMode.moveRight} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveRight', v)} />
                       <KeyRow label="Search Buffer" value={localSettings.keybindings.viewMode.search} onChange={(v) => handleKeybindingChangeNested('viewMode', 'search', v)} />
+                      <KeyRow label="Prev Line" value={localSettings.keybindings.viewMode.prevLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'prevLine', v)} />
+                      <KeyRow label="Next Line" value={localSettings.keybindings.viewMode.nextLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'nextLine', v)} />
+                      <KeyRow label="Forward Character" value={localSettings.keybindings.viewMode.forwardChar} onChange={(v) => handleKeybindingChangeNested('viewMode', 'forwardChar', v)} />
+                      <KeyRow label="Backward Character" value={localSettings.keybindings.viewMode.backwardChar} onChange={(v) => handleKeybindingChangeNested('viewMode', 'backwardChar', v)} />
+                      <KeyRow label="Start of Line" value={localSettings.keybindings.viewMode.startOfLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'startOfLine', v)} />
+                      <KeyRow label="End of Line" value={localSettings.keybindings.viewMode.endOfLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'endOfLine', v)} />
                    </div>
 
                    {/* Edit Mode */}
