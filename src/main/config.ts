@@ -58,6 +58,34 @@ export async function initAppFolders() {
   }
 }
 
+const DEFAULT_KEYBINDINGS = {
+  commandTab: 'META+X',
+  chatTab: 'META+Y',
+  closeTab: 'CTRL+W',
+  viewMode: {
+    enterEdit: 'A',
+    moveDown: 'J',
+    moveUp: 'K',
+    moveLeft: 'H',
+    moveRight: 'L',
+    search: '/'
+  },
+  editMode: {
+    exitEdit: 'ESCAPE',
+    endOfLine: 'CTRL+E',
+    startOfLine: 'CTRL+A',
+    killLine: 'CTRL+K',
+    copy: 'CTRL+C',
+    paste: 'CTRL+V',
+    selectAll: 'CTRL+Q',
+    cut: 'CTRL+X',
+    prevLine: 'CTRL+P',
+    nextLine: 'CTRL+N',
+    forwardChar: 'CTRL+F',
+    backwardChar: 'CTRL+B'
+  }
+};
+
 export async function loadConfig() {
   const configDir = path.join(getConfigDir(), 'config');
   
@@ -71,15 +99,36 @@ export async function loadConfig() {
   };
 
   const appearance = await readJson('appearance.json', { theme: 'dark' });
-  const keybindings = await readJson('keybindings.json', { commandTab: 'META+X', chatTab: 'META+Y' });
+  let keybindings = await readJson('keybindings.json', DEFAULT_KEYBINDINGS);
   const ai = await readJson('ai.json', { provider: 'gemini', configs: {} });
+
+  // Recursive merge/repair for keybindings
+  let modified = false;
+  const ensureKeys = (target: any, defaults: any) => {
+    for (const key in defaults) {
+      if (target[key] === undefined) {
+        target[key] = JSON.parse(JSON.stringify(defaults[key]));
+        modified = true;
+      } else if (typeof defaults[key] === 'object' && defaults[key] !== null) {
+        if (typeof target[key] !== 'object' || target[key] === null) {
+          target[key] = JSON.parse(JSON.stringify(defaults[key]));
+          modified = true;
+        } else {
+          ensureKeys(target[key], defaults[key]);
+        }
+      }
+    }
+  };
+
+  ensureKeys(keybindings, DEFAULT_KEYBINDINGS);
+
+  if (modified) {
+    await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
+  }
 
   return {
     theme: appearance.theme || 'dark',
-    keybindings: {
-      commandTab: keybindings.commandTab || 'META+X',
-      chatTab: keybindings.chatTab || 'META+Y'
-    },
+    keybindings: keybindings,
     aiProvider: ai.provider || 'gemini',
     aiConfigs: ai.configs || {}
   };

@@ -7,14 +7,21 @@ interface FileViewerProps {
   onChange?: (content: string) => void;
   onSave?: () => void;
   isDirty?: boolean;
+  keybindings: any;
 }
 
-export default function FileViewer({ filename, content, onChange, onSave, isDirty }: FileViewerProps) {
+export default function FileViewer({ filename, content, onChange, onSave, isDirty, keybindings }: FileViewerProps) {
   const [localContent, setLocalContent] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<number[]>([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLocalContent(content);
@@ -25,8 +32,13 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
     if (textareaRef.current) {
       textareaRef.current.scrollTop = 0;
       textareaRef.current.scrollLeft = 0;
+      textareaRef.current.focus();
     }
   }, [filename]);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, [isEditing]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalContent(e.target.value);
@@ -35,6 +47,185 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
     }
     updateCursor();
   };
+
+  const moveCursor = (dir: 'up' | 'down' | 'left' | 'right') => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    let pos = textarea.selectionStart;
+    const lines = localContent.split('\n');
+    const getPosInfo = (p: number) => {
+      const before = localContent.substring(0, p);
+      const l = before.split('\n').length - 1;
+      const c = before.split('\n').slice(-1)[0].length;
+      return { l, c };
+    };
+    
+    const { l, c } = getPosInfo(pos);
+
+    if (dir === 'up' && l > 0) {
+      const prevLineLength = lines[l - 1].length;
+      const targetCol = Math.min(c, prevLineLength);
+      let newPos = 0;
+      for (let i = 0; i < l - 1; i++) newPos += lines[i].length + 1;
+      pos = newPos + targetCol;
+    } else if (dir === 'down' && l < lines.length - 1) {
+      const nextLineLength = lines[l + 1].length;
+      const targetCol = Math.min(c, nextLineLength);
+      let newPos = 0;
+      for (let i = 0; i <= l; i++) newPos += lines[i].length + 1;
+      pos = newPos + targetCol;
+    } else if (dir === 'left' && pos > 0) {
+      pos--;
+    } else if (dir === 'right' && pos < localContent.length) {
+      pos++;
+    }
+
+    textarea.selectionStart = textarea.selectionEnd = pos;
+    textarea.focus();
+    updateCursor();
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query) {
+      setSearchResults([]);
+      setCurrentSearchIndex(-1);
+      return;
+    }
+    const results: number[] = [];
+    let pos = localContent.indexOf(query);
+    while (pos !== -1) {
+      results.push(pos);
+      pos = localContent.indexOf(query, pos + 1);
+    }
+    setSearchResults(results);
+    if (results.length > 0) {
+      setCurrentSearchIndex(0);
+      jumpToSearchResult(results[0]);
+    } else {
+      setCurrentSearchIndex(-1);
+    }
+  };
+
+  const jumpToSearchResult = (pos: number) => {
+    if (!textareaRef.current) return;
+    textareaRef.current.focus();
+    textareaRef.current.setSelectionRange(pos, pos + searchQuery.length);
+    updateCursor();
+    // Scroll into view
+    const textarea = textareaRef.current;
+    const lineHeight = 24; // 1.5rem
+    const charWidth = 8;
+    const beforeResults = localContent.substring(0, pos);
+    const line = beforeResults.split('\n').length - 1;
+    textarea.scrollTop = line * lineHeight - (textarea.clientHeight / 2);
+  };
+
+  const nextSearch = () => {
+    if (searchResults.length > 0) {
+      const nextIdx = (currentSearchIndex + 1) % searchResults.length;
+      setCurrentSearchIndex(nextIdx);
+      jumpToSearchResult(searchResults[nextIdx]);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isAlt = e.altKey;
+      const isShift = e.shiftKey;
+      const isCmd = e.metaKey || e.ctrlKey;
+      const key = e.key.toUpperCase();
+
+      if (showSearch) {
+        if (e.key === 'Escape') {
+          setShowSearch(false);
+          textareaRef.current?.focus();
+          return;
+        }
+        if (e.key === 'Enter') {
+          nextSearch();
+          return;
+        }
+        return; // Don't process other keys when searching
+      }
+
+      if (!isEditing) {
+        // VIEW MODE BINDINGS
+        if (key === keybindings.viewMode.enterEdit) {
+          e.preventDefault();
+          setIsEditing(true);
+        } else if (key === keybindings.viewMode.moveDown) {
+          e.preventDefault(); moveCursor('down');
+        } else if (key === keybindings.viewMode.moveUp) {
+          e.preventDefault(); moveCursor('up');
+        } else if (key === keybindings.viewMode.moveLeft) {
+          e.preventDefault(); moveCursor('left');
+        } else if (key === keybindings.viewMode.moveRight) {
+          e.preventDefault(); moveCursor('right');
+        } else if (e.key === keybindings.viewMode.search) {
+          e.preventDefault();
+          setShowSearch(true);
+          setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
+      } else {
+        // EDIT MODE BINDINGS
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setIsEditing(false);
+        } else if (isCmd && key === 'E') { // End of Line
+          e.preventDefault();
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const pos = textarea.selectionStart;
+            const end = localContent.indexOf('\n', pos);
+            const newPos = end === -1 ? localContent.length : end;
+            textarea.selectionStart = textarea.selectionEnd = newPos;
+            updateCursor();
+          }
+        } else if (isCmd && key === 'A') { // Start of Line
+          e.preventDefault();
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const pos = textarea.selectionStart;
+            const start = localContent.lastIndexOf('\n', pos - 1);
+            const newPos = start === -1 ? 0 : start + 1;
+            textarea.selectionStart = textarea.selectionEnd = newPos;
+            updateCursor();
+          }
+        } else if (isCmd && key === 'K') { // Kill line
+          e.preventDefault();
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const pos = textarea.selectionStart;
+            const end = localContent.indexOf('\n', pos);
+            const nextLineStart = end === -1 ? localContent.length : end + 1;
+            const newContent = localContent.substring(0, pos) + localContent.substring(nextLineStart);
+            setLocalContent(newContent);
+            if (onChange) onChange(newContent);
+            setTimeout(updateCursor, 0);
+          }
+        } else if (isCmd && key === keybindings.editMode.selectAll.split('+').pop()) { // Select All
+          e.preventDefault();
+          textareaRef.current?.select();
+          updateCursor();
+        } else if (isCmd && key === keybindings.editMode.prevLine.split('+').pop()) { // Prev Line
+          e.preventDefault(); moveCursor('up');
+        } else if (isCmd && key === keybindings.editMode.nextLine.split('+').pop()) { // Next Line
+          e.preventDefault(); moveCursor('down');
+        } else if (isCmd && key === keybindings.editMode.forwardChar.split('+').pop()) { // Forward Char
+          e.preventDefault(); moveCursor('right');
+        } else if (isCmd && key === keybindings.editMode.backwardChar.split('+').pop()) { // Backward Char
+          e.preventDefault(); moveCursor('left');
+        }
+        // Copy/Paste/Cut are handled natively by textarea, but user asked to bind them.
+        // Standard bindings (CTRL+C, V, X) usually work. If we need to explicitly handle them:
+        // they are already default.
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditing, keybindings, localContent, showSearch, searchResults, currentSearchIndex, onChange, onSave]);
 
   const updateCursor = () => {
     if (textareaRef.current) {
@@ -94,10 +285,35 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
               onKeyUp={updateCursor}
               onClick={updateCursor}
               onChange={handleContentChange}
-              className={`flex-1 resize-none bg-transparent outline-none p-4 leading-relaxed whitespace-pre font-mono text-foreground ${isEditing ? 'cursor-text' : 'cursor-default'}`}
+              className={cn(
+                "flex-1 resize-none bg-transparent outline-none p-4 leading-relaxed whitespace-pre font-mono text-foreground transition-all",
+                "caret-blue-500 selection:bg-blue-500/30",
+                !isEditing && "caret-gray-400"
+              )}
               style={{ lineHeight: '1.5rem', tabSize: 4 }}
+              track-cursor="true"
               wrap="off"
+              autoFocus
             />
+          </div>
+        )}
+        
+        {showSearch && (
+          <div className="absolute top-4 right-4 z-50 bg-sidebar border border-border rounded-md shadow-lg p-2 flex items-center gap-2">
+            <input 
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search..."
+              className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 w-48"
+            />
+            <span className="text-xs text-muted-foreground mr-2">
+              {searchResults.length > 0 ? `${currentSearchIndex + 1}/${searchResults.length}` : '0/0'}
+            </span>
+            <button onClick={() => setShowSearch(false)} className="text-muted-foreground hover:text-foreground">
+              <Eye size={16} />
+            </button>
           </div>
         )}
       </div>

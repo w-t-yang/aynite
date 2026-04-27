@@ -24,7 +24,30 @@ const DEFAULT_SETTINGS: SettingsState = {
   aiProvider: 'gemini',
   keybindings: {
     commandTab: 'META+X',
-    chatTab: 'META+Y'
+    chatTab: 'META+Y',
+    closeTab: 'CTRL+W',
+    viewMode: {
+      enterEdit: 'A',
+      moveDown: 'J',
+      moveUp: 'K',
+      moveLeft: 'H',
+      moveRight: 'L',
+      search: '/'
+    },
+    editMode: {
+      exitEdit: 'ESCAPE',
+      endOfLine: 'CTRL+E',
+      startOfLine: 'CTRL+A',
+      killLine: 'CTRL+K',
+      copy: 'CTRL+C',
+      paste: 'CTRL+V',
+      selectAll: 'CTRL+Q',
+      cut: 'CTRL+X',
+      prevLine: 'CTRL+P',
+      nextLine: 'CTRL+N',
+      forwardChar: 'CTRL+F',
+      backwardChar: 'CTRL+B'
+    }
   }
 };
 
@@ -206,12 +229,24 @@ export default function App() {
       const isMeta = e.metaKey || e.ctrlKey;
       const key = e.key.toUpperCase();
       
+      if (!settings) return;
+
       if (isMeta && key === 'S') {
         e.preventDefault();
         handleSaveActiveTab();
       }
+
+      if (settings?.keybindings?.closeTab) {
+        const closeMatch = settings.keybindings.closeTab.toUpperCase().split('+');
+        const isCloseMeta = (closeMatch.includes('CTRL') || closeMatch.includes('META')) ? (e.ctrlKey || e.metaKey) : true;
+        if (isCloseMeta && key === closeMatch[closeMatch.length - 1]) {
+           if (activeTabId) {
+             e.preventDefault();
+             closeTab({ stopPropagation: () => {} } as any, activeTabId);
+           }
+        }
+      }
       
-      if (!settings) return;
       const cmdMatch = settings.keybindings.commandTab.toUpperCase().split('+');
       const chatMatch = settings.keybindings.chatTab.toUpperCase().split('+');
 
@@ -426,6 +461,7 @@ export default function App() {
                     onChange={handleFileContentChange}
                     onSave={handleSaveActiveTab}
                     isDirty={activeTab.isDirty}
+                    keybindings={settings.keybindings}
                   />
                 </div>
               )}
