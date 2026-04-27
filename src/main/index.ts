@@ -3,13 +3,13 @@ import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
-import chokidar from 'chokidar';
+import { FSWatcher, watch } from 'chokidar';
 import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder } from './config';
 
 const execAsync = promisify(exec);
 
 let mainWindow: BrowserWindow | null = null;
-let watcher: chokidar.FSWatcher | null = null;
+let watcher: FSWatcher | null = null;
 
 function setupWatcher(folders: string[]) {
   if (watcher) {
@@ -17,8 +17,8 @@ function setupWatcher(folders: string[]) {
   }
   
   if (folders.length === 0) return;
-
-  watcher = chokidar.watch(folders, {
+  
+  watcher = watch(folders, {
     ignored: /(^|[\/\\])\../, // ignore dotfiles
     persistent: true,
     ignoreInitial: true,
