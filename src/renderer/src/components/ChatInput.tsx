@@ -47,11 +47,15 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
 
     useImperativeHandle(ref, () => ({
       onKeyDown: ({ event }: { event: KeyboardEvent }) => {
-        if (event.key === 'ArrowUp') {
+        const isCtrl = event.ctrlKey || event.metaKey;
+
+        if (event.key === 'ArrowUp' || (isCtrl && event.key.toUpperCase() === 'P')) {
+          event.preventDefault();
           setSelectedIndex((prev) => (prev + items.length - 1) % items.length);
           return true;
         }
-        if (event.key === 'ArrowDown') {
+        if (event.key === 'ArrowDown' || (isCtrl && event.key.toUpperCase() === 'N')) {
+          event.preventDefault();
           setSelectedIndex((prev) => (prev + 1) % items.length);
           return true;
         }
@@ -172,7 +176,8 @@ function createSuggestion(
           }
         },
         onKeyDown: (props: any) => {
-          if (props.event.key === 'Escape') {
+          const isCtrl = props.event.ctrlKey || props.event.metaKey;
+          if (props.event.key === 'Escape' || (isCtrl && props.event.key.toUpperCase() === 'G')) {
             popup?.[0]?.hide();
             return true;
           }

@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatTab from './components/Chat';
 import SettingsView from './components/Settings';
 import FileViewer from './components/FileViewer';
+import TabSwitcher from './components/TabSwitcher';
 import { SettingsState } from './components/Settings';
 import { cn } from './lib/utils';
 import Markdown from 'react-markdown';
@@ -23,8 +24,8 @@ const DEFAULT_SETTINGS: SettingsState = {
   theme: 'dark',
   aiProvider: 'gemini',
   keybindings: {
-    commandTab: 'META+X',
-    chatTab: 'META+Y',
+    startChat: 'CTRL+T',
+    switchTab: 'CTRL+TAB',
     closeTab: 'CTRL+W',
     viewMode: {
       enterEdit: 'A',
@@ -33,22 +34,13 @@ const DEFAULT_SETTINGS: SettingsState = {
       moveLeft: 'H',
       moveRight: 'L',
       search: '/',
-      prevLine: 'CTRL+P',
-      nextLine: 'CTRL+N',
-      forwardChar: 'CTRL+F',
-      backwardChar: 'CTRL+B',
-      startOfLine: 'CTRL+A',
-      endOfLine: 'CTRL+E'
     },
-    editMode: {
+    contentKeys: {
       exitEdit: 'ESCAPE',
       endOfLine: 'CTRL+E',
       startOfLine: 'CTRL+A',
       killLine: 'CTRL+K',
-      copy: 'CTRL+C',
-      paste: 'CTRL+V',
       selectAll: 'CTRL+Q',
-      cut: 'CTRL+X',
       prevLine: 'CTRL+P',
       nextLine: 'CTRL+N',
       forwardChar: 'CTRL+F',
@@ -64,6 +56,7 @@ export default function App() {
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [workspaceFolders, setWorkspaceFolders] = useState<string[]>([]);
+  const [showTabSwitcher, setShowTabSwitcher] = useState(false);
 
   const loadWorkspaceState = async () => {
     // @ts-ignore
@@ -98,10 +91,57 @@ export default function App() {
     }
   };
 
+  // Migrate old settings structure to new one
+  const migrateSettings = (loaded: any): SettingsState => {
+    const kb = loaded.keybindings || {};
+    
+    // Migrate editMode → contentKeys
+    if (kb.editMode && !kb.contentKeys) {
+      kb.contentKeys = {
+        exitEdit: kb.editMode.exitEdit || DEFAULT_SETTINGS.keybindings.contentKeys.exitEdit,
+        endOfLine: kb.editMode.endOfLine || DEFAULT_SETTINGS.keybindings.contentKeys.endOfLine,
+        startOfLine: kb.editMode.startOfLine || DEFAULT_SETTINGS.keybindings.contentKeys.startOfLine,
+        killLine: kb.editMode.killLine || DEFAULT_SETTINGS.keybindings.contentKeys.killLine,
+        selectAll: kb.editMode.selectAll || DEFAULT_SETTINGS.keybindings.contentKeys.selectAll,
+        prevLine: kb.editMode.prevLine || DEFAULT_SETTINGS.keybindings.contentKeys.prevLine,
+        nextLine: kb.editMode.nextLine || DEFAULT_SETTINGS.keybindings.contentKeys.nextLine,
+        forwardChar: kb.editMode.forwardChar || DEFAULT_SETTINGS.keybindings.contentKeys.forwardChar,
+        backwardChar: kb.editMode.backwardChar || DEFAULT_SETTINGS.keybindings.contentKeys.backwardChar,
+      };
+      delete kb.editMode;
+    }
+
+    // Migrate commandTab/chatTab → startChat
+    if (kb.commandTab || kb.chatTab) {
+      kb.startChat = kb.startChat || DEFAULT_SETTINGS.keybindings.startChat;
+      kb.switchTab = kb.switchTab || DEFAULT_SETTINGS.keybindings.switchTab;
+      delete kb.commandTab;
+      delete kb.chatTab;
+    }
+
+    // Strip removed CTRL keys from viewMode
+    if (kb.viewMode) {
+      const { prevLine, nextLine, forwardChar, backwardChar, startOfLine, endOfLine, ...cleanView } = kb.viewMode;
+      kb.viewMode = cleanView;
+    }
+
+    // Deep merge with defaults to fill any missing keys
+    return {
+      ...DEFAULT_SETTINGS,
+      ...loaded,
+      keybindings: {
+        ...DEFAULT_SETTINGS.keybindings,
+        ...kb,
+        viewMode: { ...DEFAULT_SETTINGS.keybindings.viewMode, ...(kb.viewMode || {}) },
+        contentKeys: { ...DEFAULT_SETTINGS.keybindings.contentKeys, ...(kb.contentKeys || {}) },
+      }
+    };
+  };
+
   useEffect(() => {
     // @ts-ignore
     window.api.loadConfig().then((res: any) => {
-      if (res.data) setSettings(res.data);
+      if (res.data) setSettings(migrateSettings(res.data));
       else setSettings(DEFAULT_SETTINGS);
     }).catch(() => setSettings(DEFAULT_SETTINGS));
     
@@ -310,10 +350,17 @@ export default function App() {
         return;
       }
       
-      if (checkMatch(settings.keybindings?.commandTab) || checkMatch(settings.keybindings?.chatTab)) {
+      if (checkMatch(settings.keybindings?.startChat)) {
         e.preventDefault();
         setRightPanelOpen(true);
         setTimeout(() => (window as any).focusChatInput?.(), 50);
+        return;
+      }
+
+      // Ctrl+Tab for tab switcher
+      if (isCtrl && e.key === 'Tab') {
+        e.preventDefault();
+        setShowTabSwitcher(true);
         return;
       }
     };
@@ -575,6 +622,14 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      {showTabSwitcher && (
+        <TabSwitcher
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onSelect={setActiveTabId}
+          onClose={() => setShowTabSwitcher(false)}
+        />
       )}
     </div>
   );

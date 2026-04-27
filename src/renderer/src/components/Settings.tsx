@@ -17,8 +17,8 @@ export interface SettingsState {
     ollama?: { url: string; model: string; contextWindow: number };
   };
   keybindings: {
-    commandTab: string;
-    chatTab: string;
+    startChat: string;
+    switchTab: string;
     closeTab: string;
     viewMode: {
       enterEdit: string;
@@ -27,22 +27,13 @@ export interface SettingsState {
       moveLeft: string;
       moveRight: string;
       search: string;
-      prevLine: string;
-      nextLine: string;
-      forwardChar: string;
-      backwardChar: string;
-      startOfLine: string;
-      endOfLine: string;
     };
-    editMode: {
+    contentKeys: {
       exitEdit: string;
       endOfLine: string;
       startOfLine: string;
       killLine: string;
-      copy: string;
-      paste: string;
       selectAll: string;
-      cut: string;
       prevLine: string;
       nextLine: string;
       forwardChar: string;
@@ -93,7 +84,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
     });
   };
 
-  const handleKeybindingChangeNested = (mode: 'viewMode' | 'editMode', type: string, value: string) => {
+  const handleKeybindingChangeNested = (mode: 'viewMode' | 'contentKeys', type: string, value: string) => {
     const keys = value.toUpperCase();
     save({
       ...localSettings,
@@ -473,8 +464,8 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                    {/* Global */}
                    <div className="space-y-1">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1">Global</div>
-                      <KeyRow label="Command Palette" value={localSettings.keybindings.commandTab} onChange={(v) => handleKeybindingChange('commandTab', v)} />
-                      <KeyRow label="Toggle Chat" value={localSettings.keybindings.chatTab} onChange={(v) => handleKeybindingChange('chatTab', v)} />
+                      <KeyRow label="Start Chat" value={localSettings.keybindings.startChat} onChange={(v) => handleKeybindingChange('startChat', v)} />
+                      <KeyRow label="Switch Tab" value={localSettings.keybindings.switchTab} onChange={(v) => handleKeybindingChange('switchTab', v)} />
                       <KeyRow label="Close Active Tab" value={localSettings.keybindings.closeTab} onChange={(v) => handleKeybindingChange('closeTab', v)} />
                    </div>
 
@@ -487,28 +478,61 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                       <KeyRow label="Vim Move Left" value={localSettings.keybindings.viewMode.moveLeft} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveLeft', v)} />
                       <KeyRow label="Vim Move Right" value={localSettings.keybindings.viewMode.moveRight} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveRight', v)} />
                       <KeyRow label="Search Buffer" value={localSettings.keybindings.viewMode.search} onChange={(v) => handleKeybindingChangeNested('viewMode', 'search', v)} />
-                      <KeyRow label="Prev Line" value={localSettings.keybindings.viewMode.prevLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'prevLine', v)} />
-                      <KeyRow label="Next Line" value={localSettings.keybindings.viewMode.nextLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'nextLine', v)} />
-                      <KeyRow label="Forward Character" value={localSettings.keybindings.viewMode.forwardChar} onChange={(v) => handleKeybindingChangeNested('viewMode', 'forwardChar', v)} />
-                      <KeyRow label="Backward Character" value={localSettings.keybindings.viewMode.backwardChar} onChange={(v) => handleKeybindingChangeNested('viewMode', 'backwardChar', v)} />
-                      <KeyRow label="Start of Line" value={localSettings.keybindings.viewMode.startOfLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'startOfLine', v)} />
-                      <KeyRow label="End of Line" value={localSettings.keybindings.viewMode.endOfLine} onChange={(v) => handleKeybindingChangeNested('viewMode', 'endOfLine', v)} />
                    </div>
 
-                   {/* Edit Mode */}
+                   {/* Content Keys */}
                    <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Edit Mode</div>
-                      <KeyRow label="Exit Edit (Esc)" value={localSettings.keybindings.editMode.exitEdit} onChange={(v) => handleKeybindingChangeNested('editMode', 'exitEdit', v)} />
-                      <KeyRow label="Select All" value={localSettings.keybindings.editMode.selectAll} onChange={(v) => handleKeybindingChangeNested('editMode', 'selectAll', v)} />
-                      <KeyRow label="Emacs Start of Line" value={localSettings.keybindings.editMode.startOfLine} onChange={(v) => handleKeybindingChangeNested('editMode', 'startOfLine', v)} />
-                      <KeyRow label="Emacs End of Line" value={localSettings.keybindings.editMode.endOfLine} onChange={(v) => handleKeybindingChangeNested('editMode', 'endOfLine', v)} />
-                      <KeyRow label="Kill to End of Line" value={localSettings.keybindings.editMode.killLine} onChange={(v) => handleKeybindingChangeNested('editMode', 'killLine', v)} />
-                      <KeyRow label="Prev Line" value={localSettings.keybindings.editMode.prevLine} onChange={(v) => handleKeybindingChangeNested('editMode', 'prevLine', v)} />
-                      <KeyRow label="Next Line" value={localSettings.keybindings.editMode.nextLine} onChange={(v) => handleKeybindingChangeNested('editMode', 'nextLine', v)} />
-                      <KeyRow label="Forward Character" value={localSettings.keybindings.editMode.forwardChar} onChange={(v) => handleKeybindingChangeNested('editMode', 'forwardChar', v)} />
-                      <KeyRow label="Backward Character" value={localSettings.keybindings.editMode.backwardChar} onChange={(v) => handleKeybindingChangeNested('editMode', 'backwardChar', v)} />
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Keys (View + Edit)</div>
+                      <KeyRow label="Exit Edit (Esc)" value={localSettings.keybindings.contentKeys.exitEdit} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'exitEdit', v)} />
+                      <KeyRow label="Select All" value={localSettings.keybindings.contentKeys.selectAll} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'selectAll', v)} />
+                      <KeyRow label="Emacs Start of Line" value={localSettings.keybindings.contentKeys.startOfLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'startOfLine', v)} />
+                      <KeyRow label="Emacs End of Line" value={localSettings.keybindings.contentKeys.endOfLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'endOfLine', v)} />
+                      <KeyRow label="Kill to End of Line" value={localSettings.keybindings.contentKeys.killLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'killLine', v)} />
+                      <KeyRow label="Prev Line" value={localSettings.keybindings.contentKeys.prevLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'prevLine', v)} />
+                      <KeyRow label="Next Line" value={localSettings.keybindings.contentKeys.nextLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'nextLine', v)} />
+                      <KeyRow label="Forward Character" value={localSettings.keybindings.contentKeys.forwardChar} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'forwardChar', v)} />
+                      <KeyRow label="Backward Character" value={localSettings.keybindings.contentKeys.backwardChar} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'backwardChar', v)} />
                    </div>
                 </div>
+              </div>
+
+              <div className="pt-6 border-t border-border">
+                <h3 className="text-sm font-medium mb-2">Reset Keybindings</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Restore all keyboard shortcuts to their default values. This will overwrite your current keybindings.
+                </p>
+                <button 
+                  onClick={() => {
+                    const defaultKb: SettingsState['keybindings'] = {
+                      startChat: 'CTRL+T',
+                      switchTab: 'CTRL+TAB',
+                      closeTab: 'CTRL+W',
+                      viewMode: {
+                        enterEdit: 'A',
+                        moveDown: 'J',
+                        moveUp: 'K',
+                        moveLeft: 'H',
+                        moveRight: 'L',
+                        search: '/',
+                      },
+                      contentKeys: {
+                        exitEdit: 'ESCAPE',
+                        endOfLine: 'CTRL+E',
+                        startOfLine: 'CTRL+A',
+                        killLine: 'CTRL+K',
+                        selectAll: 'CTRL+Q',
+                        prevLine: 'CTRL+P',
+                        nextLine: 'CTRL+N',
+                        forwardChar: 'CTRL+F',
+                        backwardChar: 'CTRL+B'
+                      }
+                    };
+                    save({ ...localSettings, keybindings: defaultKb });
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"
+                >
+                  <RotateCcw size={14} /> Reset to Defaults
+                </button>
               </div>
             </div>
           )}

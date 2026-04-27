@@ -24,10 +24,21 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const undoStack = useRef<string[]>([]);
+  const isLocalChange = useRef(false);
 
   useEffect(() => {
-    setLocalContent(content);
+    // Only sync from parent if it's not our own change propagating back
+    if (!isLocalChange.current) {
+      setLocalContent(content);
+    }
+    isLocalChange.current = false;
   }, [content]);
+
+  // Reset undo stack when switching files
+  useEffect(() => {
+    undoStack.current = [];
+  }, [filename]);
 
   useEffect(() => {
     setIsEditing(false); // reset mode on file change
@@ -43,8 +54,12 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
   }, [isEditing]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    undoStack.current.push(localContent);
+    // Cap undo history at 100 entries
+    if (undoStack.current.length > 100) undoStack.current.shift();
     setLocalContent(e.target.value);
     if (onChange) {
+      isLocalChange.current = true;
       onChange(e.target.value);
     }
     updateCursor();
@@ -148,16 +163,39 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
         return;
       }
 
-      // ─── Bypass System/Browser Shortcuts ───
+      // ─── Undo (Ctrl+Z) ───
+      if (isCmd && key === 'Z') {
+        e.preventDefault();
+        if (undoStack.current.length > 0) {
+          const textarea = textareaRef.current;
+          const cursorPos = textarea?.selectionStart ?? 0;
+          const prev = undoStack.current.pop()!;
+          setLocalContent(prev);
+          if (onChange) {
+            isLocalChange.current = true;
+            onChange(prev);
+          }
+          // Restore cursor after React re-renders
+          setTimeout(() => {
+            if (textarea) {
+              const clampedPos = Math.min(cursorPos, prev.length);
+              textarea.selectionStart = textarea.selectionEnd = clampedPos;
+              textarea.focus();
+              updateCursor();
+            }
+          }, 0);
+        }
+        return;
+      }
+
       // If it looks like a standard dev tool or system shortcut, don't even look at it
       if (isCmd && (key === 'I' || key === 'R' || key === 'O' || key === 'P' && isShift)) {
-        // P+Shift might be print or something, but P+Ctrl is our Prev Line. 
-        // Let's be careful.
         if (key === 'I' || key === 'R') return; 
       }
 
       if (showSearch) {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' || (isCmd && key === 'G')) {
+          e.preventDefault();
           setShowSearch(false);
           textareaRef.current?.focus();
           return;
@@ -175,7 +213,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
         // Helper to check if a key matches a viewMode binding
         const isViewBinding = (binding: string | undefined) => isPlainKey && key === binding?.toUpperCase();
 
-        // 1. Single character view mode shortcuts
+        // 1. Single character view mode shortcuts (only in view mode)
         if (isViewBinding(keybindings.viewMode.enterEdit)) {
           e.preventDefault(); setIsEditing(true);
         } else if (isViewBinding(keybindings.viewMode.moveDown)) {
@@ -190,90 +228,70 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
           e.preventDefault();
           setShowSearch(true);
           setTimeout(() => searchInputRef.current?.focus(), 50);
-        } 
-        // 2. Modifer-based shortcuts
-        else if (isCmd && key === 'P') { 
-          e.preventDefault(); moveCursor('up');
-        } else if (isCmd && key === 'N') { 
-          e.preventDefault(); moveCursor('down');
-        } else if (isCmd && key === 'F') { 
-          e.preventDefault(); moveCursor('right');
-        } else if (isCmd && key === 'B') { 
-          e.preventDefault(); moveCursor('left');
-        } else if (isCmd && key === 'A') { // Start of Line
-          e.preventDefault();
-          const textarea = textareaRef.current;
-          if (textarea) {
-            const start = localContent.lastIndexOf('\n', textarea.selectionStart - 1);
-            const newPos = start === -1 ? 0 : start + 1;
-            textarea.selectionStart = textarea.selectionEnd = newPos;
-            textarea.focus();
-            updateCursor();
-          }
-        } else if (isCmd && key === 'E') { // End of Line
-          e.preventDefault();
-          const textarea = textareaRef.current;
-          if (textarea) {
-            const end = localContent.indexOf('\n', textarea.selectionStart);
-            const newPos = end === -1 ? localContent.length : end;
-            textarea.selectionStart = textarea.selectionEnd = newPos;
-            textarea.focus();
-            updateCursor();
-          }
         }
-      } else {
-        // EDIT MODE BINDINGS
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setIsEditing(false);
-        } else if (isCmd && key === 'E') { // End of Line
-          e.preventDefault();
-          const textarea = textareaRef.current;
-          if (textarea) {
-            const pos = textarea.selectionStart;
-            const end = localContent.indexOf('\n', pos);
-            const newPos = end === -1 ? localContent.length : end;
-            textarea.selectionStart = textarea.selectionEnd = newPos;
-            updateCursor();
-          }
-        } else if (isCmd && key === 'A') { // Start of Line
-          e.preventDefault();
-          const textarea = textareaRef.current;
-          if (textarea) {
-            const pos = textarea.selectionStart;
-            const start = localContent.lastIndexOf('\n', pos - 1);
-            const newPos = start === -1 ? 0 : start + 1;
-            textarea.selectionStart = textarea.selectionEnd = newPos;
-            updateCursor();
-          }
-        } else if (isCmd && key === 'K') { // Kill line
-          e.preventDefault();
-          const textarea = textareaRef.current;
-          if (textarea) {
-            const pos = textarea.selectionStart;
-            const end = localContent.indexOf('\n', pos);
-            const nextLineStart = end === -1 ? localContent.length : end + 1;
-            const newContent = localContent.substring(0, pos) + localContent.substring(nextLineStart);
-            setLocalContent(newContent);
-            if (onChange) onChange(newContent);
-            setTimeout(updateCursor, 0);
-          }
-        } else if (isCmd && key === keybindings.editMode.selectAll.split('+').pop()) { // Select All
-          e.preventDefault();
-          textareaRef.current?.select();
+      }
+
+      // ─── Content Keys: apply in BOTH view and edit mode ─────────
+      const ck = keybindings.contentKeys || {};
+
+      if (isEditing && (e.key === 'Escape' || (isCmd && key === 'G'))) {
+        e.preventDefault();
+        setIsEditing(false);
+      } else if (isCmd && key === ck.endOfLine?.split('+').pop()) { // End of Line
+        e.preventDefault();
+        const textarea = textareaRef.current;
+        if (textarea) {
+          const pos = textarea.selectionStart;
+          const end = localContent.indexOf('\n', pos);
+          const newPos = end === -1 ? localContent.length : end;
+          textarea.selectionStart = textarea.selectionEnd = newPos;
+          textarea.focus();
           updateCursor();
-        } else if (isCmd && key === keybindings.editMode.prevLine.split('+').pop()) { // Prev Line
-          e.preventDefault(); moveCursor('up');
-        } else if (isCmd && key === keybindings.editMode.nextLine.split('+').pop()) { // Next Line
-          e.preventDefault(); moveCursor('down');
-        } else if (isCmd && key === keybindings.editMode.forwardChar.split('+').pop()) { // Forward Char
-          e.preventDefault(); moveCursor('right');
-        } else if (isCmd && key === keybindings.editMode.backwardChar.split('+').pop()) { // Backward Char
-          e.preventDefault(); moveCursor('left');
         }
-        // Copy/Paste/Cut are handled natively by textarea, but user asked to bind them.
-        // Standard bindings (CTRL+C, V, X) usually work. If we need to explicitly handle them:
-        // they are already default.
+      } else if (isCmd && key === ck.startOfLine?.split('+').pop()) { // Start of Line
+        e.preventDefault();
+        const textarea = textareaRef.current;
+        if (textarea) {
+          const pos = textarea.selectionStart;
+          const start = localContent.lastIndexOf('\n', pos - 1);
+          const newPos = start === -1 ? 0 : start + 1;
+          textarea.selectionStart = textarea.selectionEnd = newPos;
+          textarea.focus();
+          updateCursor();
+        }
+      } else if (isCmd && key === ck.killLine?.split('+').pop()) { // Kill line
+        e.preventDefault();
+        const textarea = textareaRef.current;
+        if (textarea) {
+          undoStack.current.push(localContent);
+          const pos = textarea.selectionStart;
+          const end = localContent.indexOf('\n', pos);
+          const nextLineStart = end === -1 ? localContent.length : end + 1;
+          const newContent = localContent.substring(0, pos) + localContent.substring(nextLineStart);
+          setLocalContent(newContent);
+          if (onChange) {
+            isLocalChange.current = true;
+            onChange(newContent);
+          }
+          // Restore cursor to kill position after React re-renders
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = pos;
+            textarea.focus();
+            updateCursor();
+          }, 0);
+        }
+      } else if (isCmd && key === ck.selectAll?.split('+').pop()) { // Select All
+        e.preventDefault();
+        textareaRef.current?.select();
+        updateCursor();
+      } else if (isCmd && key === ck.prevLine?.split('+').pop()) { // Prev Line
+        e.preventDefault(); moveCursor('up');
+      } else if (isCmd && key === ck.nextLine?.split('+').pop()) { // Next Line
+        e.preventDefault(); moveCursor('down');
+      } else if (isCmd && key === ck.forwardChar?.split('+').pop()) { // Forward Char
+        e.preventDefault(); moveCursor('right');
+      } else if (isCmd && key === ck.backwardChar?.split('+').pop()) { // Backward Char
+        e.preventDefault(); moveCursor('left');
       }
     };
 
