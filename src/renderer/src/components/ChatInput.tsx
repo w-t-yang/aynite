@@ -192,8 +192,8 @@ function createSuggestion(
 async function flattenWorkspaceFiles(
   folders: string[],
   maxDepth: number = 3
-): Promise<{ id: string; label: string }[]> {
-  const results: { id: string; label: string }[] = [];
+): Promise<SuggestionItem[]> {
+  const results: SuggestionItem[] = [];
 
   const walk = async (dir: string, depth: number, rootFolder: string, rootName: string) => {
     if (depth > maxDepth) return;
@@ -236,13 +236,13 @@ async function flattenWorkspaceFiles(
 
 const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   ({ onSubmit, disabled, workspaceFolders = [] }, ref) => {
-    const [fileItems, setFileItems] = useState<{ id: string; label: string }[]>([]);
-    const [skillItems, setSkillItems] = useState<{ id: string; label: string }[]>([]);
-    const [commandItems, setCommandItems] = useState<{ id: string; label: string }[]>([]);
+    const [fileItems, setFileItems] = useState<SuggestionItem[]>([]);
+    const [skillItems, setSkillItems] = useState<SuggestionItem[]>([]);
+    const [commandItems, setCommandItems] = useState<SuggestionItem[]>([]);
 
-    const fileItemsRef = React.useRef<{ id: string; label: string }[]>([]);
-    const skillItemsRef = React.useRef<{ id: string; label: string }[]>([]);
-    const commandItemsRef = React.useRef<{ id: string; label: string }[]>([]);
+    const fileItemsRef = React.useRef<SuggestionItem[]>([]);
+    const skillItemsRef = React.useRef<SuggestionItem[]>([]);
+    const commandItemsRef = React.useRef<SuggestionItem[]>([]);
 
     // Debug utility exposed to window
     useEffect(() => {
