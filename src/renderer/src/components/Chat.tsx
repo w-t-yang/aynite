@@ -117,14 +117,24 @@ function ApprovalModal({
 
 function MessageContent({ text, role, onOpenFile }: { text: string; role: 'user' | 'model', onOpenFile?: (path: string) => void }) {
   if (role === 'model') {
+    // Process <think> blocks
+    let processedText = text;
+    processedText = processedText.replace(/<think>([\s\S]*?)<\/think>/g, (match, p1) => {
+      return `\n> **Thinking Process:**\n> ${p1.trim().replace(/\n/g, '\n> ')}\n\n`;
+    });
+    if (processedText.includes('<think>') && !processedText.includes('</think>')) {
+      const parts = processedText.split('<think>');
+      processedText = parts[0] + `\n> **Thinking...**\n> ${parts[1].trim().replace(/\n/g, '\n> ')}\n\n`;
+    }
+
     const parts = [];
     let lastPos = 0;
     const viewRegex = /\[\[View:(.*?)\]\]/g;
     let match;
 
-    while ((match = viewRegex.exec(text)) !== null) {
+    while ((match = viewRegex.exec(processedText)) !== null) {
       if (match.index > lastPos) {
-        parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{text.substring(lastPos, match.index)}</Markdown>);
+        parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{processedText.substring(lastPos, match.index)}</Markdown>);
       }
       const path = match[1];
       parts.push(
@@ -144,8 +154,8 @@ function MessageContent({ text, role, onOpenFile }: { text: string; role: 'user'
       lastPos = viewRegex.lastIndex;
     }
 
-    if (lastPos < text.length) {
-      parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{text.substring(lastPos)}</Markdown>);
+    if (lastPos < processedText.length) {
+      parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{processedText.substring(lastPos)}</Markdown>);
     }
 
     return (
@@ -453,16 +463,19 @@ export default function ChatTab({
           try {
             // @ts-ignore
             const res = await window.api.readFile(`${sp}/SKILL.md`);
-            return res.data ? res.data : "";
+            if (!res.data) return "";
+            const skillName = sp.split(/[/\\]/).filter(Boolean).pop() || sp;
+            return `<skill name="${skillName}">\n${res.data}\n</skill>`;
           } catch { return ""; }
         }));
-        skillContext = skillsData.filter(Boolean).join("\n\n---\n\n");
+        skillContext = skillsData.filter(Boolean).join("\n\n");
       }
 
-      // Build history from existing messages (simplified)
+      // Build history from existing messages, masking the skill paths from the agent
       const history: AgentMessage[] = messages.flatMap((m): AgentMessage[] => {
-        if (m.role === 'user') return [{ role: 'user' as const, content: m.text }];
-        if (m.role === 'model') return [{ role: 'assistant' as const, content: m.text }];
+        const cleanContent = m.text.replace(skillMentionRegex, '[Skill: $1]');
+        if (m.role === 'user') return [{ role: 'user' as const, content: cleanContent }];
+        if (m.role === 'model') return [{ role: 'assistant' as const, content: cleanContent }];
         return [];
       });
 
@@ -476,8 +489,9 @@ export default function ChatTab({
       abortRef.current = abort;
 
       try {
+        const cleanText = text.replace(skillMentionRegex, '[Skill: $1]');
         await runAgentLoop(
-          text,
+          cleanText,
           history,
           agentConfig,
           workspaceFolders,
@@ -518,6 +532,14 @@ export default function ChatTab({
                 break;
               }
               case 'text_delta': {
+                // Determine if we need to append to an existing text step
+                const lastStep = steps[steps.length - 1];
+                if (lastStep && lastStep.type === 'text') {
+                  lastStep.content += event.content;
+                } else {
+                  // Explicitly cast type so TypeScript doesn't complain about 'text' not being in AgentStep type yet
+                  steps.push({ id: genId(), type: 'text' as any, content: event.content });
+                }
                 modelText += event.content;
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -527,6 +549,12 @@ export default function ChatTab({
                 break;
               }
               case 'text_done': {
+                const lastStep = steps[steps.length - 1];
+                if (lastStep && lastStep.type === 'text') {
+                  lastStep.content = event.content;
+                } else {
+                  steps.push({ id: genId(), type: 'text' as any, content: event.content });
+                }
                 modelText = event.content;
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -629,20 +657,32 @@ export default function ChatTab({
                   : 'bg-accent/40 rounded-tl-none border border-border/50 text-foreground'
               }`}
             >
-              {/* Agent Steps */}
-              {msg.steps && msg.steps.length > 0 && msg.role === 'model' && (
-                <div className="px-3 pt-3 pb-1 space-y-0.5">
-                  {msg.steps.map((step) => (
-                    <StepEntry key={step.id} step={step} />
-                  ))}
+              {/* Agent Steps & Text Interleaved */}
+              {msg.steps && msg.steps.length > 0 && msg.role === 'model' ? (
+                <div className="space-y-1">
+                  {msg.steps.map((step) => {
+                    // @ts-ignore
+                    if (step.type === 'text') {
+                      if (!step.content.trim()) return null;
+                      return (
+                        <div key={step.id} className="px-4 py-3">
+                          <MessageContent text={step.content} role="model" onOpenFile={handleOpenFile} />
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={step.id} className="px-3 pt-2 pb-1">
+                        <StepEntry step={step} />
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-
-              {/* Text Content */}
-              {msg.text && (
-                <div className={msg.role === 'model' ? 'px-4 py-3' : ''}>
-                  <MessageContent text={msg.text} role={msg.role} onOpenFile={handleOpenFile} />
-                </div>
+              ) : (
+                msg.text && (
+                  <div className={msg.role === 'model' ? 'px-4 py-3' : ''}>
+                    <MessageContent text={msg.text} role={msg.role} onOpenFile={handleOpenFile} />
+                  </div>
+                )
               )}
             </div>
 

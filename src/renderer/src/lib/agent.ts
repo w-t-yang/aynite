@@ -94,6 +94,36 @@ const AGENT_TOOLS = [
       },
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'search_codebase',
+      description: 'Search for a string or regex pattern in the workspace files using grep.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'The search term or regex pattern' },
+          path: { type: 'string', description: 'Absolute path to directory to search' },
+          isRegex: { type: 'boolean', description: 'Whether the query is a regular expression' }
+        },
+        required: ['query', 'path'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'spawn_subagent',
+      description: 'Spawn a subagent to execute a secondary task, test, or evaluate independent logic. NOTE: This tool executes SYNCHRONOUSLY. It blocks until the subagent completes and returns the final output immediately in the tool result. Do NOT wait for background notifications or poll for status.',
+      parameters: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Detailed instructions for the subagent' },
+        },
+        required: ['prompt'],
+      },
+    },
+  },
 ];
 
 // ─── Path Security ───────────────────────────────────────────────────
@@ -176,6 +206,60 @@ async function executeRunCommand(
   }
 }
 
+async function executeSearchCodebase(args: { query: string; path: string; isRegex?: boolean }, workspaceFolders: string[]): Promise<string> {
+  if (!isPathWithinWorkspace(args.path, workspaceFolders)) {
+    return `Error: Access denied. Path "${args.path}" is not within the workspace.`;
+  }
+  try {
+    const escapedQuery = args.query.replace(/'/g, "'\\''");
+    const regexFlag = args.isRegex ? '-E' : '-F';
+    // Use standard grep
+    const cmd = `grep ${regexFlag} -rn '${escapedQuery}' . | head -n 50`;
+    
+    // @ts-ignore
+    const res = await window.api.runCommand(cmd, args.path);
+    if (res.error) {
+      if (res.error.includes('exit code: 1')) return 'No matches found.';
+      return `Error searching: ${res.error}`;
+    }
+    const output = [res.data?.stdout, res.data?.stderr].filter(Boolean).join('\n');
+    return output.trim() || 'No matches found.';
+  } catch (e: any) {
+    return `Error: ${e.message}`;
+  }
+}
+
+async function executeSpawnSubagent(
+  args: { prompt: string },
+  config: AgentConfig,
+  workspaceFolders: string[],
+  onEvent: (event: AgentStepEvent) => void,
+  requestApproval: (command: string, cwd: string) => Promise<boolean>,
+  skillContext?: string
+): Promise<string> {
+  try {
+    const finalMessages = await runAgentLoop(
+      `[SUBAGENT DELEGATION]: ${args.prompt}`,
+      [],
+      config,
+      workspaceFolders,
+      // Suppress subagent's UI updates except approvals to avoid chat UI state collision
+      (event: AgentStepEvent) => {
+        if (event.type === 'approval_request' || event.type === 'error') {
+          onEvent(event);
+        }
+      },
+      requestApproval,
+      undefined,
+      undefined // DO NOT pass skillContext down to subagents to prevent infinite recursion
+    );
+    const lastAsst = finalMessages.slice().reverse().find(m => m.role === 'assistant' && m.content);
+    return lastAsst ? lastAsst.content : "Subagent completed task but returned no textual output.";
+  } catch (e: any) {
+    return `Subagent crashed: ${e.message}`;
+  }
+}
+
 // ─── Agent Loop ──────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are Citron, an AI coding assistant embedded in a file explorer IDE. You can read files, write files, list directories, and run shell commands within the user's workspace.
@@ -184,7 +268,8 @@ Rules:
 - Always explain what you plan to do before calling a tool.
 - When reading or writing files, use absolute paths within the workspace.
 - When running commands, explain what the command does.
-- Be concise and helpful. Format code in markdown code blocks.`;
+- Be concise and helpful. Format code in markdown code blocks.
+- NEVER stop generating without an explanation or a tool call. If you execute a tool, ALWAYS continue your task by reading the tool output and deciding on the next step.`;
 
 export interface AgentConfig {
   url: string;
@@ -204,12 +289,15 @@ export async function runAgentLoop(
 ): Promise<AgentMessage[]> {
 
   const messages: AgentMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT + (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to these specialized skills. Follow their instructions strictly:\n${skillContext}` : "") },
+    { 
+      role: 'system', 
+      content: SYSTEM_PROMPT + (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to the following skills. Their instructions are provided below. When the user mentions a skill (e.g., [Skill: name]), follow its instructions strictly to complete their request. Do not attempt to read or list files in the skill's directory using tools, as all necessary skill instructions are already provided here:\n\n${skillContext}` : "") 
+    },
     ...history,
     { role: 'user', content: userMessage },
   ];
 
-  const MAX_ITERATIONS = 10;
+  const MAX_ITERATIONS = 30;
   let iterations = 0;
 
   while (iterations < MAX_ITERATIONS) {
@@ -335,6 +423,17 @@ export async function runAgentLoop(
             });
             result = await executeRunCommand(fnArgs, workspaceFolders, requestApproval);
             break;
+          case 'search_codebase':
+            result = await executeSearchCodebase(fnArgs as any, workspaceFolders);
+            break;
+          case 'spawn_subagent':
+            onEvent({
+              type: 'tool_call',
+              content: `Spawning background subagent...`,
+              toolName: 'spawn_subagent',
+            });
+            result = await executeSpawnSubagent(fnArgs as any, config, workspaceFolders, onEvent, requestApproval, skillContext);
+            break;
           default:
             result = `Unknown tool: ${fnName}`;
         }
@@ -361,6 +460,16 @@ export async function runAgentLoop(
 
     // No tool calls — this is the final text response
     const finalText = assistantMessage.content || '';
+    
+    // Auto-fix for local models that silently halt after tool results
+    if (!finalText.trim() && messages.length > 0 && messages[messages.length - 1].role === 'tool') {
+      if (import.meta.env.DEV) {
+        console.log('Model returned empty text after tool execution. Nudging model to continue...');
+      }
+      messages.push({ role: 'user', content: 'Tool execution complete. Please continue your task based on the results, or explicitly state that the task is finished.' });
+      continue;
+    }
+
     messages.push({ role: 'assistant', content: finalText });
 
     // Stream-like emission of final text

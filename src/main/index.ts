@@ -358,7 +358,9 @@ ipcMain.handle('api:file-delete', async (event, filePath: string) => {
 
 ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
   try {
-    await fs.writeFile(expandHome(filePath), content, 'utf-8');
+    const expandedPath = expandHome(filePath);
+    await fs.mkdir(require('path').dirname(expandedPath), { recursive: true });
+    await fs.writeFile(expandedPath, content, 'utf-8');
     return { data: true };
   } catch (error: any) {
     return { error: error.message };
