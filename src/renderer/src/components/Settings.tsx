@@ -6,10 +6,9 @@ export interface SettingsState {
   theme: 'dark' | 'light' | 'nord' | 'solarized';
   aiProvider?: 'gemini' | 'deepseek' | 'ollama';
   aiConfigs?: {
-    [key in 'gemini' | 'deepseek' | 'ollama']?: {
-      apiKey: string;
-      url: string;
-    };
+    gemini?: { apiKey: string; url: string };
+    deepseek?: { apiKey: string; url: string };
+    ollama?: { url: string; model: string; contextWindow: number };
   };
   keybindings: {
     commandTab: string;
@@ -64,7 +63,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
         aiConfigs: {
           gemini: { apiKey: '', url: '' },
           deepseek: { apiKey: '', url: '' },
-          ollama: { apiKey: '', url: 'http://localhost:11434' }
+          ollama: { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192 }
         }
       }));
     } else {
@@ -103,12 +102,17 @@ export default function Settings({ settings, onSave }: SettingsProps) {
     });
   };
 
-  const handleAiConfigChange = (provider: 'gemini' | 'deepseek' | 'ollama', field: 'apiKey' | 'url', value: string) => {
+  const handleAiConfigChange = (provider: 'gemini' | 'deepseek' | 'ollama', field: string, value: any) => {
     const newConfigs = { ...localSettings.aiConfigs } as any;
     if (!newConfigs[provider]) {
-      newConfigs[provider] = { apiKey: '', url: '' };
+      newConfigs[provider] = provider === 'ollama' ? { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192 } : { apiKey: '', url: '' };
     }
-    newConfigs[provider][field] = value;
+    
+    if (field === 'contextWindow') {
+      newConfigs[provider][field] = parseInt(value, 10) || 8192;
+    } else {
+      newConfigs[provider][field] = value;
+    }
     
     save({
       ...localSettings,
@@ -177,27 +181,54 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                       
                       {(localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'gemini')) && (
                         <div className="ml-7 space-y-4 pt-2 pb-4">
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">API Key</label>
-                            <input 
-                              type="password"
-                              placeholder={`Enter ${provider} API Key`}
-                              value={localSettings.aiConfigs?.[provider]?.apiKey || ''}
-                              onChange={(e) => handleAiConfigChange(provider, 'apiKey', e.target.value)}
-                              className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                            />
-                          </div>
+                          {provider !== 'ollama' && (
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">API Key</label>
+                              <input 
+                                type="password"
+                                placeholder={`Enter ${provider} API Key`}
+                                value={localSettings.aiConfigs?.[provider as 'gemini' | 'deepseek']?.apiKey || ''}
+                                onChange={(e) => handleAiConfigChange(provider, 'apiKey', e.target.value)}
+                                className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                              />
+                            </div>
+                          )}
                           
                           <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-medium text-muted-foreground">URL Endpoint (Optional)</label>
                             <input 
                               type="text"
-                              placeholder="Default URL"
+                              placeholder={provider === 'ollama' ? "http://localhost:11434" : "Default URL"}
                               value={localSettings.aiConfigs?.[provider]?.url || ''}
                               onChange={(e) => handleAiConfigChange(provider, 'url', e.target.value)}
                               className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
                             />
                           </div>
+
+                          {provider === 'ollama' && (
+                            <>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">Model</label>
+                                <input 
+                                  type="text"
+                                  placeholder="deepseek-r1:14b"
+                                  value={localSettings.aiConfigs?.ollama?.model || 'deepseek-r1:14b'}
+                                  onChange={(e) => handleAiConfigChange(provider, 'model', e.target.value)}
+                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">Context Window</label>
+                                <input 
+                                  type="number"
+                                  placeholder="8192"
+                                  value={localSettings.aiConfigs?.ollama?.contextWindow || 8192}
+                                  onChange={(e) => handleAiConfigChange(provider, 'contextWindow', e.target.value)}
+                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

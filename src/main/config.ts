@@ -12,52 +12,6 @@ export function getConfigDir() {
   }
 }
 
-export async function initAppFolders() {
-  const baseDir = getConfigDir();
-  
-  const folders = ['config', 'skills', 'commands', 'workspaces'];
-  for (const folder of folders) {
-    const dir = path.join(baseDir, folder);
-    if (!existsSync(dir)) {
-      await fs.mkdir(dir, { recursive: true });
-    }
-  }
-
-  const configDir = path.join(baseDir, 'config');
-  const workspacesDir = path.join(baseDir, 'workspaces');
-
-  // Default configs
-  const defaults: Record<string, any> = {
-    'appearance.json': { theme: 'dark' },
-    'keybindings.json': { commandTab: 'META+X', chatTab: 'META+Y' },
-    'ai.json': { 
-      provider: 'gemini', 
-      configs: { 
-        gemini: { apiKey: '', url: '' },
-        deepseek: { apiKey: '', url: '' },
-        ollama: { apiKey: '', url: 'http://localhost:11434' }
-      } 
-    },
-    'workspaces.json': {
-      active: 'default workspace',
-      list: ['default workspace']
-    }
-  };
-
-  for (const [file, content] of Object.entries(defaults)) {
-    const filePath = path.join(configDir, file);
-    if (!existsSync(filePath)) {
-      await fs.writeFile(filePath, JSON.stringify(content, null, 2), 'utf-8');
-    }
-  }
-
-  // Ensure default workspace exists
-  const defaultWorkspacePath = path.join(workspacesDir, 'default workspace.json');
-  if (!existsSync(defaultWorkspacePath)) {
-    await fs.writeFile(defaultWorkspacePath, JSON.stringify({ folders: [], tabs: [], activeTabId: '' }, null, 2), 'utf-8');
-  }
-}
-
 const DEFAULT_KEYBINDINGS = {
   commandTab: 'META+X',
   chatTab: 'META+Y',
@@ -92,6 +46,54 @@ const DEFAULT_KEYBINDINGS = {
   }
 };
 
+export async function initAppFolders() {
+  const baseDir = getConfigDir();
+  
+  const folders = ['config', 'skills', 'commands', 'workspaces'];
+  for (const folder of folders) {
+    const dir = path.join(baseDir, folder);
+    if (!existsSync(dir)) {
+      await fs.mkdir(dir, { recursive: true });
+    }
+  }
+
+  const configDir = path.join(baseDir, 'config');
+  const workspacesDir = path.join(baseDir, 'workspaces');
+
+  // Default values
+  const aiDefault = { 
+    provider: 'gemini', 
+    configs: { 
+      gemini: { apiKey: '', url: '' },
+      deepseek: { apiKey: '', url: '' },
+      ollama: { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192 }
+    } 
+  };
+  const appearanceDefault = { theme: 'dark' };
+  const keybindingsDefault = DEFAULT_KEYBINDINGS;
+  const configDefault = { lastUsed: new Date().toISOString() };
+  const workspacesDefault = { active: 'default workspace', list: ['default workspace'] };
+
+  const checkAndWrite = async (filename: string, content: any) => {
+    const p = path.join(configDir, filename);
+    if (!existsSync(p)) {
+      await fs.writeFile(p, JSON.stringify(content, null, 2), 'utf-8');
+    }
+  };
+
+  await checkAndWrite('ai.json', aiDefault);
+  await checkAndWrite('appearance.json', appearanceDefault);
+  await checkAndWrite('keybindings.json', keybindingsDefault);
+  await checkAndWrite('config.json', configDefault);
+  await checkAndWrite('workspaces.json', workspacesDefault);
+
+  // Ensure default workspace exists
+  const defaultWorkspacePath = path.join(workspacesDir, 'default workspace.json');
+  if (!existsSync(defaultWorkspacePath)) {
+    await fs.writeFile(defaultWorkspacePath, JSON.stringify({ folders: [], tabs: [], activeTabId: '' }, null, 2), 'utf-8');
+  }
+}
+
 export async function loadConfig() {
   const configDir = path.join(getConfigDir(), 'config');
   
@@ -105,8 +107,9 @@ export async function loadConfig() {
   };
 
   const appearance = await readJson('appearance.json', { theme: 'dark' });
-  let keybindings = await readJson('keybindings.json', DEFAULT_KEYBINDINGS);
   const ai = await readJson('ai.json', { provider: 'gemini', configs: {} });
+  let keybindings = await readJson('keybindings.json', DEFAULT_KEYBINDINGS);
+  const mainConfig = await readJson('config.json', {});
 
   // Recursive merge/repair for keybindings
   let modified = false;
@@ -136,7 +139,8 @@ export async function loadConfig() {
     theme: appearance.theme || 'dark',
     keybindings: keybindings,
     aiProvider: ai.provider || 'gemini',
-    aiConfigs: ai.configs || {}
+    aiConfigs: ai.configs || {},
+    ...mainConfig
   };
 }
 
@@ -144,12 +148,17 @@ export async function saveConfig(settings: any) {
   const configDir = path.join(getConfigDir(), 'config');
 
   const appearance = { theme: settings.theme };
-  const keybindings = { commandTab: settings.keybindings?.commandTab, chatTab: settings.keybindings?.chatTab };
   const ai = { provider: settings.aiProvider, configs: settings.aiConfigs };
+  const keybindings = settings.keybindings || DEFAULT_KEYBINDINGS;
+  
+  // Extract remaining fields for config.json
+  const { theme, aiProvider, aiConfigs, keybindings: _, ...rest } = settings;
+  const mainConfig = { ...rest, updatedAt: new Date().toISOString() };
 
   await fs.writeFile(path.join(configDir, 'appearance.json'), JSON.stringify(appearance, null, 2), 'utf-8');
-  await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'ai.json'), JSON.stringify(ai, null, 2), 'utf-8');
+  await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
+  await fs.writeFile(path.join(configDir, 'config.json'), JSON.stringify(mainConfig, null, 2), 'utf-8');
   
   return true;
 }

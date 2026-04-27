@@ -510,7 +510,7 @@ export default function App() {
             </div>
             
             <div className="flex-1 overflow-hidden relative bg-background">
-              <ChatTab />
+              <ChatTab settings={settings} />
             </div>
           </div>
         </div>

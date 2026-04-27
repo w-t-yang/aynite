@@ -1,19 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, RefreshCw, Trash2 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export default function ChatTab() {
+import { SettingsState } from './Settings';
+
+export default function ChatTab({ settings }: { settings: SettingsState }) {
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
-  // Keep track of the chat instance across renders
-  const chatRef = useRef<any>(null);
-
   useEffect(() => {
     // Focus down to the latest message
     if (scrollRef.current) {
@@ -22,21 +21,6 @@ export default function ChatTab() {
   }, [messages, loading]);
 
   useEffect(() => {
-    // Initialize the AI Chat via the SDK
-    if (!chatRef.current) {
-      try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        chatRef.current = ai.chats.create({
-          model: "gemini-3.1-pro-preview",
-          config: {
-            systemInstruction: "You are a helpful AI assistant residing in a file explorer application.",
-          }
-        });
-      } catch (e) {
-        console.error("Failed to initialize Gemini", e);
-      }
-    }
-    
     // Keybinding focus hook
     (window as any).focusChatInput = () => {
       inputRef.current?.focus();
@@ -48,7 +32,7 @@ export default function ChatTab() {
 
   const sendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim() || !chatRef.current) return;
+    if (!input.trim()) return;
 
     const userMsg = input.trim();
     setInput('');
@@ -56,18 +40,70 @@ export default function ChatTab() {
     setLoading(true);
 
     try {
-      const responseStream = await chatRef.current.sendMessageStream({ message: userMsg });
+      const provider = settings.aiProvider || 'gemini';
       
-      let fullText = '';
-      setMessages(prev => [...prev, { role: 'model', text: '' }]);
-      
-      for await (const chunk of responseStream) {
-        fullText += (chunk as any).text || '';
-        setMessages(prev => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = { role: 'model', text: fullText };
-          return newMessages;
+      if (provider === 'gemini' || provider === 'deepseek') {
+         setTimeout(() => {
+           setMessages(prev => [...prev, { role: 'model', text: `[WIP] The integration for ${provider} is currently a work in progress.` }]);
+           setLoading(false);
+         }, 500);
+         return;
+      }
+
+      if (provider === 'ollama') {
+        const url = settings.aiConfigs?.ollama?.url || 'http://localhost:11434';
+        const model = settings.aiConfigs?.ollama?.model || 'deepseek-r1:14b';
+        const contextWindow = settings.aiConfigs?.ollama?.contextWindow || 8192;
+        
+        const response = await fetch(`${url}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model,
+            messages: [...messages, { role: 'user', text: userMsg }].map(m => ({
+              role: m.role === 'model' ? 'assistant' : 'user',
+              content: m.text
+            })),
+            options: {
+              num_ctx: contextWindow
+            }
+          })
         });
+
+        if (!response.ok) {
+           throw new Error(`Ollama API error: ${response.statusText}`);
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder("utf-8");
+        setMessages(prev => [...prev, { role: 'model', text: '' }]);
+        
+        if (reader) {
+          let fullText = '';
+          while (true) {
+             const { done, value } = await reader.read();
+             if (done) break;
+             const chunk = decoder.decode(value, { stream: true });
+             const lines = chunk.split('\n');
+             for (const line of lines) {
+                if (line.trim()) {
+                   try {
+                     const parsed = JSON.parse(line);
+                     if (parsed.message?.content) {
+                       fullText += parsed.message.content;
+                       setMessages(prev => {
+                         const newMessages = [...prev];
+                         newMessages[newMessages.length - 1] = { role: 'model', text: fullText };
+                         return newMessages;
+                       });
+                     }
+                   } catch (err) {
+                     // ignore partial json
+                   }
+                }
+             }
+          }
+        }
       }
     } catch (err: any) {
       setMessages(prev => [...prev, { role: 'model', text: `Error: ${err.message}` }]);
@@ -136,6 +172,25 @@ export default function ChatTab() {
         )}
       </div>
       
+      <div className="px-4 py-2 flex items-center justify-between border-t border-border bg-accent/5">
+        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+          <Bot size={12} />
+          <span>{settings.aiProvider || 'gemini'}</span>
+          {settings.aiProvider === 'ollama' && (
+             <span className="normal-case font-medium opacity-80 border-l border-border pl-2">
+               {settings.aiConfigs?.ollama?.model || 'deepseek-r1:14b'}
+             </span>
+          )}
+        </div>
+        <button 
+          onClick={() => setMessages([])}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-500 text-muted-foreground transition-all text-[10px] font-medium"
+        >
+          <Trash2 size={12} />
+          Clear History
+        </button>
+      </div>
+
       <div className="p-4 border-t border-border">
         <div className="max-w-4xl mx-auto relative flex items-end shadow-sm">
           <textarea 
