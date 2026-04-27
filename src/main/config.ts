@@ -5,6 +5,14 @@ import path from 'path';
 import os from 'os';
 import yaml from 'js-yaml';
 
+// Helper to expand ~ to home directory
+function expandHome(filepath: string): string {
+  if (filepath.startsWith('~')) {
+    return path.join(os.homedir(), filepath.slice(1));
+  }
+  return filepath;
+}
+
 export function getConfigDir() {
   if (process.platform === 'win32') {
     return path.join(app.getPath('appData'), 'citron');
@@ -464,7 +472,8 @@ export async function getWorkspaceFolders() {
   
   try {
     const data = await fs.readFile(workspacePath, 'utf-8');
-    return JSON.parse(data).folders || [];
+    const folders = JSON.parse(data).folders || [];
+    return folders.map((f: string) => expandHome(f));
   } catch {
     return [];
   }

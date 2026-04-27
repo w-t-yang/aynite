@@ -79,10 +79,18 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Helper to expand ~ to home directory
+function expandHome(filepath: string): string {
+  if (filepath.startsWith('~')) {
+    return join(require('os').homedir(), filepath.slice(1));
+  }
+  return filepath;
+}
+
 // IPC handlers ported from express server.ts
 ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
   try {
-    const resolvedPath = require('path').resolve(dirPath);
+    const resolvedPath = require('path').resolve(expandHome(dirPath));
     const files = await fs.readdir(resolvedPath, { withFileTypes: true });
     
     const result = files.map(file => ({
@@ -145,7 +153,7 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
 
 ipcMain.handle('api:read-file', async (event, filePath: string) => {
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
+    const content = await fs.readFile(expandHome(filePath), 'utf-8');
     return { data: content };
   } catch (error: any) {
     return { error: error.message };
@@ -350,10 +358,9 @@ ipcMain.handle('api:file-delete', async (event, filePath: string) => {
 
 ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
   try {
-    await fs.writeFile(filePath, content, 'utf-8');
+    await fs.writeFile(expandHome(filePath), content, 'utf-8');
     return { data: true };
   } catch (error: any) {
     return { error: error.message };
   }
 });
-

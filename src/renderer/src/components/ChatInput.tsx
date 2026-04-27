@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from 'react';
 import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
@@ -21,9 +21,17 @@ interface ChatInputProps {
 
 // ─── Suggestion List Component ───────────────────────────────────────
 
+interface SuggestionItem {
+  id: string;
+  label: string;
+  name?: string;
+  subtitle?: string;
+  isDirectory?: boolean;
+}
+
 interface SuggestionListProps {
-  items: { id: string; label: string }[];
-  command: (item: { id: string; label: string }) => void;
+  items: SuggestionItem[];
+  command: (item: SuggestionItem) => void;
   triggerChar: string;
 }
 
@@ -57,36 +65,64 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
       },
     }));
 
+    const listRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const selectedEl = listRef.current?.children[selectedIndex] as HTMLElement;
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: 'nearest' });
+      }
+    }, [selectedIndex]);
+
     if (!items.length) {
       return (
-        <div className="suggestion-list bg-sidebar border border-border rounded-lg shadow-xl p-2 text-xs text-muted-foreground">
+        <div className="suggestion-list bg-sidebar border border-border rounded-lg shadow-xl p-2 text-xs text-muted-foreground whitespace-nowrap">
           No results
         </div>
       );
     }
 
-    const icon = triggerChar === '@' ? '📄' : triggerChar === '/' ? '⚡' : '▶';
-    const label = triggerChar === '@' ? 'Files' : triggerChar === '/' ? 'Skills' : 'Commands';
+    const triggerLabel = triggerChar === '@' ? 'Files' : triggerChar === '/' ? 'Skills' : 'Commands';
 
     return (
-      <div className="suggestion-list bg-sidebar border border-border rounded-lg shadow-xl overflow-hidden min-w-[200px] max-w-[360px]">
-        <div className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/30">
-          {icon} {label}
+      <div className="suggestion-list bg-sidebar border border-border rounded-lg shadow-xl overflow-hidden min-w-[240px] max-w-[420px] flex flex-col">
+        <div className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/30 bg-muted/20 shrink-0">
+          {triggerLabel}
         </div>
-        {items.map((item, index) => (
-          <button
-            key={item.id}
-            className={`w-full text-left px-3 py-1.5 text-sm truncate transition-colors ${
-              index === selectedIndex
-                ? 'bg-blue-500/15 text-blue-400'
-                : 'text-foreground hover:bg-accent/50'
-            }`}
-            onClick={() => command(item)}
-          >
-            <span className="font-mono text-[10px] opacity-50 mr-1.5">{triggerChar}</span>
-            {item.label}
-          </button>
-        ))}
+        <div 
+          ref={listRef}
+          className="overflow-y-auto max-h-[40vh] py-1"
+        >
+          {items.map((item, index) => {
+            const isSelected = index === selectedIndex;
+            let icon = '📄';
+            if (triggerChar === '/') icon = '⚡';
+            else if (triggerChar === '>') icon = '▶';
+            else if (item.isDirectory) icon = '📁';
+
+            return (
+              <button
+                key={item.id}
+                className={`w-full text-left px-3 py-1.5 transition-colors flex items-center gap-2.5 ${
+                  isSelected ? 'bg-blue-500/15 text-blue-400' : 'text-foreground hover:bg-accent/50'
+                }`}
+                onClick={() => command(item)}
+              >
+                <span className="text-base shrink-0 opacity-80">{icon}</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium truncate">
+                    {item.name || item.label}
+                  </span>
+                  {item.subtitle && (
+                    <span className={`text-[10px] truncate opacity-50 ${isSelected ? 'text-blue-300' : ''}`}>
+                      {item.subtitle}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -159,17 +195,27 @@ async function flattenWorkspaceFiles(
 ): Promise<{ id: string; label: string }[]> {
   const results: { id: string; label: string }[] = [];
 
-  const walk = async (dir: string, depth: number, rootFolder: string) => {
+  const walk = async (dir: string, depth: number, rootFolder: string, rootName: string) => {
     if (depth > maxDepth) return;
     try {
       // @ts-ignore
       const res = await window.api.getFiles(dir);
       if (res.error || !res.data) return;
       for (const file of res.data) {
+        const parts = file.path.split(/[/\\]/);
+        const name = parts.pop() || '';
+        const parent = parts.pop() || '';
         const relativePath = file.path.replace(rootFolder, '').replace(/^[/\\]/, '');
-        results.push({ id: file.path, label: relativePath });
+        
+        results.push({ 
+          id: file.path, 
+          label: `${rootName}/${relativePath}`, 
+          name: name,
+          subtitle: parent ? `${rootName}/.../${parent}/` : `(Root: ${rootName})`,
+          isDirectory: file.isDirectory 
+        });
         if (file.isDirectory && depth < maxDepth) {
-          await walk(file.path, depth + 1, rootFolder);
+          await walk(file.path, depth + 1, rootFolder, rootName);
         }
       }
     } catch {
@@ -178,8 +224,9 @@ async function flattenWorkspaceFiles(
   };
 
   for (const folder of folders) {
-    results.push({ id: folder, label: folder.split(/[/\\]/).pop() || folder });
-    await walk(folder, 1, folder);
+    const rootName = folder.split(/[/\\]/).pop() || folder;
+    results.push({ id: folder, label: rootName, name: rootName, subtitle: 'Workspace Root', isDirectory: true });
+    await walk(folder, 1, folder, rootName);
   }
 
   return results;
@@ -197,7 +244,50 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const skillItemsRef = React.useRef<{ id: string; label: string }[]>([]);
     const commandItemsRef = React.useRef<{ id: string; label: string }[]>([]);
 
-    // Load workspace files for @ suggestions
+    // Debug utility exposed to window
+    useEffect(() => {
+      const rebuild = async () => {
+        if (workspaceFolders.length > 0) {
+          const items = await flattenWorkspaceFiles(workspaceFolders);
+          fileItemsRef.current = items;
+          setFileItems(items);
+        }
+        
+        const skillsRes = await (window.api as any).getAvailableSkills();
+        if (skillsRes.data) {
+          const items = skillsRes.data.map((s: any) => ({ id: s.path, label: s.name, name: s.name, subtitle: 'Skill' }));
+          skillItemsRef.current = items;
+          setSkillItems(items);
+        }
+
+        const cmdsRes = await (window.api as any).getAvailableCommands();
+        if (cmdsRes.data) {
+          const items = cmdsRes.data.map((c: any) => ({ id: c.path, label: c.name, name: c.name, subtitle: 'Command' }));
+          commandItemsRef.current = items;
+          setCommandItems(items);
+        }
+
+        console.log('[Citron Debug] All indexes rebuilt.');
+      };
+
+      // @ts-ignore
+      window.__citron = {
+        rebuild,
+        getItems: () => ({
+          files: fileItemsRef.current,
+          skills: skillItemsRef.current,
+          commands: commandItemsRef.current
+        }),
+        getWorkspaceFolders: () => workspaceFolders
+      };
+      
+      return () => {
+        // @ts-ignore
+        delete window.__citron;
+      };
+    }, [workspaceFolders]);
+
+    // Initial load
     useEffect(() => {
       if (workspaceFolders.length > 0) {
         flattenWorkspaceFiles(workspaceFolders).then((items) => {
@@ -210,7 +300,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       // @ts-ignore
       window.api.getAvailableSkills().then((res: any) => {
         if (res.data) {
-          const items = res.data.map((s: any) => ({ id: s.path, label: s.name }));
+          const items = res.data.map((s: any) => ({ id: s.path, label: s.name, name: s.name, subtitle: 'Skill' }));
           skillItemsRef.current = items;
           setSkillItems(items);
         }
@@ -218,7 +308,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       // @ts-ignore
       window.api.getAvailableCommands().then((res: any) => {
         if (res.data) {
-          const items = res.data.map((c: any) => ({ id: c.path, label: c.name }));
+          const items = res.data.map((c: any) => ({ id: c.path, label: c.name, name: c.name, subtitle: 'Command' }));
           commandItemsRef.current = items;
           setCommandItems(items);
         }
@@ -246,9 +336,33 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         }),
         Mention.configure({
           HTMLAttributes: { class: 'mention mention-file' },
-          suggestion: createSuggestion('@', (query) =>
-            fileItemsRef.current.filter((item) => item.label.toLowerCase().includes(query)).slice(0, 10)
-          ),
+          suggestion: createSuggestion('@', (query) => {
+            const q = query.toLowerCase();
+            return fileItemsRef.current
+              .filter((item) => item.label.toLowerCase().includes(q))
+              .sort((a, b) => {
+                const aName = (a.name || '').toLowerCase();
+                const bName = (b.name || '').toLowerCase();
+                const aLabel = a.label.toLowerCase();
+                const bLabel = b.label.toLowerCase();
+
+                // 1. Exact name match
+                if (aName === q && bName !== q) return -1;
+                if (bName === q && aName !== q) return 1;
+
+                // 2. Name starts with
+                if (aName.startsWith(q) && !bName.startsWith(q)) return -1;
+                if (bName.startsWith(q) && !aName.startsWith(q)) return 1;
+
+                // 3. Label starts with (root match)
+                if (aLabel.startsWith(q) && !bLabel.startsWith(q)) return -1;
+                if (bLabel.startsWith(q) && !aLabel.startsWith(q)) return 1;
+
+                // 4. Shorter label (closer to root)
+                return aLabel.length - bLabel.length;
+              })
+              .slice(0, 20);
+          }),
         }),
         Mention.extend({ name: 'skillMention' }).configure({
           HTMLAttributes: { class: 'mention mention-skill' },
