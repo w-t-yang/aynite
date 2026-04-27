@@ -63,7 +63,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
         aiConfigs: {
           gemini: { apiKey: '', url: '' },
           deepseek: { apiKey: '', url: '' },
-          ollama: { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192 }
+          ollama: { url: 'http://localhost:11434', model: 'gemma:e4b', contextWindow: 8192 }
         }
       }));
     } else {
@@ -105,7 +105,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
   const handleAiConfigChange = (provider: 'gemini' | 'deepseek' | 'ollama', field: string, value: any) => {
     const newConfigs = { ...localSettings.aiConfigs } as any;
     if (!newConfigs[provider]) {
-      newConfigs[provider] = provider === 'ollama' ? { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192 } : { apiKey: '', url: '' };
+      newConfigs[provider] = provider === 'ollama' ? { url: 'http://localhost:11434', model: 'gemma:e4b', contextWindow: 8192 } : { apiKey: '', url: '' };
     }
     
     if (field === 'contextWindow') {
@@ -211,8 +211,8 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                                 <label className="text-xs font-medium text-muted-foreground">Model</label>
                                 <input 
                                   type="text"
-                                  placeholder="deepseek-r1:14b"
-                                  value={localSettings.aiConfigs?.ollama?.model || 'deepseek-r1:14b'}
+                                  placeholder="gemma:e4b"
+                                  value={localSettings.aiConfigs?.ollama?.model || 'gemma:e4b'}
                                   onChange={(e) => handleAiConfigChange(provider, 'model', e.target.value)}
                                   className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
                                 />

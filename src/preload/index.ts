@@ -12,6 +12,7 @@ const api = {
   createWorkspace: (name: string) => ipcRenderer.invoke('api:workspace-create', name),
   switchWorkspace: (name: string) => ipcRenderer.invoke('api:workspace-switch', name),
   addWorkspaceFolder: () => ipcRenderer.invoke('api:workspace-add-folder'),
+  removeWorkspaceFolder: (path: string) => ipcRenderer.invoke('api:workspace-remove-folder', path),
   getWorkspaceFolders: () => ipcRenderer.invoke('api:workspace-get-folders'),
   getWorkspaceState: () => ipcRenderer.invoke('api:workspace-get-state'),
   saveWorkspaceState: (tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { tabs, activeTabId }),
@@ -24,7 +25,14 @@ const api = {
   
   // Util
   joinPath: (...paths: string[]) => require('path').join(...paths),
-  dirname: (p: string) => require('path').dirname(p)
+  dirname: (p: string) => require('path').dirname(p),
+  
+  // Events
+  onFileSystemChange: (callback: (data: { event: string, path: string }) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('api:fs-change', listener);
+    return () => ipcRenderer.removeListener('api:fs-change', listener);
+  }
 };
 
 if (process.contextIsolated) {

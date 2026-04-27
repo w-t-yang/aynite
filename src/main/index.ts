@@ -1,13 +1,36 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import chokidar from 'chokidar';
 import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder } from './config';
 
 const execAsync = promisify(exec);
 
 let mainWindow: BrowserWindow | null = null;
+let watcher: chokidar.FSWatcher | null = null;
+
+function setupWatcher(folders: string[]) {
+  if (watcher) {
+    watcher.close();
+  }
+  
+  if (folders.length === 0) return;
+
+  watcher = chokidar.watch(folders, {
+    ignored: /(^|[\/\\])\../, // ignore dotfiles
+    persistent: true,
+    ignoreInitial: true,
+    depth: 99
+  });
+
+  watcher.on('all', (event, path) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('api:fs-change', { event, path });
+    }
+  });
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -30,9 +53,18 @@ function createWindow(): void {
   mainWindow.setMenuBarVisibility(false);
 }
 
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-wayland-ime');
+  app.commandLine.appendSwitch('wayland-text-input-v3');
+}
+
 app.whenReady().then(async () => {
   await initAppFolders();
   createWindow();
+
+  // Initial watcher setup
+  const folders = await getWorkspaceFolders();
+  setupWatcher(folders);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -129,6 +161,8 @@ ipcMain.handle('api:workspace-create', async (event, name: string) => {
 ipcMain.handle('api:workspace-switch', async (event, name: string) => {
   try {
     const ws = await switchWorkspace(name);
+    const folders = await getWorkspaceFolders();
+    setupWatcher(folders);
     return { data: ws };
   } catch (error: any) {
     return { error: error.message };
@@ -143,6 +177,8 @@ ipcMain.handle('api:workspace-add-folder', async () => {
     if (canceled || filePaths.length === 0) return { data: null };
     
     await addWorkspaceFolder(filePaths[0]);
+    const folders = await getWorkspaceFolders();
+    setupWatcher(folders);
     return { data: filePaths[0] };
   } catch (error: any) {
     return { error: error.message };
@@ -153,6 +189,17 @@ ipcMain.handle('api:workspace-get-folders', async () => {
   try {
     const folders = await getWorkspaceFolders();
     return { data: folders };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-remove-folder', async (event, folderPath: string) => {
+  try {
+    await removeWorkspaceFolder(folderPath);
+    const folders = await getWorkspaceFolders();
+    setupWatcher(folders);
+    return { data: true };
   } catch (error: any) {
     return { error: error.message };
   }

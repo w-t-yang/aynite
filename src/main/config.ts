@@ -66,7 +66,7 @@ export async function initAppFolders() {
     configs: { 
       gemini: { apiKey: '', url: '' },
       deepseek: { apiKey: '', url: '' },
-      ollama: { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192 }
+      ollama: { url: 'http://localhost:11434', model: 'gemma:e4b', contextWindow: 8192 }
     } 
   };
   const appearanceDefault = { theme: 'dark' };

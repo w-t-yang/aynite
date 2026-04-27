@@ -63,6 +63,7 @@ export default function App() {
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [tabs, setTabs] = useState<Tab[]>([]);
+  const [workspaceFolders, setWorkspaceFolders] = useState<string[]>([]);
 
   const loadWorkspaceState = async () => {
     // @ts-ignore
@@ -88,6 +89,13 @@ export default function App() {
       setActiveTabId(validTabs.find(t => t.id === restoredActiveId) ? restoredActiveId : (validTabs.length > 0 ? validTabs[validTabs.length - 1].id : ''));
     }
     setWorkspaceReady(true);
+
+    // Load workspace folders for the chat agent
+    // @ts-ignore
+    const foldersRes = await window.api.getWorkspaceFolders();
+    if (foldersRes && Array.isArray(foldersRes.data)) {
+      setWorkspaceFolders(foldersRes.data);
+    }
   };
 
   useEffect(() => {
@@ -231,50 +239,90 @@ export default function App() {
   }, [activeTabId, tabs]);
 
   useEffect(() => {
+    // @ts-ignore
+    const unsubscribe = window.api.onFileSystemChange(({ event, path }) => {
+      if (event === 'unlink' || event === 'unlinkDir') {
+        window.dispatchEvent(new CustomEvent('file-deleted', { detail: path }));
+      }
+      // Note: renames are unlink + add. 
+      // If we want to support smooth rename transitions from external sources, 
+      // we'd need more complex tracking. For now, unlink will safely close the tab.
+    });
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMeta = e.metaKey || e.ctrlKey;
+      const isCtrl = e.ctrlKey;
+      const isMeta = e.metaKey;
+      const isShift = e.shiftKey;
+      const isCmd = isCtrl || isMeta;
       const key = e.key.toUpperCase();
-      
+
+      if (import.meta.env.DEV) {
+        console.log('App KeyDown:', { key: e.key, code: e.code, ctrl: isCtrl, meta: isMeta, alt: e.altKey, shift: isShift });
+      }
+
+      // 1. Manually handle Developer Tools (since we disabled the menu)
+      if (isCmd && isShift && key === 'I') {
+        // Electron allows opening dev tools via IPC if needed, but usually we just want to NOT block it
+        // If we are in the renderer, we can't easily open devtools, but we should NOT preventDefault.
+        return; 
+      }
+
+      // 2. Explicitly ignore any modifier + \ to allow system input method switching
+      if ((isCtrl || isMeta || e.altKey) && (e.key === '\\' || e.code === 'Backslash' || e.key === '|')) return;
+
       if (!settings) return;
 
-      if (isMeta && key === 'S') {
+      // 3. Match registered shortcuts
+      const checkMatch = (shortcutStr: string | undefined) => {
+        if (!shortcutStr) return false;
+        const parts = shortcutStr.toUpperCase().split('+');
+        const targetKey = parts[parts.length - 1];
+        const reqCtrl = parts.includes('CTRL');
+        const reqMeta = parts.includes('META');
+        const reqShift = parts.includes('SHIFT');
+        const reqAlt = parts.includes('ALT');
+
+        // Note: isCmd handles either CTRL or META depending on app logic, 
+        // but let's be specific based on the binding string.
+        if (reqCtrl && !isCtrl) return false;
+        if (reqMeta && !isMeta) return false;
+        if (reqShift && !isShift) return false;
+        if (reqAlt && !e.altKey) return false;
+        
+        // If the binding only specified 'META' but we are on Linux/Windows where META might be SUPER,
+        // and we usually treat CTRL as META for shortcuts, let's check that too.
+        if (parts.includes('META') && !isMeta && !isCtrl) return false;
+
+        return key === targetKey;
+      };
+
+      if (isCmd && key === 'S') {
         e.preventDefault();
         handleSaveActiveTab();
+        return;
       }
 
-      if (settings?.keybindings?.closeTab) {
-        const closeMatch = settings.keybindings.closeTab.toUpperCase().split('+');
-        const isCloseMeta = (closeMatch.includes('CTRL') || closeMatch.includes('META')) ? (e.ctrlKey || e.metaKey) : true;
-        if (isCloseMeta && key === closeMatch[closeMatch.length - 1]) {
-           if (activeTabId) {
-             e.preventDefault();
-             closeTab({ stopPropagation: () => {} } as any, activeTabId);
-           }
+      if (checkMatch(settings.keybindings?.closeTab)) {
+        if (activeTabId) {
+          e.preventDefault();
+          closeTab({ stopPropagation: () => {} } as any, activeTabId);
         }
+        return;
       }
       
-      const cmdMatch = settings.keybindings.commandTab.toUpperCase().split('+');
-      const chatMatch = settings.keybindings.chatTab.toUpperCase().split('+');
-
-      if (isMeta && (cmdMatch.includes('META') || cmdMatch.includes('CTRL'))) {
-        if (key === cmdMatch[cmdMatch.length - 1]) {
-          e.preventDefault();
-          setRightPanelOpen(true);
-          setTimeout(() => (window as any).focusChatInput?.(), 50);
-        }
-      }
-
-      if (isMeta && (chatMatch.includes('META') || chatMatch.includes('CTRL'))) {
-        if (key === chatMatch[chatMatch.length - 1]) {
-          e.preventDefault();
-          setRightPanelOpen(true);
-          setTimeout(() => (window as any).focusChatInput?.(), 50);
-        }
+      if (checkMatch(settings.keybindings?.commandTab) || checkMatch(settings.keybindings?.chatTab)) {
+        e.preventDefault();
+        setRightPanelOpen(true);
+        setTimeout(() => (window as any).focusChatInput?.(), 50);
+        return;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [settings, tabs, activeTabId]);
 
   useEffect(() => {
@@ -510,7 +558,7 @@ export default function App() {
             </div>
             
             <div className="flex-1 overflow-hidden relative bg-background">
-              <ChatTab settings={settings} />
+              <ChatTab settings={settings} workspaceFolders={workspaceFolders} />
             </div>
           </div>
         </div>

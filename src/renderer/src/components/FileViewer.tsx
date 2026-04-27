@@ -133,14 +133,27 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Explicitly ignore Ctrl + \ or Super + \ to allow system input method switching
+      if ((e.ctrlKey || e.metaKey) && (e.key === '\\' || e.code === 'Backslash')) return;
+
       const isAlt = e.altKey;
       const isShift = e.shiftKey;
       const isCmd = e.metaKey || e.ctrlKey;
       const key = e.key.toUpperCase();
 
-      // Don't capture keys if an input or another textarea is focused
-      if (e.target instanceof HTMLInputElement || (e.target instanceof HTMLTextAreaElement && e.target !== textareaRef.current)) {
+      // Don't capture keys if focus is NOT on the file viewer textarea
+      // This prevents view mode shortcuts from interfering with chat input, settings, etc.
+      const target = e.target as HTMLElement;
+      if (target !== textareaRef.current) {
         return;
+      }
+
+      // ─── Bypass System/Browser Shortcuts ───
+      // If it looks like a standard dev tool or system shortcut, don't even look at it
+      if (isCmd && (key === 'I' || key === 'R' || key === 'O' || key === 'P' && isShift)) {
+        // P+Shift might be print or something, but P+Ctrl is our Prev Line. 
+        // Let's be careful.
+        if (key === 'I' || key === 'R') return; 
       }
 
       if (showSearch) {
@@ -157,29 +170,35 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
       }
 
       if (!isEditing) {
-        // VIEW MODE BINDINGS
-        if (key === keybindings.viewMode.enterEdit) {
-          e.preventDefault();
-          setIsEditing(true);
-        } else if (key === keybindings.viewMode.moveDown) {
+        const isPlainKey = !isCmd && !isAlt && !isShift;
+
+        // Helper to check if a key matches a viewMode binding
+        const isViewBinding = (binding: string | undefined) => isPlainKey && key === binding?.toUpperCase();
+
+        // 1. Single character view mode shortcuts
+        if (isViewBinding(keybindings.viewMode.enterEdit)) {
+          e.preventDefault(); setIsEditing(true);
+        } else if (isViewBinding(keybindings.viewMode.moveDown)) {
           e.preventDefault(); moveCursor('down');
-        } else if (key === keybindings.viewMode.moveUp) {
+        } else if (isViewBinding(keybindings.viewMode.moveUp)) {
           e.preventDefault(); moveCursor('up');
-        } else if (key === keybindings.viewMode.moveLeft) {
+        } else if (isViewBinding(keybindings.viewMode.moveLeft)) {
           e.preventDefault(); moveCursor('left');
-        } else if (key === keybindings.viewMode.moveRight) {
+        } else if (isViewBinding(keybindings.viewMode.moveRight)) {
           e.preventDefault(); moveCursor('right');
-        } else if (e.key === keybindings.viewMode.search) {
+        } else if (isPlainKey && e.key === keybindings.viewMode.search) {
           e.preventDefault();
           setShowSearch(true);
           setTimeout(() => searchInputRef.current?.focus(), 50);
-        } else if (isCmd && key === 'P') { // Prev Line
+        } 
+        // 2. Modifer-based shortcuts
+        else if (isCmd && key === 'P') { 
           e.preventDefault(); moveCursor('up');
-        } else if (isCmd && key === 'N') { // Next Line
+        } else if (isCmd && key === 'N') { 
           e.preventDefault(); moveCursor('down');
-        } else if (isCmd && key === 'F') { // Forward char
+        } else if (isCmd && key === 'F') { 
           e.preventDefault(); moveCursor('right');
-        } else if (isCmd && key === 'B') { // Backward char
+        } else if (isCmd && key === 'B') { 
           e.preventDefault(); moveCursor('left');
         } else if (isCmd && key === 'A') { // Start of Line
           e.preventDefault();

@@ -201,3 +201,62 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
+
+/* ─── Tiptap Chat Input Styles ────────────────────────────────────── */
+
+.chat-input-editor {
+  word-break: break-word;
+}
+
+.chat-input-editor p {
+  margin: 0;
+}
+
+.chat-input-editor .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Mention Tags */
+.mention {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mention-file {
+  background: rgba(59, 130, 246, 0.15);
+  color: rgb(96, 165, 250);
+}
+
+.mention-skill {
+  background: rgba(168, 85, 247, 0.15);
+  color: rgb(192, 132, 252);
+}
+
+.mention-command {
+  background: rgba(234, 179, 8, 0.15);
+  color: rgb(250, 204, 21);
+}
+
+/* Tippy Popup */
+.tippy-box {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tippy-content {
+  padding: 0 !important;
+}
+
+.tippy-arrow {
+  display: none !important;
+}

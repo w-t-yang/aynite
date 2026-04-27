@@ -42,16 +42,35 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   } | null>(null);
 
   useEffect(() => {
+    // @ts-ignore
+    const unsubscribe = window.api.onFileSystemChange(async ({ event, path }) => {
+      // @ts-ignore
+      const dirname = await window.api.dirname(path);
+      // Reload the parent directory to refresh the tree view
+      window.dispatchEvent(new CustomEvent('reload-folder', { detail: dirname }));
+      
+      // If it's a directory change itself (e.g. its content changed), reload it too
+      if (event === 'add' || event === 'unlink' || event === 'addDir' || event === 'unlinkDir') {
+         window.dispatchEvent(new CustomEvent('reload-folder', { detail: path }));
+      }
+      
+      // In case a root folder was added/removed externally, reload workspace data
+      if (workspaces.length > 0) {
+        loadWorkspaceData();
+      }
+    });
+
     const closeMenu = () => setContextMenu(null);
     window.addEventListener('click', closeMenu);
     window.addEventListener('contextmenu', closeMenu);
     return () => {
+      unsubscribe();
       window.removeEventListener('click', closeMenu);
       window.removeEventListener('contextmenu', closeMenu);
     };
-  }, []);
+  }, [workspaces]);
 
-  const handleCtxAction = async (action: 'new-file' | 'new-folder' | 'rename' | 'delete') => {
+  const handleCtxAction = async (action: 'new-file' | 'new-folder' | 'rename' | 'delete' | 'remove-from-workspace') => {
     if (!contextMenu) return;
     const { file } = contextMenu;
     setContextMenu(null); // Close menu instantly
@@ -80,6 +99,9 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
           // @ts-ignore
           await window.api.deleteFile(file.path);
           window.dispatchEvent(new CustomEvent('file-deleted', { detail: file.path }));
+        } else if (action === 'remove-from-workspace') {
+          // @ts-ignore
+          await window.api.removeWorkspaceFolder(file.path);
         }
         
         window.dispatchEvent(new CustomEvent('reload-folder', { detail: reloadPath }));
@@ -109,7 +131,13 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     } else if (action === 'delete') {
       setConfirmModal({
         isOpen: true,
-        message: `Are you sure you want to delete ${file.name}?`,
+        message: `Are you sure you want to delete "${file.name}"? This action will permanently delete it from disk.`,
+        onConfirm: async () => await executeAction()
+      });
+    } else if (action === 'remove-from-workspace') {
+      setConfirmModal({
+        isOpen: true,
+        message: `Are you sure you want to remove "${file.name}" from this workspace? The folder will NOT be deleted from disk.`,
         onConfirm: async () => await executeAction()
       });
     }
@@ -342,7 +370,22 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
             </>
           )}
           <button onClick={() => { handleCtxAction('rename'); }} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Rename</button>
-          <button onClick={() => { handleCtxAction('delete'); }} className="px-3 py-1.5 text-left hover:bg-accent text-red-500 hover:bg-red-500/10 transition-colors">Delete</button>
+          
+          {rootFiles.some(rf => rf.path === contextMenu.file.path) ? (
+            <button 
+              onClick={() => { handleCtxAction('remove-from-workspace'); }} 
+              className="px-3 py-1.5 text-left hover:bg-accent text-amber-500 hover:bg-amber-500/10 transition-colors"
+            >
+              Remove from Workspace
+            </button>
+          ) : (
+            <button 
+              onClick={() => { handleCtxAction('delete'); }} 
+              className="px-3 py-1.5 text-left hover:bg-accent text-red-500 hover:bg-red-500/10 transition-colors"
+            >
+              Delete
+            </button>
+          )}
         </div>
       )}
     </div>
