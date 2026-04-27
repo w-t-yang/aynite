@@ -15,6 +15,8 @@ type Tab = {
   title: string;
   content?: string;
   filepath?: string;
+  originalContent?: string;
+  isDirty?: boolean;
 };
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -37,8 +39,24 @@ export default function App() {
     // @ts-ignore
     const res = await window.api.getWorkspaceState();
     if (res && res.data) {
-      setTabs(res.data.tabs || []);
-      setActiveTabId(res.data.activeTabId || '');
+      const restoredTabs = res.data.tabs || [];
+      const validTabs: Tab[] = [];
+
+      for (const tab of restoredTabs) {
+        if (tab.type === 'file' && tab.filepath) {
+          // @ts-ignore
+          const fRes = await window.api.readFile(tab.filepath);
+          if (fRes && !fRes.error) {
+             validTabs.push({ ...tab, content: fRes.data, originalContent: fRes.data, isDirty: false });
+          }
+        } else {
+          validTabs.push(tab);
+        }
+      }
+
+      setTabs(validTabs);
+      const restoredActiveId = res.data.activeTabId;
+      setActiveTabId(validTabs.find(t => t.id === restoredActiveId) ? restoredActiveId : (validTabs.length > 0 ? validTabs[validTabs.length - 1].id : ''));
     }
     setWorkspaceReady(true);
   };
@@ -128,9 +146,22 @@ export default function App() {
   const handleFileContentChange = (content: string) => {
     setTabs(prev => prev.map(tab => 
       tab.id === activeTabId 
-        ? { ...tab, content } 
+        ? { ...tab, content, isDirty: content !== tab.originalContent } 
         : tab
     ));
+  };
+
+  const handleSaveActiveTab = async () => {
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab?.type === 'file' && activeTab.filepath && activeTab.isDirty) {
+      // @ts-ignore
+      await window.api.saveFile(activeTab.filepath, activeTab.content || '');
+      setTabs(prev => prev.map(tab => 
+        tab.id === activeTabId
+          ? { ...tab, isDirty: false, originalContent: activeTab.content }
+          : tab
+      ));
+    }
   };
 
   useEffect(() => {
@@ -145,8 +176,12 @@ export default function App() {
 
   useEffect(() => {
     if (!workspaceReady) return;
+    const strippedTabs = tabs.map(t => {
+      const { content, originalContent, isDirty, ...rest } = t;
+      return rest;
+    });
     // @ts-ignore
-    window.api.saveWorkspaceState(tabs, activeTabId).catch(console.error);
+    window.api.saveWorkspaceState(strippedTabs, activeTabId).catch(console.error);
   }, [activeTabId, tabs, workspaceReady]);
 
   useEffect(() => {
@@ -171,6 +206,11 @@ export default function App() {
       const isMeta = e.metaKey || e.ctrlKey;
       const key = e.key.toUpperCase();
       
+      if (isMeta && key === 'S') {
+        e.preventDefault();
+        handleSaveActiveTab();
+      }
+      
       if (!settings) return;
       const cmdMatch = settings.keybindings.commandTab.toUpperCase().split('+');
       const chatMatch = settings.keybindings.chatTab.toUpperCase().split('+');
@@ -194,7 +234,51 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [settings]);
+  }, [settings, tabs, activeTabId]);
+
+  useEffect(() => {
+    const handleFileDeleted = (e: any) => {
+      const p = e.detail;
+      const newTabs = tabs.filter(t => !t.filepath || (t.filepath !== p && !t.filepath.startsWith(p + '/')));
+      setTabs(newTabs);
+      
+      const activeT = tabs.find(t => t.id === activeTabId);
+      if (activeT?.filepath && (activeT.filepath === p || activeT.filepath.startsWith(p + '/'))) {
+        if (newTabs.length > 0) setActiveTabId(newTabs[newTabs.length - 1].id);
+        else setActiveTabId('');
+      }
+    };
+    
+    const handleFileRenamed = (e: any) => {
+      const { oldPath, newPath } = e.detail;
+      let updatedActiveId = activeTabId;
+
+      const newTabs = tabs.map(t => {
+        if (t.filepath === oldPath) {
+          const newName = newPath.split(/[\/\\]/).pop() || newPath;
+          const newId = `file-${newPath}`;
+          if (activeTabId === t.id) updatedActiveId = newId;
+          return { ...t, id: newId, title: newName, filepath: newPath };
+        } else if (t.filepath && t.filepath.startsWith(oldPath + '/')) {
+          const newChildPath = newPath + t.filepath.substring(oldPath.length);
+          const newId = `file-${newChildPath}`;
+          if (activeTabId === t.id) updatedActiveId = newId;
+          return { ...t, id: newId, filepath: newChildPath };
+        }
+        return t;
+      });
+      
+      setTabs(newTabs);
+      if (updatedActiveId !== activeTabId) setActiveTabId(updatedActiveId);
+    };
+
+    window.addEventListener('file-deleted', handleFileDeleted);
+    window.addEventListener('file-renamed', handleFileRenamed);
+    return () => {
+      window.removeEventListener('file-deleted', handleFileDeleted);
+      window.removeEventListener('file-renamed', handleFileRenamed);
+    };
+  }, [tabs, activeTabId]);
 
   const handleSelectFile = (file: { name: string; path: string }, content: string) => {
     const tabId = `file-${file.path}`;
@@ -204,7 +288,9 @@ export default function App() {
         type: 'file',
         title: file.name,
         filepath: file.path,
-        content
+        content,
+        originalContent: content,
+        isDirty: false
       }]);
     }
     setActiveTabId(tabId);
@@ -246,6 +332,7 @@ export default function App() {
               onSelectFile={handleSelectFile} 
               onOpenSettings={openSettings} 
               onClose={() => setLeftPanelOpen(false)} 
+              dirtyFiles={tabs.filter(t => t.isDirty && t.filepath).map(t => t.filepath as string)}
             />
           </div>
           <div 
@@ -298,7 +385,9 @@ export default function App() {
               >
                 {tab.type === 'file' && <FileText size={14} className="mr-2 shrink-0" />}
                 {tab.type === 'settings' && <SettingsIcon size={14} className="mr-2 shrink-0" />}
-                <span className="truncate text-sm font-medium">{tab.title}</span>
+                <span className={cn("truncate text-sm font-medium", tab.isDirty && "italic")}>
+                   {tab.title}{tab.isDirty && " •"}
+                </span>
                 
                 <button 
                   onClick={(e) => closeTab(e, tab.id)}
@@ -335,6 +424,8 @@ export default function App() {
                     filename={activeTab.title} 
                     content={activeTab.content || ''} 
                     onChange={handleFileContentChange}
+                    onSave={handleSaveActiveTab}
+                    isDirty={activeTab.isDirty}
                   />
                 </div>
               )}

@@ -163,6 +163,30 @@ export async function addWorkspaceFolder(folderPath: string) {
   }
 }
 
+export async function removeWorkspaceFolder(folderPath: string) {
+  const wsConfig = await getWorkspacesConfig();
+  const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
+  try {
+    const data = JSON.parse(await fs.readFile(workspacePath, 'utf-8'));
+    if (data.folders.includes(folderPath)) {
+      data.folders = data.folders.filter((f: string) => f !== folderPath);
+      await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
+    }
+  } catch {}
+}
+
+export async function renameWorkspaceFolder(oldPath: string, newPath: string) {
+  const wsConfig = await getWorkspacesConfig();
+  const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
+  try {
+    const data = JSON.parse(await fs.readFile(workspacePath, 'utf-8'));
+    if (data.folders.includes(oldPath)) {
+      data.folders = data.folders.map((f: string) => f === oldPath ? newPath : f);
+      await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
+    }
+  } catch {}
+}
+
 export async function getWorkspaceFolders() {
   const wsConfig = await getWorkspacesConfig();
   const activeWs = wsConfig.active;

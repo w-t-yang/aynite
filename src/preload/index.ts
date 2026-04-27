@@ -14,7 +14,17 @@ const api = {
   addWorkspaceFolder: () => ipcRenderer.invoke('api:workspace-add-folder'),
   getWorkspaceFolders: () => ipcRenderer.invoke('api:workspace-get-folders'),
   getWorkspaceState: () => ipcRenderer.invoke('api:workspace-get-state'),
-  saveWorkspaceState: (tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { tabs, activeTabId })
+  saveWorkspaceState: (tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { tabs, activeTabId }),
+  
+  // File Ops API
+  createFile: (path: string, isDirectory: boolean) => ipcRenderer.invoke('api:file-create', { path, isDirectory }),
+  renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('api:file-rename', { oldPath, newPath }),
+  deleteFile: (path: string) => ipcRenderer.invoke('api:file-delete', path),
+  saveFile: (path: string, content: string) => ipcRenderer.invoke('api:file-save', { path, content }),
+  
+  // Util
+  joinPath: (...paths: string[]) => require('path').join(...paths),
+  dirname: (p: string) => require('path').dirname(p)
 };
 
 if (process.contextIsolated) {

@@ -3,7 +3,7 @@ import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder } from './config';
 
 const execAsync = promisify(exec);
 
@@ -175,3 +175,47 @@ ipcMain.handle('api:workspace-save-state', async (event, { tabs, activeTabId }: 
     return { error: error.message };
   }
 });
+
+// File manipulation IPC handlers
+ipcMain.handle('api:file-create', async (event, { path: filePath, isDirectory }) => {
+  try {
+    if (isDirectory) {
+      await fs.mkdir(filePath, { recursive: true });
+    } else {
+      await fs.writeFile(filePath, '', 'utf-8');
+    }
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:file-rename', async (event, { oldPath, newPath }) => {
+  try {
+    await fs.rename(oldPath, newPath);
+    await renameWorkspaceFolder(oldPath, newPath);
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:file-delete', async (event, filePath: string) => {
+  try {
+    await fs.rm(filePath, { recursive: true, force: true });
+    await removeWorkspaceFolder(filePath);
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
+  try {
+    await fs.writeFile(filePath, content, 'utf-8');
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+

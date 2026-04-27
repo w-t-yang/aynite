@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Pencil, Eye } from 'lucide-react';
+import { Pencil, Eye, Save } from 'lucide-react';
 
 interface FileViewerProps {
   filename: string;
   content: string;
   onChange?: (content: string) => void;
+  onSave?: () => void;
+  isDirty?: boolean;
 }
 
-export default function FileViewer({ filename, content, onChange }: FileViewerProps) {
+export default function FileViewer({ filename, content, onChange, onSave, isDirty }: FileViewerProps) {
   const [localContent, setLocalContent] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
@@ -105,14 +107,26 @@ export default function FileViewer({ filename, content, onChange }: FileViewerPr
         <div className="flex items-center gap-4">
            <span className="font-medium truncate max-w-[200px]">{filename}</span>
            {isTextFile && (
-             <button 
-                onClick={() => setIsEditing(!isEditing)} 
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors"
-                title={isEditing ? "Switch to View Mode" : "Switch to Edit Mode"}
-             >
-                {isEditing ? <Pencil size={12} className="text-blue-500" /> : <Eye size={12} />}
-                <span>{isEditing ? 'Editing' : 'Read Only'}</span>
-             </button>
+             <div className="flex items-center gap-2">
+               {isDirty && (
+                 <button
+                   onClick={onSave}
+                   className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors mr-2"
+                   title="Save File (Cmd/Ctrl + S)"
+                 >
+                   <Save size={12} />
+                   <span>Save</span>
+                 </button>
+               )}
+               <button 
+                  onClick={() => setIsEditing(!isEditing)} 
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors"
+                  title={isEditing ? "Switch to View Mode" : "Switch to Edit Mode"}
+               >
+                  {isEditing ? <Pencil size={12} className="text-blue-500" /> : <Eye size={12} />}
+                  <span>{isEditing ? 'Editing' : 'Read Only'}</span>
+               </button>
+             </div>
            )}
         </div>
         <div className="flex gap-4 items-center opacity-80">
