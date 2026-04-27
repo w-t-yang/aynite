@@ -199,11 +199,12 @@ export async function runAgentLoop(
   workspaceFolders: string[],
   onEvent: (event: AgentStepEvent) => void,
   requestApproval: (command: string, cwd: string) => Promise<boolean>,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  skillContext?: string
 ): Promise<AgentMessage[]> {
 
   const messages: AgentMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: SYSTEM_PROMPT + (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to these specialized skills. Follow their instructions strictly:\n${skillContext}` : "") },
     ...history,
     { role: 'user', content: userMessage },
   ];

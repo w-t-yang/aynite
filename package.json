@@ -19,6 +19,7 @@
     "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "js-yaml": "^4.1.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.14",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.14.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

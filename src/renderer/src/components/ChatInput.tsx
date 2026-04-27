@@ -9,7 +9,6 @@ import tippy, { Instance as TippyInstance } from 'tippy.js';
 
 export interface ChatInputHandle {
   focus: () => void;
-  clear: () => void;
 }
 
 interface ChatInputProps {
@@ -18,23 +17,7 @@ interface ChatInputProps {
   workspaceFolders?: string[];
 }
 
-// ─── Dummy registries (skills & commands) ────────────────────────────
-
-const DUMMY_SKILLS = [
-  { id: 'review', label: 'review' },
-  { id: 'summarize', label: 'summarize' },
-  { id: 'translate', label: 'translate' },
-  { id: 'outline', label: 'outline' },
-  { id: 'explain', label: 'explain' },
-];
-
-const DUMMY_COMMANDS = [
-  { id: 'build', label: 'build' },
-  { id: 'test', label: 'test' },
-  { id: 'lint', label: 'lint' },
-  { id: 'format', label: 'format' },
-  { id: 'dev', label: 'dev' },
-];
+// Real registries will be loaded via API
 
 // ─── Suggestion List Component ───────────────────────────────────────
 
@@ -207,8 +190,12 @@ async function flattenWorkspaceFiles(
 const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   ({ onSubmit, disabled, workspaceFolders = [] }, ref) => {
     const [fileItems, setFileItems] = useState<{ id: string; label: string }[]>([]);
-    // Use a ref so that the Tiptap suggestion closure always reads the latest items
+    const [skillItems, setSkillItems] = useState<{ id: string; label: string }[]>([]);
+    const [commandItems, setCommandItems] = useState<{ id: string; label: string }[]>([]);
+
     const fileItemsRef = React.useRef<{ id: string; label: string }[]>([]);
+    const skillItemsRef = React.useRef<{ id: string; label: string }[]>([]);
+    const commandItemsRef = React.useRef<{ id: string; label: string }[]>([]);
 
     // Load workspace files for @ suggestions
     useEffect(() => {
@@ -218,8 +205,32 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           setFileItems(items);
         });
       }
+      
+      // Load skills and commands
+      // @ts-ignore
+      window.api.getAvailableSkills().then((res: any) => {
+        if (res.data) {
+          const items = res.data.map((s: any) => ({ id: s.path, label: s.name }));
+          skillItemsRef.current = items;
+          setSkillItems(items);
+        }
+      });
+      // @ts-ignore
+      window.api.getAvailableCommands().then((res: any) => {
+        if (res.data) {
+          const items = res.data.map((c: any) => ({ id: c.path, label: c.name }));
+          commandItemsRef.current = items;
+          setCommandItems(items);
+        }
+      });
     }, [workspaceFolders]);
-
+    
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        editor?.commands.focus();
+      }
+    }));
+    
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
@@ -242,13 +253,13 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         Mention.extend({ name: 'skillMention' }).configure({
           HTMLAttributes: { class: 'mention mention-skill' },
           suggestion: createSuggestion('/', (query) =>
-            DUMMY_SKILLS.filter((item) => item.label.includes(query))
+            skillItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
           ),
         }),
         Mention.extend({ name: 'commandMention' }).configure({
           HTMLAttributes: { class: 'mention mention-command' },
           suggestion: createSuggestion('>', (query) =>
-            DUMMY_COMMANDS.filter((item) => item.label.includes(query))
+            commandItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
           ),
         }),
       ],

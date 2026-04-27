@@ -1,8 +1,9 @@
 import { app } from 'electron';
 import fs from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync } from 'fs';
 import path from 'path';
 import os from 'os';
+import yaml from 'js-yaml';
 
 export function getConfigDir() {
   if (process.platform === 'win32') {
@@ -92,6 +93,38 @@ export async function initAppFolders() {
   if (!existsSync(defaultWorkspacePath)) {
     await fs.writeFile(defaultWorkspacePath, JSON.stringify({ folders: [], tabs: [], activeTabId: '' }, null, 2), 'utf-8');
   }
+
+  // Ensure skills.json exists in ~/.citron/skills
+  const skillsDir = path.join(baseDir, 'skills');
+  const skillsConfigPath = path.join(skillsDir, 'skills.json');
+  if (!existsSync(skillsConfigPath)) {
+    await fs.writeFile(skillsConfigPath, JSON.stringify({ folders: [skillsDir] }, null, 2), 'utf-8');
+  }
+
+  // Ensure commands.json exists in ~/.citron/commands
+  const commandsDir = path.join(baseDir, 'commands');
+  const commandsConfigPath = path.join(commandsDir, 'commands.json');
+  if (!existsSync(commandsConfigPath)) {
+    await fs.writeFile(commandsConfigPath, JSON.stringify({ folders: [commandsDir] }, null, 2), 'utf-8');
+  }
+
+  // Ensure default skills exist
+  const skillsToInstall = ['skill-creator', 'command-creator', 'hello-skill'];
+  for (const skillName of skillsToInstall) {
+    const skillPath = path.join(skillsDir, skillName);
+    if (!existsSync(skillPath)) {
+      await restoreSkill(skillName);
+    }
+  }
+
+  // Ensure default commands exist
+  const commandsToInstall = ['hello-command'];
+  for (const cmdName of commandsToInstall) {
+    const cmdPath = path.join(commandsDir, cmdName);
+    if (!existsSync(cmdPath)) {
+      await restoreCommand(cmdName);
+    }
+  }
 }
 
 export async function loadConfig() {
@@ -135,11 +168,15 @@ export async function loadConfig() {
     await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
   }
 
+  const skills = await getSkillsConfig();
+
   return {
     theme: appearance.theme || 'dark',
     keybindings: keybindings,
     aiProvider: ai.provider || 'gemini',
     aiConfigs: ai.configs || {},
+    skills,
+    commands: await getCommandsConfig(),
     ...mainConfig
   };
 }
@@ -160,7 +197,176 @@ export async function saveConfig(settings: any) {
   await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'config.json'), JSON.stringify(mainConfig, null, 2), 'utf-8');
   
+  if (settings.skills) {
+    await saveSkillsConfig(settings.skills);
+  }
+  if (settings.commands) {
+    await saveCommandsConfig(settings.commands);
+  }
+
   return true;
+}
+
+// Skills Logic
+
+export async function getSkillsConfig() {
+  const skillsDir = path.join(getConfigDir(), 'skills');
+  const configPath = path.join(skillsDir, 'skills.json');
+  try {
+    const data = await fs.readFile(configPath, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return { folders: [skillsDir] };
+  }
+}
+
+export async function saveSkillsConfig(config: any) {
+  const skillsDir = path.join(getConfigDir(), 'skills');
+  const configPath = path.join(skillsDir, 'skills.json');
+  await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+}
+
+export async function restoreSkill(skillName: string) {
+  const skillsDir = path.join(getConfigDir(), 'skills');
+  const bundledSkillsPath = app.isPackaged 
+    ? path.join(process.resourcesPath, 'skills') 
+    : path.join(app.getAppPath(), 'resources', 'skills');
+  
+  const srcDir = path.join(bundledSkillsPath, skillName);
+  const destDir = path.join(skillsDir, skillName);
+
+  if (existsSync(srcDir)) {
+    await fs.cp(srcDir, destDir, { recursive: true });
+    return true;
+  }
+  return false;
+}
+
+export async function restoreDefaultSkills() {
+  const skillsToRestore = ['skill-creator', 'command-creator', 'hello-skill'];
+  let allSuccess = true;
+  for (const skill of skillsToRestore) {
+    const success = await restoreSkill(skill);
+    if (!success) allSuccess = false;
+  }
+  return allSuccess;
+}
+
+export async function listAvailableSkills() {
+  const config = await getSkillsConfig();
+  const skills: any[] = [];
+
+  for (const folder of config.folders) {
+    if (!existsSync(folder)) continue;
+    try {
+      const items = readdirSync(folder);
+      for (const item of items) {
+        const itemPath = path.join(folder, item);
+        const skillMdPath = path.join(itemPath, 'SKILL.md');
+        if (existsSync(skillMdPath)) {
+          const content = await fs.readFile(skillMdPath, 'utf-8');
+          const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
+          if (match) {
+            try {
+              const meta: any = yaml.load(match[1]);
+              skills.push({
+                name: meta.name || item,
+                description: meta.description || '',
+                path: itemPath
+              });
+            } catch (e) {
+              console.error(`Error parsing YAML in ${skillMdPath}`, e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`Error scanning folder ${folder}`, e);
+    }
+  }
+  return skills;
+}
+
+// Commands Logic
+
+export async function getCommandsConfig() {
+  const commandsDir = path.join(getConfigDir(), 'commands');
+  const configPath = path.join(commandsDir, 'commands.json');
+  try {
+    const data = await fs.readFile(configPath, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return { folders: [commandsDir] };
+  }
+}
+
+export async function saveCommandsConfig(config: any) {
+  const commandsDir = path.join(getConfigDir(), 'commands');
+  const configPath = path.join(commandsDir, 'commands.json');
+  await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+}
+
+export async function listAvailableCommands() {
+  const config = await getCommandsConfig();
+  const commands: any[] = [];
+
+  for (const folder of config.folders) {
+    if (!existsSync(folder)) continue;
+    try {
+      const items = readdirSync(folder);
+      for (const item of items) {
+        const itemPath = path.join(folder, item);
+        const cmdMdPath = path.join(itemPath, 'COMMAND.md');
+        if (existsSync(cmdMdPath)) {
+          const content = await fs.readFile(cmdMdPath, 'utf-8');
+          const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
+          if (match) {
+            try {
+              const meta: any = yaml.load(match[1]);
+              commands.push({
+                name: meta.name || item,
+                description: meta.description || '',
+                parameters: meta.parameters || [],
+                example: meta.example || '',
+                path: itemPath
+              });
+            } catch (e) {
+              console.error(`Error parsing YAML in ${cmdMdPath}`, e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`Error scanning folder ${folder}`, e);
+    }
+  }
+  return commands;
+}
+
+export async function restoreDefaultCommands() {
+  const commandsToRestore = ['hello-command'];
+  let allSuccess = true;
+  for (const cmd of commandsToRestore) {
+    const success = await restoreCommand(cmd);
+    if (!success) allSuccess = false;
+  }
+  return allSuccess;
+}
+
+export async function restoreCommand(commandName: string) {
+  const commandsDir = path.join(getConfigDir(), 'commands');
+  const bundledCommandsPath = app.isPackaged 
+    ? path.join(process.resourcesPath, 'commands') 
+    : path.join(app.getAppPath(), 'resources', 'commands');
+  
+  const srcDir = path.join(bundledCommandsPath, commandName);
+  const destDir = path.join(commandsDir, commandName);
+
+  if (existsSync(srcDir)) {
+    await fs.cp(srcDir, destDir, { recursive: true });
+    return true;
+  }
+  return false;
 }
 
 // Workspace Logic

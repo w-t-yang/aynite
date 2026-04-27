@@ -115,11 +115,42 @@ function ApprovalModal({
 
 // ─── Message Rendering with Mentions ────────────────────────────────
 
-function MessageContent({ text, role }: { text: string; role: 'user' | 'model' }) {
+function MessageContent({ text, role, onOpenFile }: { text: string; role: 'user' | 'model', onOpenFile?: (path: string) => void }) {
   if (role === 'model') {
+    const parts = [];
+    let lastPos = 0;
+    const viewRegex = /\[\[View:(.*?)\]\]/g;
+    let match;
+
+    while ((match = viewRegex.exec(text)) !== null) {
+      if (match.index > lastPos) {
+        parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{text.substring(lastPos, match.index)}</Markdown>);
+      }
+      const path = match[1];
+      parts.push(
+        <button
+          key={`view-${match.index}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onOpenFile?.(path);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-xs font-medium transition-all my-2 group"
+        >
+          <FileText size={14} className="group-hover:scale-110 transition-transform" /> 
+          <span>View Definition</span>
+        </button>
+      );
+      lastPos = viewRegex.lastIndex;
+    }
+
+    if (lastPos < text.length) {
+      parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{text.substring(lastPos)}</Markdown>);
+    }
+
     return (
       <div className="markdown-body prose prose-sm dark:prose-invert max-w-none break-words">
-        <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+        {parts}
       </div>
     );
   }
@@ -171,9 +202,13 @@ function MessageContent({ text, role }: { text: string; role: 'user' | 'model' }
 export default function ChatTab({
   settings,
   workspaceFolders = [],
+  onOpenFile,
+  activeTabPath,
 }: {
   settings: SettingsState;
   workspaceFolders?: string[];
+  onOpenFile?: (file: { name: string; path: string, isDirectory: boolean }, content: string) => void;
+  activeTabPath?: string;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -199,6 +234,21 @@ export default function ChatTab({
       delete (window as any).focusChatInput;
     };
   }, []);
+
+  const handleOpenFile = async (filepath: string) => {
+    if (!onOpenFile) return;
+    try {
+      // @ts-ignore
+      const res = await window.api.readFile(filepath);
+      if (res && res.data) {
+        const name = filepath.split(/[/\\]/).pop() || filepath;
+        // Ensure we pass the exactly same structure as Sidebar
+        onOpenFile({ name, path: filepath, isDirectory: false }, res.data);
+      }
+    } catch (e) {
+      console.error('Failed to open file', e);
+    }
+  };
 
   const genId = () => `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -233,6 +283,130 @@ export default function ChatTab({
       setMessages((prev) => [...prev, userMsg]);
       setLoading(true);
 
+      // Handle direct lookup if message ends with ?
+      // Format: /skill[label](id)? or >cmd[label](id)?
+      const trimmed = text.trim();
+      if (trimmed.endsWith('?')) {
+        const skillMatch = trimmed.match(/^\/skill\[(.*?)\]\((.*?)\)\s*\?$/);
+        const cmdMatch = trimmed.match(/^>cmd\[(.*?)\]\((.*?)\)\s*\?$/);
+
+        if (skillMatch || cmdMatch) {
+          const type = skillMatch ? 'skill' : 'command';
+          const name = (skillMatch || cmdMatch)![1];
+          
+          try {
+            // @ts-ignore
+            const res = type === 'skill' ? await window.api.getAvailableSkills() : await window.api.getAvailableCommands();
+            if (res.data) {
+               const item = res.data.find((i: any) => i.name === name);
+               if (item) {
+                 const mdPath = type === 'skill' ? `${item.path}/SKILL.md` : `${item.path}/COMMAND.md`;
+                 setMessages((prev) => [...prev, {
+                   id: genId(),
+                   role: 'model',
+                   text: `### ${type === 'skill' ? 'Skill' : 'Command'}: ${name}\n\n${item.description || 'No description provided.'}\n[[View:${mdPath}]]`
+                 }]);
+                 setLoading(false);
+                 return;
+               }
+            }
+          } catch (e) {
+            console.error('Lookup error', e);
+          }
+        }
+      }
+
+      // Handle Direct Command Execution (if not a lookup)
+      const commandMentionRegex = />cmd\[(.*?)\]\((.*?)\)/g;
+      const cmdMatches = [...text.matchAll(commandMentionRegex)];
+      
+      if (cmdMatches.length > 0) {
+        // 1. Multiple commands check
+        if (cmdMatches.length > 1) {
+          setMessages((prev) => [...prev, {
+            id: genId(),
+            role: 'model',
+            text: `⚠️ **Error**: Multiple commands detected. Please provide only one command at a time.`
+          }]);
+          setLoading(false);
+          return;
+        }
+
+        const match = cmdMatches[0];
+        const textBefore = text.substring(0, match.index!).trim();
+        
+        // 2. Leading text check
+        if (textBefore.length > 0) {
+          setMessages((prev) => [...prev, {
+            id: genId(),
+            role: 'model',
+            text: `⚠️ **Error**: Please start your message with the command mention. Standard text before commands is not allowed.`
+          }]);
+          setLoading(false);
+          return;
+        }
+
+        const cmdName = match[1];
+        const cmdPath = match[2];
+        const trailingText = text.substring(match.index! + match[0].length).trim();
+        
+        try {
+          // @ts-ignore
+          const res = await window.api.getAvailableCommands();
+          const cmdMeta = res.data?.find((c: any) => c.name === cmdName || c.path === cmdPath);
+          
+          if (cmdMeta) {
+            // 3. Parameter validation
+            const requiredParams = (cmdMeta.parameters || []).filter((p: any) => p.required);
+            
+            // For now, we treat the trailing text as the first required parameter if provided.
+            // In the future, we might support named parameters.
+            if (requiredParams.length > 0 && !trailingText) {
+              setMessages((prev) => [...prev, {
+                id: genId(),
+                role: 'model',
+                text: `⚠️ **Required Parameter Missing**: This command expects parameters.\n\n**Example**: ${cmdMeta.example || `>${cmdName} some-value`}`
+              }]);
+              setLoading(false);
+              return;
+            }
+
+            // 4. Execution
+            const params = trailingText ? [trailingText] : [];
+            // @ts-ignore
+            const runRes = await window.api.runDirectCommand({ 
+              commandPath: cmdMeta.path, 
+              params, 
+              currentFile: activeTabPath 
+            });
+
+            if (runRes.error) {
+              setMessages((prev) => [...prev, {
+                id: genId(),
+                role: 'model',
+                text: `❌ **Command Error**:\n\`\`\`\n${runRes.error}\n${runRes.stderr || ''}\n\`\`\``
+              }]);
+            } else {
+              setMessages((prev) => [...prev, {
+                id: genId(),
+                role: 'model',
+                text: `✅ **Results**:\n${runRes.data?.stdout || 'Command completed with no output.'}`
+              }]);
+            }
+            setLoading(false);
+            return;
+          }
+        } catch (e: any) {
+          setMessages((prev) => [...prev, {
+            id: genId(),
+            role: 'model',
+            text: `❌ **System Error**: ${e.message}`
+          }]);
+          setLoading(false);
+          return;
+        }
+      }
+
       const provider = settings.aiProvider || 'gemini';
 
       // WIP for non-ollama providers
@@ -259,8 +433,34 @@ export default function ChatTab({
         contextWindow: settings.aiConfigs?.ollama?.contextWindow || 8192,
       };
 
+      // 5. Extract Skills from history and current text
+      const skillMentionRegex = /\/skill\[(.*?)\]\((.*?)\)/g;
+      const skillPaths = new Set<string>();
+      
+      // Search in current message
+      const currentMatches = [...text.matchAll(skillMentionRegex)];
+      currentMatches.forEach(m => skillPaths.add(m[2]));
+      
+      // Search in history
+      messages.forEach(msg => {
+        const matches = [...msg.text.matchAll(skillMentionRegex)];
+        matches.forEach(m => skillPaths.add(m[2]));
+      });
+
+      let skillContext = "";
+      if (skillPaths.size > 0) {
+        const skillsData = await Promise.all([...skillPaths].map(async (sp) => {
+          try {
+            // @ts-ignore
+            const res = await window.api.readFile(`${sp}/SKILL.md`);
+            return res.data ? res.data : "";
+          } catch { return ""; }
+        }));
+        skillContext = skillsData.filter(Boolean).join("\n\n---\n\n");
+      }
+
       // Build history from existing messages (simplified)
-      const history: AgentMessage[] = messages.flatMap((m) => {
+      const history: AgentMessage[] = messages.flatMap((m): AgentMessage[] => {
         if (m.role === 'user') return [{ role: 'user' as const, content: m.text }];
         if (m.role === 'model') return [{ role: 'assistant' as const, content: m.text }];
         return [];
@@ -353,7 +553,8 @@ export default function ChatTab({
             }
           },
           requestApproval,
-          abort.signal
+          abort.signal,
+          skillContext
         );
       } catch (err: any) {
         setMessages((prev) =>
@@ -364,9 +565,17 @@ export default function ChatTab({
       } finally {
         setLoading(false);
         abortRef.current = null;
+        
+        // Focus back on the chatbox after response is done, 
+        // unless the user has moved focus to something else (like an editor or sidebar)
+        const active = document.activeElement;
+        const isPanelFocused = active && (active.closest('.chat-panel') || active === document.body);
+        if (isPanelFocused) {
+          setTimeout(() => inputRef.current?.focus(), 10);
+        }
       }
     },
-    [settings, messages, workspaceFolders, requestApproval]
+    [settings, messages, workspaceFolders, requestApproval, activeTabPath]
   );
 
   const clearHistory = useCallback(() => {
@@ -375,7 +584,7 @@ export default function ChatTab({
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="chat-panel flex flex-col h-full bg-background">
       {/* Message Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6" ref={scrollRef}>
         {messages.length === 0 && (
@@ -432,7 +641,7 @@ export default function ChatTab({
               {/* Text Content */}
               {msg.text && (
                 <div className={msg.role === 'model' ? 'px-4 py-3' : ''}>
-                  <MessageContent text={msg.text} role={msg.role} />
+                  <MessageContent text={msg.text} role={msg.role} onOpenFile={handleOpenFile} />
                 </div>
               )}
             </div>

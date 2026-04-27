@@ -16,6 +16,17 @@ const api = {
   getWorkspaceFolders: () => ipcRenderer.invoke('api:workspace-get-folders'),
   getWorkspaceState: () => ipcRenderer.invoke('api:workspace-get-state'),
   saveWorkspaceState: (tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { tabs, activeTabId }),
+
+  // Skills API
+  pickSkillFolder: () => ipcRenderer.invoke('api:skill-add-folder'),
+  restoreDefaultSkills: () => ipcRenderer.invoke('api:skills-restore-default'),
+  
+  // Commands API
+  pickCommandFolder: () => ipcRenderer.invoke('api:command-add-folder'),
+  restoreDefaultCommands: () => ipcRenderer.invoke('api:commands-restore-default'),
+  getAvailableSkills: () => ipcRenderer.invoke('api:skills-list'),
+  getAvailableCommands: () => ipcRenderer.invoke('api:commands-list'),
+  runDirectCommand: (payload: { commandPath: string, params: string[], currentFile?: string }) => ipcRenderer.invoke('api:command-run-direct', payload),
   
   // File Ops API
   createFile: (path: string, isDirectory: boolean) => ipcRenderer.invoke('api:file-create', { path, isDirectory }),

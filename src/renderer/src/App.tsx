@@ -369,20 +369,28 @@ export default function App() {
     };
   }, [tabs, activeTabId]);
 
-  const handleSelectFile = (file: { name: string; path: string }, content: string) => {
-    const tabId = `file-${file.path}`;
-    if (!tabs.find(t => t.id === tabId)) {
+  const handleSelectFile = (file: { name: string; path: string, isDirectory: boolean }, content: string) => {
+    // Normalize path to ensure tab reuse works across platforms/sources
+    const normalizedPath = file.path.replace(/\\/g, '/');
+    const tabId = `file-${normalizedPath}`;
+    
+    // Check if a tab with this normalized path already exists
+    const existingTab = tabs.find(t => t.filepath?.replace(/\\/g, '/') === normalizedPath);
+    
+    if (!existingTab) {
       setTabs(prev => [...prev, {
         id: tabId,
         type: 'file',
         title: file.name,
-        filepath: file.path,
+        filepath: file.path, // Store original path for saving
         content,
         originalContent: content,
         isDirty: false
       }]);
+      setActiveTabId(tabId);
+    } else {
+      setActiveTabId(existingTab.id);
     }
-    setActiveTabId(tabId);
   };
 
   const openSettings = () => {
@@ -558,7 +566,12 @@ export default function App() {
             </div>
             
             <div className="flex-1 overflow-hidden relative bg-background">
-              <ChatTab settings={settings} workspaceFolders={workspaceFolders} />
+              <ChatTab 
+                settings={settings} 
+                workspaceFolders={workspaceFolders} 
+                onOpenFile={handleSelectFile}
+                activeTabPath={activeTab?.filepath}
+              />
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands } from './config';
 
 const execAsync = promisify(exec);
 
@@ -106,6 +106,37 @@ ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
 ipcMain.handle('api:command', async (event, { command, cwd }: { command: string, cwd?: string }) => {
   try {
     const { stdout, stderr } = await execAsync(command, { cwd: cwd || process.cwd() });
+    return { data: { stdout, stderr } };
+  } catch (error: any) {
+    return { error: error.message, stdout: error.stdout, stderr: error.stderr };
+  }
+});
+
+ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, currentFile }: { commandPath: string, params: string[], currentFile?: string }) => {
+  try {
+    const runShPath = join(commandPath, 'run.sh');
+    // Ensure execute permission
+    if (process.platform !== 'win32') {
+      try {
+        await fs.chmod(runShPath, 0o755);
+      } catch (e) {
+        console.error('Failed to set chmod on run.sh', e);
+      }
+    }
+    
+    const env = { 
+      ...process.env, 
+      CITRON_CURRENT_FILE: currentFile || '' 
+    };
+
+    // Construct the command. We wrap params in quotes to handle spaces.
+    const quotedParams = params.map(p => `"${p.replace(/"/g, '\\"')}"`).join(' ');
+    const fullCmd = process.platform === 'win32' ? `sh "${runShPath}" ${quotedParams}` : `"${runShPath}" ${quotedParams}`;
+
+    const { stdout, stderr } = await execAsync(fullCmd, { 
+      cwd: commandPath,
+      env
+    });
     return { data: { stdout, stderr } };
   } catch (error: any) {
     return { error: error.message, stdout: error.stdout, stderr: error.stderr };
@@ -218,6 +249,66 @@ ipcMain.handle('api:workspace-save-state', async (event, { tabs, activeTabId }: 
   try {
     await saveWorkspaceState(tabs, activeTabId);
     return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:skill-add-folder', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory']
+    });
+    if (canceled || filePaths.length === 0) return { data: null };
+    return { data: filePaths[0] };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:skills-restore-default', async () => {
+  try {
+    const success = await restoreDefaultSkills();
+    return { data: success };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:command-add-folder', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory']
+    });
+    if (canceled || filePaths.length === 0) return { data: null };
+    return { data: filePaths[0] };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:commands-restore-default', async () => {
+  try {
+    const success = await restoreDefaultCommands();
+    return { data: success };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:skills-list', async () => {
+  try {
+    const skills = await listAvailableSkills();
+    return { data: skills };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:commands-list', async () => {
+  try {
+    const commands = await listAvailableCommands();
+    return { data: commands };
   } catch (error: any) {
     return { error: error.message };
   }

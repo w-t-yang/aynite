@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X, Moon, Sun, Keyboard, Bot } from 'lucide-react';
+import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export interface SettingsState {
   theme: 'dark' | 'light' | 'nord' | 'solarized';
   aiProvider?: 'gemini' | 'deepseek' | 'ollama';
+  skills?: {
+    folders: string[];
+  };
+  commands?: {
+    folders: string[];
+  };
   aiConfigs?: {
     gemini?: { apiKey: string; url: string };
     deepseek?: { apiKey: string; url: string };
@@ -52,7 +58,7 @@ interface SettingsProps {
 }
 
 export default function Settings({ settings, onSave }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai'>('appearance');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands'>('appearance');
   const [localSettings, setLocalSettings] = useState<SettingsState>(settings);
 
   useEffect(() => {
@@ -152,10 +158,166 @@ export default function Settings({ settings, onSave }: SettingsProps) {
           >
             <Bot size={16} /> AI Agent
           </button>
+          <button 
+            onClick={() => setActiveTab('skills')}
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium",
+              activeTab === 'skills' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <BrainCircuit size={16} /> Skills
+          </button>
+          <button 
+            onClick={() => setActiveTab('commands')}
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium",
+              activeTab === 'commands' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Terminal size={16} /> Commands
+          </button>
         </div>
 
         {/* Settings Content */}
         <div className="flex-1 p-6 overflow-y-auto">
+          {activeTab === 'skills' && (
+            <div className="space-y-6 max-w-2xl">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                   <h3 className="text-lg font-medium">Skill Folders</h3>
+                   <button 
+                      onClick={async () => {
+                         // @ts-ignore
+                         const res = await window.api.pickSkillFolder();
+                         if (res && res.data) {
+                           const newFolders = [...(localSettings.skills?.folders || []), res.data];
+                           save({ ...localSettings, skills: { folders: Array.from(new Set(newFolders)) } });
+                         }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
+                   >
+                      <Plus size={14} /> Add Folder
+                   </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Agent skills are loaded from these folders. Each skill should be a directory containing a SKILL.md file.
+                </p>
+
+                <div className="space-y-2">
+                  {(localSettings.skills?.folders || []).map((folder, index) => (
+                    <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
+                      </div>
+                      {index > 0 && (
+                        <button 
+                          onClick={() => {
+                            const newFolders = (localSettings.skills?.folders || []).filter(f => f !== folder);
+                            save({ ...localSettings, skills: { folders: newFolders } });
+                          }}
+                          className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-border">
+                <h3 className="text-sm font-medium mb-2">Default Skills</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Restore bundled essential skills like skill-creator if they were deleted or modified.
+                </p>
+                <button 
+                  onClick={async () => {
+                    // @ts-ignore
+                    const res = await window.api.restoreDefaultSkills();
+                    if (res && res.data) {
+                      alert('Default skills restored successfully!');
+                    } else {
+                      alert('Failed to restore default skills. Check if tmp/claude-skills exists.');
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"
+                >
+                  <RotateCcw size={14} /> Restore Default Skills
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'commands' && (
+            <div className="space-y-6 max-w-2xl">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                   <h3 className="text-lg font-medium">Command Folders</h3>
+                   <button 
+                      onClick={async () => {
+                         // @ts-ignore
+                         const res = await window.api.pickCommandFolder();
+                         if (res && res.data) {
+                           const newFolders = [...(localSettings.commands?.folders || []), res.data];
+                           save({ ...localSettings, commands: { folders: Array.from(new Set(newFolders)) } });
+                         }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
+                   >
+                      <Plus size={14} /> Add Folder
+                   </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Agent commands (executables or scripts) are loaded from these folders.
+                </p>
+
+                <div className="space-y-2">
+                  {(localSettings.commands?.folders || []).map((folder, index) => (
+                    <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
+                      </div>
+                      {index > 0 && (
+                        <button 
+                          onClick={() => {
+                            const newFolders = (localSettings.commands?.folders || []).filter(f => f !== folder);
+                            save({ ...localSettings, commands: { folders: newFolders } });
+                          }}
+                          className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-border">
+                <h3 className="text-sm font-medium mb-2">Default Commands</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Restore bundled essential commands like hello-world if they were deleted or modified.
+                </p>
+                <button 
+                  onClick={async () => {
+                    // @ts-ignore
+                    const res = await window.api.restoreDefaultCommands();
+                    if (res && res.data) {
+                      alert('Default commands restored successfully!');
+                    } else {
+                      alert('Failed to restore default commands.');
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"
+                >
+                  <RotateCcw size={14} /> Restore Default Commands
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'ai' && (
             <div className="space-y-6 max-w-2xl">
               <div>
