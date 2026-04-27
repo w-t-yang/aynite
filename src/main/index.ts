@@ -1,9 +1,9 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
-import { initAppFolders, loadConfig, saveConfig } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState } from './config';
 
 const execAsync = promisify(exec);
 
@@ -101,6 +101,75 @@ ipcMain.handle('api:load-config', async () => {
 ipcMain.handle('api:save-config', async (event, config) => {
   try {
     await saveConfig(config);
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+// Workspace IPC handlers
+ipcMain.handle('api:workspaces-list', async () => {
+  try {
+    const list = await getWorkspacesList();
+    return { data: list };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-create', async (event, name: string) => {
+  try {
+    const ws = await createWorkspace(name);
+    return { data: ws };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-switch', async (event, name: string) => {
+  try {
+    const ws = await switchWorkspace(name);
+    return { data: ws };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-add-folder', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory']
+    });
+    if (canceled || filePaths.length === 0) return { data: null };
+    
+    await addWorkspaceFolder(filePaths[0]);
+    return { data: filePaths[0] };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-get-folders', async () => {
+  try {
+    const folders = await getWorkspaceFolders();
+    return { data: folders };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-get-state', async () => {
+  try {
+    const state = await getWorkspaceState();
+    return { data: state };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-save-state', async (event, { tabs, activeTabId }: { tabs: any[], activeTabId: string }) => {
+  try {
+    await saveWorkspaceState(tabs, activeTabId);
     return { data: true };
   } catch (error: any) {
     return { error: error.message };

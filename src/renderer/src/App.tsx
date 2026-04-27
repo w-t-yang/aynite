@@ -29,25 +29,29 @@ const DEFAULT_SETTINGS: SettingsState = {
 export default function App() {
   const [settings, setSettings] = useState<SettingsState | null>(null);
 
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+  const [activeTabId, setActiveTabId] = useState<string>('');
+  const [tabs, setTabs] = useState<Tab[]>([]);
+
+  const loadWorkspaceState = async () => {
+    // @ts-ignore
+    const res = await window.api.getWorkspaceState();
+    if (res && res.data) {
+      setTabs(res.data.tabs || []);
+      setActiveTabId(res.data.activeTabId || '');
+    }
+    setWorkspaceReady(true);
+  };
+
   useEffect(() => {
     // @ts-ignore
     window.api.loadConfig().then((res: any) => {
       if (res.data) setSettings(res.data);
       else setSettings(DEFAULT_SETTINGS);
     }).catch(() => setSettings(DEFAULT_SETTINGS));
+    
+    loadWorkspaceState();
   }, []);
-
-  const [activeTabId, setActiveTabId] = useState<string>(() => {
-    return localStorage.getItem('obsidian_active_tab') || '';
-  });
-
-  const [tabs, setTabs] = useState<Tab[]>(() => {
-    const saved = localStorage.getItem('obsidian_tabs');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return [];
-  });
 
   const [rightPanelOpen, setRightPanelOpen] = useState(() => {
     return localStorage.getItem('obsidian_right_panel') !== 'false';
@@ -140,9 +144,10 @@ export default function App() {
   }, [settings]);
 
   useEffect(() => {
-    localStorage.setItem('obsidian_active_tab', activeTabId);
-    localStorage.setItem('obsidian_tabs', JSON.stringify(tabs));
-  }, [activeTabId, tabs]);
+    if (!workspaceReady) return;
+    // @ts-ignore
+    window.api.saveWorkspaceState(tabs, activeTabId).catch(console.error);
+  }, [activeTabId, tabs, workspaceReady]);
 
   useEffect(() => {
     localStorage.setItem('obsidian_right_panel', String(rightPanelOpen));
@@ -235,7 +240,13 @@ export default function App() {
       {leftPanelOpen && (
         <div className="relative shrink-0 flex" style={{ width: leftWidth }}>
           <div className="flex-1 overflow-hidden min-w-0">
-            <Sidebar onSelectFile={handleSelectFile} onOpenSettings={openSettings} onClose={() => setLeftPanelOpen(false)} />
+            <Sidebar 
+              activeTabPath={activeTab?.filepath}
+              onWorkspaceChange={loadWorkspaceState}
+              onSelectFile={handleSelectFile} 
+              onOpenSettings={openSettings} 
+              onClose={() => setLeftPanelOpen(false)} 
+            />
           </div>
           <div 
             className="w-1 cursor-col-resize hover:bg-blue-500/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -right-0.5 top-0"
