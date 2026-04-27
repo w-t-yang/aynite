@@ -138,6 +138,11 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
       const isCmd = e.metaKey || e.ctrlKey;
       const key = e.key.toUpperCase();
 
+      // Don't capture keys if an input or another textarea is focused
+      if (e.target instanceof HTMLInputElement || (e.target instanceof HTMLTextAreaElement && e.target !== textareaRef.current)) {
+        return;
+      }
+
       if (showSearch) {
         if (e.key === 'Escape') {
           setShowSearch(false);
