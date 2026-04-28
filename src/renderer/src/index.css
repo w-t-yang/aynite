@@ -260,3 +260,55 @@
 .tippy-arrow {
   display: none !important;
 }
+
+/* ─── Collapsible Thinking Process ──────────────────────────────── */
+details {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 12px;
+  margin: 8px 0;
+  background: rgba(var(--muted), 0.1);
+  font-size: 0.9em;
+}
+
+summary {
+  cursor: pointer;
+  list-style: none;
+  outline: none;
+  padding: 4px 0;
+  user-select: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary b {
+  color: var(--muted-foreground);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s;
+}
+
+summary:hover b {
+  color: var(--foreground);
+}
+
+summary b::before {
+  content: '→';
+  font-family: var(--font-mono);
+  font-size: 1em;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+details[open] > summary b::before {
+  transform: rotate(90deg);
+}
+
+details > div, details > p {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+}

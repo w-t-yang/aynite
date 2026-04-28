@@ -40,11 +40,11 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'read_file',
-      description: 'Read the contents of a file at the given path. The path must be within the workspace.',
+      description: 'Read the contents of a file. Use this to inspect existing skills or source code. Example: path="/home/user/citron/skills/hello/SKILL.md"',
       parameters: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'Absolute path to the file to read' },
+          path: { type: 'string', description: 'Absolute path to the file' },
         },
         required: ['path'],
       },
@@ -54,12 +54,12 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'write_file',
-      description: 'Write content to a file at the given path. Creates the file if it does not exist. The path must be within the workspace.',
+      description: 'Write content to a file. When creating scripts, ALWAYS include a main block and imports. Example: path="/home/user/citron/skills/new/scripts/tool.py", content="import sys\nif __name__ == \'__main__\':\n    print(\'hello\')"',
       parameters: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'Absolute path to the file to write' },
-          content: { type: 'string', description: 'Content to write to the file' },
+          path: { type: 'string', description: 'Absolute path to the file' },
+          content: { type: 'string', description: 'Full content to write' },
         },
         required: ['path', 'content'],
       },
@@ -69,11 +69,11 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'list_files',
-      description: 'List all files and directories in the given directory path. The path must be within the workspace.',
+      description: 'List files in a directory to understand the project structure. Example: path="/home/user/citron/skills"',
       parameters: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'Absolute path to the directory to list' },
+          path: { type: 'string', description: 'Absolute path to the directory' },
         },
         required: ['path'],
       },
@@ -83,12 +83,12 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'run_command',
-      description: 'Run a shell command. This requires user approval before execution.',
+      description: 'Execute a shell command. Use this to run validation scripts or tests. Example: command="python3 scripts/validate.py input.txt"',
       parameters: {
         type: 'object',
         properties: {
-          command: { type: 'string', description: 'The shell command to execute' },
-          cwd: { type: 'string', description: 'Working directory for the command (optional, defaults to first workspace folder)' },
+          command: { type: 'string', description: 'The shell command' },
+          cwd: { type: 'string', description: 'Directory to run in' },
         },
         required: ['command'],
       },
@@ -98,13 +98,13 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'search_codebase',
-      description: 'Search for a string or regex pattern in the workspace files using grep.',
+      description: 'Search for text patterns. Use this to find where skills are referenced or triggered. Example: query="scene-splitter"',
       parameters: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'The search term or regex pattern' },
-          path: { type: 'string', description: 'Absolute path to directory to search' },
-          isRegex: { type: 'boolean', description: 'Whether the query is a regular expression' }
+          query: { type: 'string', description: 'Search term' },
+          path: { type: 'string', description: 'Directory to search' },
+          isRegex: { type: 'boolean', description: 'True if regex' }
         },
         required: ['query', 'path'],
       },
@@ -114,11 +114,11 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'spawn_subagent',
-      description: 'Spawn a subagent to execute a secondary task, test, or evaluate independent logic. NOTE: This tool executes SYNCHRONOUSLY. It blocks until the subagent completes and returns the final output immediately in the tool result. Do NOT wait for background notifications or poll for status.',
+      description: 'Delegate a complex task (like running benchmarks) to another instance. Return its summary here.',
       parameters: {
         type: 'object',
         properties: {
-          prompt: { type: 'string', description: 'Detailed instructions for the subagent' },
+          prompt: { type: 'string', description: 'Instructions for the subagent' },
         },
         required: ['prompt'],
       },
@@ -188,18 +188,23 @@ async function executeRunCommand(
 ): Promise<string> {
   const cwd = args.cwd || workspaceFolders[0] || '.';
 
-  const approved = await requestApproval(args.command, cwd);
-  if (!approved) {
-    return 'Command rejected by user.';
+  if (!config.autoApproveCommands) {
+    const approved = await requestApproval(args.command, cwd);
+    if (!approved) {
+      return 'Command rejected by user.';
+    }
   }
 
   try {
     // @ts-ignore
     const res = await window.api.runCommand(args.command, cwd);
+    const output = [res.data?.stdout, res.data?.stderr, res.stdout, res.stderr].filter(Boolean).join('\n').trim();
+    
     if (res.error) {
-      return `Command failed:\nstdout: ${res.stdout || ''}\nstderr: ${res.stderr || ''}\nerror: ${res.error}`;
+      // If we have output even on failure, just return that (e.g., validation diffs)
+      if (output) return output;
+      return `Command failed: ${res.error}`;
     }
-    const output = [res.data?.stdout, res.data?.stderr].filter(Boolean).join('\n');
     return output || '(no output)';
   } catch (e: any) {
     return `Error: ${e.message}`;
@@ -262,19 +267,24 @@ async function executeSpawnSubagent(
 
 // ─── Agent Loop ──────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Citron, an AI coding assistant embedded in a file explorer IDE. You can read files, write files, list directories, and run shell commands within the user's workspace.
+const SYSTEM_PROMPT = `You are Citron, an industry-grade AI coding assistant. You are rigorous, precise, and systematic.
 
-Rules:
-- Always explain what you plan to do before calling a tool.
-- When reading or writing files, use absolute paths within the workspace.
-- When running commands, explain what the command does.
-- Be concise and helpful. Format code in markdown code blocks.
-- NEVER stop generating without an explanation or a tool call. If you execute a tool, ALWAYS continue your task by reading the tool output and deciding on the next step.`;
+## Operation Rules
+1. **Chain of Thought**: Before ANY tool call or major conclusion, you MUST output a <thought> block explaining your reasoning, the evidence you've gathered, and your next step.
+2. **Industrial Standards**: 
+   - When writing Python scripts, you MUST include a \`if __name__ == "__main__":\` block.
+   - When writing SKILL.md files, ensure they start with clear \`---\` YAML frontmatter.
+3. **Verification**: After writing a file or running a command, verify the result before telling the user you are finished.
+4. **conciseness**: Be direct. Use absolute paths. Format code properly.
+
+## Continuous Execution
+NEVER stop generating without an explanation or a tool call. If tools return results, proceed to analyze them immediately.`;
 
 export interface AgentConfig {
   url: string;
   model: string;
   contextWindow: number;
+  autoApproveCommands?: boolean;
 }
 
 export async function runAgentLoop(
@@ -291,7 +301,9 @@ export async function runAgentLoop(
   const messages: AgentMessage[] = [
     { 
       role: 'system', 
-      content: SYSTEM_PROMPT + (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to the following skills. Their instructions are provided below. When the user mentions a skill (e.g., [Skill: name]), follow its instructions strictly to complete their request. Do not attempt to read or list files in the skill's directory using tools, as all necessary skill instructions are already provided here:\n\n${skillContext}` : "") 
+      content: SYSTEM_PROMPT + 
+        (config.model.toLowerCase().includes('gemma') ? "\n\n### COMPACT MODEL ADVISORY\nYou are running in a compact model mode. Be extra careful with syntax. Double-check your tool arguments and ensure all scripts are executable and self-contained." : "") +
+        (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to the following skills. Their instructions are provided below in XML tags. Follow them strictly. Do not attempt to read the skill files directly; use the provided context:\n\n${skillContext}` : "") 
     },
     ...history,
     { role: 'user', content: userMessage },
@@ -462,11 +474,11 @@ export async function runAgentLoop(
     const finalText = assistantMessage.content || '';
     
     // Auto-fix for local models that silently halt after tool results
-    if (!finalText.trim() && messages.length > 0 && messages[messages.length - 1].role === 'tool') {
+    if (!finalText.trim() && messages.length > 0 && (messages[messages.length - 1].role === 'tool' || messages[messages.length - 1].role === 'assistant')) {
       if (import.meta.env.DEV) {
-        console.log('Model returned empty text after tool execution. Nudging model to continue...');
+        console.log('Model returned empty response or halted. Nudging...');
       }
-      messages.push({ role: 'user', content: 'Tool execution complete. Please continue your task based on the results, or explicitly state that the task is finished.' });
+      messages.push({ role: 'user', content: 'Please continue and complete the remaining steps of your plan.' });
       continue;
     }
 

@@ -137,8 +137,13 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
       CITRON_CURRENT_FILE: currentFile || '' 
     };
 
+    // Automatically resolve Citron mentions (e.g., @file[label](path)) to raw paths
+    const resolvedParams = params.map(p => {
+      return p.replace(/@(?:file|skill|cmd)\[.*?\]\((.*?)\)/g, '$1');
+    });
+
     // Construct the command. We wrap params in quotes to handle spaces.
-    const quotedParams = params.map(p => `"${p.replace(/"/g, '\\"')}"`).join(' ');
+    const quotedParams = resolvedParams.map(p => `"${p.replace(/"/g, '\\"')}"`).join(' ');
     const fullCmd = process.platform === 'win32' ? `sh "${runShPath}" ${quotedParams}` : `"${runShPath}" ${quotedParams}`;
 
     const { stdout, stderr } = await execAsync(fullCmd, { 

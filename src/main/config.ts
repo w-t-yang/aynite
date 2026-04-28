@@ -273,19 +273,23 @@ export async function listAvailableSkills() {
         const skillMdPath = path.join(itemPath, 'SKILL.md');
         if (existsSync(skillMdPath)) {
           const content = await fs.readFile(skillMdPath, 'utf-8');
-          const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
+          // Optional YAML frontmatter
+          const match = content.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/);
+          let meta: any = {};
           if (match) {
             try {
-              const meta: any = yaml.load(match[1]);
-              skills.push({
-                name: meta.name || item,
-                description: meta.description || '',
-                path: itemPath
-              });
+              meta = yaml.load(match[1]) || {};
             } catch (e) {
               console.error(`Error parsing YAML in ${skillMdPath}`, e);
             }
           }
+          
+          // Always push if SKILL.md exists
+          skills.push({
+            name: meta.name || item,
+            description: meta.description || '',
+            path: itemPath
+          });
         }
       }
     } catch (e) {

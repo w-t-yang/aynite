@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { SettingsState } from './Settings';
@@ -18,7 +18,7 @@ interface ChatMessage {
 
 interface AgentStep {
   id: string;
-  type: 'tool_call' | 'tool_result' | 'approval_request' | 'error';
+  type: 'tool_call' | 'tool_result' | 'approval_request' | 'error' | 'text';
   content: string;
   toolName?: string;
   toolArgs?: Record<string, any>;
@@ -117,14 +117,19 @@ function ApprovalModal({
 
 function MessageContent({ text, role, onOpenFile }: { text: string; role: 'user' | 'model', onOpenFile?: (path: string) => void }) {
   if (role === 'model') {
-    // Process <think> blocks
+    // Process <think> or <thought> blocks
     let processedText = text;
-    processedText = processedText.replace(/<think>([\s\S]*?)<\/think>/g, (match, p1) => {
-      return `\n> **Thinking Process:**\n> ${p1.trim().replace(/\n/g, '\n> ')}\n\n`;
+    const thinkRegex = /<(think|thought)>([\s\S]*?)<\/\1>/g;
+    processedText = processedText.replace(thinkRegex, (match, tag, p1) => {
+      return `\n<details>\n<summary><b>Thinking Process</b></summary>\n\n${p1.trim()}\n\n</details>\n\n`;
     });
+    
     if (processedText.includes('<think>') && !processedText.includes('</think>')) {
       const parts = processedText.split('<think>');
-      processedText = parts[0] + `\n> **Thinking...**\n> ${parts[1].trim().replace(/\n/g, '\n> ')}\n\n`;
+      processedText = parts[0] + `\n<details open>\n<summary><b>Thinking...</b></summary>\n\n${parts[1].trim()}\n\n</details>\n\n`;
+    } else if (processedText.includes('<thought>') && !processedText.includes('</thought>')) {
+      const parts = processedText.split('<thought>');
+      processedText = parts[0] + `\n<details open>\n<summary><b>Thinking...</b></summary>\n\n${parts[1].trim()}\n\n</details>\n\n`;
     }
 
     const parts = [];
@@ -229,6 +234,7 @@ export default function ChatTab({
   // Approval flow state
   const approvalResolveRef = useRef<((approved: boolean) => void) | null>(null);
   const [pendingApproval, setPendingApproval] = useState<{ command: string; cwd: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -382,7 +388,9 @@ export default function ChatTab({
             }
 
             // 4. Execution
-            const params = trailingText ? [trailingText] : [];
+            // Split trailingText by whitespace into separate parameters, but preserve quotes if we were to support them.
+            // For now, a simple split handles @file and --flags correctly.
+            const params = trailingText.split(/\s+/).filter(Boolean);
             // @ts-ignore
             const runRes = await window.api.runDirectCommand({ 
               commandPath: cmdMeta.path, 
@@ -391,10 +399,11 @@ export default function ChatTab({
             });
 
             if (runRes.error) {
+              const output = [runRes.stdout, runRes.data?.stdout, runRes.stderr, runRes.data?.stderr].filter(Boolean).join('\n').trim();
               setMessages((prev) => [...prev, {
                 id: genId(),
                 role: 'model',
-                text: `❌ **Command Error**:\n\`\`\`\n${runRes.error}\n${runRes.stderr || ''}\n\`\`\``
+                text: `❌ **Command Failure**\n\n${output ? `\`\`\`\n${output}\n\`\`\`` : `*${runRes.error}*`}`
               }]);
             } else {
               setMessages((prev) => [...prev, {
@@ -441,6 +450,7 @@ export default function ChatTab({
         url: settings.aiConfigs?.ollama?.url || 'http://localhost:11434',
         model: settings.aiConfigs?.ollama?.model || 'deepseek-r1:14b',
         contextWindow: settings.aiConfigs?.ollama?.contextWindow || 8192,
+        autoApproveCommands: settings.aiConfigs?.autoApproveCommands || false,
       };
 
       // 5. Extract Skills from history and current text
@@ -537,8 +547,7 @@ export default function ChatTab({
                 if (lastStep && lastStep.type === 'text') {
                   lastStep.content += event.content;
                 } else {
-                  // Explicitly cast type so TypeScript doesn't complain about 'text' not being in AgentStep type yet
-                  steps.push({ id: genId(), type: 'text' as any, content: event.content });
+                  steps.push({ id: genId(), type: 'text', content: event.content });
                 }
                 modelText += event.content;
                 setMessages((prev) =>
@@ -553,7 +562,7 @@ export default function ChatTab({
                 if (lastStep && lastStep.type === 'text') {
                   lastStep.content = event.content;
                 } else {
-                  steps.push({ id: genId(), type: 'text' as any, content: event.content });
+                  steps.push({ id: genId(), type: 'text', content: event.content });
                 }
                 modelText = event.content;
                 setMessages((prev) =>
@@ -610,6 +619,14 @@ export default function ChatTab({
     setMessages([]);
     abortRef.current?.abort();
   }, []);
+
+  const copyHistoryAsJson = useCallback(() => {
+    const jsonStr = JSON.stringify(messages, null, 2);
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => console.error('Failed to copy', err));
+  }, [messages]);
 
   return (
     <div className="chat-panel flex flex-col h-full bg-background">
@@ -726,13 +743,28 @@ export default function ChatTab({
             </span>
           )}
         </div>
-        <button
-          onClick={clearHistory}
-          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-500 text-muted-foreground transition-all text-[10px] font-medium"
-        >
-          <Trash2 size={12} />
-          Clear History
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyHistoryAsJson}
+            disabled={messages.length === 0}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all text-[10px] font-medium ${
+              copied 
+                ? 'bg-green-500/10 text-green-500' 
+                : 'hover:bg-blue-500/10 hover:text-blue-500 text-muted-foreground'
+            } ${messages.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Copy conversation as JSON"
+          >
+            {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
+            {copied ? 'Copied' : 'Copy JSON'}
+          </button>
+          <button
+            onClick={clearHistory}
+            className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-500 text-muted-foreground transition-all text-[10px] font-medium"
+          >
+            <Trash2 size={12} />
+            Clear History
+          </button>
+        </div>
       </div>
 
       {/* Input Area */}

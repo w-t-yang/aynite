@@ -15,6 +15,7 @@ export interface SettingsState {
     gemini?: { apiKey: string; url: string };
     deepseek?: { apiKey: string; url: string };
     ollama?: { url: string; model: string; contextWindow: number };
+    autoApproveCommands?: boolean;
   };
   keybindings: {
     startChat: string;
@@ -114,6 +115,16 @@ export default function Settings({ settings, onSave }: SettingsProps) {
     save({
       ...localSettings,
       aiConfigs: newConfigs
+    });
+  };
+
+  const handleToggleAutoApprove = () => {
+    save({
+      ...localSettings,
+      aiConfigs: {
+        ...localSettings.aiConfigs,
+        autoApproveCommands: !localSettings.aiConfigs?.autoApproveCommands
+      }
     });
   };
 
@@ -386,6 +397,27 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                       )}
                     </div>
                   ))}
+                </div>
+                
+                <div className="pt-8 border-t border-border/50">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-accent/5">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-medium">Auto-Approve Commands</h4>
+                      <p className="text-xs text-muted-foreground">Skip the approval prompt when the AI needs to run shell commands.</p>
+                    </div>
+                    <button 
+                      onClick={handleToggleAutoApprove}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
+                        localSettings.aiConfigs?.autoApproveCommands ? "bg-blue-600" : "bg-muted"
+                      )}
+                    >
+                      <span className={cn(
+                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                        localSettings.aiConfigs?.autoApproveCommands ? "translate-x-6" : "translate-x-1"
+                      )} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
