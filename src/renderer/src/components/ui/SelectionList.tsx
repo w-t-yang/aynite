@@ -78,12 +78,22 @@ export function SelectionList({
                 <span className="truncate font-medium">
                   {item.label}
                 </span>
-                {item.isActive && (
-                  <div className={cn(
-                    "w-1.5 h-1.5 rounded-full shrink-0",
-                    isSelected ? "bg-primary-foreground" : "bg-primary"
-                  )} />
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {item.badge && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-wider",
+                      isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"
+                    )}>
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.isActive && (
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      isSelected ? "bg-primary-foreground" : "bg-primary"
+                    )} />
+                  )}
+                </div>
               </div>
               {item.subtitle && (
                 <span className={cn(

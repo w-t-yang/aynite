@@ -198,7 +198,11 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
 
       // @ts-ignore
       const folders = await window.api.getWorkspaceFolders();
+      console.log('Sidebar: loaded folders from backend', folders);
       if (folders && Array.isArray(folders.data)) {
+        if (folders.data.length === 0) {
+          console.warn('Sidebar: Workspace has NO folders. Checked path:', folders.debugPath);
+        }
         const rootNodes = folders.data.map((f: string) => ({
           id: f,
           name: f.split(/[\/\\]/).pop() || f,
@@ -206,7 +210,10 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
           isLoaded: false,
           children: []
         }));
+        console.log('Sidebar: setting tree data', rootNodes);
         setTreeData(rootNodes);
+      } else {
+        console.error('Sidebar: failed to load folders', folders);
       }
     } catch (e) {
       console.error(e);
@@ -483,23 +490,36 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
       </div>
 
       <div ref={containerRef} className="flex-1 overflow-hidden outline-none">
-        <Tree
-          ref={treeRef}
-          data={treeData}
-          width="100%"
-          height={treeHeight}
-          indent={12}
-          rowHeight={28}
-          openByDefault={false}
-          onMove={onMove}
-          onToggle={handleToggle}
-          disableDrop={({ parentNode }) => {
-            if (!parentNode || parentNode.isInternal || parentNode.level === -1) return false;
-            return !parentNode.data?.isDirectory;
-          }}
-        >
-          {NodeRenderer}
-        </Tree>
+        {treeData.length > 0 ? (
+          <Tree
+            ref={treeRef}
+            data={treeData}
+            width="100%"
+            height={treeHeight}
+            indent={12}
+            rowHeight={28}
+            openByDefault={false}
+            onMove={onMove}
+            onToggle={handleToggle}
+            disableDrop={({ parentNode }) => {
+              if (!parentNode || parentNode.isInternal || parentNode.level === -1) return false;
+              return !parentNode.data?.isDirectory;
+            }}
+          >
+            {NodeRenderer}
+          </Tree>
+        ) : (
+          <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
+            <p>No folders in this workspace.</p>
+            <p className="opacity-50">Active: {activeWorkspace}</p>
+            <button 
+              onClick={handleAddFolder}
+              className="mt-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
+            >
+              Add Folder
+            </button>
+          </div>
+        )}
       </div>
       
       <div className="mt-auto border-t border-border p-2 shrink-0 bg-sidebar">

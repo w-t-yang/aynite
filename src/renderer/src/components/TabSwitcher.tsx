@@ -13,18 +13,40 @@ interface TabSwitcherProps {
   tabs: TabItem[];
   activeTabId: string;
   onSelect: (tabId: string) => void;
+  onOpenFile: (file: { name: string, path: string, isDirectory: boolean }, content: string) => void;
   onClose: () => void;
 }
 
-export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: TabSwitcherProps) {
+export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, onClose }: TabSwitcherProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = tabs.filter(t =>
-    t.title.toLowerCase().includes(query.toLowerCase()) ||
-    (t.filepath && t.filepath.toLowerCase().includes(query.toLowerCase()))
-  );
+  useEffect(() => {
+    // @ts-ignore
+    window.api.workspaceAllFiles().then(res => {
+      if (res && res.data) {
+        setWorkspaceFiles(res.data);
+      }
+    });
+  }, []);
+
+  const openTabPaths = new Set(tabs.map(t => t.filepath?.replace(/\\/g, '/')));
+
+  const combinedItems = [
+    ...tabs.map(t => ({ ...t, isTab: true })),
+    ...workspaceFiles
+      .filter(f => !openTabPaths.has(f.path.replace(/\\/g, '/')))
+      .map(f => ({ id: f.path, title: f.name, filepath: f.path, type: 'file', isTab: false }))
+  ];
+
+  const filtered = combinedItems
+    .filter(t =>
+      t.title.toLowerCase().includes(query.toLowerCase()) ||
+      (t.filepath && t.filepath.toLowerCase().includes(query.toLowerCase()))
+    )
+    .slice(0, 30);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -46,8 +68,18 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
 
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        if (filtered[selectedIndex]) {
-          onSelect(filtered[selectedIndex].id);
+        const item = filtered[selectedIndex];
+        if (item) {
+          if (item.isTab) {
+            onSelect(item.id);
+          } else {
+            // @ts-ignore
+            window.api.readFile(item.filepath).then(res => {
+              if (res && res.data) {
+                onOpenFile({ name: item.title, path: item.filepath!, isDirectory: false }, res.data);
+              }
+            });
+          }
           onClose();
         }
         return;
@@ -72,12 +104,13 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [filtered, selectedIndex, onClose, onSelect]);
 
-  const selectionItems: SelectionItem[] = filtered.map(tab => ({
-    id: tab.id,
-    label: tab.title,
-    subtitle: tab.filepath,
-    isActive: tab.id === activeTabId,
-    icon: tab.type === 'settings' ? <SettingsIcon size={16} /> : <FileText size={16} />
+  const selectionItems: SelectionItem[] = filtered.map(item => ({
+    id: item.id,
+    label: item.title,
+    subtitle: item.filepath,
+    isActive: item.id === activeTabId,
+    badge: item.isTab ? 'OPEN' : 'FILE',
+    icon: item.type === 'settings' ? <SettingsIcon size={16} /> : <FileText size={16} />
   }));
 
   return (
@@ -107,9 +140,21 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
         <SelectionList
           items={selectionItems}
           selectedIndex={selectedIndex}
-          onSelect={(item) => {
-            onSelect(item.id);
-            onClose();
+          onSelect={(selection) => {
+            const item = filtered.find(f => f.id === selection.id);
+            if (item) {
+              if (item.isTab) {
+                onSelect(item.id);
+              } else {
+                // @ts-ignore
+                window.api.readFile(item.filepath).then(res => {
+                  if (res && res.data) {
+                    onOpenFile({ name: item.title, path: item.filepath!, isDirectory: false }, res.data);
+                  }
+                });
+              }
+              onClose();
+            }
           }}
           className="max-h-[50vh]"
         />

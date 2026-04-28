@@ -15,6 +15,7 @@ const api = {
   removeWorkspaceFolder: (path: string) => ipcRenderer.invoke('api:workspace-remove-folder', path),
   reorderWorkspaceFolders: (folders: string[]) => ipcRenderer.invoke('api:workspace-reorder-folders', folders),
   getWorkspaceFolders: () => ipcRenderer.invoke('api:workspace-get-folders'),
+  workspaceAllFiles: () => ipcRenderer.invoke('api:workspace-all-files'),
   getWorkspaceState: () => ipcRenderer.invoke('api:workspace-get-state'),
   saveWorkspaceState: (tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { tabs, activeTabId }),
 

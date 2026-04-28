@@ -27,13 +27,14 @@ const DEFAULT_SETTINGS: SettingsState = {
   keybindings: {
     global: {
       refresh: 'CTRL+R',
-      toggleLeftPanel: 'CTRL+T',
-      toggleRightPanel: 'CTRL+U',
       quit: 'CTRL+Q'
     },
-    explorer: {},
+    explorer: {
+      toggleLeftPanel: 'CTRL+T'
+    },
     agent: {
-      focusChat: 'CTRL+I'
+      focusChat: 'CTRL+I',
+      toggleRightPanel: 'CTRL+U'
     },
     content: {
       navigation: {
@@ -789,6 +790,7 @@ export default function App() {
               if (textarea) textarea.focus();
             }, 200);
           }}
+          onOpenFile={handleSelectFile}
           onClose={() => setShowTabSwitcher(false)}
         />
       )}

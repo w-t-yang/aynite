@@ -377,7 +377,7 @@ export function isSystemTheme(name: string): boolean {
 
 export async function initAppFolders() {
   const baseDir = getConfigDir();
-  
+
   const folders = ['config', 'skills', 'commands', 'workspaces', 'themes'];
   for (const folder of folders) {
     const dir = path.join(baseDir, folder);
@@ -390,16 +390,20 @@ export async function initAppFolders() {
   const workspacesDir = path.join(baseDir, 'workspaces');
 
   // Default values
-  const aiDefault = { 
-    provider: 'gemini', 
-    configs: { 
+  const aiDefault = {
+    provider: 'gemini',
+    configs: {
       gemini: { apiKey: '', url: '' },
       deepseek: { apiKey: '', url: '' },
       ollama: { url: 'http://localhost:11434', model: 'gemma:e4b', contextWindow: 8192 }
-    } 
+    }
   };
   const keybindingsDefault = DEFAULT_KEYBINDINGS;
-  const configDefault = { lastUsed: new Date().toISOString(), activeTheme: 'nord' };
+  const configDefault = {
+    lastUsed: new Date().toISOString(),
+    activeTheme: 'nord'
+  };
+  const ignoreDefault = ['.git', 'node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
   const workspacesDefault = { active: 'default workspace', list: ['default workspace'] };
 
   const checkAndWrite = async (filename: string, content: any) => {
@@ -413,6 +417,11 @@ export async function initAppFolders() {
   await checkAndWrite('keybindings.json', keybindingsDefault);
   await checkAndWrite('config.json', configDefault);
   await checkAndWrite('workspaces.json', workspacesDefault);
+  
+  const ignorePath = path.join(configDir, 'ignore');
+  if (!existsSync(ignorePath)) {
+    await fs.writeFile(ignorePath, ignoreDefault, 'utf-8');
+  }
 
   // Initialize themes
   await initThemes();
@@ -458,7 +467,7 @@ export async function initAppFolders() {
 
 export async function loadConfig() {
   const configDir = path.join(getConfigDir(), 'config');
-  
+
   const readJson = async (file: string, fallback: any) => {
     try {
       const data = await fs.readFile(path.join(configDir, file), 'utf-8');
@@ -508,11 +517,12 @@ export async function loadConfig() {
       }
       // Remove the deprecated file
       await fs.unlink(appearancePath);
-    } catch {}
+    } catch { }
   }
 
   return {
     activeTheme: mainConfig.activeTheme || 'dark',
+    ignore: await getIgnorePatterns(),
     keybindings: keybindings,
     aiProvider: ai.provider || 'gemini',
     aiConfigs: ai.configs || {},
@@ -522,12 +532,23 @@ export async function loadConfig() {
   };
 }
 
+export async function getIgnorePatterns(): Promise<string[]> {
+  const ignorePath = path.join(getConfigDir(), 'config', 'ignore');
+  try {
+    if (!existsSync(ignorePath)) return ['.git', 'node_modules'];
+    const data = await fs.readFile(ignorePath, 'utf-8');
+    return data.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+  } catch {
+    return ['.git', 'node_modules'];
+  }
+}
+
 export async function saveConfig(settings: any) {
   const configDir = path.join(getConfigDir(), 'config');
 
   const ai = { provider: settings.aiProvider, configs: settings.aiConfigs };
   const keybindings = settings.keybindings || DEFAULT_KEYBINDINGS;
-  
+
   // Extract remaining fields for config.json
   const { aiProvider, aiConfigs, keybindings: _, ...rest } = settings;
   const mainConfig = { ...rest, updatedAt: new Date().toISOString() };
@@ -535,7 +556,7 @@ export async function saveConfig(settings: any) {
   await fs.writeFile(path.join(configDir, 'ai.json'), JSON.stringify(ai, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'config.json'), JSON.stringify(mainConfig, null, 2), 'utf-8');
-  
+
   if (settings.skills) {
     await saveSkillsConfig(settings.skills);
   }
@@ -567,10 +588,10 @@ export async function saveSkillsConfig(config: any) {
 
 export async function restoreSkill(skillName: string) {
   const skillsDir = path.join(getConfigDir(), 'skills');
-  const bundledSkillsPath = app.isPackaged 
-    ? path.join(process.resourcesPath, 'skills') 
+  const bundledSkillsPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'skills')
     : path.join(app.getAppPath(), 'resources', 'skills');
-  
+
   const srcDir = path.join(bundledSkillsPath, skillName);
   const destDir = path.join(skillsDir, skillName);
 
@@ -624,7 +645,7 @@ export async function listAvailableSkills() {
       for (const skillMdPath of skillMdFiles) {
         const itemPath = path.dirname(skillMdPath);
         const item = path.basename(itemPath);
-        
+
         try {
           const content = await fs.readFile(skillMdPath, 'utf-8');
           // Optional YAML frontmatter
@@ -637,9 +658,9 @@ export async function listAvailableSkills() {
               console.error(`Error parsing YAML in ${skillMdPath}`, e);
             }
           }
-          
+
           const name = meta.name || item;
-          
+
           if (seenNames.has(name)) {
             if (seenNames.get(name) === itemPath) {
               // Already registered from same path, ignore
@@ -699,7 +720,7 @@ export async function listAvailableCommands() {
       for (const cmdMdPath of cmdMdFiles) {
         const itemPath = path.dirname(cmdMdPath);
         const item = path.basename(itemPath);
-        
+
         try {
           const content = await fs.readFile(cmdMdPath, 'utf-8');
           const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
@@ -752,10 +773,10 @@ export async function restoreDefaultCommands() {
 
 export async function restoreCommand(commandName: string) {
   const commandsDir = path.join(getConfigDir(), 'commands');
-  const bundledCommandsPath = app.isPackaged 
-    ? path.join(process.resourcesPath, 'commands') 
+  const bundledCommandsPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'commands')
     : path.join(app.getAppPath(), 'resources', 'commands');
-  
+
   const srcDir = path.join(bundledCommandsPath, commandName);
   const destDir = path.join(commandsDir, commandName);
 
@@ -792,7 +813,7 @@ export async function createWorkspace(name: string) {
   if (wsConfig.list.includes(name)) {
     throw new Error('Workspace already exists');
   }
-  
+
   wsConfig.list.push(name);
   wsConfig.active = name;
 
@@ -817,12 +838,12 @@ export async function addWorkspaceFolder(folderPath: string) {
   const wsConfig = await getWorkspacesConfig();
   const activeWs = wsConfig.active;
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
-  
+
   let wsData: { folders: string[], tabs?: any[], activeTabId?: string } = { folders: [], tabs: [], activeTabId: '' };
   try {
     const data = await fs.readFile(workspacePath, 'utf-8');
     wsData = JSON.parse(data);
-  } catch {}
+  } catch { }
 
   if (!wsData.folders.includes(folderPath)) {
     wsData.folders.push(folderPath);
@@ -839,7 +860,7 @@ export async function removeWorkspaceFolder(folderPath: string) {
       data.folders = data.folders.filter((f: string) => f !== folderPath);
       await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
     }
-  } catch {}
+  } catch { }
 }
 
 export async function renameWorkspaceFolder(oldPath: string, newPath: string) {
@@ -851,7 +872,7 @@ export async function renameWorkspaceFolder(oldPath: string, newPath: string) {
       data.folders = data.folders.map((f: string) => f === oldPath ? newPath : f);
       await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
     }
-  } catch {}
+  } catch { }
 }
 
 export async function reorderWorkspaceFolders(newFolders: string[]) {
@@ -861,20 +882,27 @@ export async function reorderWorkspaceFolders(newFolders: string[]) {
     const data = JSON.parse(await fs.readFile(workspacePath, 'utf-8'));
     data.folders = newFolders;
     await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch {}
+  } catch { }
 }
 
 export async function getWorkspaceFolders() {
-  const wsConfig = await getWorkspacesConfig();
-  const activeWs = wsConfig.active;
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
-  
   try {
+    const wsConfig = await getWorkspacesConfig();
+    const activeWs = wsConfig.active;
+    const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
+
+    if (!existsSync(workspacePath)) {
+      console.warn(`Workspace file not found: ${workspacePath}`);
+      return { data: [], debugPath: workspacePath };
+    }
+
     const data = await fs.readFile(workspacePath, 'utf-8');
-    const folders = JSON.parse(data).folders || [];
-    return folders.map((f: string) => expandHome(f));
-  } catch {
-    return [];
+    const parsed = JSON.parse(data);
+    const folders = parsed.folders || [];
+    return { data: folders.map((f: string) => expandHome(f)), debugPath: workspacePath };
+  } catch (e) {
+    console.error('getWorkspaceFolders failed:', e);
+    return { data: [], error: String(e) };
   }
 }
 
@@ -882,7 +910,7 @@ export async function getWorkspaceState() {
   const wsConfig = await getWorkspacesConfig();
   const activeWs = wsConfig.active;
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
-  
+
   try {
     const data = await fs.readFile(workspacePath, 'utf-8');
     const parsed = JSON.parse(data);
@@ -896,12 +924,12 @@ export async function saveWorkspaceState(tabs: any[], activeTabId: string) {
   const wsConfig = await getWorkspacesConfig();
   const activeWs = wsConfig.active;
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
-  
+
   let wsData: any = { folders: [], tabs: [], activeTabId: '' };
   try {
     const data = await fs.readFile(workspacePath, 'utf-8');
     wsData = JSON.parse(data);
-  } catch {}
+  } catch { }
 
   wsData.tabs = tabs;
   wsData.activeTabId = activeTabId;

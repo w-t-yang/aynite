@@ -1,10 +1,12 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
-import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
+import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns } from './config';
 
 const execAsync = promisify(exec);
 
@@ -18,17 +20,25 @@ function setupWatcher(folders: string[]) {
   
   if (folders.length === 0) return;
   
-  watcher = watch(folders, {
-    ignored: /(^|[\/\\])\../, // ignore dotfiles
-    persistent: true,
-    ignoreInitial: true,
-    depth: 99
-  });
+  getIgnorePatterns().then(ignorePatterns => {
+    watcher = watch(folders, {
+      ignored: (p) => {
+        const basename = path.basename(p);
+        if (folders.includes(p)) return false;
+        return Array.isArray(ignorePatterns) && ignorePatterns.includes(basename);
+      },
+      persistent: true,
+      ignoreInitial: true,
+      depth: 99
+    });
 
-  watcher.on('all', (event, path) => {
-    if (mainWindow) {
-      mainWindow.webContents.send('api:fs-change', { event, path });
-    }
+    watcher.on('all', (event, path) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('api:fs-change', { event, path });
+      }
+    });
+  }).catch(e => {
+    console.error('Error in setupWatcher ignore patterns:', e);
   });
 }
 
@@ -38,7 +48,7 @@ function createWindow(): void {
     height: 800,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true
     }
@@ -47,7 +57,7 @@ function createWindow(): void {
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
   
   mainWindow.setMenuBarVisibility(false);
@@ -63,8 +73,8 @@ app.whenReady().then(async () => {
   createWindow();
 
   // Initial watcher setup
-  const folders = await getWorkspaceFolders();
-  setupWatcher(folders);
+  const foldersRes = await getWorkspaceFolders();
+  setupWatcher(foldersRes.data);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -82,7 +92,7 @@ app.on('window-all-closed', () => {
 // Helper to expand ~ to home directory
 function expandHome(filepath: string): string {
   if (filepath.startsWith('~')) {
-    return join(require('os').homedir(), filepath.slice(1));
+    return path.join(os.homedir(), filepath.slice(1));
   }
   return filepath;
 }
@@ -90,14 +100,23 @@ function expandHome(filepath: string): string {
 // IPC handlers ported from express server.ts
 ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
   try {
-    const resolvedPath = require('path').resolve(expandHome(dirPath));
+    const resolvedPath = path.resolve(expandHome(dirPath));
     const files = await fs.readdir(resolvedPath, { withFileTypes: true });
     
-    const result = files.map(file => ({
-      name: file.name,
-      isDirectory: file.isDirectory(),
-      path: require('path').join(resolvedPath, file.name)
-    }));
+    let ignorePatterns: string[] = [];
+    try {
+      ignorePatterns = await getIgnorePatterns();
+    } catch (e) {
+      console.error('Failed to get ignore patterns', e);
+    }
+
+    const result = files
+      .filter(file => !Array.isArray(ignorePatterns) || !ignorePatterns.includes(file.name))
+      .map(file => ({
+        name: file.name,
+        isDirectory: file.isDirectory(),
+        path: path.join(resolvedPath, file.name)
+      }));
     
     result.sort((a, b) => {
       if (a.isDirectory && !b.isDirectory) return -1;
@@ -105,9 +124,10 @@ ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
       return a.name.localeCompare(b.name);
     });
 
-    return { data: result };
+    return { data: result, debug: { resolvedPath, ignorePatterns } };
   } catch (error: any) {
-    return { error: error.message };
+    console.error('api:files error:', error);
+    return { error: error.message, debug: { dirPath } };
   }
 });
 
@@ -122,7 +142,7 @@ ipcMain.handle('api:command', async (event, { command, cwd }: { command: string,
 
 ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, currentFile }: { commandPath: string, params: string[], currentFile?: string }) => {
   try {
-    const runShPath = join(commandPath, 'run.sh');
+    const runShPath = path.join(commandPath, 'run.sh');
     // Ensure execute permission
     if (process.platform !== 'win32') {
       try {
@@ -205,8 +225,8 @@ ipcMain.handle('api:workspace-create', async (event, name: string) => {
 ipcMain.handle('api:workspace-switch', async (event, name: string) => {
   try {
     const ws = await switchWorkspace(name);
-    const folders = await getWorkspaceFolders();
-    setupWatcher(folders);
+    const foldersRes = await getWorkspaceFolders();
+    setupWatcher(foldersRes.data);
     return { data: ws };
   } catch (error: any) {
     return { error: error.message };
@@ -221,8 +241,8 @@ ipcMain.handle('api:workspace-add-folder', async () => {
     if (canceled || filePaths.length === 0) return { data: null };
     
     await addWorkspaceFolder(filePaths[0]);
-    const folders = await getWorkspaceFolders();
-    setupWatcher(folders);
+    const foldersRes = await getWorkspaceFolders();
+    setupWatcher(foldersRes.data);
     return { data: filePaths[0] };
   } catch (error: any) {
     return { error: error.message };
@@ -231,8 +251,43 @@ ipcMain.handle('api:workspace-add-folder', async () => {
 
 ipcMain.handle('api:workspace-get-folders', async () => {
   try {
-    const folders = await getWorkspaceFolders();
-    return { data: folders };
+    return await getWorkspaceFolders();
+  } catch (error: any) {
+    return { data: [], error: error.message };
+  }
+});
+
+ipcMain.handle('api:workspace-all-files', async () => {
+  try {
+    const foldersRes = await getWorkspaceFolders();
+    const folders = foldersRes.data;
+    const ignorePatterns = await getIgnorePatterns();
+    let allFiles: any[] = [];
+
+    async function scan(dir: string) {
+      const list = await fs.readdir(dir, { withFileTypes: true });
+      for (const file of list) {
+        if (ignorePatterns.includes(file.name)) continue;
+        const res = path.resolve(dir, file.name);
+        if (file.isDirectory()) {
+          await scan(res);
+        } else {
+          allFiles.push({
+            name: file.name,
+            path: res,
+            isDirectory: false
+          });
+        }
+      }
+    }
+
+    for (const folder of folders) {
+      if (existsSync(folder)) {
+        await scan(folder);
+      }
+    }
+
+    return { data: allFiles };
   } catch (error: any) {
     return { error: error.message };
   }
@@ -241,8 +296,8 @@ ipcMain.handle('api:workspace-get-folders', async () => {
 ipcMain.handle('api:workspace-remove-folder', async (event, folderPath: string) => {
   try {
     await removeWorkspaceFolder(folderPath);
-    const folders = await getWorkspaceFolders();
-    setupWatcher(folders);
+    const foldersRes = await getWorkspaceFolders();
+    setupWatcher(foldersRes.data);
     return { data: true };
   } catch (error: any) {
     return { error: error.message };
@@ -252,8 +307,8 @@ ipcMain.handle('api:workspace-remove-folder', async (event, folderPath: string) 
 ipcMain.handle('api:workspace-reorder-folders', async (event, folders: string[]) => {
   try {
     await reorderWorkspaceFolders(folders);
-    const updatedFolders = await getWorkspaceFolders();
-    setupWatcher(updatedFolders);
+    const updatedFoldersRes = await getWorkspaceFolders();
+    setupWatcher(updatedFoldersRes.data);
     return { data: true };
   } catch (error: any) {
     return { error: error.message };
