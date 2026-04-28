@@ -79,12 +79,15 @@ export default function App() {
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [workspaceFolders, setWorkspaceFolders] = useState<string[]>([]);
+  const [activeWorkspaceName, setActiveWorkspaceName] = useState<string>('');
   const [showTabSwitcher, setShowTabSwitcher] = useState(false);
 
   const loadWorkspaceState = async () => {
+    setWorkspaceReady(false);
     // @ts-ignore
     const res = await window.api.getWorkspaceState();
     if (res && res.data) {
+      setActiveWorkspaceName(res.data.name || '');
       const restoredTabs = res.data.tabs || [];
       const validTabs: Tab[] = [];
 
@@ -110,14 +113,15 @@ export default function App() {
         if (textarea) textarea.focus();
       }, 300);
     }
-    setWorkspaceReady(true);
-
+    
     // Load workspace folders for the chat agent
     // @ts-ignore
     const foldersRes = await window.api.getWorkspaceFolders();
     if (foldersRes && Array.isArray(foldersRes.data)) {
       setWorkspaceFolders(foldersRes.data);
     }
+
+    setWorkspaceReady(true);
   };
 
   // Migrate old settings structure to new one
@@ -345,14 +349,19 @@ export default function App() {
   }, [settings]);
 
   useEffect(() => {
-    if (!workspaceReady) return;
-    const strippedTabs = tabs.map(t => {
-      const { content, originalContent, isDirty, ...rest } = t;
-      return rest;
-    });
-    // @ts-ignore
-    window.api.saveWorkspaceState(strippedTabs, activeTabId).catch(console.error);
-  }, [activeTabId, tabs, workspaceReady]);
+    if (!workspaceReady || !activeWorkspaceName) return;
+    
+    const timer = setTimeout(() => {
+      const strippedTabs = tabs.map(t => {
+        const { content, originalContent, isDirty, ...rest } = t;
+        return rest;
+      });
+      // @ts-ignore
+      window.api.saveWorkspaceState(activeWorkspaceName, strippedTabs, activeTabId).catch(console.error);
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timer);
+  }, [activeTabId, tabs, workspaceReady, activeWorkspaceName]);
 
   useEffect(() => {
     localStorage.setItem('obsidian_right_panel', String(rightPanelOpen));

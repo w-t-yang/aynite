@@ -834,16 +834,25 @@ export async function switchWorkspace(name: string) {
   return wsConfig;
 }
 
+async function safeReadWorkspaceData(workspacePath: string): Promise<any | null> {
+  try {
+    if (!existsSync(workspacePath)) return { folders: [], tabs: [], activeTabId: '' };
+    const content = await fs.readFile(workspacePath, 'utf-8');
+    if (!content.trim()) return null;
+    return JSON.parse(content);
+  } catch (e) {
+    console.error(`Failed to read/parse workspace file at ${workspacePath}:`, e);
+    return null;
+  }
+}
+
 export async function addWorkspaceFolder(folderPath: string) {
   const wsConfig = await getWorkspacesConfig();
   const activeWs = wsConfig.active;
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
 
-  let wsData: { folders: string[], tabs?: any[], activeTabId?: string } = { folders: [], tabs: [], activeTabId: '' };
-  try {
-    const data = await fs.readFile(workspacePath, 'utf-8');
-    wsData = JSON.parse(data);
-  } catch { }
+  const wsData = await safeReadWorkspaceData(workspacePath);
+  if (!wsData) return; // Prevent overwriting if read failed
 
   if (!wsData.folders.includes(folderPath)) {
     wsData.folders.push(folderPath);
@@ -854,35 +863,35 @@ export async function addWorkspaceFolder(folderPath: string) {
 export async function removeWorkspaceFolder(folderPath: string) {
   const wsConfig = await getWorkspacesConfig();
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
-  try {
-    const data = JSON.parse(await fs.readFile(workspacePath, 'utf-8'));
-    if (data.folders.includes(folderPath)) {
-      data.folders = data.folders.filter((f: string) => f !== folderPath);
-      await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
-    }
-  } catch { }
+  const data = await safeReadWorkspaceData(workspacePath);
+  if (!data) return;
+
+  if (data.folders.includes(folderPath)) {
+    data.folders = data.folders.filter((f: string) => f !== folderPath);
+    await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
+  }
 }
 
 export async function renameWorkspaceFolder(oldPath: string, newPath: string) {
   const wsConfig = await getWorkspacesConfig();
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
-  try {
-    const data = JSON.parse(await fs.readFile(workspacePath, 'utf-8'));
-    if (data.folders.includes(oldPath)) {
-      data.folders = data.folders.map((f: string) => f === oldPath ? newPath : f);
-      await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
-    }
-  } catch { }
+  const data = await safeReadWorkspaceData(workspacePath);
+  if (!data) return;
+
+  if (data.folders.includes(oldPath)) {
+    data.folders = data.folders.map((f: string) => f === oldPath ? newPath : f);
+    await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
+  }
 }
 
 export async function reorderWorkspaceFolders(newFolders: string[]) {
   const wsConfig = await getWorkspacesConfig();
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
-  try {
-    const data = JSON.parse(await fs.readFile(workspacePath, 'utf-8'));
-    data.folders = newFolders;
-    await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch { }
+  const data = await safeReadWorkspaceData(workspacePath);
+  if (!data) return;
+
+  data.folders = newFolders;
+  await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 export async function getWorkspaceFolders() {
@@ -911,25 +920,21 @@ export async function getWorkspaceState() {
   const activeWs = wsConfig.active;
   const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
 
-  try {
-    const data = await fs.readFile(workspacePath, 'utf-8');
-    const parsed = JSON.parse(data);
-    return { tabs: parsed.tabs || [], activeTabId: parsed.activeTabId || '' };
-  } catch {
-    return { tabs: [], activeTabId: '' };
-  }
+  const parsed = await safeReadWorkspaceData(workspacePath);
+  if (!parsed) return { name: activeWs, tabs: [], activeTabId: '' };
+  
+  return { 
+    name: activeWs,
+    tabs: parsed.tabs || [], 
+    activeTabId: parsed.activeTabId || '' 
+  };
 }
 
-export async function saveWorkspaceState(tabs: any[], activeTabId: string) {
-  const wsConfig = await getWorkspacesConfig();
-  const activeWs = wsConfig.active;
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
+export async function saveWorkspaceState(workspaceName: string, tabs: any[], activeTabId: string) {
+  const workspacePath = path.join(getConfigDir(), 'workspaces', `${workspaceName}.json`);
 
-  let wsData: any = { folders: [], tabs: [], activeTabId: '' };
-  try {
-    const data = await fs.readFile(workspacePath, 'utf-8');
-    wsData = JSON.parse(data);
-  } catch { }
+  const wsData = await safeReadWorkspaceData(workspacePath);
+  if (!wsData) return; // Prevent overwriting if read failed
 
   wsData.tabs = tabs;
   wsData.activeTabId = activeTabId;

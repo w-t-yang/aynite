@@ -17,7 +17,7 @@ const api = {
   getWorkspaceFolders: () => ipcRenderer.invoke('api:workspace-get-folders'),
   workspaceAllFiles: () => ipcRenderer.invoke('api:workspace-all-files'),
   getWorkspaceState: () => ipcRenderer.invoke('api:workspace-get-state'),
-  saveWorkspaceState: (tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { tabs, activeTabId }),
+  saveWorkspaceState: (workspaceName: string, tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { workspaceName, tabs, activeTabId }),
 
   // Skills API
   pickSkillFolder: () => ipcRenderer.invoke('api:skill-add-folder'),

@@ -324,9 +324,9 @@ ipcMain.handle('api:workspace-get-state', async () => {
   }
 });
 
-ipcMain.handle('api:workspace-save-state', async (event, { tabs, activeTabId }: { tabs: any[], activeTabId: string }) => {
+ipcMain.handle('api:workspace-save-state', async (event, { workspaceName, tabs, activeTabId }: { workspaceName: string, tabs: any[], activeTabId: string }) => {
   try {
-    await saveWorkspaceState(tabs, activeTabId);
+    await saveWorkspaceState(workspaceName, tabs, activeTabId);
     return { data: true };
   } catch (error: any) {
     return { error: error.message };

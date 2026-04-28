@@ -20,3 +20,4 @@
 - logs
   - [] conversation history
   - [] dev log, remove the current key trigger log and ollama call request log in the console, put them into the dev log
+- more files types
