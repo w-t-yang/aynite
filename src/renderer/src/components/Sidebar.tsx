@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus } from 'lucide-react';
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../lib/utils';
+import { getFileCategory } from '../lib/file-handlers';
 import { SearchableSelect } from './ui/SearchableSelect';
 
 interface FileNode {
@@ -16,7 +17,7 @@ interface SidebarProps {
   activeTabPath?: string;
   dirtyFiles?: string[];
   onWorkspaceChange?: () => void;
-  onSelectFile?: (file: { name: string; isDirectory: boolean; path: string }, content: string) => void;
+  onSelectFile?: (file: { name: string; isDirectory: boolean; path: string }) => void;
   onOpenSettings?: () => void;
   onClose?: () => void;
 }
@@ -334,7 +335,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
           // @ts-ignore
           await window.api.createFile(newPath, action === 'new-folder');
           if (action === 'new-file' && onSelectFile) {
-            onSelectFile({ name: payloadVal, isDirectory: false, path: newPath }, '');
+            onSelectFile({ name: payloadVal, isDirectory: false, path: newPath });
           }
         } else if (action === 'rename' && payloadVal && payloadVal !== file.name) {
           // @ts-ignore
@@ -430,10 +431,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
             if (isDirectory) {
               node.toggle();
             } else {
-               // @ts-ignore
-               window.api.readFile(id).then(res => {
-                 if (res.data) onSelectFile?.({ name, isDirectory, path: id }, res.data);
-               });
+               onSelectFile?.({ name, isDirectory, path: id });
             }
           }
         }}

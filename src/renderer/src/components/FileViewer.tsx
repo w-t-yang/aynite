@@ -1,6 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Pencil, Eye, Save } from 'lucide-react';
+import { Pencil, Eye, Save, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { getFileCategory, FileInfo } from '../lib/file-handlers';
+import { FileHandlerComponents } from './viewers';
+import Editor from 'react-simple-code-editor';
+// @ts-ignore
+import { highlight, languages } from 'prismjs';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-rust';
+import 'prismjs/components/prism-yaml';
+import 'prism-themes/themes/prism-vsc-dark-plus.css';
 
 interface FileViewerProps {
   filename: string;
@@ -25,6 +40,13 @@ export default function FileViewer({
   const [searchResults, setSearchResults] = useState<number[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
   const [scrollPos, setScrollPos] = useState({ top: 0, left: 0 });
+  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const category = fileInfo ? getFileCategory(fileInfo.extension, fileInfo.isText) : 'text';
+  const Handler = FileHandlerComponents[category];
+  const canEdit = category === 'text' || category === 'markdown' || category === 'html';
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumRef = useRef<HTMLDivElement>(null);
@@ -46,30 +68,48 @@ export default function FileViewer({
   }, [id]);
 
   useEffect(() => {
-    setIsEditing(false); // reset mode on file change
-    if (textareaRef.current) {
-      textareaRef.current.focus(); // Focus first to avoid it resetting selection later
+    const fetchInfo = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const path = id.startsWith('file-') ? id.replace('file-', '') : id;
+        // @ts-ignore
+        const res = await window.api.getFileInfo(path);
+        if (res.error) throw new Error(res.error);
+        setFileInfo(res.data);
+      } catch (e: any) {
+        console.error('Failed to fetch file info:', e);
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInfo();
+    setIsEditing(false);
+  }, [id]);
+
+  useEffect(() => {
+    const el = document.getElementById('file-editor-textarea') as HTMLTextAreaElement;
+    if (el) {
+      textareaRef.current = el;
+      el.focus();
       if (initialCursorPos !== undefined) {
-        textareaRef.current.setSelectionRange(initialCursorPos, initialCursorPos);
-        // We need a small timeout to ensure scrolling happens after layout
+        el.setSelectionRange(initialCursorPos, initialCursorPos);
         setTimeout(() => {
-          if (textareaRef.current) {
-            updateCursor();
-            // Scroll into view manually if needed
-            const pos = initialCursorPos;
-            const textBefore = textareaRef.current.value.substring(0, pos);
-            const lineCount = textBefore.split('\n').length;
-            const lineHeight = 24; // 1.5rem
-            textareaRef.current.scrollTop = Math.max(0, (lineCount - 5) * lineHeight);
-          }
+          updateCursor();
+          const pos = initialCursorPos;
+          const textBefore = el.value.substring(0, pos);
+          const lineCount = textBefore.split('\n').length;
+          const lineHeight = 24;
+          el.scrollTop = Math.max(0, (lineCount - 5) * lineHeight);
         }, 0);
       } else {
-        textareaRef.current.scrollTop = 0;
-        textareaRef.current.scrollLeft = 0;
-        textareaRef.current.setSelectionRange(0, 0);
+        el.scrollTop = 0;
+        el.scrollLeft = 0;
+        el.setSelectionRange(0, 0);
       }
     }
-  }, [id]);
+  }, [id, category]);
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -199,7 +239,8 @@ export default function FileViewer({
 
       // Don't capture keys if focus is NOT on the file viewer textarea or search input
       const target = e.target as HTMLElement;
-      if (target !== textareaRef.current && target !== searchInputRef.current) {
+      const editorTextarea = document.getElementById('file-editor-textarea');
+      if (target !== editorTextarea && target !== textareaRef.current && target !== searchInputRef.current) {
         return;
       }
 
@@ -440,6 +481,28 @@ export default function FileViewer({
     }
   };
 
+
+  useEffect(() => {
+    // Keep textareaRef in sync with the Editor's internal textarea
+    const el = document.getElementById('file-editor-textarea') as HTMLTextAreaElement;
+    if (el) {
+      textareaRef.current = el;
+      // Force caret visibility - important since react-simple-code-editor makes text transparent
+      el.style.caretColor = isEditing ? 'var(--primary)' : '#808080'; // Primary if editing, grey in view mode
+      el.style.opacity = '1';
+    }
+  });
+
+  // Focus the editor when category or isEditing changes
+  useEffect(() => {
+    if (canEdit) {
+      setTimeout(() => {
+        const el = document.getElementById('file-editor-textarea');
+        if (el) el.focus();
+      }, 100);
+    }
+  }, [category, isEditing]);
+
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
     const { scrollTop, scrollLeft } = e.currentTarget;
     setScrollPos({ top: scrollTop, left: scrollLeft });
@@ -449,60 +512,87 @@ export default function FileViewer({
   };
 
   const wordCount = localContent.trim() ? localContent.trim().split(/\s+/).length : 0;
-  const ext = filename.includes('.') ? filename.split('.').pop()?.toLowerCase() || 'txt' : 'txt';
 
   const lineCount = localContent.split('\n').length;
   const lines = Array.from({ length: Math.max(1, lineCount) }, (_, i) => i + 1);
 
-  const binaryExts = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'pdf', 'zip', 'tar', 'gz', 'mp3', 'mp4', 'webm', 'ogg', 'wav'];
-  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext);
-  const isTextFile = !binaryExts.includes(ext);
-
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden relative">
       <div className="flex-1 flex overflow-hidden relative">
-        {!isTextFile ? (
-          <div className="flex-1 flex items-center justify-center bg-accent/20">
-            {isImage ? (
-              <div className="text-center text-muted-foreground">
-                 <p className="mb-2">Image Viewer</p>
-                 <span className="text-xs">Cannot display binary content natively here yet.</span>
-              </div>
-            ) : (
-               <div className="text-muted-foreground text-sm">Binary file ({ext}) - Cannot display content.</div>
-            )}
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : (
-          <div className="flex-1 flex overflow-hidden font-mono text-sm relative">
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-destructive gap-2">
+            <AlertCircle size={32} />
+            <p>Error loading file info: {error}</p>
+          </div>
+        ) : (isEditing && canEdit) || (category === 'text') ? (
+          <div className="flex-1 flex overflow-hidden font-mono text-sm relative bg-background">
             <div 
               ref={lineNumRef}
-              className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-60 overflow-hidden select-none"
+              className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-60 overflow-hidden select-none z-10"
             >
               {lines.map((l) => <div key={l} className="leading-relaxed h-6">{l}</div>)}
             </div>
-            <textarea
-              ref={textareaRef}
-              value={localContent}
-              readOnly={false}
-              onBeforeInput={(e) => {
-                if (!isEditing) e.preventDefault();
-              }}
-              onScroll={handleScroll}
-              onSelect={updateCursor}
-              onKeyUp={updateCursor}
-              onClick={updateCursor}
-              onChange={handleContentChange}
-              className={cn(
-                "flex-1 resize-none bg-transparent outline-none p-4 leading-relaxed whitespace-pre font-mono text-foreground transition-all",
-                isEditing ? "caret-primary" : "caret-muted-foreground/60",
-                "selection:bg-primary/30"
-              )}
-              style={{ lineHeight: '1.5rem', tabSize: 4 }}
-              track-cursor="true"
-              wrap="off"
-              autoFocus={false}
-            />
+            <div className="flex-1 overflow-auto relative" onScroll={(e) => {
+               if (lineNumRef.current) lineNumRef.current.scrollTop = e.currentTarget.scrollTop;
+            }}>
+              <Editor
+                value={localContent}
+                onValueChange={content => {
+                  if (!isEditing) return;
+                  setLocalContent(content);
+                  if (onChange) {
+                    isLocalChange.current = true;
+                    onChange(content);
+                  }
+                }}
+                highlight={code => {
+                  const langMap: any = {
+                    'js': languages.js,
+                    'ts': languages.typescript,
+                    'tsx': languages.typescript,
+                    'jsx': languages.js,
+                    'json': languages.json,
+                    'css': languages.css,
+                    'html': languages.html,
+                    'py': languages.python,
+                    'rs': languages.rust,
+                    'sh': languages.bash,
+                    'bash': languages.bash,
+                    'yaml': languages.yaml,
+                    'yml': languages.yaml,
+                    'md': languages.markdown
+                  };
+                  const lang = langMap[fileInfo?.extension || ''] || languages.clike || languages.plain;
+                  return highlight(code, lang, fileInfo?.extension || 'text');
+                }}
+                padding={16}
+                className="min-h-full font-mono text-sm leading-relaxed outline-none"
+                style={{
+                  fontFamily: '"Fira Code", monospace',
+                  minHeight: '100%',
+                }}
+                readOnly={!isEditing}
+                textareaId="file-editor-textarea"
+                textareaClassName="outline-none focus:ring-0 !caret-primary"
+                preClassName="selection:bg-primary/30"
+                // @ts-ignore
+                textareaProps={{ 
+                  "track-cursor": "true",
+                  spellCheck: false,
+                  autoCapitalize: "off",
+                  autoComplete: "off",
+                  autoCorrect: "off",
+                  style: { caretColor: isEditing ? 'var(--primary)' : '#808080' }
+                }}
+              />
+            </div>
           </div>
+        ) : (
+          <Handler file={fileInfo!} content={localContent} />
         )}
         
         {showSearch && (
@@ -529,7 +619,7 @@ export default function FileViewer({
       <div className="h-7 shrink-0 bg-muted/50 border-t border-border text-muted-foreground flex items-center px-4 justify-between text-xs font-sans">
         <div className="flex items-center gap-4">
            <span className="font-medium truncate max-w-[200px]">{filename}</span>
-           {isTextFile && (
+           {!loading && !error && canEdit && (
              <div className="flex items-center gap-2">
                {isDirty && (
                  <button
@@ -547,16 +637,16 @@ export default function FileViewer({
                   title={isEditing ? "Switch to View Mode" : "Switch to Edit Mode"}
                >
                   {isEditing ? <Pencil size={12} className="text-primary" /> : <Eye size={12} />}
-                  <span>{isEditing ? 'Editing' : 'Read Only'}</span>
+                  <span>{isEditing ? 'Editing' : (category === 'markdown' ? 'Preview' : 'View Mode')}</span>
                </button>
              </div>
            )}
         </div>
         <div className="flex gap-4 items-center opacity-80">
-           {isTextFile && <span>Ln {cursor.line}, Col {cursor.col}</span>}
-           {isTextFile && <span>{wordCount} words</span>}
+           {canEdit && isEditing && <span>Ln {cursor.line}, Col {cursor.col}</span>}
+           {canEdit && <span>{wordCount} words</span>}
            <span>UTF-8</span>
-           <span className="uppercase">{ext}</span>
+           <span className="uppercase">{fileInfo?.extension || 'txt'}</span>
         </div>
       </div>
     </div>

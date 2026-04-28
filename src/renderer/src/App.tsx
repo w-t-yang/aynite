@@ -7,6 +7,7 @@ import FileViewer from './components/FileViewer';
 import TabSwitcher from './components/TabSwitcher';
 import { SettingsState } from './components/Settings';
 import { cn } from './lib/utils';
+import { getFileCategory } from './lib/file-handlers';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -93,10 +94,17 @@ export default function App() {
 
       for (const tab of restoredTabs) {
         if (tab.type === 'file' && tab.filepath) {
-          // @ts-ignore
-          const fRes = await window.api.readFile(tab.filepath);
-          if (fRes && !fRes.error) {
-             validTabs.push({ ...tab, content: fRes.data, originalContent: fRes.data, isDirty: false });
+          const ext = tab.filepath.split('.').pop() || '';
+          const category = getFileCategory(ext);
+          
+          if (category === 'text' || category === 'markdown' || category === 'html') {
+            // @ts-ignore
+            const fRes = await window.api.readFile(tab.filepath);
+            if (fRes && !fRes.error) {
+               validTabs.push({ ...tab, content: fRes.data, originalContent: fRes.data, isDirty: false });
+            }
+          } else {
+             validTabs.push({ ...tab, content: '', originalContent: '', isDirty: false });
           }
         } else {
           validTabs.push(tab);
@@ -581,7 +589,7 @@ export default function App() {
     };
   }, [tabs, activeTabId]);
 
-  const handleSelectFile = (file: { name: string; path: string, isDirectory: boolean }, content: string) => {
+  const handleSelectFile = async (file: { name: string; path: string, isDirectory: boolean }) => {
     // Normalize path to ensure tab reuse works across platforms/sources
     const normalizedPath = file.path.replace(/\\/g, '/');
     const tabId = `file-${normalizedPath}`;
@@ -590,6 +598,16 @@ export default function App() {
     const existingTab = tabs.find(t => t.filepath?.replace(/\\/g, '/') === normalizedPath);
     
     if (!existingTab) {
+      const ext = file.path.split('.').pop() || '';
+      const category = getFileCategory(ext);
+      let content = '';
+
+      if (category === 'text' || category === 'markdown' || category === 'html') {
+        // @ts-ignore
+        const res = await window.api.readFile(file.path);
+        content = res.data || '';
+      }
+
       setTabs(prev => [...prev, {
         id: tabId,
         type: 'file',

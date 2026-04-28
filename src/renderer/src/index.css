@@ -1,6 +1,35 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.2);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.4);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* iframe scrollbar hiding or styling is limited by cross-origin, 
+   but for aynite-resource we can try to inject or just ensure container looks good */
+iframe {
+  color-scheme: dark;
+}
+
 @layer base {
   :root {
     /* Default values (dark theme) — overridden dynamically by JS */
@@ -243,4 +272,86 @@
 
 .mask-fade-vertical {
   mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+}
+
+/* ─── Prism Syntax Highlighting Overrides ────────────────────────── */
+
+code[class*="language-"],
+pre[class*="language-"] {
+  color: var(--foreground) !important;
+  background: transparent !important;
+  text-shadow: none !important;
+  font-family: var(--font-mono) !important;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--muted-foreground) !important;
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: var(--foreground) !important;
+  opacity: 0.6;
+}
+
+.token.namespace {
+  opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: var(--info) !important;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: var(--success) !important;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: var(--warning) !important;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: var(--primary) !important;
+}
+
+.token.function,
+.token.class-name {
+  color: var(--link) !important;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: var(--warning) !important;
+}
+
+.token.bold {
+  font-weight: bold;
+}
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
 }

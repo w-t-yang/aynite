@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, protocol, net } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
@@ -9,6 +9,10 @@ import { FSWatcher, watch } from 'chokidar';
 import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns } from './config';
 
 const execAsync = promisify(exec);
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'aynite-resource', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true } }
+]);
 
 let mainWindow: BrowserWindow | null = null;
 let watcher: FSWatcher | null = null;
@@ -69,6 +73,19 @@ if (process.platform === 'linux') {
 }
 
 app.whenReady().then(async () => {
+  const { protocol, net } = await import('electron');
+  protocol.handle('aynite-resource', (request) => {
+    const url = request.url.replace('aynite-resource://', '');
+    try {
+      const decodedPath = decodeURIComponent(url);
+      const fileUrl = 'file://' + (decodedPath.startsWith('/') ? '' : '/') + decodedPath;
+      return net.fetch(fileUrl);
+    } catch (e) {
+      console.error('Failed to handle resource request:', e);
+      return new Response('File not found', { status: 404 });
+    }
+  });
+
   await initAppFolders();
   createWindow();
 
@@ -180,6 +197,43 @@ ipcMain.handle('api:read-file', async (event, filePath: string) => {
   try {
     const content = await fs.readFile(expandHome(filePath), 'utf-8');
     return { data: content };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+async function checkIsTextFile(filePath: string): Promise<boolean> {
+  try {
+    const fd = await fs.open(filePath, 'r');
+    const { buffer } = await fd.read(Buffer.alloc(1024), 0, 1024, 0);
+    await fd.close();
+    
+    for (let i = 0; i < buffer.length; i++) {
+      if (buffer[i] === 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+ipcMain.handle('api:file-info', async (event, filePath: string) => {
+  try {
+    const expandedPath = expandHome(filePath);
+    const stats = await fs.stat(expandedPath);
+    const isText = stats.isDirectory() ? false : await checkIsTextFile(expandedPath);
+    
+    return {
+      data: {
+        size: stats.size,
+        createdAt: stats.birthtime,
+        modifiedAt: stats.mtime,
+        isDirectory: stats.isDirectory(),
+        path: expandedPath,
+        extension: path.extname(expandedPath).toLowerCase().slice(1),
+        isText
+      }
+    };
   } catch (error: any) {
     return { error: error.message };
   }
