@@ -581,18 +581,41 @@ export async function restoreDefaultSkills() {
   return allSuccess;
 }
 
+async function findFilesRecursively(dir: string, filenames: string[], ignoreDirs: string[] = ['node_modules', '.git']): Promise<string[]> {
+  let results: string[] = [];
+  try {
+    const list = await fs.readdir(dir, { withFileTypes: true });
+    for (const file of list) {
+      const res = path.resolve(dir, file.name);
+      if (file.isDirectory()) {
+        if (ignoreDirs.includes(file.name)) continue;
+        results = results.concat(await findFilesRecursively(res, filenames, ignoreDirs));
+      } else {
+        if (filenames.includes(file.name)) {
+          results.push(res);
+        }
+      }
+    }
+  } catch (e) {
+    // console.error(`Error searching directory ${dir}`, e);
+  }
+  return results;
+}
+
 export async function listAvailableSkills() {
   const config = await getSkillsConfig();
   const skills: any[] = [];
+  const seenNames = new Map<string, string>(); // name -> path
 
   for (const folder of config.folders) {
     if (!existsSync(folder)) continue;
     try {
-      const items = readdirSync(folder);
-      for (const item of items) {
-        const itemPath = path.join(folder, item);
-        const skillMdPath = path.join(itemPath, 'SKILL.md');
-        if (existsSync(skillMdPath)) {
+      const skillMdFiles = await findFilesRecursively(folder, ['SKILL.md']);
+      for (const skillMdPath of skillMdFiles) {
+        const itemPath = path.dirname(skillMdPath);
+        const item = path.basename(itemPath);
+        
+        try {
           const content = await fs.readFile(skillMdPath, 'utf-8');
           // Optional YAML frontmatter
           const match = content.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/);
@@ -605,12 +628,27 @@ export async function listAvailableSkills() {
             }
           }
           
-          // Always push if SKILL.md exists
+          const name = meta.name || item;
+          
+          if (seenNames.has(name)) {
+            if (seenNames.get(name) === itemPath) {
+              // Already registered from same path, ignore
+              continue;
+            } else {
+              // Same name, different path - ignore (don't override)
+              console.warn(`Skill name collision: "${name}" at ${itemPath} ignored. Already registered from ${seenNames.get(name)}`);
+              continue;
+            }
+          }
+
           skills.push({
-            name: meta.name || item,
+            name: name,
             description: meta.description || '',
             path: itemPath
           });
+          seenNames.set(name, itemPath);
+        } catch (e) {
+          console.error(`Error reading skill at ${skillMdPath}`, e);
         }
       }
     } catch (e) {
@@ -642,31 +680,47 @@ export async function saveCommandsConfig(config: any) {
 export async function listAvailableCommands() {
   const config = await getCommandsConfig();
   const commands: any[] = [];
+  const seenNames = new Map<string, string>(); // name -> path
 
   for (const folder of config.folders) {
     if (!existsSync(folder)) continue;
     try {
-      const items = readdirSync(folder);
-      for (const item of items) {
-        const itemPath = path.join(folder, item);
-        const cmdMdPath = path.join(itemPath, 'COMMAND.md');
-        if (existsSync(cmdMdPath)) {
+      const cmdMdFiles = await findFilesRecursively(folder, ['COMMAND.md']);
+      for (const cmdMdPath of cmdMdFiles) {
+        const itemPath = path.dirname(cmdMdPath);
+        const item = path.basename(itemPath);
+        
+        try {
           const content = await fs.readFile(cmdMdPath, 'utf-8');
           const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
           if (match) {
             try {
               const meta: any = yaml.load(match[1]);
+              const name = meta.name || item;
+
+              if (seenNames.has(name)) {
+                if (seenNames.get(name) === itemPath) {
+                  continue;
+                } else {
+                  console.warn(`Command name collision: "${name}" at ${itemPath} ignored. Already registered from ${seenNames.get(name)}`);
+                  continue;
+                }
+              }
+
               commands.push({
-                name: meta.name || item,
+                name: name,
                 description: meta.description || '',
                 parameters: meta.parameters || [],
                 example: meta.example || '',
                 path: itemPath
               });
+              seenNames.set(name, itemPath);
             } catch (e) {
               console.error(`Error parsing YAML in ${cmdMdPath}`, e);
             }
           }
+        } catch (e) {
+          console.error(`Error reading command at ${cmdMdPath}`, e);
         }
       }
     } catch (e) {
