@@ -43,6 +43,7 @@ const api = {
   copyFile: (srcPath: string, destPath: string) => ipcRenderer.invoke('api:file-copy', { srcPath, destPath }),
   deleteFile: (path: string) => ipcRenderer.invoke('api:file-delete', path),
   saveFile: (path: string, content: string) => ipcRenderer.invoke('api:file-save', { path, content }),
+  quitApp: () => ipcRenderer.invoke('api:app-quit'),
   
   // Util
   joinPath: (...paths: string[]) => require('path').join(...paths),

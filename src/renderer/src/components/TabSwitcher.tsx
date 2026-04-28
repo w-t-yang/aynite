@@ -44,7 +44,7 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
         return;
       }
 
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
         if (filtered[selectedIndex]) {
           onSelect(filtered[selectedIndex].id);

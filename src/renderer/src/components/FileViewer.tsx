@@ -9,9 +9,14 @@ interface FileViewerProps {
   onSave?: () => void;
   isDirty?: boolean;
   keybindings: any;
+  initialCursorPos?: number;
+  onCursorChange?: (pos: number) => void;
+  id: string;
 }
 
-export default function FileViewer({ filename, content, onChange, onSave, isDirty, keybindings }: FileViewerProps) {
+export default function FileViewer({ 
+  filename, content, onChange, onSave, isDirty, keybindings, initialCursorPos, onCursorChange, id 
+}: FileViewerProps) {
   const [localContent, setLocalContent] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
@@ -38,16 +43,33 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
   // Reset undo stack when switching files
   useEffect(() => {
     undoStack.current = [];
-  }, [filename]);
+  }, [id]);
 
   useEffect(() => {
     setIsEditing(false); // reset mode on file change
     if (textareaRef.current) {
-      textareaRef.current.scrollTop = 0;
-      textareaRef.current.scrollLeft = 0;
-      textareaRef.current.focus();
+      textareaRef.current.focus(); // Focus first to avoid it resetting selection later
+      if (initialCursorPos !== undefined) {
+        textareaRef.current.setSelectionRange(initialCursorPos, initialCursorPos);
+        // We need a small timeout to ensure scrolling happens after layout
+        setTimeout(() => {
+          if (textareaRef.current) {
+            updateCursor();
+            // Scroll into view manually if needed
+            const pos = initialCursorPos;
+            const textBefore = textareaRef.current.value.substring(0, pos);
+            const lineCount = textBefore.split('\n').length;
+            const lineHeight = 24; // 1.5rem
+            textareaRef.current.scrollTop = Math.max(0, (lineCount - 5) * lineHeight);
+          }
+        }, 0);
+      } else {
+        textareaRef.current.scrollTop = 0;
+        textareaRef.current.scrollLeft = 0;
+        textareaRef.current.setSelectionRange(0, 0);
+      }
     }
-  }, [filename]);
+  }, [id]);
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -118,15 +140,15 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
     setSearchResults(results);
     if (results.length > 0) {
       setCurrentSearchIndex(0);
-      jumpToSearchResult(results[0]);
+      jumpToSearchResult(results[0], false); // Don't steal focus while typing
     } else {
       setCurrentSearchIndex(-1);
     }
   };
 
-  const jumpToSearchResult = (pos: number) => {
+  const jumpToSearchResult = (pos: number, shouldFocus = true) => {
     if (!textareaRef.current) return;
-    textareaRef.current.focus();
+    if (shouldFocus) textareaRef.current.focus();
     textareaRef.current.setSelectionRange(pos, pos + searchQuery.length);
     updateCursor();
     // Scroll into view
@@ -156,10 +178,28 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
       const isCmd = e.metaKey || e.ctrlKey;
       const key = e.key.toUpperCase();
 
-      // Don't capture keys if focus is NOT on the file viewer textarea
-      // This prevents view mode shortcuts from interfering with chat input, settings, etc.
+      if (e.key === 'Tab') {
+        if (isEditing && e.target === textareaRef.current) {
+          e.preventDefault();
+          const textarea = textareaRef.current;
+          if (!textarea) return;
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const val = textarea.value;
+          textarea.value = val.substring(0, start) + "\t" + val.substring(end);
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+          setLocalContent(textarea.value);
+          if (onChange) onChange(textarea.value);
+          updateCursor();
+        } else {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // Don't capture keys if focus is NOT on the file viewer textarea or search input
       const target = e.target as HTMLElement;
-      if (target !== textareaRef.current) {
+      if (target !== textareaRef.current && target !== searchInputRef.current) {
         return;
       }
 
@@ -201,43 +241,59 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
           return;
         }
         if (e.key === 'Enter') {
+          e.preventDefault();
           nextSearch();
           return;
         }
-        return; // Don't process other keys when searching
+        // If we're in the search input, don't let other keys through to the editor
+        if (target === searchInputRef.current) return;
+      }
+
+      // Prevent any deletion in view mode
+      if (!isEditing) {
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          return;
+        }
       }
 
       if (!isEditing) {
         const isPlainKey = !isCmd && !isAlt && !isShift;
 
-        // Helper to check if a key matches a viewMode binding
+        // Helper to check if a key matches a viewer binding
         const isViewBinding = (binding: string | undefined) => isPlainKey && key === binding?.toUpperCase();
 
-        // 1. Single character view mode shortcuts (only in view mode)
-        if (isViewBinding(keybindings.viewMode.enterEdit)) {
+        // 1. Single character viewer shortcuts (only in view mode)
+        const v = keybindings.content.viewer;
+        if (isViewBinding(v.enterEdit)) {
           e.preventDefault(); setIsEditing(true);
-        } else if (isViewBinding(keybindings.viewMode.moveDown)) {
+        } else if (isViewBinding(v.moveDown)) {
           e.preventDefault(); moveCursor('down');
-        } else if (isViewBinding(keybindings.viewMode.moveUp)) {
+        } else if (isViewBinding(v.moveUp)) {
           e.preventDefault(); moveCursor('up');
-        } else if (isViewBinding(keybindings.viewMode.moveLeft)) {
+        } else if (isViewBinding(v.moveLeft)) {
           e.preventDefault(); moveCursor('left');
-        } else if (isViewBinding(keybindings.viewMode.moveRight)) {
+        } else if (isViewBinding(v.moveRight)) {
           e.preventDefault(); moveCursor('right');
-        } else if (isPlainKey && e.key === keybindings.viewMode.search) {
+        } else if (isPlainKey && e.key === v.search) {
           e.preventDefault();
           setShowSearch(true);
-          setTimeout(() => searchInputRef.current?.focus(), 50);
+          setTimeout(() => {
+            if (searchInputRef.current) {
+              searchInputRef.current.focus();
+              searchInputRef.current.select();
+            }
+          }, 50);
         }
       }
 
-      // ─── Content Keys: apply in BOTH view and edit mode ─────────
-      const ck = keybindings.contentKeys || {};
+      // ─── Content Generic Keys: apply in BOTH view and edit mode ─────────
+      const g = keybindings.content.generic || {};
 
       if (isEditing && (e.key === 'Escape' || (isCmd && key === 'G'))) {
         e.preventDefault();
         setIsEditing(false);
-      } else if (isCmd && key === ck.endOfLine?.split('+').pop()) { // End of Line
+      } else if (isCmd && key === g.endOfLine?.split('+').pop()) { // End of Line
         e.preventDefault();
         const textarea = textareaRef.current;
         if (textarea) {
@@ -248,7 +304,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
           textarea.focus();
           updateCursor();
         }
-      } else if (isCmd && key === ck.startOfLine?.split('+').pop()) { // Start of Line
+      } else if (isCmd && key === g.startOfLine?.split('+').pop()) { // Start of Line
         e.preventDefault();
         const textarea = textareaRef.current;
         if (textarea) {
@@ -259,7 +315,8 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
           textarea.focus();
           updateCursor();
         }
-      } else if (isCmd && key === ck.killLine?.split('+').pop()) { // Kill line
+      } else if (isCmd && key === g.killLine?.split('+').pop()) { // Kill line
+        if (!isEditing) return;
         e.preventDefault();
         const textarea = textareaRef.current;
         if (textarea) {
@@ -280,17 +337,89 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
             updateCursor();
           }, 0);
         }
-      } else if (isCmd && key === ck.selectAll?.split('+').pop()) { // Select All
+      } else if (isCmd && key === g.deleteForward?.split('+').pop()) { // Delete character (forward)
+        if (!isEditing) return;
+        e.preventDefault();
+        const textarea = textareaRef.current;
+        if (textarea) {
+          undoStack.current.push(localContent);
+          const pos = textarea.selectionStart;
+          if (pos < localContent.length) {
+            const newContent = localContent.substring(0, pos) + localContent.substring(pos + 1);
+            setLocalContent(newContent);
+            if (onChange) {
+              isLocalChange.current = true;
+              onChange(newContent);
+            }
+            setTimeout(() => {
+              textarea.selectionStart = textarea.selectionEnd = pos;
+              textarea.focus();
+              updateCursor();
+            }, 0);
+          }
+        }
+      } else if (isCmd && key === g.cut?.split('+').pop()) { // Cut
+        if (!isEditing) return;
+        const textarea = textareaRef.current;
+        if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+          e.preventDefault();
+          undoStack.current.push(localContent);
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const selectedText = localContent.substring(start, end);
+          navigator.clipboard.writeText(selectedText);
+          const newContent = localContent.substring(0, start) + localContent.substring(end);
+          setLocalContent(newContent);
+          if (onChange) {
+            isLocalChange.current = true;
+            onChange(newContent);
+          }
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start;
+            textarea.focus();
+            updateCursor();
+          }, 0);
+        }
+      } else if (isCmd && key === g.copy?.split('+').pop()) { // Copy
+        const textarea = textareaRef.current;
+        if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+          e.preventDefault();
+          const selectedText = localContent.substring(textarea.selectionStart, textarea.selectionEnd);
+          navigator.clipboard.writeText(selectedText);
+        }
+      } else if (isCmd && key === g.paste?.split('+').pop()) { // Paste
+        if (!isEditing) return;
+        const textarea = textareaRef.current;
+        if (textarea) {
+          e.preventDefault();
+          navigator.clipboard.readText().then(text => {
+            undoStack.current.push(localContent);
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const newContent = localContent.substring(0, start) + text + localContent.substring(end);
+            setLocalContent(newContent);
+            if (onChange) {
+              isLocalChange.current = true;
+              onChange(newContent);
+            }
+            setTimeout(() => {
+              textarea.selectionStart = textarea.selectionEnd = start + text.length;
+              textarea.focus();
+              updateCursor();
+            }, 0);
+          });
+        }
+      } else if (isCmd && key === g.selectAll?.split('+').pop()) { // Select All
         e.preventDefault();
         textareaRef.current?.select();
         updateCursor();
-      } else if (isCmd && key === ck.prevLine?.split('+').pop()) { // Prev Line
+      } else if (isCmd && key === g.prevLine?.split('+').pop()) { // Prev Line
         e.preventDefault(); moveCursor('up');
-      } else if (isCmd && key === ck.nextLine?.split('+').pop()) { // Next Line
+      } else if (isCmd && key === g.nextLine?.split('+').pop()) { // Next Line
         e.preventDefault(); moveCursor('down');
-      } else if (isCmd && key === ck.forwardChar?.split('+').pop()) { // Forward Char
+      } else if (isCmd && key === g.forwardChar?.split('+').pop()) { // Forward Char
         e.preventDefault(); moveCursor('right');
-      } else if (isCmd && key === ck.backwardChar?.split('+').pop()) { // Backward Char
+      } else if (isCmd && key === g.backwardChar?.split('+').pop()) { // Backward Char
         e.preventDefault(); moveCursor('left');
       }
     };
@@ -307,6 +436,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
       const line = lines.length;
       const col = lines[lines.length - 1].length + 1;
       setCursor({ line, col });
+      if (onCursorChange) onCursorChange(pos);
     }
   };
 
@@ -370,7 +500,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
               style={{ lineHeight: '1.5rem', tabSize: 4 }}
               track-cursor="true"
               wrap="off"
-              autoFocus
+              autoFocus={false}
             />
           </div>
         )}

@@ -19,27 +19,46 @@ export interface SettingsState {
     autoApproveCommands?: boolean;
   };
   keybindings: {
-    startChat: string;
-    switchTab: string;
-    closeTab: string;
-    viewMode: {
-      enterEdit: string;
-      moveDown: string;
-      moveUp: string;
-      moveLeft: string;
-      moveRight: string;
-      search: string;
+    global: {
+      refresh: string;
+      quit: string;
     };
-    contentKeys: {
-      exitEdit: string;
-      endOfLine: string;
-      startOfLine: string;
-      killLine: string;
-      selectAll: string;
-      prevLine: string;
-      nextLine: string;
-      forwardChar: string;
-      backwardChar: string;
+    explorer: {
+      toggleLeftPanel: string;
+    };
+    agent: {
+      focusChat: string;
+      toggleRightPanel: string;
+    };
+    content: {
+      navigation: {
+        switchTab: string;
+        closeTab: string;
+        focusContent: string;
+      };
+      viewer: {
+        enterEdit: string;
+        moveDown: string;
+        moveUp: string;
+        moveLeft: string;
+        moveRight: string;
+        search: string;
+      };
+      generic: {
+        exitEdit: string;
+        endOfLine: string;
+        startOfLine: string;
+        killLine: string;
+        selectAll: string;
+        deleteForward: string;
+        cut: string;
+        copy: string;
+        paste: string;
+        prevLine: string;
+        nextLine: string;
+        forwardChar: string;
+        backwardChar: string;
+      };
     };
   };
 }
@@ -50,7 +69,7 @@ interface SettingsProps {
   onClose: () => void;
 }
 
-export default function Settings({ settings, onSave }: SettingsProps) {
+export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands'>('appearance');
   const [localSettings, setLocalSettings] = useState<SettingsState>(settings);
 
@@ -75,27 +94,36 @@ export default function Settings({ settings, onSave }: SettingsProps) {
     onSave(newSettings);
   };
 
-  const handleKeybindingChange = (type: string, value: string) => {
+  const handleKeybindingChange = (group: string, type: string, value: string) => {
     const keys = value.toUpperCase();
     save({
       ...localSettings,
       keybindings: {
         ...localSettings.keybindings,
-        [type]: keys
+        [group]: {
+          // @ts-ignore
+          ...(localSettings.keybindings[group] || {}),
+          [type]: keys
+        }
       }
     });
   };
 
-  const handleKeybindingChangeNested = (mode: 'viewMode' | 'contentKeys', type: string, value: string) => {
+  const handleKeybindingChangeNested = (group: string, subGroup: string, type: string, value: string) => {
     const keys = value.toUpperCase();
     save({
       ...localSettings,
       keybindings: {
         ...localSettings.keybindings,
-        [mode]: {
+        // @ts-ignore
+        [group]: {
           // @ts-ignore
-          ...localSettings.keybindings[mode],
-          [type]: keys
+          ...(localSettings.keybindings[group] || {}),
+          [subGroup]: {
+            // @ts-ignore
+            ...(localSettings.keybindings[group]?.[subGroup] || {}),
+            [type]: keys
+          }
         }
       }
     });
@@ -118,6 +146,21 @@ export default function Settings({ settings, onSave }: SettingsProps) {
       aiConfigs: newConfigs
     });
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCtrl = e.ctrlKey || e.metaKey;
+      if (e.key === 'Escape' || (isCtrl && e.key.toUpperCase() === 'G')) {
+        // Only trigger if we're not currently recording a keybinding
+        if (onClose) {
+          e.preventDefault();
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleToggleAutoApprove = () => {
     save({
@@ -183,6 +226,30 @@ export default function Settings({ settings, onSave }: SettingsProps) {
 
         {/* Settings Content */}
         <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+             <h2 className="text-xl font-bold capitalize">{activeTab}</h2>
+             {activeTab === 'keybindings' && (
+                <button 
+                   onClick={() => {
+                     const defaultKb: SettingsState['keybindings'] = {
+                       global: { refresh: 'CTRL+R', quit: 'CTRL+Q' },
+                       explorer: { toggleLeftPanel: 'CTRL+T' },
+                       agent: { focusChat: 'CTRL+I', toggleRightPanel: 'CTRL+U' },
+                       content: {
+                         navigation: { switchTab: 'CTRL+TAB', closeTab: 'CTRL+W', focusContent: 'CTRL+Y' },
+                         viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/' },
+                         generic: { exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Z', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B' }
+                       }
+                     };
+                     save({ ...localSettings, keybindings: defaultKb });
+                   }}
+                   className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors"
+                   title="Reset Keybindings to Defaults"
+                >
+                   <RotateCcw size={18} />
+                </button>
+             )}
+          </div>
           {activeTab === 'skills' && (
             <div className="space-y-6 max-w-2xl">
               <div>
@@ -431,84 +498,68 @@ export default function Settings({ settings, onSave }: SettingsProps) {
           {activeTab === 'keybindings' && (
             <div className="space-y-6 max-w-2xl">
               <div>
-                <h3 className="text-lg font-medium mb-2">Keyboard Shortcuts</h3>
                 <p className="text-sm text-muted-foreground mb-6 text-xs">
                   Customize shortcuts. Use 'Meta' for Cmd/Win. Global 'Close Tab' is priority.
                 </p>
                 
                 <div className="space-y-6 pb-10">
                    {/* Global */}
+                    <div className="space-y-1">
+                       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1">Global</div>
+                       <KeyRow label="Refresh App" value={localSettings.keybindings.global.refresh} onChange={(v) => handleKeybindingChange('global', 'refresh', v)} />
+                       <KeyRow label="Quit App" value={localSettings.keybindings.global.quit} onChange={(v) => handleKeybindingChange('global', 'quit', v)} />
+                    </div>
+
+                    {/* Explorer */}
+                    <div className="space-y-1">
+                       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Explorer (Left Panel)</div>
+                       <KeyRow label="Toggle Left Panel" value={localSettings.keybindings.explorer.toggleLeftPanel} onChange={(v) => handleKeybindingChange('explorer', 'toggleLeftPanel', v)} />
+                    </div>
+
+                    {/* Agent */}
+                    <div className="space-y-1">
+                       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">AI Agent (Right Panel)</div>
+                       <KeyRow label="Focus Chat Input" value={localSettings.keybindings.agent.focusChat} onChange={(v) => handleKeybindingChange('agent', 'focusChat', v)} />
+                       <KeyRow label="Toggle Right Panel" value={localSettings.keybindings.agent.toggleRightPanel} onChange={(v) => handleKeybindingChange('agent', 'toggleRightPanel', v)} />
+                    </div>
+
+                   {/* Content Navigation */}
                    <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1">Global</div>
-                      <KeyRow label="Start Chat" value={localSettings.keybindings.startChat} onChange={(v) => handleKeybindingChange('startChat', v)} />
-                      <KeyRow label="Switch Tab" value={localSettings.keybindings.switchTab} onChange={(v) => handleKeybindingChange('switchTab', v)} />
-                      <KeyRow label="Close Active Tab" value={localSettings.keybindings.closeTab} onChange={(v) => handleKeybindingChange('closeTab', v)} />
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Navigation</div>
+                      <KeyRow label="Switch Tab" value={localSettings.keybindings.content.navigation.switchTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'switchTab', v)} />
+                      <KeyRow label="Close Active Tab" value={localSettings.keybindings.content.navigation.closeTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'closeTab', v)} />
+                      <KeyRow label="Focus Active Tab" value={localSettings.keybindings.content.navigation.focusContent} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'focusContent', v)} />
                    </div>
 
-                   {/* View Mode */}
+                   {/* Content Viewer */}
                    <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">View Mode</div>
-                      <KeyRow label="Enter Edit Mode" value={localSettings.keybindings.viewMode.enterEdit} onChange={(v) => handleKeybindingChangeNested('viewMode', 'enterEdit', v)} />
-                      <KeyRow label="Vim Move Down" value={localSettings.keybindings.viewMode.moveDown} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveDown', v)} />
-                      <KeyRow label="Vim Move Up" value={localSettings.keybindings.viewMode.moveUp} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveUp', v)} />
-                      <KeyRow label="Vim Move Left" value={localSettings.keybindings.viewMode.moveLeft} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveLeft', v)} />
-                      <KeyRow label="Vim Move Right" value={localSettings.keybindings.viewMode.moveRight} onChange={(v) => handleKeybindingChangeNested('viewMode', 'moveRight', v)} />
-                      <KeyRow label="Search Buffer" value={localSettings.keybindings.viewMode.search} onChange={(v) => handleKeybindingChangeNested('viewMode', 'search', v)} />
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Viewer (Read Only Mode)</div>
+                      <KeyRow label="Enter Edit Mode" value={localSettings.keybindings.content.viewer.enterEdit} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'enterEdit', v)} />
+                      <KeyRow label="Vim Move Down" value={localSettings.keybindings.content.viewer.moveDown} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveDown', v)} />
+                      <KeyRow label="Vim Move Up" value={localSettings.keybindings.content.viewer.moveUp} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveUp', v)} />
+                      <KeyRow label="Vim Move Left" value={localSettings.keybindings.content.viewer.moveLeft} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveLeft', v)} />
+                      <KeyRow label="Vim Move Right" value={localSettings.keybindings.content.viewer.moveRight} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveRight', v)} />
+                      <KeyRow label="Search Buffer" value={localSettings.keybindings.content.viewer.search} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'search', v)} />
                    </div>
 
-                   {/* Content Keys */}
+                   {/* Content Generic */}
                    <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Keys (View + Edit)</div>
-                      <KeyRow label="Exit Edit (Esc)" value={localSettings.keybindings.contentKeys.exitEdit} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'exitEdit', v)} />
-                      <KeyRow label="Select All" value={localSettings.keybindings.contentKeys.selectAll} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'selectAll', v)} />
-                      <KeyRow label="Emacs Start of Line" value={localSettings.keybindings.contentKeys.startOfLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'startOfLine', v)} />
-                      <KeyRow label="Emacs End of Line" value={localSettings.keybindings.contentKeys.endOfLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'endOfLine', v)} />
-                      <KeyRow label="Kill to End of Line" value={localSettings.keybindings.contentKeys.killLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'killLine', v)} />
-                      <KeyRow label="Prev Line" value={localSettings.keybindings.contentKeys.prevLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'prevLine', v)} />
-                      <KeyRow label="Next Line" value={localSettings.keybindings.contentKeys.nextLine} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'nextLine', v)} />
-                      <KeyRow label="Forward Character" value={localSettings.keybindings.contentKeys.forwardChar} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'forwardChar', v)} />
-                      <KeyRow label="Backward Character" value={localSettings.keybindings.contentKeys.backwardChar} onChange={(v) => handleKeybindingChangeNested('contentKeys', 'backwardChar', v)} />
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Generic (Read + Edit)</div>
+                      <KeyRow label="Exit Edit (Esc)" value={localSettings.keybindings.content.generic.exitEdit} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'exitEdit', v)} />
+                      <KeyRow label="Select All" value={localSettings.keybindings.content.generic.selectAll} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'selectAll', v)} />
+                      <KeyRow label="Delete Character" value={localSettings.keybindings.content.generic.deleteForward} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'deleteForward', v)} />
+                      <KeyRow label="Cut" value={localSettings.keybindings.content.generic.cut} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'cut', v)} />
+                      <KeyRow label="Copy" value={localSettings.keybindings.content.generic.copy} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'copy', v)} />
+                      <KeyRow label="Paste" value={localSettings.keybindings.content.generic.paste} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'paste', v)} />
+                      <KeyRow label="Go to Start of Line" value={localSettings.keybindings.content.generic.startOfLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'startOfLine', v)} />
+                      <KeyRow label="Go to End of Line" value={localSettings.keybindings.content.generic.endOfLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'endOfLine', v)} />
+                      <KeyRow label="Kill to End of Line" value={localSettings.keybindings.content.generic.killLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'killLine', v)} />
+                      <KeyRow label="Prev Line" value={localSettings.keybindings.content.generic.prevLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'prevLine', v)} />
+                      <KeyRow label="Next Line" value={localSettings.keybindings.content.generic.nextLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'nextLine', v)} />
+                      <KeyRow label="Forward Character" value={localSettings.keybindings.content.generic.forwardChar} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'forwardChar', v)} />
+                      <KeyRow label="Backward Character" value={localSettings.keybindings.content.generic.backwardChar} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'backwardChar', v)} />
                    </div>
                 </div>
-              </div>
-
-              <div className="pt-6 border-t border-border">
-                <h3 className="text-sm font-medium mb-2">Reset Keybindings</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Restore all keyboard shortcuts to their default values. This will overwrite your current keybindings.
-                </p>
-                <button 
-                  onClick={() => {
-                    const defaultKb: SettingsState['keybindings'] = {
-                      startChat: 'CTRL+T',
-                      switchTab: 'CTRL+TAB',
-                      closeTab: 'CTRL+W',
-                      viewMode: {
-                        enterEdit: 'A',
-                        moveDown: 'J',
-                        moveUp: 'K',
-                        moveLeft: 'H',
-                        moveRight: 'L',
-                        search: '/',
-                      },
-                      contentKeys: {
-                        exitEdit: 'ESCAPE',
-                        endOfLine: 'CTRL+E',
-                        startOfLine: 'CTRL+A',
-                        killLine: 'CTRL+K',
-                        selectAll: 'CTRL+Q',
-                        prevLine: 'CTRL+P',
-                        nextLine: 'CTRL+N',
-                        forwardChar: 'CTRL+F',
-                        backwardChar: 'CTRL+B'
-                      }
-                    };
-                    save({ ...localSettings, keybindings: defaultKb });
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"
-                >
-                  <RotateCcw size={14} /> Reset to Defaults
-                </button>
               </div>
             </div>
           )}

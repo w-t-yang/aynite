@@ -446,3 +446,7 @@ ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
     return { error: error.message };
   }
 });
+
+ipcMain.handle('api:app-quit', () => {
+  app.quit();
+});

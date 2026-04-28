@@ -18,33 +18,52 @@ type Tab = {
   filepath?: string;
   originalContent?: string;
   isDirty?: boolean;
+  cursorPos?: number;
 };
 
 const DEFAULT_SETTINGS: SettingsState = {
   activeTheme: 'dark',
   aiProvider: 'gemini',
   keybindings: {
-    startChat: 'CTRL+T',
-    switchTab: 'CTRL+TAB',
-    closeTab: 'CTRL+W',
-    viewMode: {
-      enterEdit: 'A',
-      moveDown: 'J',
-      moveUp: 'K',
-      moveLeft: 'H',
-      moveRight: 'L',
-      search: '/',
+    global: {
+      refresh: 'CTRL+R',
+      toggleLeftPanel: 'CTRL+T',
+      toggleRightPanel: 'CTRL+U',
+      quit: 'CTRL+Q'
     },
-    contentKeys: {
-      exitEdit: 'ESCAPE',
-      endOfLine: 'CTRL+E',
-      startOfLine: 'CTRL+A',
-      killLine: 'CTRL+K',
-      selectAll: 'CTRL+Q',
-      prevLine: 'CTRL+P',
-      nextLine: 'CTRL+N',
-      forwardChar: 'CTRL+F',
-      backwardChar: 'CTRL+B'
+    explorer: {},
+    agent: {
+      focusChat: 'CTRL+I'
+    },
+    content: {
+      navigation: {
+        switchTab: 'CTRL+TAB',
+        closeTab: 'CTRL+W',
+        focusContent: 'CTRL+Y'
+      },
+      viewer: {
+        enterEdit: 'A',
+        moveDown: 'J',
+        moveUp: 'K',
+        moveLeft: 'H',
+        moveRight: 'L',
+        search: '/'
+      },
+      generic: {
+        exitEdit: 'ESCAPE',
+        endOfLine: 'CTRL+E',
+        startOfLine: 'CTRL+A',
+        killLine: 'CTRL+K',
+        selectAll: 'CTRL+Z',
+        deleteForward: 'CTRL+D',
+        cut: 'CTRL+X',
+        copy: 'CTRL+C',
+        paste: 'CTRL+V',
+        prevLine: 'CTRL+P',
+        nextLine: 'CTRL+N',
+        forwardChar: 'CTRL+F',
+        backwardChar: 'CTRL+B'
+      }
     }
   }
 };
@@ -81,6 +100,12 @@ export default function App() {
       setTabs(validTabs);
       const restoredActiveId = res.data.activeTabId;
       setActiveTabId(validTabs.find(t => t.id === restoredActiveId) ? restoredActiveId : (validTabs.length > 0 ? validTabs[validTabs.length - 1].id : ''));
+      
+      // Focus the editor if a tab is active
+      setTimeout(() => {
+        const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLTextAreaElement;
+        if (textarea) textarea.focus();
+      }, 300);
     }
     setWorkspaceReady(true);
 
@@ -96,38 +121,51 @@ export default function App() {
   const migrateSettings = (loaded: any): SettingsState => {
     const kb = loaded.keybindings || {};
     
-    // Migrate editMode → contentKeys
-    if (kb.editMode && !kb.contentKeys) {
-      kb.contentKeys = {
-        exitEdit: kb.editMode.exitEdit || DEFAULT_SETTINGS.keybindings.contentKeys.exitEdit,
-        endOfLine: kb.editMode.endOfLine || DEFAULT_SETTINGS.keybindings.contentKeys.endOfLine,
-        startOfLine: kb.editMode.startOfLine || DEFAULT_SETTINGS.keybindings.contentKeys.startOfLine,
-        killLine: kb.editMode.killLine || DEFAULT_SETTINGS.keybindings.contentKeys.killLine,
-        selectAll: kb.editMode.selectAll || DEFAULT_SETTINGS.keybindings.contentKeys.selectAll,
-        prevLine: kb.editMode.prevLine || DEFAULT_SETTINGS.keybindings.contentKeys.prevLine,
-        nextLine: kb.editMode.nextLine || DEFAULT_SETTINGS.keybindings.contentKeys.nextLine,
-        forwardChar: kb.editMode.forwardChar || DEFAULT_SETTINGS.keybindings.contentKeys.forwardChar,
-        backwardChar: kb.editMode.backwardChar || DEFAULT_SETTINGS.keybindings.contentKeys.backwardChar,
+    // If the old structure is detected, convert it
+    if (!kb.global) {
+      const oldKb = { ...kb };
+      kb.global = {
+        refresh: 'CTRL+R',
+        toggleLeftPanel: 'CTRL+T',
+        toggleRightPanel: 'CTRL+U',
+        quit: 'CTRL+Q'
       };
+      kb.explorer = {};
+      kb.agent = {
+        focusChat: oldKb.startChat || 'CTRL+I'
+      };
+      kb.content = {
+        navigation: {
+          switchTab: oldKb.switchTab || 'CTRL+TAB',
+          closeTab: oldKb.closeTab || 'CTRL+W',
+          focusContent: 'CTRL+Y'
+        },
+        viewer: oldKb.viewMode || {
+          enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/'
+        },
+        generic: oldKb.contentKeys || {
+          exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Z', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B'
+        }
+      };
+
+      // Clean up old keys
+      delete kb.startChat;
+      delete kb.switchTab;
+      delete kb.closeTab;
+      delete kb.viewMode;
+      delete kb.contentKeys;
+      delete kb.commandTab;
+      delete kb.chatTab;
       delete kb.editMode;
     }
 
-    // Migrate commandTab/chatTab → startChat
-    if (kb.commandTab || kb.chatTab) {
-      kb.startChat = kb.startChat || DEFAULT_SETTINGS.keybindings.startChat;
-      kb.switchTab = kb.switchTab || DEFAULT_SETTINGS.keybindings.switchTab;
-      delete kb.commandTab;
-      delete kb.chatTab;
-    }
-
-    // Strip removed CTRL keys from viewMode
-    if (kb.viewMode) {
-      const { prevLine, nextLine, forwardChar, backwardChar, startOfLine, endOfLine, ...cleanView } = kb.viewMode;
-      kb.viewMode = cleanView;
+    // Strip removed CTRL keys from viewer if they still exist in some old configs
+    if (kb.content?.viewer) {
+      const { prevLine, nextLine, forwardChar, backwardChar, startOfLine, endOfLine, ...cleanViewer } = kb.content.viewer;
+      kb.content.viewer = cleanViewer;
     }
 
     // Deep merge with defaults to fill any missing keys
-    // Migrate old 'theme' field to 'activeTheme'
     if (loaded.theme && !loaded.activeTheme) {
       loaded.activeTheme = loaded.theme;
       delete loaded.theme;
@@ -140,8 +178,14 @@ export default function App() {
       keybindings: {
         ...DEFAULT_SETTINGS.keybindings,
         ...kb,
-        viewMode: { ...DEFAULT_SETTINGS.keybindings.viewMode, ...(kb.viewMode || {}) },
-        contentKeys: { ...DEFAULT_SETTINGS.keybindings.contentKeys, ...(kb.contentKeys || {}) },
+        global: { ...DEFAULT_SETTINGS.keybindings.global, ...(kb.global || {}) },
+        content: {
+          ...DEFAULT_SETTINGS.keybindings.content,
+          ...(kb.content || {}),
+          navigation: { ...DEFAULT_SETTINGS.keybindings.content.navigation, ...(kb.content?.navigation || {}) },
+          viewer: { ...DEFAULT_SETTINGS.keybindings.content.viewer, ...(kb.content?.viewer || {}) },
+          generic: { ...DEFAULT_SETTINGS.keybindings.content.generic, ...(kb.content?.generic || {}) },
+        }
       }
     };
   };
@@ -232,6 +276,14 @@ export default function App() {
     setTabs(prev => prev.map(tab => 
       tab.id === activeTabId 
         ? { ...tab, content, isDirty: content !== tab.originalContent } 
+        : tab
+    ));
+  };
+
+  const handleCursorChange = (cursorPos: number) => {
+    setTabs(prev => prev.map(tab => 
+      tab.id === activeTabId 
+        ? { ...tab, cursorPos } 
         : tab
     ));
   };
@@ -331,8 +383,16 @@ export default function App() {
       const isCtrl = e.ctrlKey;
       const isMeta = e.metaKey;
       const isShift = e.shiftKey;
-      const isCmd = isCtrl || isMeta;
+      const isCmd = e.metaKey || e.ctrlKey;
       const key = e.key.toUpperCase();
+
+      if (e.key === 'Tab') {
+        const target = e.target as HTMLElement;
+        // Allow Tab in contentEditable (chat input) and if we're in the switcher (handled there)
+        if (!target.isContentEditable && !showTabSwitcher) {
+          e.preventDefault();
+        }
+      }
 
       if (import.meta.env.DEV) {
         console.log('App KeyDown:', { key: e.key, code: e.code, ctrl: isCtrl, meta: isMeta, alt: e.altKey, shift: isShift });
@@ -347,6 +407,7 @@ export default function App() {
 
       // 2. Explicitly ignore any modifier + \ to allow system input method switching
       if ((isCtrl || isMeta || e.altKey) && (e.key === '\\' || e.code === 'Backslash' || e.key === '|')) return;
+
 
       if (!settings) return;
 
@@ -380,25 +441,71 @@ export default function App() {
         return;
       }
 
-      if (checkMatch(settings.keybindings?.closeTab)) {
-        if (activeTabId) {
+      // ─── Keyboard Quit (Esc or Ctrl+G) ────────────────────────────────
+      if (e.key === 'Escape' || (isCtrl && key === 'G')) {
+        if (showTabSwitcher) {
           e.preventDefault();
-          closeTab({ stopPropagation: () => {} } as any, activeTabId);
+          setShowTabSwitcher(false);
+          return;
         }
+        // Add other global dismissals here if needed
+      }
+
+      const kb = settings.keybindings;
+
+      // ─── Global ────────────────────────────────────────────────────────
+      if (checkMatch(kb.global.refresh)) {
+        e.preventDefault();
+        window.location.reload();
         return;
       }
-      
-      if (checkMatch(settings.keybindings?.startChat)) {
+
+      if (checkMatch(kb.explorer.toggleLeftPanel)) {
+        e.preventDefault();
+        setLeftPanelOpen(prev => !prev);
+        return;
+      }
+
+      if (checkMatch(kb.agent.toggleRightPanel)) {
+        e.preventDefault();
+        setRightPanelOpen(prev => !prev);
+        return;
+      }
+
+      if (checkMatch(kb.global.quit)) {
+        e.preventDefault();
+        // @ts-ignore
+        window.api.quitApp();
+        return;
+      }
+
+      // ─── Agent ─────────────────────────────────────────────────────────
+      if (checkMatch(kb.agent.focusChat)) {
         e.preventDefault();
         setRightPanelOpen(true);
         setTimeout(() => (window as any).focusChatInput?.(), 50);
         return;
       }
 
-      // Ctrl+Tab for tab switcher
-      if (isCtrl && e.key === 'Tab') {
+      // ─── Content Navigation ───────────────────────────────────────────
+      if (checkMatch(kb.content.navigation.closeTab)) {
+        if (activeTabId) {
+          e.preventDefault();
+          closeTab({ stopPropagation: () => {} } as any, activeTabId);
+        }
+        return;
+      }
+
+      if (checkMatch(kb.content.navigation.switchTab)) {
         e.preventDefault();
         setShowTabSwitcher(true);
+        return;
+      }
+
+      if (checkMatch(kb.content.navigation.focusContent)) {
+        e.preventDefault();
+        const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLTextAreaElement;
+        if (textarea) textarea.focus();
         return;
       }
     };
@@ -476,6 +583,12 @@ export default function App() {
     } else {
       setActiveTabId(existingTab.id);
     }
+
+    // Focus the editor after a selection (sidebar or elsewhere)
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLTextAreaElement;
+      if (textarea) textarea.focus();
+    }, 200);
   };
 
   const openSettings = () => {
@@ -609,6 +722,10 @@ export default function App() {
                     onSave={handleSaveActiveTab}
                     isDirty={activeTab.isDirty}
                     keybindings={settings.keybindings}
+                    initialCursorPos={activeTab.cursorPos}
+                    onCursorChange={handleCursorChange}
+                    id={activeTab.id}
+                    key={activeTab.id}
                   />
                 </div>
               )}
@@ -665,7 +782,13 @@ export default function App() {
         <TabSwitcher
           tabs={tabs}
           activeTabId={activeTabId}
-          onSelect={setActiveTabId}
+          onSelect={(id) => {
+            setActiveTabId(id);
+            setTimeout(() => {
+              const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLTextAreaElement;
+              if (textarea) textarea.focus();
+            }, 200);
+          }}
           onClose={() => setShowTabSwitcher(false)}
         />
       )}

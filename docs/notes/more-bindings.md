@@ -1,6 +1,6 @@
 - [] rename file
-- [] ctrl + tab to switch tabs (shared popup selection menu)
-- [] ctrl + r to refresh app (make some keybinds that cannot be overriden)
+- [x] ctrl + tab to switch tabs (shared popup selection menu)
+- [x] ctrl + r to refresh app (make some keybinds that cannot be overriden)
 - [] ctrl + q will quit app when in view mode
 - [] fix search in view mode
 - [] key bindings are not synced to config file
