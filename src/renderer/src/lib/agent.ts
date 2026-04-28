@@ -40,7 +40,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'read_file',
-      description: 'Read the contents of a file. Use this to inspect existing skills or source code. Example: path="/home/user/aynite/skills/hello/SKILL.md"',
+      description: 'Read the contents of a file. Use this to inspect source code. Do NOT use this for skills, as their content is already provided in your system context. Provide the full absolute path.',
       parameters: {
         type: 'object',
         properties: {
@@ -54,7 +54,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'write_file',
-      description: 'Write content to a file. When creating scripts, ALWAYS include a main block and imports. Example: path="/home/user/aynite/skills/new/scripts/tool.py", content="import sys\nif __name__ == \'__main__\':\n    print(\'hello\')"',
+      description: 'Write content to a file. Provide the full absolute path. When creating scripts, ALWAYS include a main block and imports.',
       parameters: {
         type: 'object',
         properties: {
@@ -69,7 +69,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'list_files',
-      description: 'List files in a directory to understand the project structure. Example: path="/home/user/aynite/skills"',
+      description: 'List files in a directory to understand the project structure. Provide the full absolute path.',
       parameters: {
         type: 'object',
         properties: {
@@ -83,7 +83,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'run_command',
-      description: 'Execute a shell command. Use this to run validation scripts or tests. Example: command="python3 scripts/validate.py input.txt"',
+      description: 'Execute a shell command. Provide the command and optionally the directory (cwd) to run in.',
       parameters: {
         type: 'object',
         properties: {
@@ -98,12 +98,12 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'search_codebase',
-      description: 'Search for text patterns. Use this to find where skills are referenced or triggered. Example: query="scene-splitter"',
+      description: 'Search for text patterns using grep. Provide the query and the absolute path to search.',
       parameters: {
         type: 'object',
         properties: {
           query: { type: 'string', description: 'Search term' },
-          path: { type: 'string', description: 'Directory to search' },
+          path: { type: 'string', description: 'Absolute path to search' },
           isRegex: { type: 'boolean', description: 'True if regex' }
         },
         required: ['query', 'path'],
@@ -114,7 +114,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'spawn_subagent',
-      description: 'Delegate a complex task (like running benchmarks) to another instance. Return its summary here.',
+      description: 'Delegate a complex task to another instance. Return its summary here.',
       parameters: {
         type: 'object',
         properties: {
@@ -303,6 +303,7 @@ export async function runAgentLoop(
     { 
       role: 'system', 
       content: SYSTEM_PROMPT + 
+        `\n\n### WORKSPACE CONTEXT\nYou are working in the following local directories. ALWAYS use these as base paths for your operations:\n${workspaceFolders.map(f => `- ${f}`).join('\n')}` +
         (config.model.toLowerCase().includes('gemma') ? "\n\n### COMPACT MODEL ADVISORY\nYou are running in a compact model mode. Be extra careful with syntax. Double-check your tool arguments and ensure all scripts are executable and self-contained." : "") +
         (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to the following skills. Their instructions are provided below in XML tags. Follow them strictly. Do not attempt to read the skill files directly; use the provided context:\n\n${skillContext}` : "") 
     },

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy } from 'lucide-react';
+import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { SettingsState } from './Settings';
@@ -39,38 +39,40 @@ function ToolIcon({ name }: { name?: string }) {
 
 // ─── Collapsible Step ────────────────────────────────────────────────
 
-function StepEntry({ step }: { step: AgentStep }) {
+function StepEntry({ step, isLast = false }: { step: AgentStep, isLast?: boolean }) {
   const [expanded, setExpanded] = useState(false);
 
-  const statusIcon = step.status === 'done' ? <CheckCircle size={10} className="text-green-500" />
-    : step.status === 'error' || step.status === 'rejected' ? <XCircle size={10} className="text-red-500" />
-    : step.status === 'pending' ? <RefreshCw size={10} className="animate-spin text-primary" />
-    : step.status === 'approved' ? <CheckCircle size={10} className="text-green-500" />
+  const statusIcon = step.status === 'done' ? <CheckCircle size={10} className="text-green-500/80" />
+    : step.status === 'error' || step.status === 'rejected' ? <XCircle size={10} className="text-red-500/80" />
+    : step.status === 'pending' ? <RefreshCw size={10} className="animate-spin text-primary/80" />
+    : step.status === 'approved' ? <CheckCircle size={10} className="text-green-500/80" />
     : null;
 
   return (
-    <div className="border border-border/30 rounded-md overflow-hidden my-1 bg-accent/10">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-accent/20 transition-colors"
-      >
-        {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-        <ToolIcon name={step.toolName} />
-        <span className="font-medium truncate flex-1 text-left">
-          {step.type === 'tool_call' ? `${step.toolName}` : step.type === 'tool_result' ? `Result` : step.type}
-          {step.toolArgs?.path ? ` → ${step.toolArgs.path.split('/').pop()}` : ''}
-          {step.toolArgs?.command ? ` → ${step.toolArgs.command}` : ''}
-        </span>
-        {statusIcon}
-      </button>
+    <div className="relative pb-1 group/step">
+      <div className="flex items-center gap-2 py-0.5 text-[10px] text-muted-foreground/70">
+        <div className={`w-2 h-2 rounded-full border border-border/40 shrink-0 flex items-center justify-center bg-background/50`}>
+           <div className={`w-1 h-1 rounded-full ${step.status === 'pending' ? 'bg-primary animate-pulse' : 'bg-muted-foreground/20'}`} />
+        </div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1.5 hover:text-foreground transition-colors uppercase tracking-tight font-bold"
+        >
+          <ToolIcon name={step.toolName} />
+          <span>{step.toolName}</span>
+          {statusIcon}
+        </button>
+      </div>
+      
       {expanded && (
-        <div className="px-3 py-2 text-[11px] border-t border-border/20 bg-background/50 max-h-48 overflow-y-auto">
-          <pre className="whitespace-pre-wrap break-words font-mono text-foreground/80">{step.content}</pre>
+        <div className="mt-1 ml-4 px-3 py-2 text-[10px] bg-accent/5 max-h-48 overflow-y-auto rounded-md">
+          <pre className="whitespace-pre-wrap break-words font-mono text-foreground/60">{step.content}</pre>
         </div>
       )}
     </div>
   );
 }
+
 
 // ─── Command Approval Modal ─────────────────────────────────────────
 
@@ -113,62 +115,93 @@ function ApprovalModal({
   );
 }
 
+
+// ─── Thinking Process Component ─────────────────────────────────────
+
+function ThinkingProcess({ content, defaultOpen = false }: { content: string; defaultOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="my-2">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-[10px] font-bold tracking-tight uppercase text-muted-foreground/50 hover:text-primary/70 transition-colors py-0.5"
+      >
+        <Bot size={12} className={isOpen ? 'text-primary/60' : ''} />
+        <span>Thought</span>
+        <ChevronRight size={10} className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+      </button>
+      
+      <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-1' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className="overflow-hidden">
+          <div className="text-[12px] leading-relaxed text-muted-foreground/80 italic bg-accent/5 px-2 py-1.5 rounded-md">
+             <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Message Rendering with Mentions ────────────────────────────────
+
 
 function MessageContent({ text, role, onOpenFile }: { text: string; role: 'user' | 'model', onOpenFile?: (path: string) => void }) {
   if (role === 'model') {
-    // Process <think> or <thought> blocks
-    let processedText = text;
-    const thinkRegex = /<(think|thought)>([\s\S]*?)<\/\1>/g;
-    processedText = processedText.replace(thinkRegex, (match, tag, p1) => {
-      return `\n<details>\n<summary><b>Thinking Process</b></summary>\n\n${p1.trim()}\n\n</details>\n\n`;
-    });
-    
-    if (processedText.includes('<think>') && !processedText.includes('</think>')) {
-      const parts = processedText.split('<think>');
-      processedText = parts[0] + `\n<details open>\n<summary><b>Thinking...</b></summary>\n\n${parts[1].trim()}\n\n</details>\n\n`;
-    } else if (processedText.includes('<thought>') && !processedText.includes('</thought>')) {
-      const parts = processedText.split('<thought>');
-      processedText = parts[0] + `\n<details open>\n<summary><b>Thinking...</b></summary>\n\n${parts[1].trim()}\n\n</details>\n\n`;
-    }
-
     const parts = [];
-    let lastPos = 0;
-    const viewRegex = /\[\[View:(.*?)\]\]/g;
+    let currentPos = 0;
+    const combinedRegex = /<(think|thought)>([\s\S]*?)(?:<\/\1>|$)|\[\[View:(.*?)\]\]/g;
     let match;
 
-    while ((match = viewRegex.exec(processedText)) !== null) {
-      if (match.index > lastPos) {
-        parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{processedText.substring(lastPos, match.index)}</Markdown>);
+    while ((match = combinedRegex.exec(text)) !== null) {
+      // Add text before match
+      if (match.index > currentPos) {
+        parts.push(<Markdown key={`md-${currentPos}`} remarkPlugins={[remarkGfm]}>{text.substring(currentPos, match.index)}</Markdown>);
       }
-      const path = match[1];
-      parts.push(
-        <button
-          key={`view-${match.index}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onOpenFile?.(path);
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md text-xs font-medium transition-all my-2 group"
-        >
-          <FileText size={14} className="group-hover:scale-110 transition-transform" /> 
-          <span>View Definition</span>
-        </button>
-      );
-      lastPos = viewRegex.lastIndex;
+
+      if (match[1]) {
+        // It's a think/thought block
+        const isClosed = text.includes(`</${match[1]}>`);
+        parts.push(
+          <ThinkingProcess 
+            key={`think-${match.index}`} 
+            content={match[2].trim()} 
+            defaultOpen={false} 
+          />
+        );
+      } else if (match[3]) {
+        // It's a view link
+        const path = match[3];
+        parts.push(
+          <button
+            key={`view-${match.index}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenFile?.(path);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md text-xs font-medium transition-all my-2 group w-fit"
+          >
+            <FileText size={14} className="group-hover:scale-110 transition-transform" /> 
+            <span>View Definition</span>
+          </button>
+        );
+      }
+
+      currentPos = combinedRegex.lastIndex;
     }
 
-    if (lastPos < processedText.length) {
-      parts.push(<Markdown key={`md-${lastPos}`} remarkPlugins={[remarkGfm]}>{processedText.substring(lastPos)}</Markdown>);
+    if (currentPos < text.length) {
+      parts.push(<Markdown key={`md-${currentPos}`} remarkPlugins={[remarkGfm]}>{text.substring(currentPos)}</Markdown>);
     }
 
     return (
-      <div className="markdown-body prose prose-sm dark:prose-invert max-w-none break-words">
+      <div className="markdown-body prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed">
         {parts}
       </div>
     );
   }
+
 
   // Pre-process user message to render mentions as rich tags
   const parts = [];
@@ -619,7 +652,6 @@ export default function ChatTab({
     setMessages([]);
     abortRef.current?.abort();
   }, []);
-
   const copyHistoryAsJson = useCallback(() => {
     const jsonStr = JSON.stringify(messages, null, 2);
     navigator.clipboard.writeText(jsonStr).then(() => {
@@ -627,11 +659,37 @@ export default function ChatTab({
       setTimeout(() => setCopied(false), 2000);
     }).catch(err => console.error('Failed to copy', err));
   }, [messages]);
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => console.error('Failed to copy', err));
+  }, []);
+
+  const saveMessageToFile = useCallback(async (text: string) => {
+    const filename = prompt('Enter filename to save message content:', `ai-message-${Date.now()}.md`);
+    if (!filename) return;
+
+    // Use first workspace folder as base if available
+    const baseDir = workspaceFolders.length > 0 ? workspaceFolders[0] : '';
+    // @ts-ignore
+    const fullPath = baseDir ? await window.api.joinPath(baseDir, filename) : filename;
+
+    try {
+      // @ts-ignore
+      await window.api.saveFile(fullPath, text);
+    } catch (err) {
+      console.error('Failed to save file', err);
+    }
+  }, [workspaceFolders]);
 
   return (
-    <div className="chat-panel flex flex-col h-full bg-background">
+    <div className="chat-panel flex flex-col h-full bg-background relative overflow-hidden">
+      {/* Atmosphere Layer */}
+      <div className="absolute inset-0 bg-ambient-gradient z-0 opacity-40" />
+      
       {/* Message Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto px-6 pt-10 pb-32 space-y-4 mask-fade-vertical z-10" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="text-muted-foreground flex flex-col items-center justify-center h-full space-y-6">
             <Bot size={48} className="opacity-50" />
@@ -659,53 +717,59 @@ export default function ChatTab({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-4 max-w-4xl mx-auto ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto px-4 py-2 rounded-md border border-transparent ${
+              msg.role === 'user' ? 'bg-foreground/[0.05] border-border/10 shadow-sm' : ''
+            }`}
           >
-            {msg.role === 'model' && (
-              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                <Bot size={18} />
-              </div>
-            )}
-
-            <div
-              className={`rounded-xl max-w-[85%] ${
-                msg.role === 'user'
-                   ? 'bg-primary text-primary-foreground rounded-br-none px-4 py-3'
-                  : 'bg-accent/40 rounded-tl-none border border-border/50 text-foreground'
-              }`}
-            >
-              {/* Agent Steps & Text Interleaved */}
-              {msg.steps && msg.steps.length > 0 && msg.role === 'model' ? (
-                <div className="space-y-1">
-                  {msg.steps.map((step) => {
-                    // @ts-ignore
-                    if (step.type === 'text') {
-                      if (!step.content.trim()) return null;
-                      return (
-                        <div key={step.id} className="px-4 py-3">
-                          <MessageContent text={step.content} role="model" onOpenFile={handleOpenFile} />
-                        </div>
-                      );
-                    }
-                    return (
-                      <div key={step.id} className="px-3 pt-2 pb-1">
-                        <StepEntry step={step} />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                msg.text && (
-                  <div className={msg.role === 'model' ? 'px-4 py-3' : ''}>
-                    <MessageContent text={msg.text} role={msg.role} onOpenFile={handleOpenFile} />
+            <div className="flex flex-col gap-1">
+              <div className="text-foreground">
+                {/* Agent Steps & Text Interleaved */}
+                {msg.steps && msg.steps.length > 0 && msg.role === 'model' ? (
+                  <div className="space-y-2">
+                      {msg.steps?.map((step, idx, arr) => {
+                        // @ts-ignore
+                        if (step.type === 'text') {
+                          if (!step.content.trim()) return null;
+                          return (
+                            <div key={step.id} className="py-1">
+                              <MessageContent text={step.content} role="model" onOpenFile={handleOpenFile} />
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={step.id} className="py-0.5">
+                            <StepEntry step={step} isLast={idx === arr.length - 1} />
+                          </div>
+                        );
+                      })}
                   </div>
-                )
-              )}
+                ) : (
+                  msg.text && (
+                    <div className="py-1">
+                      <MessageContent text={msg.text} role={msg.role} onOpenFile={handleOpenFile} />
+                    </div>
+                  )
+                )}
+              </div>
             </div>
 
-            {msg.role === 'user' && (
-              <div className="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center shrink-0">
-                <User size={18} />
+            {/* Message Actions */}
+            {msg.role === 'model' && (
+              <div className="flex items-center justify-end gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity mt-1">
+                <button
+                  onClick={() => copyToClipboard(msg.text || '')}
+                  className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  title="Copy Message"
+                >
+                  <Copy size={12} />
+                </button>
+                <button
+                  onClick={() => saveMessageToFile(msg.text || '')}
+                  className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  title="Save to File"
+                >
+                  <Save size={12} />
+                </button>
               </div>
             )}
           </div>
@@ -732,44 +796,44 @@ export default function ChatTab({
         )}
       </div>
 
-      {/* Status Bar */}
-      <div className="px-4 py-2 flex items-center justify-between border-t border-border bg-accent/5">
-        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-          <Bot size={12} />
-          <span>{settings.aiProvider || 'gemini'}</span>
-          {settings.aiProvider === 'ollama' && (
-            <span className="normal-case font-medium opacity-80 border-l border-border pl-2">
-              {settings.aiConfigs?.ollama?.model || 'deepseek-r1:14b'}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={copyHistoryAsJson}
-            disabled={messages.length === 0}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all text-[10px] font-medium ${
-              copied 
-                ? 'bg-green-500/10 text-green-500' 
-                : 'hover:bg-primary/10 hover:text-primary text-muted-foreground'
-            } ${messages.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title="Copy conversation as JSON"
-          >
-            {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
-            {copied ? 'Copied' : 'Copy JSON'}
-          </button>
-          <button
-            onClick={clearHistory}
-            className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-500 text-muted-foreground transition-all text-[10px] font-medium"
-          >
-            <Trash2 size={12} />
-            Clear History
-          </button>
-        </div>
-      </div>
+      {/* Input Area & Status Overlay */}
+      <div className="p-6 pt-2 z-10 relative">
+        <div className="max-w-4xl mx-auto relative">
+          {/* Floating Status Pill */}
+          <div className="absolute -top-10 left-0 right-0 flex items-center justify-between px-2 pointer-events-none">
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/40 backdrop-blur-md border border-border/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shadow-xl pointer-events-auto">
+              <Bot size={10} className="text-primary" />
+              <span>{settings.aiProvider || 'gemini'}</span>
+              {settings.aiProvider === 'ollama' && (
+                <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
+                  {settings.aiConfigs?.ollama?.model || 'deepseek-r1:14b'}
+                </span>
+              )}
+            </div>
 
-      {/* Input Area */}
-      <div className="p-4 border-t border-border">
-        <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-1.5 pointer-events-auto">
+              <button
+                onClick={copyHistoryAsJson}
+                disabled={messages.length === 0}
+                className={`p-1.5 rounded-full backdrop-blur-md border border-border/20 transition-all ${
+                  copied 
+                    ? 'bg-green-500/20 text-green-500 border-green-500/20' 
+                    : 'bg-background/40 hover:bg-primary/10 text-muted-foreground hover:text-primary'
+                } ${messages.length === 0 ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
+                title="Copy conversation as JSON"
+              >
+                {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
+              </button>
+              <button
+                onClick={clearHistory}
+                className={`p-1.5 rounded-full bg-background/40 backdrop-blur-md border border-border/20 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all ${messages.length === 0 ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
+                title="Clear History"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          </div>
+
           <ChatInput
             ref={inputRef}
             onSubmit={sendMessage}

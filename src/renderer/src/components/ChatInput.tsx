@@ -399,7 +399,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, [editor, disabled, onSubmit]);
 
     return (
-      <div className={`chat-input-wrapper bg-background border border-border rounded-xl px-4 py-3 focus-within:ring-1 focus-within:ring-primary transition-shadow ${disabled ? 'opacity-50' : ''}`}>
+      <div className={`chat-input-wrapper bg-background/60 backdrop-blur-xl border border-border/40 rounded-2xl px-4 py-3.5 shadow-2xl shadow-black/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300 active:scale-[0.995] ${disabled ? 'opacity-50 grayscale-[0.5]' : ''}`}>
         <EditorContent editor={editor} />
       </div>
     );

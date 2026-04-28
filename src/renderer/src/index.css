@@ -181,18 +181,21 @@
 }
 
 .mention-file {
-  background: color-mix(in srgb, var(--info), transparent 85%);
+  background: color-mix(in srgb, var(--info), transparent 92%);
   color: var(--info);
+  border: 1px solid color-mix(in srgb, var(--info), transparent 80%);
 }
 
 .mention-skill {
-  background: color-mix(in srgb, var(--primary), transparent 85%);
+  background: color-mix(in srgb, var(--primary), transparent 92%);
   color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary), transparent 80%);
 }
 
 .mention-command {
-  background: color-mix(in srgb, var(--warning), transparent 85%);
+  background: color-mix(in srgb, var(--warning), transparent 92%);
   color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning), transparent 80%);
 }
 
 /* Tippy Popup */
@@ -210,54 +213,34 @@
   display: none !important;
 }
 
-/* ─── Collapsible Thinking Process ──────────────────────────────── */
-details {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 12px;
-  margin: 8px 0;
-  background: rgba(var(--muted), 0.1);
-  font-size: 0.9em;
+
+
+/* ─── Atmosphere & Depth Utilities ───────────────────────────────── */
+
+.bg-ambient-gradient {
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--primary), transparent 97%), transparent 80%);
 }
 
-summary {
-  cursor: pointer;
-  list-style: none;
-  outline: none;
-  padding: 4px 0;
-  user-select: none;
+
+/* Prose Adjustments */
+.prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--foreground);
+  --tw-prose-pre-bg: var(--accent);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
 }
 
-summary::-webkit-details-marker {
-  display: none;
-}
-
-summary b {
-  color: var(--muted-foreground);
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: color 0.2s;
-}
-
-summary:hover b {
-  color: var(--foreground);
-}
-
-summary b::before {
-  content: '→';
-  font-family: var(--font-mono);
-  font-size: 1em;
-  transition: transform 0.2s;
-  display: inline-block;
-}
-
-details[open] > summary b::before {
-  transform: rotate(90deg);
-}
-
-details > div, details > p {
-  margin-top: 8px;
-  color: var(--muted-foreground);
+.mask-fade-vertical {
+  mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
 }

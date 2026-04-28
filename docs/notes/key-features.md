@@ -10,10 +10,13 @@
   - [] syntax highlight
   - [] markdown smart editing (e.g. auto indent)
 - commands
-  - [] add default commands
+  - [x] add default commands
 - skills
-  - [] add default skills
+  - [x] add default skills
      - create skill
      - create command
-  - [] add config to maintain a list of folder for skills, same for commands
+  - [x] add config to maintain a list of folder for skills, same for commands
 - git
+- logs
+  - [] conversation history
+  - [] dev log, remove the current key trigger log and ollama call request log in the console, put them into the dev log

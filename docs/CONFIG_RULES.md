@@ -19,6 +19,6 @@ The `config/` directory contains the following JSON files:
 ## Saving Rules
 When settings are updated, they are synchronized across their respective specialized files:
 1. AI settings are updated in `ai.json`.
-2. Theme/Appearance settings are updated in `appearance.json`.
+2. Theme/Appearance settings are updated in `config.json`. themes are in folder `.aynite/themes/`
 3. Shortcuts are updated in `keybindings.json`.
 4. Global application state is updated in `config.json`.

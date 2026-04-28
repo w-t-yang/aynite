@@ -1,6 +1,6 @@
 ## UI
-- improve scroll bar style
-- improve the workspace dropdown menu
+- [x] improve scroll bar style
+- [x] improve the workspace dropdown menu
 - ai chat box styles
   - message box
   - tool calling box
