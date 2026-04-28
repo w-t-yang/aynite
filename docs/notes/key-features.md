@@ -1,0 +1,19 @@
+- ai
+  - [x] ollama connection
+  - [] gemini connection
+  - [] deepseek connection
+- agent
+  - [x] calling tools
+  - [x] tag files and folders
+  - [] advanced agent features
+- text
+  - [] syntax highlight
+  - [] markdown smart editing (e.g. auto indent)
+- commands
+  - [] add default commands
+- skills
+  - [] add default skills
+     - create skill
+     - create command
+  - [] add config to maintain a list of folder for skills, same for commands
+- git
