@@ -276,8 +276,12 @@ export default function ChatTab({
   }, [messages, loading]);
 
   useEffect(() => {
-    (window as any).focusChatInput = () => {
-      inputRef.current?.focus();
+    (window as any).focusChatInput = (prefix?: string) => {
+      if (prefix) {
+        inputRef.current?.trigger(prefix);
+      } else {
+        inputRef.current?.focus();
+      }
     };
     return () => {
       delete (window as any).focusChatInput;

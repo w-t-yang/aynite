@@ -27,13 +27,15 @@ const DEFAULT_SETTINGS: SettingsState = {
   keybindings: {
     global: {
       refresh: 'CTRL+R',
-      quit: 'CTRL+Q'
+      quit: ''
     },
     explorer: {
       toggleLeftPanel: 'CTRL+T'
     },
     agent: {
       focusChat: 'CTRL+I',
+      focusSkills: 'CTRL+/',
+      focusCommands: 'CTRL+.',
       toggleRightPanel: 'CTRL+U'
     },
     content: {
@@ -55,7 +57,7 @@ const DEFAULT_SETTINGS: SettingsState = {
         endOfLine: 'CTRL+E',
         startOfLine: 'CTRL+A',
         killLine: 'CTRL+K',
-        selectAll: 'CTRL+Z',
+        selectAll: 'CTRL+Q',
         deleteForward: 'CTRL+D',
         cut: 'CTRL+X',
         copy: 'CTRL+C',
@@ -473,18 +475,26 @@ export default function App() {
         return;
       }
 
-      if (checkMatch(kb.global.quit)) {
-        e.preventDefault();
-        // @ts-ignore
-        window.api.quitApp();
-        return;
-      }
 
       // ─── Agent ─────────────────────────────────────────────────────────
       if (checkMatch(kb.agent.focusChat)) {
         e.preventDefault();
         setRightPanelOpen(true);
-        setTimeout(() => (window as any).focusChatInput?.(), 50);
+        setTimeout(() => (window as any).focusChatInput?.(), 150);
+        return;
+      }
+
+      if (checkMatch(kb.agent.focusSkills)) {
+        e.preventDefault();
+        setRightPanelOpen(true);
+        setTimeout(() => (window as any).focusChatInput?.('/'), 150);
+        return;
+      }
+
+      if (checkMatch(kb.agent.focusCommands)) {
+        e.preventDefault();
+        setRightPanelOpen(true);
+        setTimeout(() => (window as any).focusChatInput?.('>'), 150);
         return;
       }
 

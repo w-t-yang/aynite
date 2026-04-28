@@ -11,6 +11,8 @@ import { FileText, Folder, Zap, Play } from 'lucide-react';
 
 export interface ChatInputHandle {
   focus: () => void;
+  clear: () => void;
+  trigger: (prefix: string) => void;
 }
 
 interface ChatInputProps {
@@ -368,6 +370,12 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             handleSubmit();
             return true;
           }
+
+          if ((event.ctrlKey || event.metaKey) && event.key.toUpperCase() === 'Q') {
+            event.preventDefault();
+            editor?.commands.selectAll();
+            return true;
+          }
           return false;
         },
       },
@@ -384,6 +392,12 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     useImperativeHandle(ref, () => ({
       focus: () => editor?.commands.focus(),
       clear: () => editor?.commands.clearContent(),
+      trigger: (prefix: string) => {
+        if (!editor) return;
+        editor.commands.focus();
+        editor.commands.clearContent();
+        editor.commands.insertContent(prefix);
+      }
     }));
 
     const handleSubmit = useCallback(() => {

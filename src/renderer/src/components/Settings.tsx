@@ -28,6 +28,8 @@ export interface SettingsState {
     };
     agent: {
       focusChat: string;
+      focusSkills: string;
+      focusCommands: string;
       toggleRightPanel: string;
     };
     content: {
@@ -232,13 +234,13 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                 <button 
                    onClick={() => {
                      const defaultKb: SettingsState['keybindings'] = {
-                       global: { refresh: 'CTRL+R', quit: 'CTRL+Q' },
+                       global: { refresh: 'CTRL+R', quit: '' },
                        explorer: { toggleLeftPanel: 'CTRL+T' },
-                       agent: { focusChat: 'CTRL+I', toggleRightPanel: 'CTRL+U' },
+                       agent: { focusChat: 'CTRL+I', focusSkills: 'CTRL+/', focusCommands: 'CTRL+.', toggleRightPanel: 'CTRL+U' },
                        content: {
                          navigation: { switchTab: 'CTRL+TAB', closeTab: 'CTRL+W', focusContent: 'CTRL+Y' },
                          viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/' },
-                         generic: { exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Z', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B' }
+                         generic: { exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Q', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B' }
                        }
                      };
                      save({ ...localSettings, keybindings: defaultKb });
@@ -520,6 +522,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     <div className="space-y-1">
                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">AI Agent (Right Panel)</div>
                        <KeyRow label="Focus Chat Input" value={localSettings.keybindings.agent.focusChat} onChange={(v) => handleKeybindingChange('agent', 'focusChat', v)} />
+                       <KeyRow label="Focus & Skills" value={localSettings.keybindings.agent.focusSkills} onChange={(v) => handleKeybindingChange('agent', 'focusSkills', v)} />
+                       <KeyRow label="Focus & Commands" value={localSettings.keybindings.agent.focusCommands} onChange={(v) => handleKeybindingChange('agent', 'focusCommands', v)} />
                        <KeyRow label="Toggle Right Panel" value={localSettings.keybindings.agent.toggleRightPanel} onChange={(v) => handleKeybindingChange('agent', 'toggleRightPanel', v)} />
                     </div>
 
