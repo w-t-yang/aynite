@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export interface SettingsState {
-  theme: 'dark' | 'light' | 'nord' | 'solarized';
+  activeTheme: string;
   aiProvider?: 'gemini' | 'deepseek' | 'ollama';
   skills?: {
     folders: string[];
@@ -424,64 +424,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
           )}
 
           {activeTab === 'appearance' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-4">Theme</h3>
-                <div className="flex flex-wrap gap-4">
-                  <button 
-                    onClick={() => save({ ...localSettings, theme: 'light' })}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
-                      localSettings.theme === 'light' ? "border-blue-500 bg-blue-500/10" : "border-border hover:border-gray-400 dark:hover:border-gray-600"
-                    )}
-                  >
-                    <div className="w-24 h-16 bg-white border border-gray-200 rounded-md flex items-center justify-center text-black shadow-sm">
-                      <Sun size={24} />
-                    </div>
-                    <span className="text-sm font-medium">Light</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => save({ ...localSettings, theme: 'dark' })}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
-                      localSettings.theme === 'dark' ? "border-blue-500 bg-blue-500/10" : "border-border hover:border-gray-400 dark:hover:border-gray-600"
-                    )}
-                  >
-                    <div className="w-24 h-16 bg-zinc-950 border border-zinc-800 rounded-md flex items-center justify-center text-white shadow-sm">
-                      <Moon size={24} />
-                    </div>
-                    <span className="text-sm font-medium">Dark</span>
-                  </button>
-
-                  <button 
-                    onClick={() => save({ ...localSettings, theme: 'nord' })}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
-                      localSettings.theme === 'nord' ? "border-blue-500 bg-blue-500/10" : "border-border hover:border-gray-400 dark:hover:border-gray-600"
-                    )}
-                  >
-                    <div className="w-24 h-16 bg-[#2e3440] border border-[#4c566a] rounded-md flex items-center justify-center text-[#88c0d0] shadow-sm">
-                      <Moon size={24} />
-                    </div>
-                    <span className="text-sm font-medium">Nord</span>
-                  </button>
-
-                  <button 
-                    onClick={() => save({ ...localSettings, theme: 'solarized' })}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
-                      localSettings.theme === 'solarized' ? "border-blue-500 bg-blue-500/10" : "border-border hover:border-gray-400 dark:hover:border-gray-600"
-                    )}
-                  >
-                    <div className="w-24 h-16 bg-[#002b36] border border-[#586e75] rounded-md flex items-center justify-center text-[#b58900] shadow-sm">
-                      <Sun size={24} />
-                    </div>
-                    <span className="text-sm font-medium">Solarized</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <AppearanceTab settings={localSettings} onSave={save} />
           )}
 
           {activeTab === 'keybindings' && (
@@ -583,6 +526,247 @@ function KeyRow({ label, value, onChange }: { label: string, value: string, onCh
         onChange={(e) => onChange(e.target.value)}
         className="w-40 bg-accent/20 rounded border border-transparent px-2 py-1 text-[10px] font-mono focus:outline-none focus:border-blue-500 text-right uppercase"
       />
+    </div>
+  );
+}
+
+// Color label mapping for display
+const COLOR_LABELS: Record<string, string> = {
+  background: 'Background', foreground: 'Foreground', sidebar: 'Sidebar',
+  card: 'Card', cardForeground: 'Card Text', popover: 'Popover', popoverForeground: 'Popover Text',
+  primary: 'Primary', primaryForeground: 'Primary Text',
+  secondary: 'Secondary', secondaryForeground: 'Secondary Text',
+  muted: 'Muted', mutedForeground: 'Muted Text',
+  accent: 'Accent', accentForeground: 'Accent Text',
+  destructive: 'Destructive', destructiveForeground: 'Destructive Text',
+  border: 'Border', input: 'Input', ring: 'Focus Ring',
+  selection: 'Selection', selectionForeground: 'Selection Text',
+  link: 'Link', success: 'Success', successForeground: 'Success Text',
+  warning: 'Warning', warningForeground: 'Warning Text',
+  info: 'Info', infoForeground: 'Info Text',
+  tabActive: 'Active Tab', tabActiveBorder: 'Active Tab Border',
+  scrollbarThumb: 'Scrollbar', scrollbarTrack: 'Scrollbar Track',
+};
+
+function AppearanceTab({ settings, onSave }: { settings: SettingsState, onSave: (s: SettingsState) => void }) {
+  const [themes, setThemes] = useState<any[]>([]);
+  const [editingTheme, setEditingTheme] = useState<any>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicateName, setDuplicateName] = useState('');
+  const [systemFonts, setSystemFonts] = useState<string[]>([]);
+  const saveTimerRef = useRef<any>(null);
+
+  const loadThemes = async () => {
+    // @ts-ignore
+    const res = await window.api.getThemesList();
+    if (res?.data) setThemes(res.data);
+  };
+
+  const loadEditingTheme = async (id: string) => {
+    // @ts-ignore
+    const res = await window.api.getTheme(id);
+    if (res?.data) setEditingTheme({ ...res.data, id });
+  };
+
+  useEffect(() => {
+    loadThemes();
+    // @ts-ignore
+    window.api.getSystemFonts().then((res: any) => { if (res?.data) setSystemFonts(res.data); });
+  }, []);
+  useEffect(() => { if (settings.activeTheme) loadEditingTheme(settings.activeTheme); }, [settings.activeTheme]);
+
+  const handleSelectTheme = (id: string) => { onSave({ ...settings, activeTheme: id }); };
+
+  const persistTheme = useCallback((theme: any) => {
+    // @ts-ignore
+    window.api.saveTheme(theme.id, { name: theme.name, type: theme.type, isSystem: theme.isSystem, colors: theme.colors, fonts: theme.fonts });
+    onSave({ ...settings, activeTheme: theme.id });
+  }, [settings, onSave]);
+
+  // Color picker (native) fires onChange on final pick, so save immediately
+  const handleColorPicker = (key: string, value: string) => {
+    if (!editingTheme) return;
+    const updated = { ...editingTheme, colors: { ...editingTheme.colors, [key]: value } };
+    setEditingTheme(updated);
+    persistTheme(updated);
+  };
+
+  // Text inputs: update local state immediately, debounce save
+  const handleColorText = (key: string, value: string) => {
+    if (!editingTheme) return;
+    const updated = { ...editingTheme, colors: { ...editingTheme.colors, [key]: value } };
+    setEditingTheme(updated);
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => persistTheme(updated), 600);
+  };
+
+  const handleFontChange = (key: string, value: string) => {
+    if (!editingTheme) return;
+    const updated = { ...editingTheme, fonts: { ...(editingTheme.fonts || {}), [key]: value } };
+    setEditingTheme(updated);
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => persistTheme(updated), 600);
+  };
+
+  const handleFontSelect = (key: string, value: string) => {
+    if (!editingTheme) return;
+    const updated = { ...editingTheme, fonts: { ...(editingTheme.fonts || {}), [key]: value } };
+    setEditingTheme(updated);
+    persistTheme(updated);
+  };
+
+  const handleRestore = async () => {
+    if (!editingTheme) return;
+    // @ts-ignore
+    await window.api.restoreDefaultTheme(editingTheme.id);
+    await loadEditingTheme(editingTheme.id);
+    onSave({ ...settings, activeTheme: editingTheme.id });
+  };
+
+  const handleDelete = async () => {
+    if (!editingTheme || editingTheme.isSystem) return;
+    // @ts-ignore
+    await window.api.deleteTheme(editingTheme.id);
+    await loadThemes();
+    onSave({ ...settings, activeTheme: 'nord' });
+  };
+
+  const handleDuplicate = async () => {
+    const name = duplicateName.trim();
+    if (!name || !editingTheme) return;
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const newTheme = { name, type: editingTheme.type, isSystem: false, colors: { ...editingTheme.colors }, fonts: { ...(editingTheme.fonts || {}) } };
+    // @ts-ignore
+    await window.api.saveTheme(id, newTheme);
+    await loadThemes();
+    setShowDuplicateModal(false);
+    setDuplicateName('');
+    onSave({ ...settings, activeTheme: id });
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium">Theme</h3>
+          <div className="flex items-center gap-2">
+            {editingTheme && !editingTheme.isSystem && (
+              <button onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-md text-xs font-medium transition-colors">
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
+            <button onClick={() => { setShowDuplicateModal(true); setDuplicateName((editingTheme?.name || 'My Theme') + ' Copy'); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors">
+              <Copy size={14} /> Duplicate
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {themes.map(t => (
+            <button key={t.id} onClick={() => handleSelectTheme(t.id)}
+              className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all min-w-[100px]",
+                settings.activeTheme === t.id ? "border-blue-500 bg-blue-500/10" : "border-border hover:border-blue-500/40")}>
+              <div className="w-20 h-14 rounded-md border flex items-center justify-center shadow-sm overflow-hidden"
+                style={{ background: t.colors?.background, borderColor: t.colors?.border }}>
+                <div className="flex gap-1">
+                  <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.primary }} />
+                  <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.accent }} />
+                  <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.destructive }} />
+                </div>
+              </div>
+              <span className="text-xs font-medium">{t.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-border">
+        <button onClick={() => setShowEditor(!showEditor)}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Palette size={16} />
+          {showEditor ? 'Hide Theme Editor' : 'Customize Theme'}
+        </button>
+      </div>
+
+      {showEditor && editingTheme?.colors && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+            {Object.entries(editingTheme.colors).map(([key, val]) => (
+              <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/20 group">
+                <label className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{COLOR_LABELS[key] || key}</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={val as string} onChange={(e) => handleColorPicker(key, e.target.value)}
+                    className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent" />
+                  <input type="text" value={val as string} onChange={(e) => handleColorText(key, e.target.value)}
+                    onBlur={() => persistTheme(editingTheme)}
+                    className="w-20 bg-accent/20 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-mono focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+            ))}
+          </div>
+          {editingTheme.isSystem && (
+            <button onClick={handleRestore} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors">
+              <RotateCcw size={14} /> Restore Defaults
+            </button>
+          )}
+        </div>
+      )}
+
+      {showEditor && (
+        <div className="space-y-4 pt-2 border-t border-border">
+          <h4 className="text-sm font-medium">Typography</h4>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-muted-foreground">Font Family</label>
+              <div className="flex items-center gap-2">
+                <select value="" onChange={(e) => { if (e.target.value) handleFontSelect('fontFamily', e.target.value + ', ui-sans-serif, system-ui, sans-serif'); }}
+                  className="bg-accent/20 rounded border border-transparent px-2 py-1 text-xs focus:outline-none focus:border-blue-500 max-w-[140px]">
+                  <option value="">System fonts…</option>
+                  {systemFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+                <input type="text" value={editingTheme?.fonts?.fontFamily || ''} onChange={(e) => handleFontChange('fontFamily', e.target.value)}
+                  onBlur={() => persistTheme(editingTheme)}
+                  className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-muted-foreground">Monospace Font</label>
+              <div className="flex items-center gap-2">
+                <select value="" onChange={(e) => { if (e.target.value) handleFontSelect('fontMono', e.target.value + ', ui-monospace, SFMono-Regular, monospace'); }}
+                  className="bg-accent/20 rounded border border-transparent px-2 py-1 text-xs focus:outline-none focus:border-blue-500 max-w-[140px]">
+                  <option value="">System fonts…</option>
+                  {systemFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+                <input type="text" value={editingTheme?.fonts?.fontMono || ''} onChange={(e) => handleFontChange('fontMono', e.target.value)}
+                  onBlur={() => persistTheme(editingTheme)}
+                  className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-muted-foreground">Base Font Size</label>
+              <input type="text" value={editingTheme?.fonts?.fontSize || '14px'} onChange={(e) => handleFontChange('fontSize', e.target.value)}
+                onBlur={() => persistTheme(editingTheme)}
+                className="w-24 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDuplicateModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
+            <h3 className="text-lg font-medium mb-4 text-foreground">Duplicate Theme</h3>
+            <input autoFocus type="text" placeholder="Theme name" value={duplicateName}
+              onChange={(e) => setDuplicateName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleDuplicate()}
+              className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-500 mb-4" />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowDuplicateModal(false)} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
+              <button onClick={handleDuplicate} className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors font-medium">Create</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts } from './config';
 
 const execAsync = promisify(exec);
 
@@ -333,6 +333,61 @@ ipcMain.handle('api:commands-list', async () => {
   try {
     const commands = await listAvailableCommands();
     return { data: commands };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+// Theme IPC handlers
+ipcMain.handle('api:themes-list', async () => {
+  try {
+    const themes = await getThemesList();
+    return { data: themes };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:theme-get', async (event, name: string) => {
+  try {
+    const theme = await getTheme(name);
+    return { data: theme };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:theme-save', async (event, { name, data }) => {
+  try {
+    await saveTheme(name, data);
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:theme-restore-default', async (event, name: string) => {
+  try {
+    const result = await restoreDefaultTheme(name);
+    return { data: result };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:theme-delete', async (event, name: string) => {
+  try {
+    const result = await deleteTheme(name);
+    return { data: result };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:system-fonts', async () => {
+  try {
+    const fonts = await getSystemFonts();
+    return { data: fonts };
   } catch (error: any) {
     return { error: error.message };
   }

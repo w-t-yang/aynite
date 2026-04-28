@@ -21,7 +21,7 @@ type Tab = {
 };
 
 const DEFAULT_SETTINGS: SettingsState = {
-  theme: 'dark',
+  activeTheme: 'dark',
   aiProvider: 'gemini',
   keybindings: {
     startChat: 'CTRL+T',
@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS: SettingsState = {
 
 export default function App() {
   const [settings, setSettings] = useState<SettingsState | null>(null);
+  const [activeThemeData, setActiveThemeData] = useState<any>(null);
 
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [activeTabId, setActiveTabId] = useState<string>('');
@@ -126,9 +127,16 @@ export default function App() {
     }
 
     // Deep merge with defaults to fill any missing keys
+    // Migrate old 'theme' field to 'activeTheme'
+    if (loaded.theme && !loaded.activeTheme) {
+      loaded.activeTheme = loaded.theme;
+      delete loaded.theme;
+    }
+
     return {
       ...DEFAULT_SETTINGS,
       ...loaded,
+      activeTheme: loaded.activeTheme || DEFAULT_SETTINGS.activeTheme,
       keybindings: {
         ...DEFAULT_SETTINGS.keybindings,
         ...kb,
@@ -241,14 +249,44 @@ export default function App() {
     }
   };
 
+  // Camel-case key to CSS custom property name (e.g. cardForeground -> --card-foreground)
+  const toCSSVar = (key: string): string => {
+    return '--' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
+  };
+
+  const applyThemeColors = (colors: Record<string, string>) => {
+    const root = document.documentElement;
+    for (const [key, value] of Object.entries(colors)) {
+      root.style.setProperty(toCSSVar(key), value);
+    }
+  };
+
+  const loadAndApplyTheme = async (themeName: string) => {
+    try {
+      // @ts-ignore
+      const res = await window.api.getTheme(themeName);
+      if (res?.data?.colors) {
+        setActiveThemeData(res.data);
+        applyThemeColors(res.data.colors);
+        // Apply font properties
+        if (res.data.fonts) {
+          const root = document.documentElement;
+          if (res.data.fonts.fontFamily) root.style.setProperty('--font-sans', res.data.fonts.fontFamily);
+          if (res.data.fonts.fontMono) root.style.setProperty('--font-mono', res.data.fonts.fontMono);
+          if (res.data.fonts.fontSize) root.style.setProperty('--font-size-base', res.data.fonts.fontSize);
+          root.style.fontSize = res.data.fonts.fontSize || '14px';
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load theme:', e);
+    }
+  };
+
   useEffect(() => {
     if (!settings) return;
     // @ts-ignore
     window.api.saveConfig(settings);
-    document.documentElement.classList.remove('dark', 'nord', 'solarized');
-    if (settings.theme !== 'light') {
-      document.documentElement.classList.add(settings.theme);
-    }
+    loadAndApplyTheme(settings.activeTheme);
   }, [settings]);
 
   useEffect(() => {

@@ -29,6 +29,14 @@ const api = {
   getAvailableCommands: () => ipcRenderer.invoke('api:commands-list'),
   runDirectCommand: (payload: { commandPath: string, params: string[], currentFile?: string }) => ipcRenderer.invoke('api:command-run-direct', payload),
   
+  // Theme API
+  getThemesList: () => ipcRenderer.invoke('api:themes-list'),
+  getTheme: (name: string) => ipcRenderer.invoke('api:theme-get', name),
+  saveTheme: (name: string, data: any) => ipcRenderer.invoke('api:theme-save', { name, data }),
+  restoreDefaultTheme: (name: string) => ipcRenderer.invoke('api:theme-restore-default', name),
+  deleteTheme: (name: string) => ipcRenderer.invoke('api:theme-delete', name),
+  getSystemFonts: () => ipcRenderer.invoke('api:system-fonts'),
+
   // File Ops API
   createFile: (path: string, isDirectory: boolean) => ipcRenderer.invoke('api:file-create', { path, isDirectory }),
   renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('api:file-rename', { oldPath, newPath }),

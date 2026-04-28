@@ -55,10 +55,320 @@ const DEFAULT_KEYBINDINGS = {
   }
 };
 
+// ─── Default Themes ────────────────────────────────────────────────
+
+const DEFAULT_THEMES: Record<string, any> = {
+  light: {
+    name: 'Light',
+    type: 'light',
+    isSystem: true,
+    colors: {
+      background: '#ffffff',
+      foreground: '#09090b',
+      sidebar: '#f4f4f5',
+      card: '#ffffff',
+      cardForeground: '#09090b',
+      popover: '#ffffff',
+      popoverForeground: '#09090b',
+      primary: '#18181b',
+      primaryForeground: '#fafafa',
+      secondary: '#f4f4f5',
+      secondaryForeground: '#18181b',
+      muted: '#f4f4f5',
+      mutedForeground: '#71717a',
+      accent: '#f4f4f5',
+      accentForeground: '#18181b',
+      destructive: '#ef4444',
+      destructiveForeground: '#fafafa',
+      border: '#e4e4e7',
+      input: '#e4e4e7',
+      ring: '#18181b',
+      selection: '#bfdbfe',
+      selectionForeground: '#1e3a5f',
+      link: '#2563eb',
+      success: '#16a34a',
+      successForeground: '#f0fdf4',
+      warning: '#ca8a04',
+      warningForeground: '#fefce8',
+      info: '#2563eb',
+      infoForeground: '#eff6ff',
+      tabActive: '#ffffff',
+      tabActiveBorder: '#3b82f6',
+      scrollbarThumb: '#d4d4d8',
+      scrollbarTrack: 'transparent'
+    },
+    fonts: {
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
+      fontSize: '14px'
+    }
+  },
+  dark: {
+    name: 'Dark',
+    type: 'dark',
+    isSystem: true,
+    colors: {
+      background: '#09090b',
+      foreground: '#fafafa',
+      sidebar: '#121214',
+      card: '#09090b',
+      cardForeground: '#fafafa',
+      popover: '#09090b',
+      popoverForeground: '#fafafa',
+      primary: '#fafafa',
+      primaryForeground: '#18181b',
+      secondary: '#27272a',
+      secondaryForeground: '#fafafa',
+      muted: '#27272a',
+      mutedForeground: '#a1a1aa',
+      accent: '#27272a',
+      accentForeground: '#fafafa',
+      destructive: '#7f1d1d',
+      destructiveForeground: '#fafafa',
+      border: '#27272a',
+      input: '#27272a',
+      ring: '#d4d4d8',
+      selection: '#264f78',
+      selectionForeground: '#ffffff',
+      link: '#60a5fa',
+      success: '#22c55e',
+      successForeground: '#052e16',
+      warning: '#eab308',
+      warningForeground: '#422006',
+      info: '#3b82f6',
+      infoForeground: '#eff6ff',
+      tabActive: '#09090b',
+      tabActiveBorder: '#3b82f6',
+      scrollbarThumb: '#27272a',
+      scrollbarTrack: 'transparent'
+    },
+    fonts: {
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
+      fontSize: '14px'
+    }
+  },
+  aurora: {
+    name: 'Aurora',
+    type: 'dark',
+    isSystem: true,
+    colors: {
+      background: '#0f0e17',
+      foreground: '#e0def4',
+      sidebar: '#141220',
+      card: '#1a1826',
+      cardForeground: '#e0def4',
+      popover: '#1a1826',
+      popoverForeground: '#e0def4',
+      primary: '#a78bfa',
+      primaryForeground: '#0f0e17',
+      secondary: '#2a2540',
+      secondaryForeground: '#e0def4',
+      muted: '#221f35',
+      mutedForeground: '#908caa',
+      accent: '#2a2540',
+      accentForeground: '#e0def4',
+      destructive: '#eb6f92',
+      destructiveForeground: '#0f0e17',
+      border: '#393552',
+      input: '#2a2540',
+      ring: '#a78bfa',
+      selection: '#3e1f79',
+      selectionForeground: '#e0def4',
+      link: '#7dd3fc',
+      success: '#4ade80',
+      successForeground: '#052e16',
+      warning: '#fbbf24',
+      warningForeground: '#422006',
+      info: '#818cf8',
+      infoForeground: '#eef2ff',
+      tabActive: '#0f0e17',
+      tabActiveBorder: '#a78bfa',
+      scrollbarThumb: '#393552',
+      scrollbarTrack: 'transparent'
+    },
+    fonts: {
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
+      fontSize: '14px'
+    }
+  },
+  ember: {
+    name: 'Ember',
+    type: 'dark',
+    isSystem: true,
+    colors: {
+      background: '#1a1210',
+      foreground: '#f5e6d3',
+      sidebar: '#151010',
+      card: '#231c18',
+      cardForeground: '#f5e6d3',
+      popover: '#231c18',
+      popoverForeground: '#f5e6d3',
+      primary: '#f59e0b',
+      primaryForeground: '#1a1210',
+      secondary: '#2d2420',
+      secondaryForeground: '#f5e6d3',
+      muted: '#2d2420',
+      mutedForeground: '#a89585',
+      accent: '#2d2420',
+      accentForeground: '#f5e6d3',
+      destructive: '#dc2626',
+      destructiveForeground: '#fef2f2',
+      border: '#3d322c',
+      input: '#2d2420',
+      ring: '#f59e0b',
+      selection: '#78350f',
+      selectionForeground: '#fef3c7',
+      link: '#fbbf24',
+      success: '#84cc16',
+      successForeground: '#1a2e05',
+      warning: '#f59e0b',
+      warningForeground: '#451a03',
+      info: '#fb923c',
+      infoForeground: '#fff7ed',
+      tabActive: '#1a1210',
+      tabActiveBorder: '#f59e0b',
+      scrollbarThumb: '#3d322c',
+      scrollbarTrack: 'transparent'
+    },
+    fonts: {
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
+      fontSize: '14px'
+    }
+  },
+  nord: {
+    name: 'Nord',
+    type: 'dark',
+    isSystem: true,
+    colors: {
+      background: '#2e3440',
+      foreground: '#d8dee9',
+      sidebar: '#242831',
+      card: '#3b4252',
+      cardForeground: '#e5e9f0',
+      popover: '#3b4252',
+      popoverForeground: '#e5e9f0',
+      primary: '#88c0d0',
+      primaryForeground: '#2e3440',
+      secondary: '#434c5e',
+      secondaryForeground: '#eceff4',
+      muted: '#3b4252',
+      mutedForeground: '#a1a1aa',
+      accent: '#434c5e',
+      accentForeground: '#eceff4',
+      destructive: '#bf616a',
+      destructiveForeground: '#eceff4',
+      border: '#4c566a',
+      input: '#434c5e',
+      ring: '#88c0d0',
+      selection: '#434c5e',
+      selectionForeground: '#eceff4',
+      link: '#88c0d0',
+      success: '#a3be8c',
+      successForeground: '#2e3440',
+      warning: '#ebcb8b',
+      warningForeground: '#2e3440',
+      info: '#81a1c1',
+      infoForeground: '#eceff4',
+      tabActive: '#2e3440',
+      tabActiveBorder: '#88c0d0',
+      scrollbarThumb: '#4c566a',
+      scrollbarTrack: 'transparent'
+    },
+    fonts: {
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
+      fontSize: '14px'
+    }
+  }
+};
+
+export async function initThemes() {
+  const themesDir = path.join(getConfigDir(), 'themes');
+  if (!existsSync(themesDir)) {
+    await fs.mkdir(themesDir, { recursive: true });
+  }
+  for (const [key, theme] of Object.entries(DEFAULT_THEMES)) {
+    const themePath = path.join(themesDir, `${key}.json`);
+    if (!existsSync(themePath)) {
+      await fs.writeFile(themePath, JSON.stringify(theme, null, 2), 'utf-8');
+    }
+  }
+}
+
+export async function getThemesList(): Promise<any[]> {
+  const themesDir = path.join(getConfigDir(), 'themes');
+  const themes: any[] = [];
+  try {
+    const files = readdirSync(themesDir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const data = await fs.readFile(path.join(themesDir, file), 'utf-8');
+        const theme = JSON.parse(data);
+        themes.push({ ...theme, id: file.replace('.json', '') });
+      } catch (e) {
+        console.error(`Error reading theme ${file}`, e);
+      }
+    }
+  } catch (e) {
+    console.error('Error listing themes', e);
+  }
+  return themes;
+}
+
+export async function getTheme(name: string): Promise<any> {
+  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
+  try {
+    const data = await fs.readFile(themePath, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return DEFAULT_THEMES['dark'];
+  }
+}
+
+export async function saveTheme(name: string, data: any): Promise<boolean> {
+  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
+  await fs.writeFile(themePath, JSON.stringify(data, null, 2), 'utf-8');
+  return true;
+}
+
+export async function restoreDefaultTheme(name: string): Promise<boolean> {
+  if (!DEFAULT_THEMES[name]) return false;
+  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
+  await fs.writeFile(themePath, JSON.stringify(DEFAULT_THEMES[name], null, 2), 'utf-8');
+  return true;
+}
+
+export async function deleteTheme(name: string): Promise<boolean> {
+  if (DEFAULT_THEMES[name]) return false; // Cannot delete system themes
+  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
+  if (existsSync(themePath)) {
+    await fs.unlink(themePath);
+    return true;
+  }
+  return false;
+}
+
+export async function getSystemFonts(): Promise<string[]> {
+  try {
+    const { stdout } = await (await import('util')).promisify((await import('child_process')).exec)('fc-list :lang=en --format="%{family}\n"');
+    const fonts = [...new Set(stdout.split('\n').map(f => f.trim()).filter(Boolean))].sort();
+    return fonts;
+  } catch {
+    return ['Inter', 'Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana'];
+  }
+}
+
+export function isSystemTheme(name: string): boolean {
+  return !!DEFAULT_THEMES[name];
+}
+
 export async function initAppFolders() {
   const baseDir = getConfigDir();
   
-  const folders = ['config', 'skills', 'commands', 'workspaces'];
+  const folders = ['config', 'skills', 'commands', 'workspaces', 'themes'];
   for (const folder of folders) {
     const dir = path.join(baseDir, folder);
     if (!existsSync(dir)) {
@@ -78,9 +388,8 @@ export async function initAppFolders() {
       ollama: { url: 'http://localhost:11434', model: 'gemma:e4b', contextWindow: 8192 }
     } 
   };
-  const appearanceDefault = { theme: 'dark' };
   const keybindingsDefault = DEFAULT_KEYBINDINGS;
-  const configDefault = { lastUsed: new Date().toISOString() };
+  const configDefault = { lastUsed: new Date().toISOString(), activeTheme: 'nord' };
   const workspacesDefault = { active: 'default workspace', list: ['default workspace'] };
 
   const checkAndWrite = async (filename: string, content: any) => {
@@ -91,10 +400,12 @@ export async function initAppFolders() {
   };
 
   await checkAndWrite('ai.json', aiDefault);
-  await checkAndWrite('appearance.json', appearanceDefault);
   await checkAndWrite('keybindings.json', keybindingsDefault);
   await checkAndWrite('config.json', configDefault);
   await checkAndWrite('workspaces.json', workspacesDefault);
+
+  // Initialize themes
+  await initThemes();
 
   // Ensure default workspace exists
   const defaultWorkspacePath = path.join(workspacesDir, 'default workspace.json');
@@ -117,7 +428,7 @@ export async function initAppFolders() {
   }
 
   // Ensure default skills exist
-  const skillsToInstall = ['skill-creator', 'command-creator', 'hello-skill'];
+  const skillsToInstall = ['skill-creator', 'command-creator', 'hello-skill', 'theme-creator'];
   for (const skillName of skillsToInstall) {
     const skillPath = path.join(skillsDir, skillName);
     if (!existsSync(skillPath)) {
@@ -147,7 +458,6 @@ export async function loadConfig() {
     }
   };
 
-  const appearance = await readJson('appearance.json', { theme: 'dark' });
   const ai = await readJson('ai.json', { provider: 'gemini', configs: {} });
   let keybindings = await readJson('keybindings.json', DEFAULT_KEYBINDINGS);
   const mainConfig = await readJson('config.json', {});
@@ -178,8 +488,21 @@ export async function loadConfig() {
 
   const skills = await getSkillsConfig();
 
+  // Migrate: if old appearance.json exists, move theme to config.json activeTheme then delete it
+  const appearancePath = path.join(configDir, 'appearance.json');
+  if (existsSync(appearancePath)) {
+    try {
+      const appearance = JSON.parse(await fs.readFile(appearancePath, 'utf-8'));
+      if (appearance.theme && !mainConfig.activeTheme) {
+        mainConfig.activeTheme = appearance.theme;
+      }
+      // Remove the deprecated file
+      await fs.unlink(appearancePath);
+    } catch {}
+  }
+
   return {
-    theme: appearance.theme || 'dark',
+    activeTheme: mainConfig.activeTheme || 'dark',
     keybindings: keybindings,
     aiProvider: ai.provider || 'gemini',
     aiConfigs: ai.configs || {},
@@ -192,15 +515,13 @@ export async function loadConfig() {
 export async function saveConfig(settings: any) {
   const configDir = path.join(getConfigDir(), 'config');
 
-  const appearance = { theme: settings.theme };
   const ai = { provider: settings.aiProvider, configs: settings.aiConfigs };
   const keybindings = settings.keybindings || DEFAULT_KEYBINDINGS;
   
   // Extract remaining fields for config.json
-  const { theme, aiProvider, aiConfigs, keybindings: _, ...rest } = settings;
+  const { aiProvider, aiConfigs, keybindings: _, ...rest } = settings;
   const mainConfig = { ...rest, updatedAt: new Date().toISOString() };
 
-  await fs.writeFile(path.join(configDir, 'appearance.json'), JSON.stringify(appearance, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'ai.json'), JSON.stringify(ai, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'config.json'), JSON.stringify(mainConfig, null, 2), 'utf-8');
