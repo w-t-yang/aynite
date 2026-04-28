@@ -1,9 +1,9 @@
-# Citron Configuration Rules
+# Aynite Configuration Rules
 
 ## Directory Structure
 The base configuration directory depends on the operating system:
-- **Mac/Linux**: `~/.citron`
-- **Windows**: `%AppData%/citron`
+- **Mac/Linux**: `~/.aynite`
+- **Windows**: `%AppData%/aynite`
 
 Within this base directory, there is a sub-folder named `config` containing the specialized configuration files.
 

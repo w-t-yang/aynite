@@ -1,6 +1,6 @@
 # AI Agent Improvements — Roadmap
 
-This document tracks the AI Agent features implemented and planned for the Citron IDE.
+This document tracks the AI Agent features implemented and planned for the Aynite IDE.
 
 ## ✅ Completed (v0.2)
 
@@ -22,7 +22,7 @@ This document tracks the AI Agent features implemented and planned for the Citro
   - `list_files` — lists directory contents within the workspace
   - `run_command` — executes a shell command (requires user approval)
 - Iterative loop: model can call tools multiple times before producing a final answer (max 10 iterations).
-- System prompt establishes Citron as a coding assistant.
+- System prompt establishes Aynite as a coding assistant.
 
 ### Security & Permissions
 - **Path validation**: All file operations validate that the target path resolves within registered workspace folders. Requests outside the workspace are rejected with an error.
@@ -45,8 +45,8 @@ This document tracks the AI Agent features implemented and planned for the Citro
 - [ ] Multi-file `@` selection (select multiple files in one message)
 
 ### Agent Capabilities
-- [ ] Load skills from `~/.citron/skills/` directory (markdown-based skill definitions)
-- [ ] Load commands from `~/.citron/commands/` directory
+- [ ] Load skills from `~/.aynite/skills/` directory (markdown-based skill definitions)
+- [ ] Load commands from `~/.aynite/commands/` directory
 - [ ] Context-aware system prompt (include open file content, cursor position)
 - [ ] Support for Gemini and DeepSeek backends (currently WIP stubs)
 - [ ] Agent memory: persist important facts across conversations

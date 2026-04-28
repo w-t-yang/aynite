@@ -15,9 +15,9 @@ function expandHome(filepath: string): string {
 
 export function getConfigDir() {
   if (process.platform === 'win32') {
-    return path.join(app.getPath('appData'), 'citron');
+    return path.join(app.getPath('appData'), 'aynite');
   } else {
-    return path.join(os.homedir(), '.citron');
+    return path.join(os.homedir(), '.aynite');
   }
 }
 
@@ -102,14 +102,14 @@ export async function initAppFolders() {
     await fs.writeFile(defaultWorkspacePath, JSON.stringify({ folders: [], tabs: [], activeTabId: '' }, null, 2), 'utf-8');
   }
 
-  // Ensure skills.json exists in ~/.citron/skills
+  // Ensure skills.json exists in ~/.aynite/skills
   const skillsDir = path.join(baseDir, 'skills');
   const skillsConfigPath = path.join(skillsDir, 'skills.json');
   if (!existsSync(skillsConfigPath)) {
     await fs.writeFile(skillsConfigPath, JSON.stringify({ folders: [skillsDir] }, null, 2), 'utf-8');
   }
 
-  // Ensure commands.json exists in ~/.citron/commands
+  // Ensure commands.json exists in ~/.aynite/commands
   const commandsDir = path.join(baseDir, 'commands');
   const commandsConfigPath = path.join(commandsDir, 'commands.json');
   if (!existsSync(commandsConfigPath)) {

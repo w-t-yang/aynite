@@ -134,10 +134,10 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
     
     const env = { 
       ...process.env, 
-      CITRON_CURRENT_FILE: currentFile || '' 
+      AYNITE_CURRENT_FILE: currentFile || '' 
     };
 
-    // Automatically resolve Citron mentions (e.g., @file[label](path)) to raw paths
+    // Automatically resolve Aynite mentions (e.g., @file[label](path)) to raw paths
     const resolvedParams = params.map(p => {
       return p.replace(/@(?:file|skill|cmd)\[.*?\]\((.*?)\)/g, '$1');
     });

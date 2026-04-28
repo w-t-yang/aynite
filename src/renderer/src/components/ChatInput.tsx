@@ -272,11 +272,11 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           setCommandItems(items);
         }
 
-        console.log('[Citron Debug] All indexes rebuilt.');
+        console.log('[Aynite Debug] All indexes rebuilt.');
       };
 
       // @ts-ignore
-      window.__citron = {
+      window.__aynite = {
         rebuild,
         getItems: () => ({
           files: fileItemsRef.current,
@@ -288,7 +288,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       
       return () => {
         // @ts-ignore
-        delete window.__citron;
+        delete window.__aynite;
       };
     }, [workspaceFolders]);
 
@@ -337,7 +337,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           horizontalRule: false,
         }),
         Placeholder.configure({
-          placeholder: 'Message Citron… (@ files, / skills, > commands)',
+          placeholder: 'Message Aynite… (@ files, / skills, > commands)',
         }),
         Mention.configure({
           HTMLAttributes: { class: 'mention mention-file' },

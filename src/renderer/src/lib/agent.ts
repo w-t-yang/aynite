@@ -40,7 +40,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'read_file',
-      description: 'Read the contents of a file. Use this to inspect existing skills or source code. Example: path="/home/user/citron/skills/hello/SKILL.md"',
+      description: 'Read the contents of a file. Use this to inspect existing skills or source code. Example: path="/home/user/aynite/skills/hello/SKILL.md"',
       parameters: {
         type: 'object',
         properties: {
@@ -54,7 +54,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'write_file',
-      description: 'Write content to a file. When creating scripts, ALWAYS include a main block and imports. Example: path="/home/user/citron/skills/new/scripts/tool.py", content="import sys\nif __name__ == \'__main__\':\n    print(\'hello\')"',
+      description: 'Write content to a file. When creating scripts, ALWAYS include a main block and imports. Example: path="/home/user/aynite/skills/new/scripts/tool.py", content="import sys\nif __name__ == \'__main__\':\n    print(\'hello\')"',
       parameters: {
         type: 'object',
         properties: {
@@ -69,7 +69,7 @@ const AGENT_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'list_files',
-      description: 'List files in a directory to understand the project structure. Example: path="/home/user/citron/skills"',
+      description: 'List files in a directory to understand the project structure. Example: path="/home/user/aynite/skills"',
       parameters: {
         type: 'object',
         properties: {
@@ -183,6 +183,7 @@ async function executeListFiles(args: { path: string }, workspaceFolders: string
 
 async function executeRunCommand(
   args: { command: string; cwd?: string },
+  config: AgentConfig,
   workspaceFolders: string[],
   requestApproval: (command: string, cwd: string) => Promise<boolean>
 ): Promise<string> {
@@ -267,7 +268,7 @@ async function executeSpawnSubagent(
 
 // ─── Agent Loop ──────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Citron, an industry-grade AI coding assistant. You are rigorous, precise, and systematic.
+const SYSTEM_PROMPT = `You are Aynite, an industry-grade AI coding assistant. You are rigorous, precise, and systematic.
 
 ## Operation Rules
 1. **Chain of Thought**: Before ANY tool call or major conclusion, you MUST output a <thought> block explaining your reasoning, the evidence you've gathered, and your next step.
@@ -433,7 +434,7 @@ export async function runAgentLoop(
               toolArgs: fnArgs,
               approvalId: callId,
             });
-            result = await executeRunCommand(fnArgs, workspaceFolders, requestApproval);
+            result = await executeRunCommand(fnArgs, config, workspaceFolders, requestApproval);
             break;
           case 'search_codebase':
             result = await executeSearchCodebase(fnArgs as any, workspaceFolders);
