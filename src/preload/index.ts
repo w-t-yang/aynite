@@ -13,6 +13,7 @@ const api = {
   switchWorkspace: (name: string) => ipcRenderer.invoke('api:workspace-switch', name),
   addWorkspaceFolder: () => ipcRenderer.invoke('api:workspace-add-folder'),
   removeWorkspaceFolder: (path: string) => ipcRenderer.invoke('api:workspace-remove-folder', path),
+  reorderWorkspaceFolders: (folders: string[]) => ipcRenderer.invoke('api:workspace-reorder-folders', folders),
   getWorkspaceFolders: () => ipcRenderer.invoke('api:workspace-get-folders'),
   getWorkspaceState: () => ipcRenderer.invoke('api:workspace-get-state'),
   saveWorkspaceState: (tabs: any[], activeTabId: string) => ipcRenderer.invoke('api:workspace-save-state', { tabs, activeTabId }),
@@ -31,6 +32,7 @@ const api = {
   // File Ops API
   createFile: (path: string, isDirectory: boolean) => ipcRenderer.invoke('api:file-create', { path, isDirectory }),
   renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('api:file-rename', { oldPath, newPath }),
+  copyFile: (srcPath: string, destPath: string) => ipcRenderer.invoke('api:file-copy', { srcPath, destPath }),
   deleteFile: (path: string) => ipcRenderer.invoke('api:file-delete', path),
   saveFile: (path: string, content: string) => ipcRenderer.invoke('api:file-save', { path, content }),
   

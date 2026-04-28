@@ -1,25 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus } from 'lucide-react';
+import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../lib/utils';
 
 interface FileNode {
+  id: string; // Absolute path
   name: string;
   isDirectory: boolean;
-  path: string;
+  isLoaded?: boolean;
+  children?: FileNode[];
 }
 
 interface SidebarProps {
   activeTabPath?: string;
   dirtyFiles?: string[];
   onWorkspaceChange?: () => void;
-  onSelectFile?: (file: FileNode, content: string) => void;
+  onSelectFile?: (file: { name: string; isDirectory: boolean; path: string }, content: string) => void;
   onOpenSettings?: () => void;
   onClose?: () => void;
 }
 
 export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceChange, onSelectFile, onOpenSettings, onClose }: SidebarProps) {
-  const [rootFiles, setRootFiles] = useState<FileNode[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [workspaces, setWorkspaces] = useState<string[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState('default workspace');
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -27,6 +29,13 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileNode } | null>(null);
   
+  const [clipboard, setClipboard] = useState<{ paths: string[], action: 'copy' | 'cut' } | null>(null);
+  const treeRef = useRef<TreeApi<FileNode> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [treeHeight, setTreeHeight] = useState(800);
+  
+  const rootFilesPaths = treeData.map(node => node.id);
+
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -42,21 +51,30 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   } | null>(null);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        setTreeHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     // @ts-ignore
     const unsubscribe = window.api.onFileSystemChange(async ({ event, path }) => {
       // @ts-ignore
       const dirname = await window.api.dirname(path);
-      // Reload the parent directory to refresh the tree view
       window.dispatchEvent(new CustomEvent('reload-folder', { detail: dirname }));
       
-      // If it's a directory change itself (e.g. its content changed), reload it too
-      if (event === 'add' || event === 'unlink' || event === 'addDir' || event === 'unlinkDir') {
+      if (event === 'addDir' || event === 'unlinkDir') {
          window.dispatchEvent(new CustomEvent('reload-folder', { detail: path }));
       }
       
-      // In case a root folder was added/removed externally, reload workspace data
       if (workspaces.length > 0) {
-        loadWorkspaceData();
+        const isRootChange = rootFilesPaths.includes(path) || rootFilesPaths.includes(dirname);
+        if (isRootChange) loadWorkspaceData();
       }
     });
 
@@ -68,78 +86,104 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
       window.removeEventListener('click', closeMenu);
       window.removeEventListener('contextmenu', closeMenu);
     };
-  }, [workspaces]);
+  }, [workspaces, treeData]);
 
-  const handleCtxAction = async (action: 'new-file' | 'new-folder' | 'rename' | 'delete' | 'remove-from-workspace') => {
-    if (!contextMenu) return;
-    const { file } = contextMenu;
-    setContextMenu(null); // Close menu instantly
-    
-    // @ts-ignore
-    const dirname = await window.api.dirname(file.path);
-    const reloadPath = (action === 'new-file' || action === 'new-folder') && file.isDirectory ? file.path : dirname;
-
-    const executeAction = async (payloadVal?: string) => {
-      try {
-        if ((action === 'new-file' || action === 'new-folder') && payloadVal) {
-          // @ts-ignore
-          const newPath = await window.api.joinPath(file.path, payloadVal);
-          // @ts-ignore
-          await window.api.createFile(newPath, action === 'new-folder');
-          if (action === 'new-file' && onSelectFile) {
-            onSelectFile({ name: payloadVal, isDirectory: false, path: newPath }, '');
-          }
-        } else if (action === 'rename' && payloadVal && payloadVal !== file.name) {
-          // @ts-ignore
-          const newPath = await window.api.joinPath(dirname, payloadVal);
-          // @ts-ignore
-          await window.api.renameFile(file.path, newPath);
-          window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath: file.path, newPath } }));
-        } else if (action === 'delete') {
-          // @ts-ignore
-          await window.api.deleteFile(file.path);
-          window.dispatchEvent(new CustomEvent('file-deleted', { detail: file.path }));
-        } else if (action === 'remove-from-workspace') {
-          // @ts-ignore
-          await window.api.removeWorkspaceFolder(file.path);
-        }
-        
-        window.dispatchEvent(new CustomEvent('reload-folder', { detail: reloadPath }));
-        loadWorkspaceData();
-      } catch (e) {
-        console.error(e);
-        alert(String(e));
+  const findNodeData = (nodes: FileNode[], targetId: string): FileNode | null => {
+    for (const node of nodes) {
+      if (node.id === targetId) return node;
+      if (node.children) {
+        const found = findNodeData(node.children, targetId);
+        if (found) return found;
       }
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const expandPathIteratively = async (targetPath: string) => {
+      if (!treeData.length) return;
+      const root = treeData.map(n => n.id).find(r => targetPath.startsWith(r));
+      if (!root) return;
+
+      const separator = targetPath.includes('\\') ? '\\' : '/';
+      const rootParts = root.split(separator);
+      const activeParts = targetPath.split(separator);
+
+      let current = root;
+      const pathsToOpen = [current];
+      for (let i = rootParts.length; i < activeParts.length - 1; i++) {
+        current += separator + activeParts[i];
+        pathsToOpen.push(current);
+      }
+
+      let newData = [...treeData];
+      let changed = false;
+
+      for (const p of pathsToOpen) {
+        const nodeData = findNodeData(newData, p);
+        if (nodeData && !nodeData.isLoaded) {
+          const children = await fetchFiles(p);
+          newData = updateNodeChildren(newData, p, children);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setTreeData(newData);
+      }
+      
+      setTimeout(() => {
+        if (!treeRef.current) return;
+        for (const p of pathsToOpen) {
+          treeRef.current.open(p);
+        }
+        treeRef.current.select(targetPath);
+        treeRef.current.scrollTo(targetPath);
+      }, changed ? 100 : 0);
     };
 
-    if (action === 'new-file' || action === 'new-folder') {
-      setPromptModal({
-        isOpen: true,
-        title: action === 'new-file' ? 'New File' : 'New Folder',
-        placeholder: action === 'new-file' ? 'filename.ext' : 'folder_name',
-        defaultValue: '',
-        onConfirm: async (val) => await executeAction(val)
-      });
-    } else if (action === 'rename') {
-      setPromptModal({
-        isOpen: true,
-        title: 'Rename File/Folder',
-        placeholder: 'New name',
-        defaultValue: file.name,
-        onConfirm: async (val) => await executeAction(val)
-      });
-    } else if (action === 'delete') {
-      setConfirmModal({
-        isOpen: true,
-        message: `Are you sure you want to delete "${file.name}"? This action will permanently delete it from disk.`,
-        onConfirm: async () => await executeAction()
-      });
-    } else if (action === 'remove-from-workspace') {
-      setConfirmModal({
-        isOpen: true,
-        message: `Are you sure you want to remove "${file.name}" from this workspace? The folder will NOT be deleted from disk.`,
-        onConfirm: async () => await executeAction()
-      });
+    if (activeTabPath && treeRef.current) {
+      expandPathIteratively(activeTabPath);
+    }
+  }, [activeTabPath, treeData.length]);
+
+  useEffect(() => {
+    const handleReload = async (e: any) => {
+      const folderPath = e.detail;
+      const children = await fetchFiles(folderPath);
+      setTreeData(prev => updateNodeChildren(prev, folderPath, children));
+    };
+    window.addEventListener('reload-folder', handleReload);
+    return () => window.removeEventListener('reload-folder', handleReload);
+  }, []);
+
+  const updateNodeChildren = (nodes: FileNode[], targetId: string, children: FileNode[]): FileNode[] => {
+    return nodes.map(node => {
+      if (node.id === targetId) {
+        return { ...node, children, isLoaded: true };
+      }
+      if (node.children) {
+        return { ...node, children: updateNodeChildren(node.children, targetId, children) };
+      }
+      return node;
+    });
+  };
+
+  const fetchFiles = async (dirPath: string): Promise<FileNode[]> => {
+    try {
+      // @ts-ignore
+      const res = await window.api.getFiles(dirPath);
+      if (res.error) throw new Error(res.error);
+      return res.data.map((f: any) => ({
+        id: f.path,
+        name: f.name,
+        isDirectory: f.isDirectory,
+        isLoaded: !f.isDirectory,
+        children: f.isDirectory ? [] : undefined
+      }));
+    } catch (e) {
+      console.error(e);
+      return [];
     }
   };
 
@@ -156,11 +200,13 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
       const folders = await window.api.getWorkspaceFolders();
       if (folders && Array.isArray(folders.data)) {
         const rootNodes = folders.data.map((f: string) => ({
+          id: f,
           name: f.split(/[\/\\]/).pop() || f,
           isDirectory: true,
-          path: f
+          isLoaded: false,
+          children: []
         }));
-        setRootFiles(rootNodes);
+        setTreeData(rootNodes);
       }
     } catch (e) {
       console.error(e);
@@ -171,15 +217,11 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     loadWorkspaceData();
   }, []);
 
-  const fetchFiles = async (dirPath: string) => {
-    try {
-      // @ts-ignore
-      const res = await window.api.getFiles(dirPath);
-      if (res.error) throw new Error(res.error);
-      return res.data;
-    } catch (e) {
-      console.error(e);
-      return [];
+  const handleToggle = async (id: string) => {
+    const node = treeRef.current?.get(id);
+    if (node && node.isOpen && !node.data.isLoaded && node.data.isDirectory) {
+       const children = await fetchFiles(id);
+       setTreeData(prev => updateNodeChildren(prev, id, children));
     }
   };
 
@@ -218,8 +260,201 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     }
   };
 
+  const onMove: MoveHandler<FileNode> = async ({ dragIds, parentId, index }) => {
+    if (parentId === null) {
+      const isAllRoots = dragIds.every(id => rootFilesPaths.includes(id));
+      if (!isAllRoots) {
+        alert("Cannot move subfolders to the workspace root.");
+        return;
+      }
+      const newOrder = rootFilesPaths.filter(id => !dragIds.includes(id));
+      newOrder.splice(index, 0, ...dragIds);
+      // @ts-ignore
+      await window.api.reorderWorkspaceFolders(newOrder);
+      await loadWorkspaceData();
+    } else {
+      const hasRoot = dragIds.some(id => rootFilesPaths.includes(id));
+      if (hasRoot) {
+        alert("Cannot move a workspace folder into a subfolder.");
+        return;
+      }
+      
+      const parentNode = treeRef.current?.get(parentId);
+      if (!parentNode?.data.isDirectory) return;
+
+      for (const id of dragIds) {
+        const name = id.split(/[\/\\]/).pop();
+        // @ts-ignore
+        const newPath = await window.api.joinPath(parentId, name);
+        if (id !== newPath) {
+          // @ts-ignore
+          await window.api.renameFile(id, newPath);
+          window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath: id, newPath } }));
+        }
+      }
+      window.dispatchEvent(new CustomEvent('reload-folder', { detail: parentId }));
+    }
+  };
+
+  const handleCtxAction = async (action: 'new-file' | 'new-folder' | 'rename' | 'delete' | 'remove-from-workspace' | 'copy' | 'paste') => {
+    if (!contextMenu) return;
+    const { file } = contextMenu;
+    setContextMenu(null);
+
+    if (action === 'copy') {
+      const selectedIds = Array.from(treeRef.current?.selectedIds || new Set<string>([file.id]));
+      setClipboard({ paths: selectedIds, action: 'copy' });
+      return;
+    }
+
+    // @ts-ignore
+    const dirname = await window.api.dirname(file.id);
+    const reloadPath = (action === 'new-file' || action === 'new-folder' || action === 'paste') && file.isDirectory ? file.id : dirname;
+    const parentDirForPaste = file.isDirectory ? file.id : dirname;
+
+    const executeAction = async (payloadVal?: string) => {
+      try {
+        if (action === 'paste' && clipboard) {
+          for (const src of clipboard.paths) {
+            const name = src.split(/[\/\\]/).pop();
+            // @ts-ignore
+            const dest = await window.api.joinPath(parentDirForPaste, name);
+            // @ts-ignore
+            await window.api.copyFile(src, dest);
+          }
+        } else if ((action === 'new-file' || action === 'new-folder') && payloadVal) {
+          // @ts-ignore
+          const newPath = await window.api.joinPath(file.id, payloadVal);
+          // @ts-ignore
+          await window.api.createFile(newPath, action === 'new-folder');
+          if (action === 'new-file' && onSelectFile) {
+            onSelectFile({ name: payloadVal, isDirectory: false, path: newPath }, '');
+          }
+        } else if (action === 'rename' && payloadVal && payloadVal !== file.name) {
+          // @ts-ignore
+          const newPath = await window.api.joinPath(dirname, payloadVal);
+          // @ts-ignore
+          await window.api.renameFile(file.id, newPath);
+          window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath: file.id, newPath } }));
+        } else if (action === 'delete') {
+          // @ts-ignore
+          await window.api.deleteFile(file.id);
+          window.dispatchEvent(new CustomEvent('file-deleted', { detail: file.id }));
+        } else if (action === 'remove-from-workspace') {
+          // @ts-ignore
+          await window.api.removeWorkspaceFolder(file.id);
+        }
+        
+        window.dispatchEvent(new CustomEvent('reload-folder', { detail: reloadPath }));
+        if (action === 'remove-from-workspace') loadWorkspaceData();
+      } catch (e) {
+        console.error(e);
+        alert(String(e));
+      }
+    };
+
+    if (action === 'paste') {
+      await executeAction();
+    } else if (action === 'new-file' || action === 'new-folder') {
+      setPromptModal({
+        isOpen: true,
+        title: action === 'new-file' ? 'New File' : 'New Folder',
+        placeholder: action === 'new-file' ? 'filename.ext' : 'folder_name',
+        defaultValue: '',
+        onConfirm: async (val) => await executeAction(val)
+      });
+    } else if (action === 'rename') {
+      setPromptModal({
+        isOpen: true,
+        title: 'Rename',
+        placeholder: 'New name',
+        defaultValue: file.name,
+        onConfirm: async (val) => await executeAction(val)
+      });
+    } else if (action === 'delete') {
+      setConfirmModal({
+        isOpen: true,
+        message: `Are you sure you want to delete "${file.name}"?`,
+        onConfirm: async () => await executeAction()
+      });
+    } else if (action === 'remove-from-workspace') {
+      setConfirmModal({
+        isOpen: true,
+        message: `Are you sure you want to remove "${file.name}" from workspace?`,
+        onConfirm: async () => await executeAction()
+      });
+    }
+  };
+
+  const handleGlobalKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      const selected = Array.from(treeRef.current?.selectedIds || []);
+      if (selected.length > 0) {
+        setClipboard({ paths: selected, action: 'copy' });
+      }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      const selected = Array.from(treeRef.current?.selectedIds || []);
+      if (selected.length > 0 && clipboard) {
+        const node = treeRef.current?.get(selected[0]);
+        if (node) {
+          setContextMenu({ x: 0, y: 0, file: node.data });
+          setTimeout(() => handleCtxAction('paste'), 0);
+        }
+      }
+    }
+  };
+
+  function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
+    const { name, isDirectory, id } = node.data;
+    const isSelected = node.isSelected;
+    const isDirty = dirtyFiles.includes(id);
+
+    return (
+      <div 
+        style={style} 
+        ref={dragHandle} 
+        className={cn(
+          "flex items-center cursor-pointer hover:bg-accent text-sm select-none",
+          isSelected ? "bg-blue-500/10 text-blue-500 font-medium hover:bg-blue-500/20" : "text-muted-foreground"
+        )}
+        onClick={(e) => {
+          node.handleClick(e);
+          if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
+            if (isDirectory) {
+              node.toggle();
+            } else {
+               // @ts-ignore
+               window.api.readFile(id).then(res => {
+                 if (res.data) onSelectFile?.({ name, isDirectory, path: id }, res.data);
+               });
+            }
+          }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          node.select();
+          setContextMenu({ x: e.clientX, y: e.clientY, file: node.data });
+        }}
+      >
+        <span className="w-4 h-4 mr-1 flex items-center justify-center">
+          {isDirectory ? (node.isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : null}
+        </span>
+        {isDirectory ? (
+          node.isOpen ? <FolderOpen size={14} className="mr-1.5 text-blue-400" /> : <Folder size={14} className="mr-1.5 text-blue-400" />
+        ) : (
+          <File size={14} className="mr-1.5 opacity-70" />
+        )}
+        <span className={cn("truncate", isDirty && "italic font-medium text-blue-400")}>
+          {name}{isDirty && " •"}
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden">
+    <div className="w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden" onKeyDown={handleGlobalKeyDown} tabIndex={-1}>
       <div className="px-3 py-3 flex items-center justify-between border-b border-border/40 shrink-0">
         <div className="relative flex-1 min-w-0 mr-2">
           <button 
@@ -259,51 +494,34 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
         </div>
         
         <div className="flex items-center gap-0.5">
-          <button 
-            onClick={handleAddFolder}
-            title="Add Folder to Workspace"
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-          >
-            <FolderPlus size={16} />
-          </button>
-          
-          {onClose && (
-            <button 
-              onClick={onClose}
-              className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-            >
-              <PanelLeftClose size={16} />
-            </button>
-          )}
+          <button onClick={handleAddFolder} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><FolderPlus size={16} /></button>
+          {onClose && <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><PanelLeftClose size={16} /></button>}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto pb-4 pt-2">
-        {rootFiles.map(file => (
-          <FileTreeNode 
-            key={file.path} 
-            file={file} 
-            fetchFiles={fetchFiles} 
-            onSelectFile={onSelectFile} 
-            level={0} 
-            activeTabPath={activeTabPath} 
-            dirtyFiles={dirtyFiles}
-            onContextMenu={(e, f) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setContextMenu({ x: e.clientX, y: e.clientY, file: f });
-            }}
-          />
-        ))}
+
+      <div ref={containerRef} className="flex-1 overflow-hidden outline-none">
+        <Tree
+          ref={treeRef}
+          data={treeData}
+          width="100%"
+          height={treeHeight}
+          indent={12}
+          rowHeight={28}
+          openByDefault={false}
+          onMove={onMove}
+          onToggle={handleToggle}
+          disableDrop={({ parentNode }) => {
+            if (!parentNode || parentNode.isInternal || parentNode.level === -1) return false;
+            return !parentNode.data?.isDirectory;
+          }}
+        >
+          {NodeRenderer}
+        </Tree>
       </div>
       
-      {/* Settings Button at Bottom */}
       <div className="mt-auto border-t border-border p-2 shrink-0 bg-sidebar">
-        <button 
-          onClick={onOpenSettings}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-        >
-          <Settings size={16} />
-          Settings
+        <button onClick={onOpenSettings} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+          <Settings size={16} /> Settings
         </button>
       </div>
 
@@ -321,18 +539,8 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
               className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-500 mb-4"
             />
             <div className="flex justify-end gap-2">
-              <button 
-                onClick={() => { setShowNewWorkspaceModal(false); setNewWorkspaceName(''); }}
-                className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCreateWorkspace}
-                className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors font-medium"
-              >
-                Create
-              </button>
+              <button onClick={() => { setShowNewWorkspaceModal(false); setNewWorkspaceName(''); }} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
+              <button onClick={handleCreateWorkspace} className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors font-medium">Create</button>
             </div>
           </div>
         </div>
@@ -364,25 +572,26 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
         >
           {contextMenu.file.isDirectory && (
             <>
-              <button onClick={() => { handleCtxAction('new-file'); }} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">New File</button>
-              <button onClick={() => { handleCtxAction('new-folder'); }} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">New Folder</button>
+              <button onClick={() => handleCtxAction('new-file')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">New File</button>
+              <button onClick={() => handleCtxAction('new-folder')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">New Folder</button>
               <div className="h-px bg-border my-1" />
             </>
           )}
-          <button onClick={() => { handleCtxAction('rename'); }} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Rename</button>
+          <button onClick={() => handleCtxAction('rename')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Rename</button>
           
-          {rootFiles.some(rf => rf.path === contextMenu.file.path) ? (
-            <button 
-              onClick={() => { handleCtxAction('remove-from-workspace'); }} 
-              className="px-3 py-1.5 text-left hover:bg-accent text-amber-500 hover:bg-amber-500/10 transition-colors"
-            >
+          <div className="h-px bg-border my-1" />
+          <button onClick={() => handleCtxAction('copy')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Copy</button>
+          {clipboard && contextMenu.file.isDirectory && (
+             <button onClick={() => handleCtxAction('paste')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Paste</button>
+          )}
+          <div className="h-px bg-border my-1" />
+
+          {rootFilesPaths.includes(contextMenu.file.id) ? (
+            <button onClick={() => handleCtxAction('remove-from-workspace')} className="px-3 py-1.5 text-left hover:bg-accent text-amber-500 hover:bg-amber-500/10 transition-colors">
               Remove from Workspace
             </button>
           ) : (
-            <button 
-              onClick={() => { handleCtxAction('delete'); }} 
-              className="px-3 py-1.5 text-left hover:bg-accent text-red-500 hover:bg-red-500/10 transition-colors"
-            >
+            <button onClick={() => handleCtxAction('delete')} className="px-3 py-1.5 text-left hover:bg-accent text-red-500 hover:bg-red-500/10 transition-colors">
               Delete
             </button>
           )}
@@ -427,144 +636,6 @@ function ConfirmModal({ message, onConfirm, onCancel }: { message: string, onCon
           <button onClick={onConfirm} className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors font-medium">Delete</button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function FileTreeNode({ 
-  file, 
-  fetchFiles, 
-  onSelectFile, 
-  level,
-  activeTabPath,
-  dirtyFiles = [],
-  onContextMenu
-}: { 
-  file: FileNode, 
-  fetchFiles: (val: string) => Promise<FileNode[]>,
-  onSelectFile?: (file: FileNode, content: string) => void,
-  level: number,
-  activeTabPath?: string,
-  dirtyFiles?: string[],
-  onContextMenu?: (e: React.MouseEvent, file: FileNode) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [children, setChildren] = useState<FileNode[]>([]);
-  const [loading, setLoading] = useState(false);
-  const lastExpandedRef = React.useRef<string | null>(null);
-
-  useEffect(() => {
-    const handleReload = (e: any) => {
-      if (e.detail === file.path && file.isDirectory) {
-         setLoading(true);
-         fetchFiles(file.path).then(childFiles => {
-           setChildren(childFiles);
-           setLoading(false);
-         });
-      }
-    };
-    window.addEventListener('reload-folder', handleReload);
-    return () => window.removeEventListener('reload-folder', handleReload);
-  }, [file.path, file.isDirectory, fetchFiles]);
-
-  useEffect(() => {
-    // Ensure we match the directory structure explicitly to avoid partial string matches
-    // e.g. preventing .git matching .gitignore
-    const isParentDir = activeTabPath && file.isDirectory && (
-      activeTabPath.startsWith(file.path + '/') || 
-      activeTabPath.startsWith(file.path + '\\')
-    );
-
-    if (isParentDir && lastExpandedRef.current !== activeTabPath) {
-      lastExpandedRef.current = activeTabPath;
-      if (!expanded && children.length === 0) {
-        setLoading(true);
-        fetchFiles(file.path).then(childFiles => {
-          setChildren(childFiles);
-          setLoading(false);
-          setExpanded(true);
-        });
-      } else if (!expanded && children.length > 0) {
-        setExpanded(true);
-      }
-    }
-  }, [activeTabPath, file.path, file.isDirectory, expanded, children.length]);
-
-  const toggleExpand = async () => {
-    if (!file.isDirectory) {
-      // It's a file, fetch its content
-      setLoading(true);
-      try {
-        // @ts-ignore
-        const res = await window.api.readFile(file.path);
-        if (res.error) throw new Error(res.error);
-        const text = res.data;
-        onSelectFile?.(file, text);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!expanded && children.length === 0) {
-      setLoading(true);
-      const childFiles = await fetchFiles(file.path);
-      setChildren(childFiles);
-      setLoading(false);
-    }
-    setExpanded(!expanded);
-  };
-
-  const paddingLeft = `${(level * 12) + 12}px`;
-  const isSelected = activeTabPath && file.path === activeTabPath;
-
-  return (
-    <div>
-      <div 
-        className={cn(
-          "flex items-center py-1 cursor-pointer hover:bg-accent text-sm select-none",
-          isSelected ? "bg-blue-500/10 text-blue-500 font-medium hover:bg-blue-500/20" : "hover:text-accent-foreground text-muted-foreground"
-        )}
-        style={{ paddingLeft }}
-        onClick={toggleExpand}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onContextMenu?.(e, file);
-        }}
-      >
-        <span className="w-4 h-4 mr-1 flex items-center justify-center">
-          {file.isDirectory ? (
-             expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
-          ) : null}
-        </span>
-        {file.isDirectory ? (
-          expanded ? <FolderOpen size={14} className="mr-1.5 text-blue-400" /> : <Folder size={14} className="mr-1.5 text-blue-400" />
-        ) : (
-          <File size={14} className="mr-1.5 opacity-70" />
-        )}
-        <span className={cn("truncate", dirtyFiles.includes(file.path) && "italic font-medium text-blue-400")}>
-          {file.name}{dirtyFiles.includes(file.path) && " •"}
-        </span>
-      </div>
-      {expanded && children.length > 0 && (
-        <div>
-          {children.map(child => (
-            <FileTreeNode 
-              key={child.path} 
-              file={child} 
-              fetchFiles={fetchFiles} 
-              onSelectFile={onSelectFile}
-              level={level + 1} 
-              activeTabPath={activeTabPath}
-              dirtyFiles={dirtyFiles}
-              onContextMenu={onContextMenu}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

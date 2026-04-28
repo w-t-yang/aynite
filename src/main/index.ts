@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands } from './config';
 
 const execAsync = promisify(exec);
 
@@ -249,6 +249,17 @@ ipcMain.handle('api:workspace-remove-folder', async (event, folderPath: string) 
   }
 });
 
+ipcMain.handle('api:workspace-reorder-folders', async (event, folders: string[]) => {
+  try {
+    await reorderWorkspaceFolders(folders);
+    const updatedFolders = await getWorkspaceFolders();
+    setupWatcher(updatedFolders);
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
 ipcMain.handle('api:workspace-get-state', async () => {
   try {
     const state = await getWorkspaceState();
@@ -345,6 +356,15 @@ ipcMain.handle('api:file-rename', async (event, { oldPath, newPath }) => {
   try {
     await fs.rename(oldPath, newPath);
     await renameWorkspaceFolder(oldPath, newPath);
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:file-copy', async (event, { srcPath, destPath }) => {
+  try {
+    await fs.cp(srcPath, destPath, { recursive: true });
     return { data: true };
   } catch (error: any) {
     return { error: error.message };
