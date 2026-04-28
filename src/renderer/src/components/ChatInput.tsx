@@ -291,11 +291,6 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       });
     }, [workspaceFolders]);
     
-    useImperativeHandle(ref, () => ({
-      focus: () => {
-        editor?.commands.focus();
-      }
-    }));
     
     const editor = useEditor({
       extensions: [
