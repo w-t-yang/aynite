@@ -364,8 +364,8 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
               onChange={handleContentChange}
               className={cn(
                 "flex-1 resize-none bg-transparent outline-none p-4 leading-relaxed whitespace-pre font-mono text-foreground transition-all",
-                isEditing ? "caret-blue-500" : "caret-muted-foreground/60",
-                "selection:bg-blue-500/30"
+                isEditing ? "caret-primary" : "caret-muted-foreground/60",
+                "selection:bg-primary/30"
               )}
               style={{ lineHeight: '1.5rem', tabSize: 4 }}
               track-cursor="true"
@@ -383,7 +383,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search..."
-              className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 w-48"
+              className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:border-primary w-48"
             />
             <span className="text-xs text-muted-foreground mr-2">
               {searchResults.length > 0 ? `${currentSearchIndex + 1}/${searchResults.length}` : '0/0'}
@@ -404,7 +404,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
                {isDirty && (
                  <button
                    onClick={onSave}
-                   className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors mr-2"
+                   className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors mr-2"
                    title="Save File (Cmd/Ctrl + S)"
                  >
                    <Save size={12} />
@@ -416,7 +416,7 @@ export default function FileViewer({ filename, content, onChange, onSave, isDirt
                   className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors"
                   title={isEditing ? "Switch to View Mode" : "Switch to Edit Mode"}
                >
-                  {isEditing ? <Pencil size={12} className="text-blue-500" /> : <Eye size={12} />}
+                  {isEditing ? <Pencil size={12} className="text-primary" /> : <Eye size={12} />}
                   <span>{isEditing ? 'Editing' : 'Read Only'}</span>
                </button>
              </div>

@@ -29,7 +29,7 @@ interface AgentStep {
 
 function ToolIcon({ name }: { name?: string }) {
   switch (name) {
-    case 'read_file': return <FileText size={12} className="text-blue-400" />;
+    case 'read_file': return <FileText size={12} className="text-primary" />;
     case 'write_file': return <FileText size={12} className="text-green-400" />;
     case 'list_files': return <FolderOpen size={12} className="text-yellow-400" />;
     case 'run_command': return <Terminal size={12} className="text-orange-400" />;
@@ -44,7 +44,7 @@ function StepEntry({ step }: { step: AgentStep }) {
 
   const statusIcon = step.status === 'done' ? <CheckCircle size={10} className="text-green-500" />
     : step.status === 'error' || step.status === 'rejected' ? <XCircle size={10} className="text-red-500" />
-    : step.status === 'pending' ? <RefreshCw size={10} className="animate-spin text-blue-400" />
+    : step.status === 'pending' ? <RefreshCw size={10} className="animate-spin text-primary" />
     : step.status === 'approved' ? <CheckCircle size={10} className="text-green-500" />
     : null;
 
@@ -150,7 +150,7 @@ function MessageContent({ text, role, onOpenFile }: { text: string; role: 'user'
             e.stopPropagation();
             onOpenFile?.(path);
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-md text-xs font-medium transition-all my-2 group"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md text-xs font-medium transition-all my-2 group"
         >
           <FileText size={14} className="group-hover:scale-110 transition-transform" /> 
           <span>View Definition</span>
@@ -662,7 +662,7 @@ export default function ChatTab({
             className={`flex gap-4 max-w-4xl mx-auto ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.role === 'model' && (
-              <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
                 <Bot size={18} />
               </div>
             )}
@@ -670,7 +670,7 @@ export default function ChatTab({
             <div
               className={`rounded-xl max-w-[85%] ${
                 msg.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-none px-4 py-3'
+                   ? 'bg-primary text-primary-foreground rounded-br-none px-4 py-3'
                   : 'bg-accent/40 rounded-tl-none border border-border/50 text-foreground'
               }`}
             >
@@ -725,7 +725,7 @@ export default function ChatTab({
 
         {loading && !pendingApproval && (
           <div className="flex gap-4 max-w-4xl mx-auto justify-start">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
               <RefreshCw size={18} className="animate-spin" />
             </div>
           </div>
@@ -750,7 +750,7 @@ export default function ChatTab({
             className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all text-[10px] font-medium ${
               copied 
                 ? 'bg-green-500/10 text-green-500' 
-                : 'hover:bg-blue-500/10 hover:text-blue-500 text-muted-foreground'
+                : 'hover:bg-primary/10 hover:text-primary text-muted-foreground'
             } ${messages.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Copy conversation as JSON"
           >

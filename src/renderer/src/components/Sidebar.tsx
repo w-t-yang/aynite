@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus } from 'lucide-react';
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus } from 'lucide-react';
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../lib/utils';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 interface FileNode {
   id: string; // Absolute path
@@ -24,7 +25,6 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [workspaces, setWorkspaces] = useState<string[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState('default workspace');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showNewWorkspaceModal, setShowNewWorkspaceModal] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileNode } | null>(null);
@@ -226,7 +226,6 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   };
 
   const handleWorkspaceSelect = async (ws: string) => {
-    setDropdownOpen(false);
     if (ws === '__NEW__') {
       setShowNewWorkspaceModal(true);
       return;
@@ -416,7 +415,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
         ref={dragHandle} 
         className={cn(
           "flex items-center cursor-pointer hover:bg-accent text-sm select-none",
-          isSelected ? "bg-blue-500/10 text-blue-500 font-medium hover:bg-blue-500/20" : "text-muted-foreground"
+          isSelected ? "bg-primary/10 text-primary font-medium hover:bg-primary/20" : "text-muted-foreground"
         )}
         onClick={(e) => {
           node.handleClick(e);
@@ -442,11 +441,11 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
           {isDirectory ? (node.isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : null}
         </span>
         {isDirectory ? (
-          node.isOpen ? <FolderOpen size={14} className="mr-1.5 text-blue-400" /> : <Folder size={14} className="mr-1.5 text-blue-400" />
+          node.isOpen ? <FolderOpen size={14} className="mr-1.5 text-primary" /> : <Folder size={14} className="mr-1.5 text-primary" />
         ) : (
           <File size={14} className="mr-1.5 opacity-70" />
         )}
-        <span className={cn("truncate", isDirty && "italic font-medium text-blue-400")}>
+        <span className={cn("truncate", isDirty && "italic font-medium text-primary")}>
           {name}{isDirty && " •"}
         </span>
       </div>
@@ -457,40 +456,24 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     <div className="w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden" onKeyDown={handleGlobalKeyDown} tabIndex={-1}>
       <div className="px-3 py-3 flex items-center justify-between border-b border-border/40 shrink-0">
         <div className="relative flex-1 min-w-0 mr-2">
-          <button 
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-1 w-full text-left text-sm font-semibold tracking-wide text-foreground hover:opacity-80 transition-opacity uppercase truncate cursor-pointer"
-          >
-            <span className="truncate">{activeWorkspace}</span>
-            <ChevronDown size={14} className="shrink-0" />
-          </button>
-          
-          {dropdownOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-              <div className="absolute top-full left-0 mt-2 w-48 bg-background border border-border shadow-lg rounded-md z-50 py-1 flex flex-col max-h-60 overflow-y-auto">
-                {workspaces.map(ws => (
-                  <button 
-                    key={ws}
-                    onClick={() => handleWorkspaceSelect(ws)}
-                    className={cn(
-                      "px-3 py-1.5 text-sm text-left truncate hover:bg-accent transition-colors",
-                      ws === activeWorkspace && "text-blue-500 font-medium bg-blue-500/10"
-                    )}
-                  >
-                    {ws}
-                  </button>
-                ))}
-                <div className="h-px bg-border my-1 shrink-0" />
-                <button 
-                  onClick={() => handleWorkspaceSelect('__NEW__')}
-                  className="px-3 py-1.5 text-sm text-left text-blue-500 font-medium hover:bg-accent transition-colors shrink-0"
-                >
-                  Create New Workspace...
-                </button>
-              </div>
-            </>
-          )}
+          <SearchableSelect
+            value={activeWorkspace}
+            options={workspaces}
+            onChange={handleWorkspaceSelect}
+            placeholder="Select Workspace"
+            searchPlaceholder="Search workspaces..."
+            className="w-full"
+            footer={
+              <button 
+                onClick={() => {
+                  setShowNewWorkspaceModal(true);
+                }}
+                className="w-full px-3 py-2 text-[10px] text-left text-primary font-medium hover:bg-accent transition-colors flex items-center gap-2"
+              >
+                <Plus size={12} /> Create New Workspace...
+              </button>
+            }
+          />
         </div>
         
         <div className="flex items-center gap-0.5">
@@ -536,11 +519,11 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkspace()}
-              className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-500 mb-4"
+              className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
             />
             <div className="flex justify-end gap-2">
               <button onClick={() => { setShowNewWorkspaceModal(false); setNewWorkspaceName(''); }} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
-              <button onClick={handleCreateWorkspace} className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors font-medium">Create</button>
+              <button onClick={handleCreateWorkspace} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Create</button>
             </div>
           </div>
         </div>
@@ -566,32 +549,32 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
 
       {contextMenu && (
         <div 
-          className="fixed bg-sidebar border border-border shadow-xl rounded-md py-1 z-[100] text-sm text-foreground flex flex-col w-40"
+          className="fixed bg-sidebar border border-border shadow-2xl rounded-lg py-1.5 z-[100] text-sm text-foreground flex flex-col w-44 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           {contextMenu.file.isDirectory && (
             <>
-              <button onClick={() => handleCtxAction('new-file')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">New File</button>
-              <button onClick={() => handleCtxAction('new-folder')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">New Folder</button>
-              <div className="h-px bg-border my-1" />
+              <button onClick={() => handleCtxAction('new-file')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New File</button>
+              <button onClick={() => handleCtxAction('new-folder')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New Folder</button>
+              <div className="h-px bg-border/50 my-1" />
             </>
           )}
-          <button onClick={() => handleCtxAction('rename')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Rename</button>
+          <button onClick={() => handleCtxAction('rename')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Rename</button>
           
-          <div className="h-px bg-border my-1" />
-          <button onClick={() => handleCtxAction('copy')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Copy</button>
+          <div className="h-px bg-border/50 my-1" />
+          <button onClick={() => handleCtxAction('copy')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Copy</button>
           {clipboard && contextMenu.file.isDirectory && (
-             <button onClick={() => handleCtxAction('paste')} className="px-3 py-1.5 text-left hover:bg-accent hover:text-accent-foreground">Paste</button>
+             <button onClick={() => handleCtxAction('paste')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Paste</button>
           )}
-          <div className="h-px bg-border my-1" />
+          <div className="h-px bg-border/50 my-1" />
 
           {rootFilesPaths.includes(contextMenu.file.id) ? (
-            <button onClick={() => handleCtxAction('remove-from-workspace')} className="px-3 py-1.5 text-left hover:bg-accent text-amber-500 hover:bg-amber-500/10 transition-colors">
+            <button onClick={() => handleCtxAction('remove-from-workspace')} className="px-3 py-1.5 text-left text-warning hover:bg-warning hover:text-warning-foreground transition-colors">
               Remove from Workspace
             </button>
           ) : (
-            <button onClick={() => handleCtxAction('delete')} className="px-3 py-1.5 text-left hover:bg-accent text-red-500 hover:bg-red-500/10 transition-colors">
+            <button onClick={() => handleCtxAction('delete')} className="px-3 py-1.5 text-left text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors">
               Delete
             </button>
           )}
@@ -614,11 +597,11 @@ function PromptModal({ title, placeholder, defaultValue, onConfirm, onCancel }: 
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && val.trim() && onConfirm(val.trim())}
-          className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-500 mb-4"
+          className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
         />
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
-          <button onClick={() => val.trim() && onConfirm(val.trim())} className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors font-medium">Confirm</button>
+          <button onClick={() => val.trim() && onConfirm(val.trim())} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Confirm</button>
         </div>
       </div>
     </div>
@@ -633,7 +616,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: { message: string, onCon
         <p className="text-sm text-muted-foreground mb-6 break-words">{message}</p>
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="px-4 py-2 text-sm text-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors font-medium">Delete</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-sm bg-destructive text-destructive-foreground hover:opacity-90 rounded-md transition-colors font-medium">Delete</button>
         </div>
       </div>
     </div>

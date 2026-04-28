@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy } from 'lucide-react';
+import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 export interface SettingsState {
   activeTheme: string;
@@ -196,7 +197,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                            save({ ...localSettings, skills: { folders: Array.from(new Set(newFolders)) } });
                          }
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"
                    >
                       <Plus size={14} /> Add Folder
                    </button>
@@ -218,7 +219,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                             const newFolders = (localSettings.skills?.folders || []).filter(f => f !== folder);
                             save({ ...localSettings, skills: { folders: newFolders } });
                           }}
-                          className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded transition-all opacity-0 group-hover:opacity-100"
+                          className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -265,7 +266,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                            save({ ...localSettings, commands: { folders: Array.from(new Set(newFolders)) } });
                          }
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"
                    >
                       <Plus size={14} /> Add Folder
                    </button>
@@ -287,7 +288,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                             const newFolders = (localSettings.commands?.folders || []).filter(f => f !== folder);
                             save({ ...localSettings, commands: { folders: newFolders } });
                           }}
-                          className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded transition-all opacity-0 group-hover:opacity-100"
+                          className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -338,7 +339,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                           value={provider}
                           checked={localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'gemini')}
                           onChange={() => save({ ...localSettings, aiProvider: provider as any })}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary" 
                         />
                         <span className="font-medium capitalize">{provider}</span>
                       </label>
@@ -353,7 +354,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                                 placeholder={`Enter ${provider} API Key`}
                                 value={localSettings.aiConfigs?.[provider as 'gemini' | 'deepseek']?.apiKey || ''}
                                 onChange={(e) => handleAiConfigChange(provider, 'apiKey', e.target.value)}
-                                className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
                               />
                             </div>
                           )}
@@ -365,7 +366,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                               placeholder={provider === 'ollama' ? "http://localhost:11434" : "Default URL"}
                               value={localSettings.aiConfigs?.[provider]?.url || ''}
                               onChange={(e) => handleAiConfigChange(provider, 'url', e.target.value)}
-                              className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                              className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
                             />
                           </div>
 
@@ -378,7 +379,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                                   placeholder="gemma:e4b"
                                   value={localSettings.aiConfigs?.ollama?.model || 'gemma:e4b'}
                                   onChange={(e) => handleAiConfigChange(provider, 'model', e.target.value)}
-                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
                                 />
                               </div>
                               <div className="flex flex-col gap-1.5">
@@ -388,7 +389,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                                   placeholder="8192"
                                   value={localSettings.aiConfigs?.ollama?.contextWindow || 8192}
                                   onChange={(e) => handleAiConfigChange(provider, 'contextWindow', e.target.value)}
-                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
                                 />
                               </div>
                             </>
@@ -409,7 +410,7 @@ export default function Settings({ settings, onSave }: SettingsProps) {
                       onClick={handleToggleAutoApprove}
                       className={cn(
                         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
-                        localSettings.aiConfigs?.autoApproveCommands ? "bg-blue-600" : "bg-muted"
+                        localSettings.aiConfigs?.autoApproveCommands ? "bg-primary" : "bg-muted"
                       )}
                     >
                       <span className={cn(
@@ -524,11 +525,13 @@ function KeyRow({ label, value, onChange }: { label: string, value: string, onCh
         type="text" 
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40 bg-accent/20 rounded border border-transparent px-2 py-1 text-[10px] font-mono focus:outline-none focus:border-blue-500 text-right uppercase"
+        className="w-40 bg-accent/20 rounded border border-transparent px-2 py-1 text-[10px] font-mono focus:outline-none focus:border-primary text-right uppercase"
       />
     </div>
   );
 }
+
+
 
 // Color label mapping for display
 const COLOR_LABELS: Record<string, string> = {
@@ -652,7 +655,7 @@ function AppearanceTab({ settings, onSave }: { settings: SettingsState, onSave: 
           <h3 className="text-lg font-medium">Theme</h3>
           <div className="flex items-center gap-2">
             {editingTheme && !editingTheme.isSystem && (
-              <button onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-md text-xs font-medium transition-colors">
+              <button onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-1.5 border border-destructive/30 text-destructive hover:bg-destructive/10 rounded-md text-xs font-medium transition-colors">
                 <Trash2 size={14} /> Delete
               </button>
             )}
@@ -666,7 +669,7 @@ function AppearanceTab({ settings, onSave }: { settings: SettingsState, onSave: 
           {themes.map(t => (
             <button key={t.id} onClick={() => handleSelectTheme(t.id)}
               className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all min-w-[100px]",
-                settings.activeTheme === t.id ? "border-blue-500 bg-blue-500/10" : "border-border hover:border-blue-500/40")}>
+                settings.activeTheme === t.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40")}>
               <div className="w-20 h-14 rounded-md border flex items-center justify-center shadow-sm overflow-hidden"
                 style={{ background: t.colors?.background, borderColor: t.colors?.border }}>
                 <div className="flex gap-1">
@@ -700,7 +703,7 @@ function AppearanceTab({ settings, onSave }: { settings: SettingsState, onSave: 
                     className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent" />
                   <input type="text" value={val as string} onChange={(e) => handleColorText(key, e.target.value)}
                     onBlur={() => persistTheme(editingTheme)}
-                    className="w-20 bg-accent/20 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-mono focus:outline-none focus:border-blue-500" />
+                    className="w-20 bg-accent/20 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-mono focus:outline-none focus:border-primary" />
                 </div>
               </div>
             ))}
@@ -720,34 +723,38 @@ function AppearanceTab({ settings, onSave }: { settings: SettingsState, onSave: 
             <div className="flex items-center justify-between">
               <label className="text-xs text-muted-foreground">Font Family</label>
               <div className="flex items-center gap-2">
-                <select value="" onChange={(e) => { if (e.target.value) handleFontSelect('fontFamily', e.target.value + ', ui-sans-serif, system-ui, sans-serif'); }}
-                  className="bg-accent/20 rounded border border-transparent px-2 py-1 text-xs focus:outline-none focus:border-blue-500 max-w-[140px]">
-                  <option value="">System fonts…</option>
-                  {systemFonts.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
+                <SearchableSelect 
+                  value="" 
+                  options={systemFonts} 
+                  onChange={(v) => handleFontSelect('fontFamily', v + ', ui-sans-serif, system-ui, sans-serif')}
+                  placeholder="System fonts..."
+                  className="w-[140px]"
+                />
                 <input type="text" value={editingTheme?.fonts?.fontFamily || ''} onChange={(e) => handleFontChange('fontFamily', e.target.value)}
                   onBlur={() => persistTheme(editingTheme)}
-                  className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500" />
+                  className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
               </div>
             </div>
             <div className="flex items-center justify-between">
               <label className="text-xs text-muted-foreground">Monospace Font</label>
               <div className="flex items-center gap-2">
-                <select value="" onChange={(e) => { if (e.target.value) handleFontSelect('fontMono', e.target.value + ', ui-monospace, SFMono-Regular, monospace'); }}
-                  className="bg-accent/20 rounded border border-transparent px-2 py-1 text-xs focus:outline-none focus:border-blue-500 max-w-[140px]">
-                  <option value="">System fonts…</option>
-                  {systemFonts.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
+                <SearchableSelect 
+                  value="" 
+                  options={systemFonts} 
+                  onChange={(v) => handleFontSelect('fontMono', v + ', ui-monospace, SFMono-Regular, monospace')}
+                  placeholder="System fonts..."
+                  className="w-[140px]"
+                />
                 <input type="text" value={editingTheme?.fonts?.fontMono || ''} onChange={(e) => handleFontChange('fontMono', e.target.value)}
                   onBlur={() => persistTheme(editingTheme)}
-                  className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500" />
+                  className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
               </div>
             </div>
             <div className="flex items-center justify-between">
               <label className="text-xs text-muted-foreground">Base Font Size</label>
               <input type="text" value={editingTheme?.fonts?.fontSize || '14px'} onChange={(e) => handleFontChange('fontSize', e.target.value)}
                 onBlur={() => persistTheme(editingTheme)}
-                className="w-24 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500" />
+                className="w-24 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
             </div>
           </div>
         </div>
@@ -759,10 +766,10 @@ function AppearanceTab({ settings, onSave }: { settings: SettingsState, onSave: 
             <h3 className="text-lg font-medium mb-4 text-foreground">Duplicate Theme</h3>
             <input autoFocus type="text" placeholder="Theme name" value={duplicateName}
               onChange={(e) => setDuplicateName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleDuplicate()}
-              className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-500 mb-4" />
+              className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4" />
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowDuplicateModal(false)} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
-              <button onClick={handleDuplicate} className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors font-medium">Create</button>
+              <button onClick={handleDuplicate} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Create</button>
             </div>
           </div>
         </div>

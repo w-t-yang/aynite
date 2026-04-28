@@ -518,7 +518,7 @@ export default function App() {
             />
           </div>
           <div 
-            className="w-1 cursor-col-resize hover:bg-blue-500/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -right-0.5 top-0"
+            className="w-1 cursor-col-resize hover:bg-primary/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -right-0.5 top-0"
             onMouseDown={startResizingLeft}
           />
         </div>
@@ -562,7 +562,7 @@ export default function App() {
                 onClick={() => setActiveTabId(tab.id)}
                 className={cn(
                   "group flex items-center h-full px-4 border-r border-border cursor-pointer select-none min-w-[120px] max-w-[240px] transition-colors relative shrink-0",
-                  activeTabId === tab.id ? "bg-background text-foreground before:absolute before:top-0 before:inset-x-0 before:h-0.5 before:bg-blue-500" : "bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                  activeTabId === tab.id ? "bg-background text-foreground before:absolute before:top-0 before:inset-x-0 before:h-0.5 before:bg-tab-active-border" : "bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 {tab.type === 'file' && <FileText size={14} className="mr-2 shrink-0" />}
@@ -589,7 +589,7 @@ export default function App() {
         <div className="flex-1 overflow-hidden relative bg-background">
           {tabs.length === 0 ? (
             <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-60">
-              <Terminal size={48} className="mb-4 opacity-50 text-blue-500" />
+              <Terminal size={48} className="mb-4 opacity-50 text-primary" />
               <p>Select a file to open or press Meta+X for terminal</p>
             </div>
           ) : (
@@ -633,7 +633,7 @@ export default function App() {
       {rightPanelOpen && (
         <div className="relative shrink-0 flex" style={{ width: rightWidth }}>
           <div 
-            className="w-1 cursor-col-resize hover:bg-blue-500/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -left-0.5 top-0"
+            className="w-1 cursor-col-resize hover:bg-primary/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -left-0.5 top-0"
             onMouseDown={startResizingRight}
           />
           <div className="flex-1 w-full h-full flex flex-col border-l border-border bg-background min-w-0 overflow-hidden">

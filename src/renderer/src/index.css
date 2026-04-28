@@ -60,6 +60,26 @@
     background-color: var(--background);
     color: var(--foreground);
   }
+
+  /* Global Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 2px solid var(--scrollbar-track);
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
 }
 
 @layer utilities {
@@ -116,6 +136,16 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
 
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-tab-active-border: var(--tab-active-border);
+  --color-scrollbar-thumb: var(--scrollbar-thumb);
+  --color-scrollbar-track: var(--scrollbar-track);
+
   /* Set typography defaults */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
@@ -151,18 +181,18 @@
 }
 
 .mention-file {
-  background: rgba(59, 130, 246, 0.15);
-  color: rgb(96, 165, 250);
+  background: color-mix(in srgb, var(--info), transparent 85%);
+  color: var(--info);
 }
 
 .mention-skill {
-  background: rgba(168, 85, 247, 0.15);
-  color: rgb(192, 132, 252);
+  background: color-mix(in srgb, var(--primary), transparent 85%);
+  color: var(--primary);
 }
 
 .mention-command {
-  background: rgba(234, 179, 8, 0.15);
-  color: rgb(250, 204, 21);
+  background: color-mix(in srgb, var(--warning), transparent 85%);
+  color: var(--warning);
 }
 
 /* Tippy Popup */

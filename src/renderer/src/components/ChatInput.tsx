@@ -4,6 +4,8 @@ import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
+import { SelectionList, SelectionItem } from './ui/SelectionList';
+import { FileText, Folder, Zap, Play } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -21,11 +23,8 @@ interface ChatInputProps {
 
 // ─── Suggestion List Component ───────────────────────────────────────
 
-interface SuggestionItem {
-  id: string;
-  label: string;
+interface SuggestionItem extends SelectionItem {
   name?: string;
-  subtitle?: string;
   isDirectory?: boolean;
 }
 
@@ -69,64 +68,34 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
       },
     }));
 
-    const listRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-      const selectedEl = listRef.current?.children[selectedIndex] as HTMLElement;
-      if (selectedEl) {
-        selectedEl.scrollIntoView({ block: 'nearest' });
-      }
-    }, [selectedIndex]);
-
-    if (!items.length) {
-      return (
-        <div className="suggestion-list bg-sidebar border border-border rounded-lg shadow-xl p-2 text-xs text-muted-foreground whitespace-nowrap">
-          No results
-        </div>
-      );
-    }
-
     const triggerLabel = triggerChar === '@' ? 'Files' : triggerChar === '/' ? 'Skills' : 'Commands';
 
+    const selectionItems: SelectionItem[] = items.map(item => {
+      let icon = <FileText size={14} />;
+      if (triggerChar === '/') icon = <Zap size={14} />;
+      else if (triggerChar === '>') icon = <Play size={14} />;
+      else if (item.isDirectory) icon = <Folder size={14} />;
+
+      return {
+        ...item,
+        label: item.name || item.label,
+        icon
+      };
+    });
+
     return (
-      <div className="suggestion-list bg-sidebar border border-border rounded-lg shadow-xl overflow-hidden min-w-[240px] max-w-[420px] flex flex-col">
+      <div className="suggestion-list bg-sidebar border border-border rounded-lg shadow-2xl overflow-hidden min-w-[280px] max-w-[480px] flex flex-col animate-in fade-in zoom-in-95 duration-100">
         <div className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/30 bg-muted/20 shrink-0">
           {triggerLabel}
         </div>
-        <div 
-          ref={listRef}
-          className="overflow-y-auto max-h-[40vh] py-1"
-        >
-          {items.map((item, index) => {
-            const isSelected = index === selectedIndex;
-            let icon = '📄';
-            if (triggerChar === '/') icon = '⚡';
-            else if (triggerChar === '>') icon = '▶';
-            else if (item.isDirectory) icon = '📁';
-
-            return (
-              <button
-                key={item.id}
-                className={`w-full text-left px-3 py-1.5 transition-colors flex items-center gap-2.5 ${
-                  isSelected ? 'bg-blue-500/15 text-blue-400' : 'text-foreground hover:bg-accent/50'
-                }`}
-                onClick={() => command(item)}
-              >
-                <span className="text-base shrink-0 opacity-80">{icon}</span>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-medium truncate">
-                    {item.name || item.label}
-                  </span>
-                  {item.subtitle && (
-                    <span className={`text-[10px] truncate opacity-50 ${isSelected ? 'text-blue-300' : ''}`}>
-                      {item.subtitle}
-                    </span>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        
+        <SelectionList
+          items={selectionItems}
+          selectedIndex={selectedIndex}
+          onSelect={(item) => command(item as SuggestionItem)}
+          size="sm"
+          className="max-h-[40vh]"
+        />
       </div>
     );
   }
@@ -430,7 +399,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, [editor, disabled, onSubmit]);
 
     return (
-      <div className={`chat-input-wrapper bg-background border border-border rounded-xl px-4 py-3 focus-within:ring-1 focus-within:ring-blue-500 transition-shadow ${disabled ? 'opacity-50' : ''}`}>
+      <div className={`chat-input-wrapper bg-background border border-border rounded-xl px-4 py-3 focus-within:ring-1 focus-within:ring-primary transition-shadow ${disabled ? 'opacity-50' : ''}`}>
         <EditorContent editor={editor} />
       </div>
     );

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Search, FileText, Settings as SettingsIcon } from 'lucide-react';
+import { SelectionList, SelectionItem } from './ui/SelectionList';
 
 interface TabItem {
   id: string;
@@ -18,7 +20,6 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const filtered = tabs.filter(t =>
     t.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -32,11 +33,6 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
-
-  useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement;
-    if (el) el.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,6 +72,14 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [filtered, selectedIndex, onClose, onSelect]);
 
+  const selectionItems: SelectionItem[] = filtered.map(tab => ({
+    id: tab.id,
+    label: tab.title,
+    subtitle: tab.filepath,
+    isActive: tab.id === activeTabId,
+    icon: tab.type === 'settings' ? <SettingsIcon size={16} /> : <FileText size={16} />
+  }));
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]"
@@ -85,66 +89,42 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onClose }: Ta
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-lg bg-sidebar border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative z-10 w-full max-w-lg bg-sidebar border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
         {/* Search input */}
-        <div className="p-3 border-b border-border/50">
+        <div className="p-3 border-b border-border/50 bg-accent/10 flex items-center gap-3">
+          <Search size={16} className="text-muted-foreground ml-1" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search open tabs..."
-            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-muted-foreground/50"
+            className="w-full bg-transparent border-none focus:outline-none text-sm py-1 placeholder:text-muted-foreground/50"
           />
         </div>
 
         {/* Tab list */}
-        <div ref={listRef} className="overflow-y-auto max-h-[40vh] py-1">
-          {filtered.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-              No matching tabs
-            </div>
-          ) : (
-            filtered.map((tab, index) => {
-              const isSelected = index === selectedIndex;
-              const isActive = tab.id === activeTabId;
-              const icon = tab.type === 'settings' ? '⚙️' : '📄';
-
-              return (
-                <button
-                  key={tab.id}
-                  className={`w-full text-left px-4 py-2.5 transition-colors flex items-center gap-3 ${
-                    isSelected
-                      ? 'bg-blue-500/15 text-blue-400'
-                      : 'text-foreground hover:bg-accent/50'
-                  }`}
-                  onClick={() => { onSelect(tab.id); onClose(); }}
-                >
-                  <span className="text-base shrink-0 opacity-80">{icon}</span>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-sm font-medium truncate">
-                      {tab.title}
-                      {isActive && (
-                        <span className="ml-2 text-[10px] opacity-50 font-normal">(active)</span>
-                      )}
-                    </span>
-                    {tab.filepath && (
-                      <span className={`text-[10px] truncate opacity-40 ${isSelected ? 'text-blue-300' : ''}`}>
-                        {tab.filepath}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
+        <SelectionList
+          items={selectionItems}
+          selectedIndex={selectedIndex}
+          onSelect={(item) => {
+            onSelect(item.id);
+            onClose();
+          }}
+          className="max-h-[50vh]"
+        />
 
         {/* Footer hint */}
-        <div className="px-3 py-2 border-t border-border/30 flex items-center gap-3 text-[10px] text-muted-foreground/50 bg-muted/10">
-          <span>↑↓ or Ctrl+P/N navigate</span>
-          <span>Enter select</span>
-          <span>Esc/Ctrl+G close</span>
+        <div className="px-4 py-2 border-t border-border/30 flex items-center gap-4 text-[10px] text-muted-foreground/40 bg-muted/5">
+          <div className="flex items-center gap-1.5">
+            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">↑↓</span> navigate
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">Enter</span> select
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">Esc</span> close
+          </div>
         </div>
       </div>
     </div>
