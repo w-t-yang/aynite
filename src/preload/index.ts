@@ -7,6 +7,8 @@ const api = {
   getFileInfo: (path: string) => ipcRenderer.invoke('api:file-info', path),
   loadConfig: () => ipcRenderer.invoke('api:load-config'),
   saveConfig: (config: any) => ipcRenderer.invoke('api:save-config', config),
+  saveChatLog: (sessionId: string, messages: any[]) => ipcRenderer.invoke('api:save-chat-log', { sessionId, messages }),
+  loadChatLog: (sessionId: string, date: string) => ipcRenderer.invoke('api:load-chat-log', { sessionId, date }),
   
   // Workspace API
   getWorkspacesList: () => ipcRenderer.invoke('api:workspaces-list'),

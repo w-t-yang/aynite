@@ -52,14 +52,18 @@ export default function FileViewer({
   const isTooLarge = isTextLike && (fileInfo?.size || 0) > MAX_TEXT_SIZE;
   const effectiveCategory = isTooLarge ? 'unsupported' : category;
   
-  console.log('[FileViewer] File Analysis:', { 
-    path: fileInfo?.path, 
-    extension: fileInfo?.extension, 
-    isText: fileInfo?.isText,
-    category, 
-    isTooLarge, 
-    effectiveCategory 
-  });
+  useEffect(() => {
+    if (fileInfo) {
+      console.log('[FileViewer] File Analysis:', { 
+        path: fileInfo.path, 
+        extension: fileInfo.extension, 
+        isText: fileInfo.isText,
+        category, 
+        isTooLarge, 
+        effectiveCategory 
+      });
+    }
+  }, [fileInfo?.path, effectiveCategory]);
   
   const Handler = FileHandlerComponents[effectiveCategory];
   const canEdit = !isTooLarge && (category === 'text' || category === 'markdown' || category === 'html');

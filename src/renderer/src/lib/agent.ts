@@ -6,6 +6,7 @@
 // text response.
 
 export interface AgentMessage {
+  id: string;
   role: 'user' | 'assistant' | 'tool' | 'system';
   content: string;
   // For tool call requests (assistant role)
@@ -268,7 +269,7 @@ async function executeSpawnSubagent(
 
 // ─── Agent Loop ──────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Aynite, an industry-grade AI coding assistant. You are rigorous, precise, and systematic.
+export const SYSTEM_PROMPT = `You are Aynite, an industry-grade AI coding assistant. You are rigorous, precise, and systematic.
 
 ## Operation Rules
 1. **Chain of Thought**: Before ANY tool call or major conclusion, you MUST output a <thought> block explaining your reasoning, the evidence you've gathered, and your next step.
@@ -281,12 +282,21 @@ const SYSTEM_PROMPT = `You are Aynite, an industry-grade AI coding assistant. Yo
 ## Continuous Execution
 NEVER stop generating without an explanation or a tool call. If tools return results, proceed to analyze them immediately.`;
 
+export function getSystemPrompt(workspaceFolders: string[], config: AgentConfig, skillContext?: string): string {
+  return SYSTEM_PROMPT + 
+    `\n\n### WORKSPACE CONTEXT\nYou are working in the following local directories. ALWAYS use these as base paths for your operations:\n${workspaceFolders.map(f => `- ${f}`).join('\n')}` +
+    (config.model.toLowerCase().includes('gemma') ? "\n\n### COMPACT MODEL ADVISORY\nYou are running in a compact model mode. Be extra careful with syntax. Double-check your tool arguments and ensure all scripts are executable and self-contained." : "") +
+    (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to the following skills. Their instructions are provided below in XML tags. Follow them strictly. Do not attempt to read the skill files directly; use the provided context:\n\n${skillContext}` : "") ;
+}
+
 export interface AgentConfig {
   url: string;
   model: string;
   contextWindow: number;
   autoApproveCommands?: boolean;
 }
+
+const genId = () => Math.random().toString(36).slice(2, 11);
 
 export async function runAgentLoop(
   userMessage: string,
@@ -299,17 +309,19 @@ export async function runAgentLoop(
   skillContext?: string
 ): Promise<AgentMessage[]> {
 
-  const messages: AgentMessage[] = [
-    { 
+  const messages: AgentMessage[] = [];
+  
+  const hasSystem = history.some(m => m.role === 'system');
+  if (!hasSystem) {
+    messages.push({ 
+      id: genId(),
       role: 'system', 
-      content: SYSTEM_PROMPT + 
-        `\n\n### WORKSPACE CONTEXT\nYou are working in the following local directories. ALWAYS use these as base paths for your operations:\n${workspaceFolders.map(f => `- ${f}`).join('\n')}` +
-        (config.model.toLowerCase().includes('gemma') ? "\n\n### COMPACT MODEL ADVISORY\nYou are running in a compact model mode. Be extra careful with syntax. Double-check your tool arguments and ensure all scripts are executable and self-contained." : "") +
-        (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to the following skills. Their instructions are provided below in XML tags. Follow them strictly. Do not attempt to read the skill files directly; use the provided context:\n\n${skillContext}` : "") 
-    },
-    ...history,
-    { role: 'user', content: userMessage },
-  ];
+      content: getSystemPrompt(workspaceFolders, config, skillContext)
+    });
+  }
+
+  messages.push(...history);
+  messages.push({ id: genId(), role: 'user', content: userMessage });
 
   const MAX_ITERATIONS = 30;
   let iterations = 0;
@@ -390,6 +402,7 @@ export async function runAgentLoop(
     if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
       // Add the assistant message with tool calls to history
       messages.push({
+        id: genId(),
         role: 'assistant',
         content: assistantMessage.content || '',
         tool_calls: assistantMessage.tool_calls,
@@ -461,6 +474,7 @@ export async function runAgentLoop(
 
         // Add tool result to message history
         messages.push({
+          id: genId(),
           role: 'tool',
           content: result,
           tool_call_id: callId,
@@ -480,11 +494,11 @@ export async function runAgentLoop(
       if (import.meta.env.DEV) {
         console.log('Model returned empty response or halted. Nudging...');
       }
-      messages.push({ role: 'user', content: 'Please continue and complete the remaining steps of your plan.' });
+      messages.push({ id: genId(), role: 'user', content: 'Please continue and complete the remaining steps of your plan.' });
       continue;
     }
 
-    messages.push({ role: 'assistant', content: finalText });
+    messages.push({ id: genId(), role: 'assistant', content: finalText });
 
     // Stream-like emission of final text
     onEvent({ type: 'text_done', content: finalText });

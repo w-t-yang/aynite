@@ -378,7 +378,7 @@ export function isSystemTheme(name: string): boolean {
 export async function initAppFolders() {
   const baseDir = getConfigDir();
 
-  const folders = ['config', 'skills', 'commands', 'workspaces', 'themes'];
+  const folders = ['config', 'skills', 'commands', 'workspaces', 'themes', 'logs'];
   for (const folder of folders) {
     const dir = path.join(baseDir, folder);
     if (!existsSync(dir)) {
@@ -399,9 +399,14 @@ export async function initAppFolders() {
     }
   };
   const keybindingsDefault = DEFAULT_KEYBINDINGS;
+  const skillsDir = path.join(baseDir, 'skills');
+  const commandsDir = path.join(baseDir, 'commands');
+
   const configDefault = {
     lastUsed: new Date().toISOString(),
-    activeTheme: 'nord'
+    activeTheme: 'nord',
+    skills: { folders: [skillsDir] },
+    commands: { folders: [commandsDir] }
   };
   const ignoreDefault = ['.git', 'node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
   const workspacesDefault = { active: 'default workspace', list: ['default workspace'] };
@@ -417,7 +422,7 @@ export async function initAppFolders() {
   await checkAndWrite('keybindings.json', keybindingsDefault);
   await checkAndWrite('config.json', configDefault);
   await checkAndWrite('workspaces.json', workspacesDefault);
-  
+
   const ignorePath = path.join(configDir, 'ignore');
   if (!existsSync(ignorePath)) {
     await fs.writeFile(ignorePath, ignoreDefault, 'utf-8');
@@ -432,18 +437,14 @@ export async function initAppFolders() {
     await fs.writeFile(defaultWorkspacePath, JSON.stringify({ folders: [], tabs: [], activeTabId: '' }, null, 2), 'utf-8');
   }
 
-  // Ensure skills.json exists in ~/.aynite/skills
-  const skillsDir = path.join(baseDir, 'skills');
-  const skillsConfigPath = path.join(skillsDir, 'skills.json');
-  if (!existsSync(skillsConfigPath)) {
-    await fs.writeFile(skillsConfigPath, JSON.stringify({ folders: [skillsDir] }, null, 2), 'utf-8');
+  // Ensure skills folder exists
+  if (!existsSync(skillsDir)) {
+    await fs.mkdir(skillsDir, { recursive: true });
   }
 
-  // Ensure commands.json exists in ~/.aynite/commands
-  const commandsDir = path.join(baseDir, 'commands');
-  const commandsConfigPath = path.join(commandsDir, 'commands.json');
-  if (!existsSync(commandsConfigPath)) {
-    await fs.writeFile(commandsConfigPath, JSON.stringify({ folders: [commandsDir] }, null, 2), 'utf-8');
+  // Ensure commands folder exists
+  if (!existsSync(commandsDir)) {
+    await fs.mkdir(commandsDir, { recursive: true });
   }
 
   // Ensure default skills exist
@@ -505,7 +506,13 @@ export async function loadConfig() {
     await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
   }
 
-  const skills = await getSkillsConfig();
+  // Migrate skills/commands if missing in config.json
+  if (!mainConfig.skills) {
+    mainConfig.skills = await getSkillsConfig();
+  }
+  if (!mainConfig.commands) {
+    mainConfig.commands = await getCommandsConfig();
+  }
 
   // Migrate: if old appearance.json exists, move theme to config.json activeTheme then delete it
   const appearancePath = path.join(configDir, 'appearance.json');
@@ -520,15 +527,16 @@ export async function loadConfig() {
     } catch { }
   }
 
+  // Remove ignore and other fields from mainConfig to avoid duplication/stale data in the return object
+  const { ignore: _, ...restConfig } = mainConfig;
+
   return {
     activeTheme: mainConfig.activeTheme || 'dark',
     ignore: await getIgnorePatterns(),
     keybindings: keybindings,
     aiProvider: ai.provider || 'gemini',
     aiConfigs: ai.configs || {},
-    skills,
-    commands: await getCommandsConfig(),
-    ...mainConfig
+    ...restConfig
   };
 }
 
@@ -549,19 +557,19 @@ export async function saveConfig(settings: any) {
   const ai = { provider: settings.aiProvider, configs: settings.aiConfigs };
   const keybindings = settings.keybindings || DEFAULT_KEYBINDINGS;
 
-  // Extract remaining fields for config.json
-  const { aiProvider, aiConfigs, keybindings: _, ...rest } = settings;
+  // Extract fields, specifically removing 'ignore' from config.json
+  const { aiProvider, aiConfigs, keybindings: _, ignore, ...rest } = settings;
   const mainConfig = { ...rest, updatedAt: new Date().toISOString() };
 
   await fs.writeFile(path.join(configDir, 'ai.json'), JSON.stringify(ai, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
   await fs.writeFile(path.join(configDir, 'config.json'), JSON.stringify(mainConfig, null, 2), 'utf-8');
 
-  if (settings.skills) {
-    await saveSkillsConfig(settings.skills);
-  }
-  if (settings.commands) {
-    await saveCommandsConfig(settings.commands);
+  // Save ignore patterns to the dedicated file
+  if (ignore !== undefined) {
+    const ignorePath = path.join(configDir, 'ignore');
+    const ignoreContent = Array.isArray(ignore) ? ignore.join('\n') : ignore;
+    await fs.writeFile(ignorePath, ignoreContent, 'utf-8');
   }
 
   return true;
@@ -570,10 +578,22 @@ export async function saveConfig(settings: any) {
 // Skills Logic
 
 export async function getSkillsConfig() {
+  const configDir = path.join(getConfigDir(), 'config');
+  const mainConfigPath = path.join(configDir, 'config.json');
+
+  if (existsSync(mainConfigPath)) {
+    try {
+      const data = await fs.readFile(mainConfigPath, 'utf-8');
+      const mainConfig = JSON.parse(data);
+      if (mainConfig.skills) return mainConfig.skills;
+    } catch { }
+  }
+
+  // Legacy fallback
   const skillsDir = path.join(getConfigDir(), 'skills');
-  const configPath = path.join(skillsDir, 'skills.json');
+  const legacyPath = path.join(skillsDir, 'skills.json');
   try {
-    const data = await fs.readFile(configPath, 'utf-8');
+    const data = await fs.readFile(legacyPath, 'utf-8');
     return JSON.parse(data);
   } catch {
     return { folders: [skillsDir] };
@@ -581,9 +601,19 @@ export async function getSkillsConfig() {
 }
 
 export async function saveSkillsConfig(config: any) {
-  const skillsDir = path.join(getConfigDir(), 'skills');
-  const configPath = path.join(skillsDir, 'skills.json');
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  const configDir = path.join(getConfigDir(), 'config');
+  const mainConfigPath = path.join(configDir, 'config.json');
+
+  let mainConfig: any = {};
+  if (existsSync(mainConfigPath)) {
+    try {
+      const data = await fs.readFile(mainConfigPath, 'utf-8');
+      mainConfig = JSON.parse(data);
+    } catch { }
+  }
+
+  mainConfig.skills = config;
+  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
 }
 
 export async function restoreSkill(skillName: string) {
@@ -692,10 +722,22 @@ export async function listAvailableSkills() {
 // Commands Logic
 
 export async function getCommandsConfig() {
+  const configDir = path.join(getConfigDir(), 'config');
+  const mainConfigPath = path.join(configDir, 'config.json');
+
+  if (existsSync(mainConfigPath)) {
+    try {
+      const data = await fs.readFile(mainConfigPath, 'utf-8');
+      const mainConfig = JSON.parse(data);
+      if (mainConfig.commands) return mainConfig.commands;
+    } catch { }
+  }
+
+  // Legacy fallback
   const commandsDir = path.join(getConfigDir(), 'commands');
-  const configPath = path.join(commandsDir, 'commands.json');
+  const legacyPath = path.join(commandsDir, 'commands.json');
   try {
-    const data = await fs.readFile(configPath, 'utf-8');
+    const data = await fs.readFile(legacyPath, 'utf-8');
     return JSON.parse(data);
   } catch {
     return { folders: [commandsDir] };
@@ -703,9 +745,19 @@ export async function getCommandsConfig() {
 }
 
 export async function saveCommandsConfig(config: any) {
-  const commandsDir = path.join(getConfigDir(), 'commands');
-  const configPath = path.join(commandsDir, 'commands.json');
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  const configDir = path.join(getConfigDir(), 'config');
+  const mainConfigPath = path.join(configDir, 'config.json');
+
+  let mainConfig: any = {};
+  if (existsSync(mainConfigPath)) {
+    try {
+      const data = await fs.readFile(mainConfigPath, 'utf-8');
+      mainConfig = JSON.parse(data);
+    } catch { }
+  }
+
+  mainConfig.commands = config;
+  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
 }
 
 export async function listAvailableCommands() {
@@ -788,6 +840,29 @@ export async function restoreCommand(commandName: string) {
 }
 
 // Workspace Logic
+
+export async function saveChatLog(sessionId: string, messages: any[]) {
+  const baseDir = getConfigDir();
+  const dateStr = new Date().toISOString().split('T')[0];
+  const logsDir = path.join(baseDir, 'logs', dateStr);
+
+  if (!existsSync(logsDir)) {
+    await fs.mkdir(logsDir, { recursive: true });
+  }
+
+  const logPath = path.join(logsDir, `${sessionId}.json`);
+  await fs.writeFile(logPath, JSON.stringify(messages, null, 2), 'utf-8');
+}
+
+export async function loadChatLog(sessionId: string, date: string) {
+  const logPath = path.join(getConfigDir(), 'logs', date, `${sessionId}.json`);
+  try {
+    const data = await fs.readFile(logPath, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
 
 async function getWorkspacesConfig() {
   const configPath = path.join(getConfigDir(), 'config', 'workspaces.json');
@@ -922,11 +997,11 @@ export async function getWorkspaceState() {
 
   const parsed = await safeReadWorkspaceData(workspacePath);
   if (!parsed) return { name: activeWs, tabs: [], activeTabId: '' };
-  
-  return { 
+
+  return {
     name: activeWs,
-    tabs: parsed.tabs || [], 
-    activeTabId: parsed.activeTabId || '' 
+    tabs: parsed.tabs || [],
+    activeTabId: parsed.activeTabId || ''
   };
 }
 
