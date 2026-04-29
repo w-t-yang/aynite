@@ -41,6 +41,8 @@ export function getProviderModel(config: ProviderConfig): LanguageModel {
         baseURL: baseUrl,
       })(model);
 
+
+
     case 'ollama':
     case 'others':
     case 'openai-compatible':

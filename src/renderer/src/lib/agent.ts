@@ -57,66 +57,86 @@ export async function runAgentLoop(
     fullHistory.unshift(sysMsg);
   }
 
-  // Map fullHistory to CoreMessage format
+  // Map fullHistory to CoreMessage format for AI SDK v6 (Agentic version)
   const apiMessages = fullHistory.map(m => {
-    // 1. Tool result message that lost its call ID (fallback to user message)
-    if (m.role === 'tool' && !m.tool_call_id) {
-      return {
-        role: 'user' as const,
-        content: `[Tool Output: ${m.name || 'unknown'}]\n${m.content || ''}`
-      };
-    }
-
-    // 2. Standard Tool result message
+    // 1. Tool result message
     if (m.role === 'tool') {
+      if (!m.tool_call_id) {
+        return {
+          role: 'user' as const,
+          content: `[Tool Output: ${m.name || 'unknown'}]\n${m.content || ''}`
+        };
+      }
       return {
         role: 'tool' as const,
-        content: m.content || '',
-        toolCallId: m.tool_call_id!,
-        toolName: m.name || 'unknown'
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: m.tool_call_id,
+            toolName: m.name || 'unknown',
+            // AI SDK v6 uses 'output' with a type union
+            output: {
+              type: 'text',
+              value: m.content || ''
+            }
+          }
+        ]
       };
     }
 
-    // 3. Assistant message with thinking/reasoning
-    if (m.role === 'assistant' && m.thinking) {
-      const parts: any[] = [{ type: 'reasoning', reasoning: m.thinking }];
+    // 2. Assistant message
+    if (m.role === 'assistant') {
+      const parts: any[] = [];
+      
+      // Add thinking (reasoning) if present
+      if (m.thinking) {
+        parts.push({ 
+          type: 'reasoning', 
+          text: m.thinking // AI SDK v6 uses 'text' for reasoning parts
+        });
+      }
+      
+      // Add text content if present
       if (m.content) {
         parts.push({ type: 'text', text: m.content });
       }
-      return {
-        role: 'assistant' as const,
-        content: parts,
-        ...(m.tool_calls && m.tool_calls.length > 0 ? { 
-          toolCalls: m.tool_calls.map(c => ({
+
+      // Add tool calls as parts
+      if (m.tool_calls && m.tool_calls.length > 0) {
+        m.tool_calls.forEach(c => {
+          parts.push({
+            type: 'tool-call',
             toolCallId: c.toolCallId,
             toolName: c.toolName,
-            args: c.args
-          })) 
-        } : {})
+            // AI SDK v6 uses 'input' for tool calls
+            input: typeof c.args === 'string' ? JSON.parse(c.args) : c.args
+          });
+        });
+      }
+
+      // If only text, return as string for better compatibility
+      if (parts.length === 1 && parts[0].type === 'text') {
+        return { role: 'assistant' as const, content: parts[0].text };
+      }
+
+      // Fallback: if no parts, use empty string content
+      if (parts.length === 0) {
+        return { role: 'assistant' as const, content: '' };
+      }
+
+      return {
+        role: 'assistant' as const,
+        content: parts
       };
     }
 
-    // 4. Standard Assistant message (no thinking)
-    if (m.role === 'assistant') {
-      return {
-        role: 'assistant' as const,
-        content: m.content || '',
-        ...(m.tool_calls && m.tool_calls.length > 0 ? { 
-          toolCalls: m.tool_calls.map(c => ({
-            toolCallId: c.toolCallId,
-            toolName: c.toolName,
-            args: c.args
-          })) 
-        } : {})
-      };
-    }
-
-    // 5. User or System message
+    // 3. User and System messages
     return {
-      role: m.role as 'user' | 'system',
+      role: m.role as any,
       content: m.content || ''
     };
   });
+
 
   const userMsg: AgentMessage = { id: genId(), role: 'user', content: userMessage };
   apiMessages.push({ role: 'user', content: userMessage });
@@ -229,11 +249,21 @@ export async function runAgentLoop(
           break;
 
         case 'tool-result':
+          // Extract the actual result string from the output object (v6) or result field
+          let resultValue = '';
+          if (typeof part.output === 'string') {
+            resultValue = part.output;
+          } else if (part.output && typeof part.output === 'object') {
+            resultValue = part.output.value || JSON.stringify(part.output);
+          } else {
+            resultValue = part.result || JSON.stringify(part || '');
+          }
+
           // Tool results are separate messages in the history
           const resultMsg: AgentMessage = {
             id: genId(),
             role: 'tool',
-            content: typeof part.output === 'string' ? part.output : JSON.stringify(part.output || part.result || ''),
+            content: resultValue,
             tool_call_id: part.toolCallId,
             name: part.toolName
           };
@@ -244,11 +274,12 @@ export async function runAgentLoop(
           
           onEvent({
             type: 'tool_result',
-            content: resultMsg.content,
+            content: resultValue,
             toolName: part.toolName,
             toolCallId: part.toolCallId,
           });
           break;
+
 
         case 'step-finish':
           finalizeAssistantMsg();

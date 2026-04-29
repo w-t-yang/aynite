@@ -474,9 +474,32 @@ export default function ChatTab({
         inputRef.current?.focus();
       }
     };
+    (window as any).setChatSession = (id: string, date?: string) => {
+      const dateStr = date || new Date().toISOString().split('T')[0];
+      // @ts-ignore
+      window.api.loadChatLog(id, dateStr).then((res: any) => {
+        if (res && res.data) {
+          const normalized = res.data.map((m: any) => ({
+            ...m,
+            content: m.content || m.text || ""
+          }));
+          setMessages(normalized);
+          setSessionId(id);
+          localStorage.setItem('lastSession', JSON.stringify({ id, date: dateStr }));
+          console.log(`[Chat] Switched to session: ${id} (${dateStr})`);
+        } else {
+          setSessionId(id);
+          setMessages([]);
+          localStorage.setItem('lastSession', JSON.stringify({ id, date: dateStr }));
+          console.log(`[Chat] Started new session with ID: ${id}`);
+        }
+      });
+    };
     return () => {
       delete (window as any).focusChatInput;
+      delete (window as any).setChatSession;
     };
+
   }, []);
 
   const handleOpenFile = async (filepath: string) => {
