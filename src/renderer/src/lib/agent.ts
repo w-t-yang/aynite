@@ -57,89 +57,111 @@ export async function runAgentLoop(
     fullHistory.unshift(sysMsg);
   }
 
-  // Map fullHistory to CoreMessage format for AI SDK v6 (Agentic version)
-  const apiMessages = fullHistory.map(m => {
-    // 1. Tool result message
-    if (m.role === 'tool') {
-      if (!m.tool_call_id) {
-        return {
-          role: 'user' as const,
-          content: `[Tool Output: ${m.name || 'unknown'}]\n${m.content || ''}`
-        };
-      }
-      return {
-        role: 'tool' as const,
-        content: [
-          {
-            type: 'tool-result',
-            toolCallId: m.tool_call_id,
-            toolName: m.name || 'unknown',
-            // AI SDK v6 uses 'output' with a type union
-            output: {
-              type: 'text',
-              value: m.content || ''
-            }
-          }
-        ]
-      };
+  // Helper to check for reasoning content
+  const hasReasoning = (m: AgentMessage) => m.thinking || m.content.includes('<thought>') || m.content.includes('<think>');
+
+  /**
+   * AI SDK v6 turns are very strict:
+   * Assistant [calls] -> Tool Results [all matching] -> (Next turn)
+   * We must ensure no other messages (user/assistant) interleave between calls and results.
+   */
+  const cleanMessages: any[] = [];
+  
+  for (let i = 0; i < fullHistory.length; i++) {
+    const m = fullHistory[i];
+
+    // --- CASE A: USER / SYSTEM / TOOL (orphaned) ---
+    if (m.role === 'user' || m.role === 'system') {
+      cleanMessages.push({ role: m.role, content: m.content || '' });
+      continue;
     }
 
-    // 2. Assistant message
+    if (m.role === 'tool') {
+      // Orphaned tool results (not immediately following an assistant call) are generally invalid for the SDK
+      // We'll skip them to keep the history clean, or map to user if they have important content
+      continue; 
+    }
+
+    // --- CASE B: ASSISTANT ---
     if (m.role === 'assistant') {
       const parts: any[] = [];
       
-      // Add thinking (reasoning) if present
-      if (m.thinking) {
-        parts.push({ 
-          type: 'reasoning', 
-          text: m.thinking // AI SDK v6 uses 'text' for reasoning parts
+      // 1. Thinking / Text
+      if (hasReasoning(m)) {
+        parts.push({
+          type: 'reasoning',
+          text: m.thinking || m.content.match(/<(?:thought|think)>([\s\S]*?)<\/(?:thought|think)>/)?.[1] || ''
         });
       }
-      
-      // Add text content if present
-      if (m.content) {
-        parts.push({ type: 'text', text: m.content });
+      const cleanContent = m.content.replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim();
+      if (cleanContent) {
+        parts.push({ type: 'text', text: cleanContent });
       }
 
-      // Add tool calls as parts
+      // 2. Identify available results that IMMEDIATELY follow this message
+      const availableResults = new Map<string, AgentMessage>();
+      let j = i + 1;
+      while (j < fullHistory.length && fullHistory[j].role === 'tool') {
+        const toolMsg = fullHistory[j];
+        if (toolMsg.tool_call_id) {
+          availableResults.set(toolMsg.tool_call_id, toolMsg);
+        }
+        j++;
+      }
+
+      // 3. Filter tool calls: only keep those that have a matching result in the immediate next block
+      const validCalls: any[] = [];
       if (m.tool_calls && m.tool_calls.length > 0) {
-        m.tool_calls.forEach(c => {
-          parts.push({
-            type: 'tool-call',
-            toolCallId: c.toolCallId,
-            toolName: c.toolName,
-            // AI SDK v6 uses 'input' for tool calls
-            input: typeof c.args === 'string' ? JSON.parse(c.args) : c.args
-          });
+        for (const c of m.tool_calls) {
+          if (c.toolCallId && availableResults.has(c.toolCallId)) {
+            validCalls.push(c);
+            parts.push({
+              type: 'tool-call',
+              toolCallId: c.toolCallId,
+              toolName: c.toolName,
+              input: typeof c.args === 'string' ? JSON.parse(c.args) : c.args
+            });
+          }
+        }
+      }
+
+      // 4. Map the assistant message
+      if (parts.length > 0) {
+        cleanMessages.push({
+          role: 'assistant',
+          content: parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts
         });
+        
+        // 5. Append the matching tool results immediately after
+        for (const c of validCalls) {
+          const res = availableResults.get(c.toolCallId)!;
+          cleanMessages.push({
+            role: 'tool',
+            content: [
+              {
+                type: 'tool-result',
+                toolCallId: c.toolCallId,
+                toolName: c.toolName,
+                output: { type: 'text', value: res.content || '' }
+              }
+            ]
+          });
+        }
+      } else {
+        // Fallback for interrupted assistant messages with no content and no valid calls
+        cleanMessages.push({ role: 'assistant', content: '(Interrupted)' });
       }
 
-      // If only text, return as string for better compatibility
-      if (parts.length === 1 && parts[0].type === 'text') {
-        return { role: 'assistant' as const, content: parts[0].text };
-      }
-
-      // Fallback: if no parts, use empty string content
-      if (parts.length === 0) {
-        return { role: 'assistant' as const, content: '' };
-      }
-
-      return {
-        role: 'assistant' as const,
-        content: parts
-      };
+      // Skip the tool results we just processed
+      i = j - 1;
     }
+  }
 
-    // 3. User and System messages
-    return {
-      role: m.role as any,
-      content: m.content || ''
-    };
-  });
-
-
+  const apiMessages = cleanMessages;
   const userMsg: AgentMessage = { id: genId(), role: 'user', content: userMessage };
-  apiMessages.push({ role: 'user', content: userMessage });
+  apiMessages.push({ role: 'user', content: userMsg.content });
+
+
 
   console.log("[Agent] Sending messages to backend:", apiMessages.length);
 
@@ -220,13 +242,13 @@ export async function runAgentLoop(
       switch (part.type) {
         case 'text-delta':
           ensureAssistantMsg();
-          currentAssistantMsg!.content += (part.text || part.textDelta || part.delta || '');
-          onEvent({ type: 'text_delta', content: part.text || part.textDelta || part.delta || '' });
+          currentAssistantMsg!.content += (part.text || '');
+          onEvent({ type: 'text_delta', content: part.text || '' });
           break;
 
         case 'reasoning-delta':
           ensureAssistantMsg();
-          const reasoning = part.reasoning || part.reasoningDelta || part.delta || part.text || '';
+          const reasoning = part.text || '';  // TextStreamPart 'reasoning-delta' uses the 'text' field
           currentAssistantMsg!.thinking += reasoning;
           onEvent({ type: 'thinking', content: reasoning });
           break;

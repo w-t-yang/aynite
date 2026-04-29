@@ -216,18 +216,18 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
             if (part.type === 'text-delta') {
               fullResponseText += part.text;
             } else if (part.type === 'reasoning-delta') {
-              fullReasoningText += (part as any).reasoning || (part as any).delta || (part as any).text || '';
+              fullReasoningText += part.text;
             } else if (part.type === 'tool-call') {
               fullToolCalls.push({
                 toolName: part.toolName,
-                args: (part as any).args || (part as any).input,
+                args: part.input,
                 toolCallId: part.toolCallId
               });
             } else if (part.type === 'tool-result') {
               fullToolResults.push({
                 toolName: part.toolName,
                 toolCallId: part.toolCallId,
-                result: (part as any).result || (part as any).output
+                result: part.output
               });
             } else if ((part as any).type === 'step-finish') {
               stepCount++;

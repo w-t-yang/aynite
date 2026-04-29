@@ -423,6 +423,14 @@ export default function ChatTab({
     }
   }, [messages, loading]);
 
+  const normalizeMessages = (msgs: any[]) => {
+    // Basic normalization (handle legacy logs with 'text' instead of 'content')
+    return msgs.map((m: any) => ({
+      ...m,
+      content: m.content || m.text || ""
+    }));
+  };
+
   useEffect(() => {
     const lastSession = localStorage.getItem('lastSession');
     if (lastSession) {
@@ -431,12 +439,7 @@ export default function ChatTab({
         // @ts-ignore
         window.api.loadChatLog(id, date).then((res: any) => {
           if (res && res.data) {
-            // Migration: handle old logs with 'text' field
-            const normalized = res.data.map((m: any) => ({
-              ...m,
-              content: m.content || m.text || ""
-            }));
-            setMessages(normalized);
+            setMessages(normalizeMessages(res.data));
             setSessionId(id || null);
           }
         });
@@ -445,6 +448,8 @@ export default function ChatTab({
       }
     }
   }, []);
+
+
 
   useEffect(() => {
     if (messages.length > 0 && !sessionId) {
@@ -479,14 +484,10 @@ export default function ChatTab({
       // @ts-ignore
       window.api.loadChatLog(id, dateStr).then((res: any) => {
         if (res && res.data) {
-          const normalized = res.data.map((m: any) => ({
-            ...m,
-            content: m.content || m.text || ""
-          }));
-          setMessages(normalized);
+          setMessages(normalizeAndHealMessages(res.data));
           setSessionId(id);
           localStorage.setItem('lastSession', JSON.stringify({ id, date: dateStr }));
-          console.log(`[Chat] Switched to session: ${id} (${dateStr})`);
+          console.log(`[Chat] Switched and healed session: ${id} (${dateStr})`);
         } else {
           setSessionId(id);
           setMessages([]);
@@ -501,6 +502,7 @@ export default function ChatTab({
     };
 
   }, []);
+
 
   const handleOpenFile = async (filepath: string) => {
     if (!onOpenFile) return;
