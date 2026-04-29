@@ -205,10 +205,10 @@ ipcMain.handle('api:read-file', async (event, filePath: string) => {
 async function checkIsTextFile(filePath: string): Promise<boolean> {
   try {
     const fd = await fs.open(filePath, 'r');
-    const { buffer } = await fd.read(Buffer.alloc(1024), 0, 1024, 0);
+    const { bytesRead, buffer } = await fd.read(Buffer.alloc(1024), 0, 1024, 0);
     await fd.close();
     
-    for (let i = 0; i < buffer.length; i++) {
+    for (let i = 0; i < bytesRead; i++) {
       if (buffer[i] === 0) return false;
     }
     return true;

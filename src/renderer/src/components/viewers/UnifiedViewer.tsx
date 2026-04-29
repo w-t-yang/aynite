@@ -90,29 +90,24 @@ export const UnifiedViewer: React.FC<{
       }
       ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
     `));
-    // Forward key events to parent
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const event = new KeyboardEvent('keydown', {
-        key: e.key,
-        code: e.code,
-        ctrlKey: e.ctrlKey,
-        shiftKey: e.shiftKey,
-        altKey: e.altKey,
-        metaKey: e.metaKey,
-        bubbles: true
-      });
-      window.parent.dispatchEvent(event);
-    };
-    doc.addEventListener('keydown', handleKeyDown);
+    head.appendChild(extraStyles);
 
     body.classList.add('bg-background', 'text-foreground', 'outline-none');
-    body.tabIndex = 0; // Make body focusable
-    body.classList.add('bg-background', 'text-foreground');
+    body.tabIndex = 0;
   }, [basePath, src]);
 
   const handleLoad = React.useCallback(() => {
     if (!contentRef) return;
-    const doc = contentRef.contentWindow?.document;
+
+    let doc: Document | null = null;
+    try {
+      doc = contentRef.contentDocument || contentRef.contentWindow?.document || null;
+    } catch (e) {
+      console.warn('UnifiedViewer: Access denied to iframe document (cross-origin):', e);
+      setReady(true);
+      return;
+    }
+
     if (!doc) return;
 
     try {
@@ -130,8 +125,7 @@ export const UnifiedViewer: React.FC<{
           const key = e.key.toLowerCase();
           const isCmd = e.ctrlKey || e.metaKey;
           
-          // Block common IDE command keys from being processed by the browser inside the iframe
-          // This prevents them from being 'typed' when focus switches to the editor.
+          // Block common IDE command keys
           const ideCommands = ['a', '/', 'j', 'k', 'h', 'l', 'w', 'r'];
           if (!isCmd && !e.altKey && ideCommands.includes(key)) {
             e.preventDefault();
@@ -142,12 +136,14 @@ export const UnifiedViewer: React.FC<{
             shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey,
             bubbles: true, cancelable: true, composed: true
           });
-          window.top?.dispatchEvent(event);
+          
+          try {
+            window.top?.dispatchEvent(event);
+          } catch (err) { }
         };
         doc.body.removeEventListener('keydown', handleKeyDown);
         doc.body.addEventListener('keydown', handleKeyDown);
         
-        // Initial focus only if it's the active viewer
         if (!src && !srcDoc) doc.body.focus();
       }
 
@@ -159,11 +155,10 @@ export const UnifiedViewer: React.FC<{
   }, [contentRef, src, srcDoc, injectStyles]);
 
   React.useEffect(() => {
-    // Ensure we trigger initialization as soon as the ref is available
     if (contentRef) {
       handleLoad();
     }
-  }, [contentRef, handleLoad, src, srcDoc]);
+  }, [contentRef, handleLoad]);
 
   return (
     <iframe 

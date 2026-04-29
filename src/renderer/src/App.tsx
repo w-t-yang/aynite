@@ -508,7 +508,7 @@ export default function App() {
     
     if (!existingTab) {
       // @ts-ignore
-      const infoRes = await window.api.fileInfo(file.path);
+      const infoRes = await window.api.getFileInfo(file.path);
       const info = infoRes.data || {};
       // @ts-ignore
       const category = getFileCategory(info.extension || '', info.isText, info.path || file.path);

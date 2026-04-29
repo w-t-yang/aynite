@@ -10,37 +10,40 @@ export interface FileInfo {
 export type FileCategory = 'text' | 'image' | 'video' | 'audio' | 'pdf' | 'markdown' | 'html' | 'unsupported';
 
 /**
- * Determines the file category based on extension, text content check, and filename.
+ * Purely behavior-driven file detection. No whitelists or blacklists for text files.
  */
 export function getFileCategory(extension: string): FileCategory;
 export function getFileCategory(extension: string, isText: boolean | undefined): FileCategory;
 export function getFileCategory(extension: string, isText: boolean | undefined, filePath: string | undefined): FileCategory;
 export function getFileCategory(extension: string, isText?: boolean, filePath?: string): FileCategory {
-  const ext = extension.toLowerCase();
+  const ext = (extension || '').toLowerCase();
   
-  const binaryExts = {
+  // 1. Specialized Viewers (Only for binary media we actually handle)
+  const binaryMedia = {
     image: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff'],
     video: ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'],
     audio: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'opus'],
-    pdf: ['pdf'],
-    unsupported: [
-      'zip', 'tar', 'gz', '7z', 'rar', 'exe', 'dll', 'so', 'dylib', 'bin',
-      'docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp', 'pyc', 'class', 'o', 'deb', 'wmv'
-    ]
+    pdf: ['pdf']
+  };
+  
+  const structuredText = {
+    markdown: ['md', 'markdown'],
+    html: ['html', 'htm']
   };
 
-  if (['md', 'markdown'].includes(ext)) return 'markdown';
-  if (ext === 'html' || ext === 'htm') return 'html';
-  if (binaryExts.image.includes(ext)) return 'image';
-  if (binaryExts.video.includes(ext)) return 'video';
-  if (binaryExts.audio.includes(ext)) return 'audio';
-  if (binaryExts.pdf.includes(ext)) return 'pdf';
-  if (binaryExts.unsupported.includes(ext)) return 'unsupported';
+  if (structuredText.markdown.includes(ext)) return 'markdown';
+  if (structuredText.html.includes(ext)) return 'html';
+  if (binaryMedia.image.includes(ext)) return 'image';
+  if (binaryMedia.video.includes(ext)) return 'video';
+  if (binaryMedia.audio.includes(ext)) return 'audio';
+  if (binaryMedia.pdf.includes(ext)) return 'pdf';
   
-  // If backend explicitly says it's binary via null-byte check, respect it
+  // 2. The Text File Rule
+  // If the backend says it's binary (null bytes found), it's unsupported.
   if (isText === false) return 'unsupported';
   
-  // Default to text for anything else
+  // 3. Fallback: Everything else is treated as text
+  // This covers .js, .tsx, .txt, and extensionless files like 'ignore' or 'test'.
   return 'text';
 }
 

@@ -139,8 +139,9 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
         for (const p of pathsToOpen) {
           treeRef.current.open(p);
         }
-        // Use scrollTo instead of select to avoid stealing focus
+        // Use scrollTo and select with focus:false to highlight without stealing focus
         treeRef.current.scrollTo(targetPath);
+        treeRef.current.select(targetPath, { focus: false });
       }, changed ? 100 : 0);
     };
 

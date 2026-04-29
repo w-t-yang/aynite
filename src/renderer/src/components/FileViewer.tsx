@@ -52,6 +52,15 @@ export default function FileViewer({
   const isTooLarge = isTextLike && (fileInfo?.size || 0) > MAX_TEXT_SIZE;
   const effectiveCategory = isTooLarge ? 'unsupported' : category;
   
+  console.log('[FileViewer] File Analysis:', { 
+    path: fileInfo?.path, 
+    extension: fileInfo?.extension, 
+    isText: fileInfo?.isText,
+    category, 
+    isTooLarge, 
+    effectiveCategory 
+  });
+  
   const Handler = FileHandlerComponents[effectiveCategory];
   const canEdit = !isTooLarge && (category === 'text' || category === 'markdown' || category === 'html');
   
@@ -384,7 +393,7 @@ export default function FileViewer({
             {/* Standard Editor - Hidden but active for search/state when viewer is shown */}
             <div className={cn(
               "flex-1 flex overflow-hidden font-mono text-sm relative bg-background",
-              (!isEditing && (category === 'markdown' || category === 'html' || category === 'pdf')) && "hidden"
+              (!isEditing && (effectiveCategory === 'markdown' || effectiveCategory === 'html' || effectiveCategory === 'pdf' || effectiveCategory === 'image' || effectiveCategory === 'video' || effectiveCategory === 'audio' || effectiveCategory === 'unsupported')) && "hidden"
             )}>
               <div 
                 ref={lineNumRef}
