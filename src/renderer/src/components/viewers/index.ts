@@ -5,7 +5,6 @@ import { ImageViewer } from './ImageViewer';
 import { VideoViewer } from './VideoViewer';
 import { AudioViewer } from './AudioViewer';
 import { PdfViewer } from './PdfViewer';
-import { TextViewer } from './TextViewer';
 import { UnsupportedViewer } from './UnsupportedViewer';
 
 export * from './UnifiedViewer';
@@ -15,7 +14,6 @@ export * from './ImageViewer';
 export * from './VideoViewer';
 export * from './AudioViewer';
 export * from './PdfViewer';
-export * from './TextViewer';
 export * from './UnsupportedViewer';
 
 export const FileHandlerComponents: Record<FileCategory, React.FC<{ file: FileInfo; content?: string }>> = {
@@ -25,6 +23,6 @@ export const FileHandlerComponents: Record<FileCategory, React.FC<{ file: FileIn
   video: VideoViewer,
   audio: AudioViewer,
   pdf: PdfViewer,
-  text: TextViewer,
+  text: () => null, // Handled internally by FileViewer
   unsupported: UnsupportedViewer
 };

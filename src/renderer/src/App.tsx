@@ -10,6 +10,7 @@ import { cn } from './lib/utils';
 import { getFileCategory } from './lib/file-handlers';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { KeyManager } from './lib/key-handlers';
 
 type Tab = {
   id: string;
@@ -399,151 +400,32 @@ export default function App() {
       // we'd need more complex tracking. For now, unlink will safely close the tab.
     });
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isCtrl = e.ctrlKey;
-      const isMeta = e.metaKey;
-      const isShift = e.shiftKey;
-      const isCmd = e.metaKey || e.ctrlKey;
-      const key = e.key.toUpperCase();
-
-      if (e.key === 'Tab') {
-        const target = e.target as HTMLElement;
-        // Allow Tab in contentEditable (chat input) and if we're in the switcher (handled there)
-        if (!target.isContentEditable && !showTabSwitcher) {
-          e.preventDefault();
-        }
-      }
-
-      if (import.meta.env.DEV) {
-        console.log('App KeyDown:', { key: e.key, code: e.code, ctrl: isCtrl, meta: isMeta, alt: e.altKey, shift: isShift });
-      }
-
-      // 1. Manually handle Developer Tools (since we disabled the menu)
-      if (isCmd && isShift && key === 'I') {
-        // Electron allows opening dev tools via IPC if needed, but usually we just want to NOT block it
-        // If we are in the renderer, we can't easily open devtools, but we should NOT preventDefault.
-        return; 
-      }
-
-      // 2. Explicitly ignore any modifier + \ to allow system input method switching
-      if ((isCtrl || isMeta || e.altKey) && (e.key === '\\' || e.code === 'Backslash' || e.key === '|')) return;
-
-
-      if (!settings) return;
-
-      // 3. Match registered shortcuts
-      const checkMatch = (shortcutStr: string | undefined) => {
-        if (!shortcutStr) return false;
-        const parts = shortcutStr.toUpperCase().split('+');
-        const targetKey = parts[parts.length - 1];
-        const reqCtrl = parts.includes('CTRL');
-        const reqMeta = parts.includes('META');
-        const reqShift = parts.includes('SHIFT');
-        const reqAlt = parts.includes('ALT');
-
-        // Note: isCmd handles either CTRL or META depending on app logic, 
-        // but let's be specific based on the binding string.
-        if (reqCtrl && !isCtrl) return false;
-        if (reqMeta && !isMeta) return false;
-        if (reqShift && !isShift) return false;
-        if (reqAlt && !e.altKey) return false;
-        
-        // If the binding only specified 'META' but we are on Linux/Windows where META might be SUPER,
-        // and we usually treat CTRL as META for shortcuts, let's check that too.
-        if (parts.includes('META') && !isMeta && !isCtrl) return false;
-
-        return key === targetKey;
-      };
-
-      if (isCmd && key === 'S') {
-        e.preventDefault();
-        handleSaveActiveTab();
-        return;
-      }
-
-      // ─── Keyboard Quit (Esc or Ctrl+G) ────────────────────────────────
-      if (e.key === 'Escape' || (isCtrl && key === 'G')) {
-        if (showTabSwitcher) {
-          e.preventDefault();
-          setShowTabSwitcher(false);
-          return;
-        }
-        // Add other global dismissals here if needed
-      }
-
-      const kb = settings.keybindings;
-
-      // ─── Global ────────────────────────────────────────────────────────
-      if (checkMatch(kb.global.refresh)) {
-        e.preventDefault();
-        window.location.reload();
-        return;
-      }
-
-      if (checkMatch(kb.explorer.toggleLeftPanel)) {
-        e.preventDefault();
-        setLeftPanelOpen(prev => !prev);
-        return;
-      }
-
-      if (checkMatch(kb.agent.toggleRightPanel)) {
-        e.preventDefault();
-        setRightPanelOpen(prev => !prev);
-        return;
-      }
-
-
-      // ─── Agent ─────────────────────────────────────────────────────────
-      if (checkMatch(kb.agent.focusChat)) {
-        e.preventDefault();
-        setRightPanelOpen(true);
-        setTimeout(() => (window as any).focusChatInput?.(), 150);
-        return;
-      }
-
-      if (checkMatch(kb.agent.focusSkills)) {
-        e.preventDefault();
-        setRightPanelOpen(true);
-        setTimeout(() => (window as any).focusChatInput?.('/'), 150);
-        return;
-      }
-
-      if (checkMatch(kb.agent.focusCommands)) {
-        e.preventDefault();
-        setRightPanelOpen(true);
-        setTimeout(() => (window as any).focusChatInput?.('>'), 150);
-        return;
-      }
-
-      // ─── Content Navigation ───────────────────────────────────────────
-      if (checkMatch(kb.content.navigation.closeTab)) {
-        if (activeTabId) {
-          e.preventDefault();
-          closeTab({ stopPropagation: () => {} } as any, activeTabId);
-        }
-        return;
-      }
-
-      if (checkMatch(kb.content.navigation.switchTab)) {
-        e.preventDefault();
-        setShowTabSwitcher(true);
-        return;
-      }
-
-      if (checkMatch(kb.content.navigation.focusContent)) {
-        e.preventDefault();
-        const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLTextAreaElement;
-        if (textarea) textarea.focus();
-        return;
-      }
+    // Initialize KeyManager
+    const globalApi = {
+      saveActiveTab: handleSaveActiveTab,
+      reload: () => window.location.reload(),
+      toggleLeftPanel: () => setLeftPanelOpen(prev => !prev),
+      toggleRightPanel: () => setRightPanelOpen(prev => !prev),
+      focusChat: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.(), 150); },
+      focusSkills: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.('/'), 150); },
+      focusCommands: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.('>'), 150); },
+      closeTab: () => { if (activeTabId) closeTab({ stopPropagation: () => {} } as any, activeTabId); },
+      switchTab: () => setShowTabSwitcher(true),
+      focusContent: () => (document.querySelector('textarea[track-cursor="true"]') as HTMLElement)?.focus(),
+      closeTabSwitcher: () => setShowTabSwitcher(false),
+      isTabSwitcherOpen: () => showTabSwitcher,
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    if (settings) {
+      KeyManager.init(settings, globalApi);
+      KeyManager.setActiveTab(activeTabId);
+    }
+
     return () => {
       unsubscribe();
-      window.removeEventListener('keydown', handleKeyDown);
+      KeyManager.cleanup();
     };
-  }, [settings, tabs, activeTabId]);
+  }, [settings, tabs, activeTabId, showTabSwitcher]);
 
   useEffect(() => {
     const handleFileDeleted = (e: any) => {

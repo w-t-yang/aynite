@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, FileText, Settings as SettingsIcon } from 'lucide-react';
 import { SelectionList, SelectionItem } from './ui/SelectionList';
+import { KeyManager } from '../lib/key-handlers';
 
 interface TabItem {
   id: string;
@@ -19,7 +20,10 @@ interface TabSwitcherProps {
 
 export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, onClose }: TabSwitcherProps) {
   const [query, setQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(() => {
+    const activeIdx = tabs.findIndex(t => t.id === activeTabId);
+    return activeIdx >= 0 && tabs.length > 1 ? (activeIdx + 1) % tabs.length : 0;
+  });
   const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,21 +57,17 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
   }, []);
 
   useEffect(() => {
-    setSelectedIndex(0);
+    if (query.trim() !== '') {
+      setSelectedIndex(0);
+    }
   }, [query]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isCtrl = e.ctrlKey || e.metaKey;
-
-      if (e.key === 'Escape' || (isCtrl && e.key.toUpperCase() === 'G')) {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault();
+    const api = {
+      moveSelection: (dir: 'up' | 'down') => {
+        setSelectedIndex(prev => (dir === 'up' ? (prev + filtered.length - 1) : (prev + 1)) % filtered.length);
+      },
+      confirmSelection: () => {
         const item = filtered[selectedIndex];
         if (item) {
           if (item.isTab) {
@@ -82,27 +82,12 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
           }
           onClose();
         }
-        return;
-      }
-
-      // Arrow Up or Ctrl+P
-      if (e.key === 'ArrowUp' || (isCtrl && e.key.toUpperCase() === 'P')) {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev + filtered.length - 1) % filtered.length);
-        return;
-      }
-
-      // Arrow Down or Ctrl+N
-      if (e.key === 'ArrowDown' || (isCtrl && e.key.toUpperCase() === 'N')) {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % filtered.length);
-        return;
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filtered, selectedIndex, onClose, onSelect]);
+    KeyManager.registerTabSwitcher(api);
+    return () => KeyManager.unregisterTabSwitcher();
+  }, [filtered, selectedIndex, onClose, onSelect, onOpenFile]);
 
   const selectionItems: SelectionItem[] = filtered.map(item => ({
     id: item.id,

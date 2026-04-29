@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Pencil, Eye, Save, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { getFileCategory, FileInfo } from '../lib/file-handlers';
+import { KeyManager } from '../lib/key-handlers';
 import { FileHandlerComponents } from './viewers';
 import Editor from 'react-simple-code-editor';
 // @ts-ignore
@@ -86,6 +87,11 @@ export default function FileViewer({
     };
     fetchInfo();
     setIsEditing(false);
+    // Force focus to show cursor in View Mode
+    setTimeout(() => {
+      const el = document.getElementById('file-editor-textarea');
+      if (el) el.focus();
+    }, 150);
   }, [id]);
 
   useEffect(() => {
@@ -186,7 +192,12 @@ export default function FileViewer({
     }
   };
 
-  const jumpToSearchResult = (pos: number, shouldFocus = true) => {
+  const jumpToSearchResult = (pos: number, shouldFocus = true, forceEdit = false) => {
+    // Only switch to edit mode if explicitly requested (e.g., navigating to a result)
+    if (forceEdit && !isEditing && (category === 'markdown' || category === 'html' || category === 'pdf')) {
+      setIsEditing(true);
+    }
+
     if (!textareaRef.current) return;
     if (shouldFocus) textareaRef.current.focus();
     textareaRef.current.setSelectionRange(pos, pos + searchQuery.length);
@@ -204,161 +215,54 @@ export default function FileViewer({
     if (searchResults.length > 0) {
       const nextIdx = (currentSearchIndex + 1) % searchResults.length;
       setCurrentSearchIndex(nextIdx);
-      jumpToSearchResult(searchResults[nextIdx]);
+      jumpToSearchResult(searchResults[nextIdx], true, true);
     }
   };
 
+  // Register with KeyManager
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Explicitly ignore Ctrl + \ or Super + \ to allow system input method switching
-      if ((e.ctrlKey || e.metaKey) && (e.key === '\\' || e.code === 'Backslash')) return;
-
-      const isAlt = e.altKey;
-      const isShift = e.shiftKey;
-      const isCmd = e.metaKey || e.ctrlKey;
-      const key = e.key.toUpperCase();
-
-      if (e.key === 'Tab') {
-        if (isEditing && e.target === textareaRef.current) {
-          e.preventDefault();
-          const textarea = textareaRef.current;
-          if (!textarea) return;
-          const start = textarea.selectionStart;
-          const end = textarea.selectionEnd;
-          const val = textarea.value;
-          textarea.value = val.substring(0, start) + "\t" + val.substring(end);
-          textarea.selectionStart = textarea.selectionEnd = start + 1;
-          setLocalContent(textarea.value);
-          if (onChange) onChange(textarea.value);
-          updateCursor();
-        } else {
-          e.preventDefault();
-        }
-        return;
-      }
-
-      // Don't capture keys if focus is NOT on the file viewer textarea or search input
-      const target = e.target as HTMLElement;
-      const editorTextarea = document.getElementById('file-editor-textarea');
-      if (target !== editorTextarea && target !== textareaRef.current && target !== searchInputRef.current) {
-        return;
-      }
-
-      // ─── Undo (Ctrl+Z) ───
-      if (isCmd && key === 'Z') {
-        e.preventDefault();
-        if (undoStack.current.length > 0) {
-          const textarea = textareaRef.current;
-          const cursorPos = textarea?.selectionStart ?? 0;
-          const prev = undoStack.current.pop()!;
-          setLocalContent(prev);
-          if (onChange) {
-            isLocalChange.current = true;
-            onChange(prev);
-          }
-          // Restore cursor after React re-renders
-          setTimeout(() => {
-            if (textarea) {
-              const clampedPos = Math.min(cursorPos, prev.length);
-              textarea.selectionStart = textarea.selectionEnd = clampedPos;
-              textarea.focus();
-              updateCursor();
-            }
-          }, 0);
-        }
-        return;
-      }
-
-      // If it looks like a standard dev tool or system shortcut, don't even look at it
-      if (isCmd && (key === 'I' || key === 'R' || key === 'O' || key === 'P' && isShift)) {
-        if (key === 'I' || key === 'R') return; 
-      }
-
-      if (showSearch) {
-        if (e.key === 'Escape' || (isCmd && key === 'G')) {
-          e.preventDefault();
-          setShowSearch(false);
-          textareaRef.current?.focus();
-          return;
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          nextSearch();
-          return;
-        }
-        // If we're in the search input, don't let other keys through to the editor
-        if (target === searchInputRef.current) return;
-      }
-
-      // Prevent any deletion in view mode
-      if (!isEditing) {
-        if (e.key === 'Backspace' || e.key === 'Delete') {
-          e.preventDefault();
-          return;
-        }
-      }
-
-      if (!isEditing) {
-        const isPlainKey = !isCmd && !isAlt && !isShift;
-
-        // Helper to check if a key matches a viewer binding
-        const isViewBinding = (binding: string | undefined) => isPlainKey && key === binding?.toUpperCase();
-
-        // 1. Single character viewer shortcuts (only in view mode)
-        const v = keybindings.content.viewer;
-        if (isViewBinding(v.enterEdit)) {
-          e.preventDefault(); setIsEditing(true);
-        } else if (isViewBinding(v.moveDown)) {
-          e.preventDefault(); moveCursor('down');
-        } else if (isViewBinding(v.moveUp)) {
-          e.preventDefault(); moveCursor('up');
-        } else if (isViewBinding(v.moveLeft)) {
-          e.preventDefault(); moveCursor('left');
-        } else if (isViewBinding(v.moveRight)) {
-          e.preventDefault(); moveCursor('right');
-        } else if (isPlainKey && e.key === v.search) {
-          e.preventDefault();
-          setShowSearch(true);
+    const api = {
+      isEditing: () => isEditing,
+      isSearchActive: () => showSearch,
+      isSearchInputFocused: (target: EventTarget | null) => target === searchInputRef.current,
+      getCategory: () => category,
+      setIsEditing,
+      setSearchActive: (val: boolean) => {
+        setShowSearch(val);
+        if (val) {
           setTimeout(() => {
             if (searchInputRef.current) {
               searchInputRef.current.focus();
               searchInputRef.current.select();
             }
           }, 50);
+        } else {
+          textareaRef.current?.focus();
         }
-      }
-
-      // ─── Content Generic Keys: apply in BOTH view and edit mode ─────────
-      const g = keybindings.content.generic || {};
-
-      if (isEditing && (e.key === 'Escape' || (isCmd && key === 'G'))) {
-        e.preventDefault();
-        setIsEditing(false);
-      } else if (isCmd && key === g.endOfLine?.split('+').pop()) { // End of Line
-        e.preventDefault();
+      },
+      nextSearch,
+      moveCursor,
+      endOfLine: () => {
         const textarea = textareaRef.current;
         if (textarea) {
           const pos = textarea.selectionStart;
           const end = localContent.indexOf('\n', pos);
-          const newPos = end === -1 ? localContent.length : end;
-          textarea.selectionStart = textarea.selectionEnd = newPos;
+          textarea.selectionStart = textarea.selectionEnd = end === -1 ? localContent.length : end;
           textarea.focus();
           updateCursor();
         }
-      } else if (isCmd && key === g.startOfLine?.split('+').pop()) { // Start of Line
-        e.preventDefault();
+      },
+      startOfLine: () => {
         const textarea = textareaRef.current;
         if (textarea) {
           const pos = textarea.selectionStart;
           const start = localContent.lastIndexOf('\n', pos - 1);
-          const newPos = start === -1 ? 0 : start + 1;
-          textarea.selectionStart = textarea.selectionEnd = newPos;
+          textarea.selectionStart = textarea.selectionEnd = start === -1 ? 0 : start + 1;
           textarea.focus();
           updateCursor();
         }
-      } else if (isCmd && key === g.killLine?.split('+').pop()) { // Kill line
-        if (!isEditing) return;
-        e.preventDefault();
+      },
+      killLine: () => {
         const textarea = textareaRef.current;
         if (textarea) {
           undoStack.current.push(localContent);
@@ -367,107 +271,22 @@ export default function FileViewer({
           const nextLineStart = end === -1 ? localContent.length : end + 1;
           const newContent = localContent.substring(0, pos) + localContent.substring(nextLineStart);
           setLocalContent(newContent);
-          if (onChange) {
-            isLocalChange.current = true;
-            onChange(newContent);
-          }
-          // Restore cursor to kill position after React re-renders
-          setTimeout(() => {
-            textarea.selectionStart = textarea.selectionEnd = pos;
-            textarea.focus();
-            updateCursor();
-          }, 0);
+          if (onChange) { isLocalChange.current = true; onChange(newContent); }
+          setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = pos; textarea.focus(); updateCursor(); }, 0);
         }
-      } else if (isCmd && key === g.deleteForward?.split('+').pop()) { // Delete character (forward)
-        if (!isEditing) return;
-        e.preventDefault();
-        const textarea = textareaRef.current;
-        if (textarea) {
-          undoStack.current.push(localContent);
-          const pos = textarea.selectionStart;
-          if (pos < localContent.length) {
-            const newContent = localContent.substring(0, pos) + localContent.substring(pos + 1);
-            setLocalContent(newContent);
-            if (onChange) {
-              isLocalChange.current = true;
-              onChange(newContent);
-            }
-            setTimeout(() => {
-              textarea.selectionStart = textarea.selectionEnd = pos;
-              textarea.focus();
-              updateCursor();
-            }, 0);
-          }
-        }
-      } else if (isCmd && key === g.cut?.split('+').pop()) { // Cut
-        if (!isEditing) return;
-        const textarea = textareaRef.current;
-        if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-          e.preventDefault();
-          undoStack.current.push(localContent);
-          const start = textarea.selectionStart;
-          const end = textarea.selectionEnd;
-          const selectedText = localContent.substring(start, end);
-          navigator.clipboard.writeText(selectedText);
-          const newContent = localContent.substring(0, start) + localContent.substring(end);
-          setLocalContent(newContent);
-          if (onChange) {
-            isLocalChange.current = true;
-            onChange(newContent);
-          }
-          setTimeout(() => {
-            textarea.selectionStart = textarea.selectionEnd = start;
-            textarea.focus();
-            updateCursor();
-          }, 0);
-        }
-      } else if (isCmd && key === g.copy?.split('+').pop()) { // Copy
-        const textarea = textareaRef.current;
-        if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-          e.preventDefault();
-          const selectedText = localContent.substring(textarea.selectionStart, textarea.selectionEnd);
-          navigator.clipboard.writeText(selectedText);
-        }
-      } else if (isCmd && key === g.paste?.split('+').pop()) { // Paste
-        if (!isEditing) return;
-        const textarea = textareaRef.current;
-        if (textarea) {
-          e.preventDefault();
-          navigator.clipboard.readText().then(text => {
-            undoStack.current.push(localContent);
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const newContent = localContent.substring(0, start) + text + localContent.substring(end);
-            setLocalContent(newContent);
-            if (onChange) {
-              isLocalChange.current = true;
-              onChange(newContent);
-            }
-            setTimeout(() => {
-              textarea.selectionStart = textarea.selectionEnd = start + text.length;
-              textarea.focus();
-              updateCursor();
-            }, 0);
-          });
-        }
-      } else if (isCmd && key === g.selectAll?.split('+').pop()) { // Select All
-        e.preventDefault();
+      },
+      selectAll: () => {
         textareaRef.current?.select();
         updateCursor();
-      } else if (isCmd && key === g.prevLine?.split('+').pop()) { // Prev Line
-        e.preventDefault(); moveCursor('up');
-      } else if (isCmd && key === g.nextLine?.split('+').pop()) { // Next Line
-        e.preventDefault(); moveCursor('down');
-      } else if (isCmd && key === g.forwardChar?.split('+').pop()) { // Forward Char
-        e.preventDefault(); moveCursor('right');
-      } else if (isCmd && key === g.backwardChar?.split('+').pop()) { // Backward Char
-        e.preventDefault(); moveCursor('left');
       }
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, keybindings, localContent, showSearch, searchResults, currentSearchIndex, onChange, onSave]);
+    
+    KeyManager.registerEditor(id, api);
+    
+    return () => {
+      KeyManager.unregisterEditor(id);
+    };
+  }, [id, isEditing, showSearch, category, localContent, onChange]);
 
   const updateCursor = () => {
     if (textareaRef.current) {
@@ -487,9 +306,13 @@ export default function FileViewer({
     const el = document.getElementById('file-editor-textarea') as HTMLTextAreaElement;
     if (el) {
       textareaRef.current = el;
-      // Force caret visibility - important since react-simple-code-editor makes text transparent
-      el.style.caretColor = isEditing ? 'var(--primary)' : '#808080'; // Primary if editing, grey in view mode
+      el.style.caretColor = isEditing ? 'var(--primary)' : '#808080';
       el.style.opacity = '1';
+      el.setAttribute('track-cursor', 'true');
+      el.spellcheck = false;
+      el.setAttribute('autocapitalize', 'off');
+      el.setAttribute('autocomplete', 'off');
+      el.setAttribute('autocorrect', 'off');
     }
   });
 
@@ -528,75 +351,68 @@ export default function FileViewer({
             <AlertCircle size={32} />
             <p>Error loading file info: {error}</p>
           </div>
-        ) : (isEditing && canEdit) || (category === 'text') ? (
-          <div className="flex-1 flex overflow-hidden font-mono text-sm relative bg-background">
-            <div 
-              ref={lineNumRef}
-              className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-60 overflow-hidden select-none z-10"
-            >
-              {lines.map((l) => <div key={l} className="leading-relaxed h-6">{l}</div>)}
-            </div>
-            <div className="flex-1 overflow-auto relative" onScroll={(e) => {
-               if (lineNumRef.current) lineNumRef.current.scrollTop = e.currentTarget.scrollTop;
-            }}>
-              <Editor
-                value={localContent}
-                onValueChange={content => {
-                  if (!isEditing) return;
-                  setLocalContent(content);
-                  if (onChange) {
-                    isLocalChange.current = true;
-                    onChange(content);
-                  }
-                }}
-                highlight={code => {
-                  const langMap: any = {
-                    'js': languages.js,
-                    'ts': languages.typescript,
-                    'tsx': languages.typescript,
-                    'jsx': languages.js,
-                    'json': languages.json,
-                    'css': languages.css,
-                    'html': languages.html,
-                    'py': languages.python,
-                    'rs': languages.rust,
-                    'sh': languages.bash,
-                    'bash': languages.bash,
-                    'yaml': languages.yaml,
-                    'yml': languages.yaml,
-                    'md': languages.markdown
-                  };
-                  const lang = langMap[fileInfo?.extension || ''] || languages.clike || languages.plain;
-                  return highlight(code, lang, fileInfo?.extension || 'text');
-                }}
-                padding={16}
-                className="min-h-full font-mono text-sm leading-relaxed outline-none"
-                style={{
-                  fontFamily: '"Fira Code", monospace',
-                  minHeight: '100%',
-                }}
-                readOnly={!isEditing}
-                textareaId="file-editor-textarea"
-                textareaClassName="outline-none focus:ring-0 !caret-primary"
-                preClassName="selection:bg-primary/30"
-                // @ts-ignore
-                textareaProps={{ 
-                  "track-cursor": "true",
-                  spellCheck: false,
-                  autoCapitalize: "off",
-                  autoComplete: "off",
-                  autoCorrect: "off",
-                  style: { caretColor: isEditing ? 'var(--primary)' : '#808080' }
-                }}
-              />
-            </div>
-          </div>
         ) : (
-          <Handler file={fileInfo!} content={localContent} />
+          <div className="flex-1 flex overflow-hidden relative">
+            {/* Standard Editor - Hidden but active for search/state when viewer is shown */}
+            <div className={cn(
+              "flex-1 flex overflow-hidden font-mono text-sm relative bg-background",
+              (!isEditing && (category === 'markdown' || category === 'html' || category === 'pdf')) && "hidden"
+            )}>
+              <div 
+                ref={lineNumRef}
+                className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-60 overflow-hidden select-none z-10"
+              >
+                {lines.map((l) => <div key={l} className="leading-relaxed h-6">{l}</div>)}
+              </div>
+              <div className="flex-1 overflow-auto relative" onScroll={(e) => {
+                 if (lineNumRef.current) lineNumRef.current.scrollTop = e.currentTarget.scrollTop;
+              }}>
+                <Editor
+                  value={localContent}
+                  onValueChange={content => {
+                    if (!isEditing) return;
+                    setLocalContent(content);
+                    if (onChange) {
+                      isLocalChange.current = true;
+                      onChange(content);
+                    }
+                  }}
+                  highlight={code => {
+                    const langMap: any = {
+                      'js': languages.js, 'ts': languages.typescript, 'tsx': languages.typescript,
+                      'jsx': languages.js, 'json': languages.json, 'css': languages.css,
+                      'html': languages.html, 'py': languages.python, 'rs': languages.rust,
+                      'sh': languages.bash, 'bash': languages.bash, 'yaml': languages.yaml,
+                      'yml': languages.yaml, 'md': languages.markdown
+                    };
+                    const lang = langMap[fileInfo?.extension || ''] || languages.clike || languages.plain;
+                    return highlight(code, lang, fileInfo?.extension || 'text');
+                  }}
+                  padding={16}
+                  className="min-h-full font-mono text-sm leading-relaxed outline-none"
+                  style={{
+                    fontFamily: '"Fira Code", monospace',
+                    minHeight: '100%',
+                  }}
+                  readOnly={!isEditing}
+                  textareaId="file-editor-textarea"
+                  textareaClassName="outline-none focus:ring-0 !caret-primary"
+                  preClassName="selection:bg-primary/30"
+                />
+              </div>
+            </div>
+
+            {/* Specialized Viewer */}
+            {(!isEditing && (category === 'markdown' || category === 'html' || category === 'pdf' || category === 'image' || category === 'video' || category === 'audio' || category === 'unsupported')) && (
+              <div className="absolute inset-0 z-20 bg-background">
+                <Handler file={fileInfo!} content={localContent} />
+              </div>
+            )}
+          </div>
         )}
         
         {showSearch && (
-          <div className="absolute top-4 right-4 z-50 bg-sidebar border border-border rounded-md shadow-lg p-2 flex items-center gap-2">
+          <div className="file-viewer-search absolute top-4 right-4 z-50 bg-sidebar border border-border rounded-md shadow-lg p-2 flex items-center gap-2">
             <input 
               ref={searchInputRef}
               type="text"
@@ -618,7 +434,6 @@ export default function FileViewer({
       {/* Status Bar */}
       <div className="h-7 shrink-0 bg-muted/50 border-t border-border text-muted-foreground flex items-center px-4 justify-between text-xs font-sans">
         <div className="flex items-center gap-4">
-           <span className="font-medium truncate max-w-[200px]">{filename}</span>
            {!loading && !error && canEdit && (
              <div className="flex items-center gap-2">
                {isDirty && (
@@ -637,7 +452,7 @@ export default function FileViewer({
                   title={isEditing ? "Switch to View Mode" : "Switch to Edit Mode"}
                >
                   {isEditing ? <Pencil size={12} className="text-primary" /> : <Eye size={12} />}
-                  <span>{isEditing ? 'Editing' : (category === 'markdown' ? 'Preview' : 'View Mode')}</span>
+                  <span>{isEditing ? 'Edit' : 'View'}</span>
                </button>
              </div>
            )}

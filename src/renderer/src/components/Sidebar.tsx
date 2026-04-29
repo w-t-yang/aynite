@@ -4,6 +4,7 @@ import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-ar
 import { cn } from '../lib/utils';
 import { getFileCategory } from '../lib/file-handlers';
 import { SearchableSelect } from './ui/SearchableSelect';
+import { KeyManager } from '../lib/key-handlers';
 
 interface FileNode {
   id: string; // Absolute path
@@ -41,9 +42,9 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     isOpen: boolean;
     title: string;
     placeholder: string;
-    defaultValue: string;
     onConfirm: (val: string) => Promise<void>;
   } | null>(null);
+  const [promptValue, setPromptValue] = useState('');
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -363,19 +364,19 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     if (action === 'paste') {
       await executeAction();
     } else if (action === 'new-file' || action === 'new-folder') {
+      setPromptValue('');
       setPromptModal({
         isOpen: true,
         title: action === 'new-file' ? 'New File' : 'New Folder',
         placeholder: action === 'new-file' ? 'filename.ext' : 'folder_name',
-        defaultValue: '',
         onConfirm: async (val) => await executeAction(val)
       });
     } else if (action === 'rename') {
+      setPromptValue(file.name);
       setPromptModal({
         isOpen: true,
         title: 'Rename',
         placeholder: 'New name',
-        defaultValue: file.name,
         onConfirm: async (val) => await executeAction(val)
       });
     } else if (action === 'delete') {
@@ -393,24 +394,37 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     }
   };
 
-  const handleGlobalKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-      const selected = Array.from(treeRef.current?.selectedIds || []);
-      if (selected.length > 0) {
-        setClipboard({ paths: selected, action: 'copy' });
-      }
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-      const selected = Array.from(treeRef.current?.selectedIds || []);
-      if (selected.length > 0 && clipboard) {
-        const node = treeRef.current?.get(selected[0]);
-        if (node) {
-          setContextMenu({ x: 0, y: 0, file: node.data });
-          setTimeout(() => handleCtxAction('paste'), 0);
+  useEffect(() => {
+    const api = {
+      copy: () => {
+        const selected = Array.from(treeRef.current?.selectedIds || []);
+        if (selected.length > 0) {
+          setClipboard({ paths: selected, action: 'copy' });
+        }
+      },
+      paste: () => {
+        const selected = Array.from(treeRef.current?.selectedIds || []);
+        if (selected.length > 0 && clipboard) {
+          const node = treeRef.current?.get(selected[0]);
+          if (node) {
+            setContextMenu({ x: 0, y: 0, file: node.data });
+            setTimeout(() => handleCtxAction('paste'), 0);
+          }
+        }
+      },
+      confirm: () => {
+        if (showNewWorkspaceModal) {
+          handleCreateWorkspace();
+        } else if (promptModal?.isOpen && promptValue.trim()) {
+          promptModal.onConfirm(promptValue.trim());
+        } else if (confirmModal?.isOpen) {
+          confirmModal.onConfirm();
         }
       }
-    }
-  };
+    };
+    KeyManager.registerSidebar(api);
+    return () => KeyManager.unregisterSidebar();
+  }, [clipboard, showNewWorkspaceModal, newWorkspaceName, promptModal, promptValue, confirmModal]);
 
   function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
     const { name, isDirectory, id } = node.data;
@@ -458,7 +472,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   }
 
   return (
-    <div className="w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden" onKeyDown={handleGlobalKeyDown} tabIndex={-1}>
+    <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none" tabIndex={-1}>
       <div className="px-3 py-3 flex items-center justify-between border-b border-border/40 shrink-0">
         <div className="relative flex-1 min-w-0 mr-2">
           <SearchableSelect
@@ -536,7 +550,6 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
               placeholder="Workspace name"
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkspace()}
               className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
             />
             <div className="flex justify-end gap-2">
@@ -551,7 +564,8 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
         <PromptModal 
            title={promptModal.title}
            placeholder={promptModal.placeholder}
-           defaultValue={promptModal.defaultValue}
+           value={promptValue}
+           onChange={setPromptValue}
            onConfirm={async (v) => { await promptModal.onConfirm(v); setPromptModal(null); }}
            onCancel={() => setPromptModal(null)}
         />
@@ -602,8 +616,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   );
 }
 
-function PromptModal({ title, placeholder, defaultValue, onConfirm, onCancel }: { title: string, placeholder: string, defaultValue: string, onConfirm: (v: string) => void, onCancel: () => void }) {
-  const [val, setVal] = useState(defaultValue);
+function PromptModal({ title, placeholder, value, onChange, onConfirm, onCancel }: { title: string, placeholder: string, value: string, onChange: (v: string) => void, onConfirm: (v: string) => void, onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
       <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
@@ -612,14 +625,13 @@ function PromptModal({ title, placeholder, defaultValue, onConfirm, onCancel }: 
           autoFocus
           type="text" 
           placeholder={placeholder}
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && val.trim() && onConfirm(val.trim())}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
           className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
         />
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
-          <button onClick={() => val.trim() && onConfirm(val.trim())} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Confirm</button>
+          <button onClick={() => value.trim() && onConfirm(value.trim())} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Confirm</button>
         </div>
       </div>
     </div>

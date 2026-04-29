@@ -6,6 +6,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { SelectionList, SelectionItem } from './ui/SelectionList';
 import { FileText, Folder, Zap, Play } from 'lucide-react';
+import { KeyManager } from '../lib/key-handlers';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -352,30 +353,31 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         attributes: {
           class: 'chat-input-editor outline-none min-h-[24px] max-h-[200px] overflow-y-auto text-sm leading-relaxed',
         },
-        handleKeyDown: (_view, event) => {
-          if (import.meta.env.DEV) {
-            console.log('ChatInput KeyDown:', { key: event.key, code: event.code, ctrl: event.ctrlKey, meta: event.metaKey });
-          }
-
-          // Explicitly ignore any modifier + \ to allow system input method switching
-          if ((event.ctrlKey || event.metaKey || event.altKey) && (event.key === '\\' || event.code === 'Backslash' || event.key === '|')) return false;
-
-          if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            handleSubmit();
-            return true;
-          }
-
-          if ((event.ctrlKey || event.metaKey) && event.key.toUpperCase() === 'Q') {
-            event.preventDefault();
-            editor?.commands.selectAll();
-            return true;
-          }
-          return false;
-        },
       },
       editable: !disabled,
     });
+
+    const handleSubmit = useCallback(() => {
+      if (!editor || disabled) return;
+
+      // Serialize: convert mention nodes to tagged text
+      const json = editor.getJSON();
+      const text = serializeTiptapToText(json);
+      if (!text.trim()) return;
+
+      onSubmit(text);
+      editor.commands.clearContent();
+    }, [editor, disabled, onSubmit]);
+
+    useEffect(() => {
+      if (!editor) return;
+      const api = {
+        submit: () => handleSubmit(),
+        selectAll: () => editor.commands.selectAll()
+      };
+      KeyManager.registerChat(api);
+      return () => KeyManager.unregisterChat();
+    }, [editor, handleSubmit]);
 
     // Update editable when disabled changes
     useEffect(() => {
@@ -394,18 +396,6 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         editor.commands.insertContent(prefix);
       }
     }));
-
-    const handleSubmit = useCallback(() => {
-      if (!editor || disabled) return;
-
-      // Serialize: convert mention nodes to tagged text
-      const json = editor.getJSON();
-      const text = serializeTiptapToText(json);
-      if (!text.trim()) return;
-
-      onSubmit(text);
-      editor.commands.clearContent();
-    }, [editor, disabled, onSubmit]);
 
     return (
       <div className={`chat-input-wrapper bg-background/60 backdrop-blur-xl border border-border/40 rounded-2xl px-4 py-3.5 shadow-2xl shadow-black/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300 active:scale-[0.995] ${disabled ? 'opacity-50 grayscale-[0.5]' : ''}`}>

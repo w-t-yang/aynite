@@ -90,35 +90,77 @@ export const UnifiedViewer: React.FC<{
       }
       ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
     `));
-    head.appendChild(extraStyles);
-    
+    // Forward key events to parent
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const event = new KeyboardEvent('keydown', {
+        key: e.key,
+        code: e.code,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        bubbles: true
+      });
+      window.parent.dispatchEvent(event);
+    };
+    doc.addEventListener('keydown', handleKeyDown);
+
+    body.classList.add('bg-background', 'text-foreground', 'outline-none');
+    body.tabIndex = 0; // Make body focusable
     body.classList.add('bg-background', 'text-foreground');
   }, [basePath, src]);
 
-  React.useEffect(() => {
-    // Only inject for portal-based (no src and no srcDoc)
-    if (contentRef && !src && !srcDoc) {
-      const doc = contentRef.contentWindow?.document;
-      if (doc) {
-        try {
-          injectStyles(doc);
-          setReady(true);
-        } catch (e) {
-          console.warn('Could not inject styles into iframe:', e);
-        }
+  const handleLoad = React.useCallback(() => {
+    if (!contentRef) return;
+    const doc = contentRef.contentWindow?.document;
+    if (!doc) return;
+
+    try {
+      // Forward key events to the top window for central handling
+      const handleKeyDown = (e: KeyboardEvent) => {
+        const event = new KeyboardEvent('keydown', {
+          key: e.key, code: e.code, ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey,
+          bubbles: true, cancelable: true, composed: true
+        });
+        window.top?.dispatchEvent(event);
+      };
+      doc.removeEventListener('keydown', handleKeyDown);
+      doc.addEventListener('keydown', handleKeyDown);
+
+      // Make body focusable
+      if (doc.body) {
+        doc.body.tabIndex = 0;
+        doc.body.style.outline = 'none';
+        doc.body.focus();
       }
-    } else if (contentRef && (src || srcDoc)) {
-      // If src or srcDoc is present, we consider the viewer ready immediately
-      // and let the document handle its own styling/relative paths.
-      setReady(true);
+
+      // 3. Inject styles (only for portal-based)
+      if (!src && !srcDoc) {
+        injectStyles(doc);
+        setReady(true);
+      } else {
+        setReady(true);
+      }
+    } catch (e) {
+      console.warn('UnifiedViewer: Could not access iframe document:', e);
+      setReady(true); // Still show it even if we can't bridge keys
     }
   }, [contentRef, src, srcDoc, injectStyles]);
+
+  React.useEffect(() => {
+    // If src or srcDoc changes, we might need to re-attach or re-check
+    if (contentRef && (src || srcDoc)) {
+      handleLoad();
+    }
+  }, [contentRef, src, srcDoc, handleLoad]);
 
   return (
     <iframe 
       ref={setContentRef} 
       src={src}
       srcDoc={srcDoc}
+      onLoad={handleLoad}
       className={`w-full h-full border-none ${className}`} 
       title="File Viewer"
     >
