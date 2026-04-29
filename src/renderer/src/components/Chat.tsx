@@ -4,7 +4,8 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { SettingsState } from './Settings';
 import ChatInput, { ChatInputHandle } from './ChatInput';
-import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig, getSystemPrompt } from '../lib/agent';
+import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig } from '../lib/agent';
+
 
 // ─── Message Types ───────────────────────────────────────────────────
 
@@ -28,8 +29,8 @@ function ToolIcon({ name }: { name?: string }) {
 
 function ToolCallItem({ call }: { call: any }) {
   const [expanded, setExpanded] = useState(false);
-  const fnName = call.function?.name;
-  const fnArgs = typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments;
+  const toolName = call.toolName || call.function?.name;
+  const toolArgs = call.args || (typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments);
 
   return (
     <div className="system-message-block border border-border/10 bg-foreground/[0.02] rounded-lg overflow-hidden mb-1">
@@ -38,19 +39,26 @@ function ToolCallItem({ call }: { call: any }) {
         className="w-full flex items-center justify-between px-2 py-1 text-[10px] hover:bg-accent/50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <ToolIcon name={fnName} />
-          <span className="font-bold uppercase tracking-tight text-muted-foreground/70">{fnName}</span>
+          <ToolIcon name={toolName} />
+          <span className="font-bold uppercase tracking-tight text-muted-foreground/70">{toolName}</span>
         </div>
         <ChevronRight size={10} className={`transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
       </button>
       {expanded && (
         <div className="px-2 pb-2 text-[10px] font-mono text-muted-foreground/60 border-t border-border/20 pt-1">
-          <pre className="whitespace-pre-wrap">{JSON.stringify(fnArgs, null, 2)}</pre>
+          <pre className="whitespace-pre-wrap">{JSON.stringify(toolArgs, null, 2)}</pre>
+          {call.result && (
+            <div className="mt-2 border-t border-border/10 pt-1">
+              <div className="text-[9px] text-green-500/70 font-bold mb-1 uppercase tracking-wider">Result</div>
+              <pre className="whitespace-pre-wrap opacity-80">{typeof call.result === 'string' ? call.result : JSON.stringify(call.result, null, 2)}</pre>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 function ThoughtBlock({ content }: { content: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -166,6 +174,126 @@ function ThinkingProcess({ content, defaultOpen = false }: { content: string; de
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+// ─── Chat Message Component ─────────────────────────────────────────
+
+function ChatMessage({ 
+  msg, 
+  idx, 
+  total, 
+  onOpenFile, 
+  onCopy 
+}: { 
+  msg: AgentMessage; 
+  idx: number; 
+  total: number; 
+  onOpenFile: (path: string) => void;
+  onCopy: (content: string) => void;
+}) {
+  const isLast = idx === total - 1;
+  const hasText = !!(msg.content || '').replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
+  const isAssistant = msg.role === 'assistant';
+  // Only collapse assistant messages that have actual text content
+  const shouldBeCollapsible = isAssistant && hasText;
+  const [isCollapsed, setIsCollapsed] = useState(shouldBeCollapsible && !isLast);
+
+  // Auto-collapse when a new message is added elsewhere
+  useEffect(() => {
+    if (shouldBeCollapsible && !isLast) {
+      setIsCollapsed(true);
+    } else if (shouldBeCollapsible && isLast) {
+      setIsCollapsed(false);
+    }
+  }, [total, isLast, shouldBeCollapsible]);
+
+
+
+  return (
+    <div
+      className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto py-1.5 rounded-md border border-transparent ${
+        msg.role === 'user' ? 'bg-foreground/[0.05] border-border/10 shadow-sm px-4' : ''
+      }`}
+    >
+      {shouldBeCollapsible && !isLast && (
+        <div className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1 rounded-md hover:bg-accent text-muted-foreground transition-colors"
+          >
+            {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+          </button>
+        </div>
+      )}
+
+
+
+      <div className="flex flex-col gap-1">
+        {shouldBeCollapsible && isCollapsed ? (
+          <button 
+            onClick={() => setIsCollapsed(false)}
+            className="text-[10px] text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-2 py-1 font-medium uppercase tracking-widest"
+          >
+            <Bot size={12} />
+            <span>Collapsed AI Response • {msg.content?.slice(0, 40) + '...'}</span>
+          </button>
+        ) : (
+
+
+          <div className="text-foreground">
+            {msg.role === 'system' ? (
+              <SystemMessage content={msg.content} />
+            ) : msg.role === 'assistant' ? (
+              <div className="space-y-2">
+                {/* Handle Thoughts (Explicit field) */}
+                {msg.thinking && <ThoughtBlock content={msg.thinking} />}
+                {/* Handle Inline Thoughts */}
+                {[...(msg.content || '').matchAll(/<thought>([\s\S]*?)<\/thought>/g)].map((m, idx) => (
+                  <ThoughtBlock key={idx} content={m[1].trim()} />
+                ))}
+                {/* Handle Content (stripping thoughts) */}
+                {(msg.content || '').replace(/<thought>[\s\S]*?<\/thought>/g, '').trim() && (
+                  <div className="py-1">
+                    <MessageContent 
+                      content={msg.content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim()} 
+                      role="assistant" 
+                      onOpenFile={onOpenFile} 
+                    />
+                  </div>
+                )}
+                {/* Handle Tool Calls */}
+                {msg.tool_calls?.map((call, idx) => (
+                  <ToolCallItem key={idx} call={call} />
+                ))}
+              </div>
+            ) : msg.role === 'tool' ? (
+              <ToolResultMessage name={msg.name} content={msg.content} />
+            ) : (
+              <div className="flex flex-col gap-2">
+                {msg.content && (
+                  <div className="py-1">
+                    <MessageContent content={msg.content} role={msg.role} onOpenFile={onOpenFile} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Message Actions */}
+      {msg.role === 'assistant' && !isCollapsed && (
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity mt-1">
+          <button
+            onClick={() => onCopy(msg.content || '')}
+            className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            title="Copy Message"
+          >
+            <Copy size={12} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -508,20 +636,23 @@ export default function ChatTab({
           }
         }
 
+        const provider = settings.aiProvider || 'ollama';
+
+        const config = (settings.aiConfigs as any)?.[provider] || {};
+
         const agentConfig: AgentConfig = {
-          url: settings.aiConfigs?.ollama?.url || 'http://localhost:11434',
-          model: settings.aiConfigs?.ollama?.model || 'deepseek-r1:14b',
-          contextWindow: settings.aiConfigs?.ollama?.contextWindow || 8192,
+          provider: provider,
+          apiKey: config.apiKey || '',
+          baseUrl: config.url || '',
+          model: config.model || '',
+          compatibility: config.compatibility,
           autoApproveCommands: settings.aiConfigs?.autoApproveCommands || false,
         };
 
-        // 1. Initial System Message
-        if (messages.length === 0) {
-          const sysPrompt = await getSystemPrompt();
-          const sysMsg: AgentMessage = { id: genId(), role: 'system', content: sysPrompt };
-          messages.push(sysMsg);
-          setMessages([sysMsg]);
-        }
+
+
+
+
 
         // 2. Add User Message
         const userMsg: AgentMessage = { id: genId(), role: 'user', content: text };
@@ -565,13 +696,70 @@ export default function ChatTab({
 
         try {
           const promptText = text;
-          const finalHistory = await runAgentLoop(
+          const resultHistory = await runAgentLoop(
             promptText,
             history.slice(0, -1),
             agentConfig,
             workspaceFolders,
             (event: AgentStepEvent) => {
-              if (event.type === 'approval_request') {
+              if (event.type === 'text_delta') {
+                setMessages((prev) => {
+                  const last = prev[prev.length - 1];
+                  if (last && last.role === 'assistant') {
+                    const newLast = { ...last, content: last.content + event.content };
+                    return [...prev.slice(0, -1), newLast];
+                  }
+                  return [...prev, { id: genId(), role: 'assistant', content: event.content }];
+                });
+              } else if (event.type === 'thinking') {
+                setMessages((prev) => {
+                  const last = prev[prev.length - 1];
+                  if (last && last.role === 'assistant') {
+                    const newLast = { ...last, thinking: (last.thinking || '') + event.content };
+                    return [...prev.slice(0, -1), newLast];
+                  }
+                  return [...prev, { id: genId(), role: 'assistant', content: '', thinking: event.content }];
+                });
+              } else if (event.type === 'tool_call') {
+                setMessages((prev) => {
+                  const last = prev[prev.length - 1];
+                  const call = { toolName: event.toolName, args: event.toolArgs, toolCallId: event.toolCallId };
+                  if (last && last.role === 'assistant') {
+                    const newLast = { ...last, tool_calls: [...(last.tool_calls || []), call] };
+                    return [...prev.slice(0, -1), newLast];
+                  }
+                  return [...prev, { id: genId(), role: 'assistant', content: '', tool_calls: [call] }];
+                });
+              } else if (event.type === 'tool_result') {
+                setMessages((prev) => {
+                  // 1. Update the tool call result in the preceding assistant message for UI consistency
+                  const newMessages = [...prev];
+                  for (let i = newMessages.length - 1; i >= 0; i--) {
+                    if (newMessages[i].role === 'assistant' && newMessages[i].tool_calls) {
+                      const callIdx = newMessages[i].tool_calls?.findIndex(c => c.toolCallId === event.toolCallId);
+                      if (callIdx !== -1) {
+                        newMessages[i] = {
+                          ...newMessages[i],
+                          tool_calls: newMessages[i].tool_calls?.map((c, idx) => 
+                            idx === callIdx ? { ...c, result: event.content } : c
+                          )
+                        };
+                        break;
+                      }
+                    }
+                  }
+                  
+                  // 2. Append the tool result as a separate message for the history
+                  return [...newMessages, { 
+                    id: genId(), 
+                    role: 'tool', 
+                    content: event.content, 
+                    tool_call_id: event.toolCallId,
+                    name: event.toolName 
+                  }];
+                });
+              } else if (event.type === 'approval_request') {
+
                 setPendingApproval({
                   command: event.toolArgs?.command || '',
                   cwd: event.toolArgs?.cwd || '',
@@ -581,7 +769,8 @@ export default function ChatTab({
             requestApproval,
             abort.signal
           );
-          setMessages(finalHistory);
+          setMessages(resultHistory);
+
         } catch (e: any) {
           setMessages((prev) => [
             ...prev,
@@ -647,7 +836,8 @@ export default function ChatTab({
       <div className="absolute inset-0 bg-ambient-gradient z-0 opacity-40" />
       
       {/* Message Area */}
-      <div className="flex-1 overflow-y-auto px-6 pt-10 pb-32 space-y-4 mask-fade-vertical z-10" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto px-6 pt-10 pb-32 space-y-1.5 mask-fade-vertical z-10" ref={scrollRef}>
+
         {messages.length === 0 && (
           <div className="text-muted-foreground flex flex-col items-center justify-center h-full space-y-6">
             <Bot size={48} className="opacity-50" />
@@ -672,69 +862,19 @@ export default function ChatTab({
           </div>
         )}
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto py-2 rounded-md border border-transparent ${
-              msg.role === 'user' ? 'bg-foreground/[0.05] border-border/10 shadow-sm px-4' : ''
-            }`}
-          >
-            <div className="flex flex-col gap-1">
-              <div className="text-foreground">
-                {msg.role === 'system' ? (
-                  <SystemMessage content={msg.content} />
-                ) : msg.role === 'assistant' ? (
-                  <div className="space-y-2">
-                    {/* Handle Thoughts (Explicit field) */}
-                    {msg.thinking && <ThoughtBlock content={msg.thinking} />}
-                    {/* Handle Inline Thoughts */}
-                    {[...msg.content.matchAll(/<thought>([\s\S]*?)<\/thought>/g)].map((m, idx) => (
-                      <ThoughtBlock key={idx} content={m[1].trim()} />
-                    ))}
-                    {/* Handle Content (stripping thoughts) */}
-                    {msg.content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim() && (
-                      <div className="py-1">
-                        <MessageContent 
-                          content={msg.content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim()} 
-                          role="assistant" 
-                          onOpenFile={handleOpenFile} 
-                        />
-                      </div>
-                    )}
-                    {/* Handle Tool Calls */}
-                    {msg.tool_calls?.map((call, idx) => (
-                      <ToolCallItem key={idx} call={call} />
-                    ))}
-                  </div>
-                ) : msg.role === 'tool' ? (
-                  <ToolResultMessage name={msg.name} content={msg.content} />
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {msg.thinking && <ThoughtBlock content={msg.thinking} />}
-                    {msg.content && (
-                      <div className="py-1">
-                        <MessageContent content={msg.content} role={msg.role} onOpenFile={handleOpenFile} />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Message Actions */}
-            {msg.role === 'assistant' && !msg.tool_calls?.length && (
-              <div className="flex items-center justify-end gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity mt-1">
-                <button
-                  onClick={() => copyToClipboard(msg.content || '')}
-                  className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                  title="Copy Message"
-                >
-                  <Copy size={12} />
-                </button>
-              </div>
-            )}
-          </div>
+        {messages.map((msg, idx) => (
+          <ChatMessage 
+            key={msg.id} 
+            msg={msg} 
+            idx={idx} 
+            total={messages.length} 
+            onOpenFile={handleOpenFile} 
+            onCopy={copyToClipboard} 
+          />
         ))}
+
+
+
 
         {/* Inline Approval Modal */}
         {pendingApproval && (
@@ -764,13 +904,13 @@ export default function ChatTab({
           <div className="absolute -top-10 left-0 right-0 flex items-center justify-between px-2 pointer-events-none">
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/40 backdrop-blur-md border border-border/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shadow-xl pointer-events-auto">
               <Bot size={10} className="text-primary" />
-              <span>{settings.aiProvider || 'gemini'}</span>
-              {settings.aiProvider === 'ollama' && (
-                <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
-                  {settings.aiConfigs?.ollama?.model || 'deepseek-r1:14b'}
-                </span>
-              )}
+              <span>{settings.aiProvider || 'ollama'}</span>
+              <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
+                {(settings.aiConfigs as any)?.[settings.aiProvider || 'ollama']?.model || ''}
+              </span>
             </div>
+
+
 
             <div className="flex items-center gap-1.5 pointer-events-auto">
               <button

@@ -122,13 +122,17 @@ export async function initAppFolders() {
 
   // Default values
   const aiDefault = {
-    provider: 'gemini',
+    provider: 'ollama',
     configs: {
-      gemini: { apiKey: '', url: '' },
-      deepseek: { apiKey: '', url: '' },
-      ollama: { url: 'http://localhost:11434', model: 'gemma:e4b', contextWindow: 8192 }
+      ollama: { url: 'http://localhost:11434', model: '', contextWindow: 8192 },
+      deepseek: { apiKey: '', url: 'https://api.deepseek.com', model: '' },
+      gemini: { apiKey: '', url: 'https://generativelanguage.googleapis.com', model: '' },
+      openai: { apiKey: '', url: 'https://api.openai.com/v1', model: '' },
+      anthropic: { apiKey: '', url: 'https://api.anthropic.com', model: '' },
+      others: { apiKey: '', url: '', model: '', compatibility: 'openai' }
     }
   };
+
   const keybindingsDefault = DEFAULT_KEYBINDINGS;
   const skillsDir = path.join(baseDir, 'skills');
   const commandsDir = path.join(baseDir, 'commands');

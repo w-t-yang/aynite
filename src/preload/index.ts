@@ -63,6 +63,21 @@ const api = {
     const listener = (_event: any, data: any) => callback(data);
     ipcRenderer.on('api:fs-change', listener);
     return () => ipcRenderer.removeListener('api:fs-change', listener);
+  },
+  
+  // AI API
+  aiChat: (payload: any) => ipcRenderer.invoke('api:ai-chat', payload),
+  sendAiApprovalResponse: (payload: { id: string, approved: boolean }) => ipcRenderer.send('api:ai-approval-response', payload),
+  onAiChatDelta: (requestId: string, callback: (part: any) => void) => {
+    const channel = `api:ai-chat-delta:${requestId}`;
+    const listener = (_: any, part: any) => callback(part);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
+  },
+  onAiApprovalRequest: (callback: (data: { id: string, command: string, cwd: string }) => void) => {
+    const listener = (_: any, data: any) => callback(data);
+    ipcRenderer.on('api:ai-approval-request', listener);
+    return () => ipcRenderer.removeListener('api:ai-approval-request', listener);
   }
 };
 

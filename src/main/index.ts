@@ -7,6 +7,8 @@ import path from 'path';
 import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
 import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, restoreDefaultPrompts, getMergedSystemPrompt, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, saveChatLog, loadChatLog } from './config';
+import { setupAiIpc } from './ai/ipc';
+
 
 const execAsync = promisify(exec);
 
@@ -88,6 +90,10 @@ app.whenReady().then(async () => {
 
   await initAppFolders();
   createWindow();
+  if (mainWindow) {
+    setupAiIpc(mainWindow);
+  }
+
 
   // Initial watcher setup
   const foldersRes = await getWorkspaceFolders();

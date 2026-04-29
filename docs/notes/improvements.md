@@ -15,3 +15,4 @@
 ## Functions
 - [x] Refactor the key binding module
 - [] window.__aynite.getItems().files, which includes all files even node_modules, etc.
+- [] when running pwd, it shows the working folder is in ~/.aynite, rethink about this

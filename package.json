@@ -10,6 +10,9 @@
     "preview": "electron-vite preview"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.72",
+    "@ai-sdk/google": "^3.0.65",
+    "@ai-sdk/openai": "^3.0.54",
     "@google/genai": "^1.29.0",
     "@tiptap/extension-mention": "^3.22.4",
     "@tiptap/extension-placeholder": "^3.22.4",
@@ -17,6 +20,7 @@
     "@tiptap/react": "^3.22.4",
     "@tiptap/starter-kit": "^3.22.4",
     "@types/prismjs": "^1.26.6",
+    "ai": "^6.0.169",
     "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
@@ -32,7 +36,8 @@
     "react-simple-code-editor": "^0.14.1",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
-    "tippy.js": "^6.3.7"
+    "tippy.js": "^6.3.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",

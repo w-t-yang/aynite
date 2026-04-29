@@ -1,28 +1,11 @@
-// ─── Agent Loop for Ollama Tool Calling ──────────────────────────────
-//
-// Implements an agentic loop that sends messages to Ollama's /api/chat
-// with tool definitions. When the model returns tool_calls, we execute
-// them locally and send results back until the model produces a final
-// text response.
-
 export interface AgentMessage {
   id: string;
   role: 'user' | 'assistant' | 'tool' | 'system';
   content: string;
-  // For tool call requests (assistant role)
   tool_calls?: any[];
-  // For tool result messages (tool role)
   tool_call_id?: string;
   name?: string;
   thinking?: string;
-}
-
-export interface ToolCall {
-  id: string;
-  function: {
-    name: string;
-    arguments: Record<string, any>;
-  };
 }
 
 export interface AgentStepEvent {
@@ -31,255 +14,15 @@ export interface AgentStepEvent {
   toolName?: string;
   toolArgs?: Record<string, any>;
   toolCallId?: string;
-  // For approval requests
   approvalId?: string;
 }
 
-// ─── Tool Definitions (Ollama format) ────────────────────────────────
-
-const AGENT_TOOLS = [
-  {
-    type: 'function' as const,
-    function: {
-      name: 'read_file',
-      description: 'Read the contents of a file. Use this to inspect source code. Do NOT use this for skills, as their content is already provided in your system context. Provide the full absolute path.',
-      parameters: {
-        type: 'object',
-        properties: {
-          path: { type: 'string', description: 'Absolute path to the file' },
-        },
-        required: ['path'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'write_file',
-      description: 'Write content to a file. Provide the full absolute path. When creating scripts, ALWAYS include a main block and imports.',
-      parameters: {
-        type: 'object',
-        properties: {
-          path: { type: 'string', description: 'Absolute path to the file' },
-          content: { type: 'string', description: 'Full content to write' },
-        },
-        required: ['path', 'content'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'list_files',
-      description: 'List files in a directory to understand the project structure. Provide the full absolute path.',
-      parameters: {
-        type: 'object',
-        properties: {
-          path: { type: 'string', description: 'Absolute path to the directory' },
-        },
-        required: ['path'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'run_command',
-      description: 'Execute a shell command. Provide the command and optionally the directory (cwd) to run in.',
-      parameters: {
-        type: 'object',
-        properties: {
-          command: { type: 'string', description: 'The shell command' },
-          cwd: { type: 'string', description: 'Directory to run in' },
-        },
-        required: ['command'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'search_codebase',
-      description: 'Search for text patterns using grep. Provide the query and the absolute path to search.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Search term' },
-          path: { type: 'string', description: 'Absolute path to search' },
-          isRegex: { type: 'boolean', description: 'True if regex' }
-        },
-        required: ['query', 'path'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'spawn_subagent',
-      description: 'Delegate a complex task to another instance. Return its summary here.',
-      parameters: {
-        type: 'object',
-        properties: {
-          prompt: { type: 'string', description: 'Instructions for the subagent' },
-        },
-        required: ['prompt'],
-      },
-    },
-  },
-];
-
-// ─── Path Security ───────────────────────────────────────────────────
-
-function isPathWithinWorkspace(filePath: string, workspaceFolders: string[]): boolean {
-  // Normalize path separators
-  const normalized = filePath.replace(/\\/g, '/');
-  return workspaceFolders.some((folder) => {
-    const normalizedFolder = folder.replace(/\\/g, '/');
-    return normalized.startsWith(normalizedFolder + '/') || normalized === normalizedFolder;
-  });
-}
-
-// ─── Tool Executors ──────────────────────────────────────────────────
-
-async function executeReadFile(args: { path: string }, workspaceFolders: string[]): Promise<string> {
-  if (!isPathWithinWorkspace(args.path, workspaceFolders)) {
-    return `Error: Access denied. Path "${args.path}" is not within the workspace.`;
-  }
-  try {
-    // @ts-ignore
-    const res = await window.api.readFile(args.path);
-    if (res.error) return `Error reading file: ${res.error}`;
-    return res.data;
-  } catch (e: any) {
-    return `Error: ${e.message}`;
-  }
-}
-
-async function executeWriteFile(args: { path: string; content: string }, workspaceFolders: string[]): Promise<string> {
-  if (!isPathWithinWorkspace(args.path, workspaceFolders)) {
-    return `Error: Access denied. Path "${args.path}" is not within the workspace.`;
-  }
-  try {
-    // @ts-ignore
-    await window.api.saveFile(args.path, args.content);
-    return `Successfully wrote ${args.content.length} characters to ${args.path}`;
-  } catch (e: any) {
-    return `Error: ${e.message}`;
-  }
-}
-
-async function executeListFiles(args: { path: string }, workspaceFolders: string[]): Promise<string> {
-  if (!isPathWithinWorkspace(args.path, workspaceFolders)) {
-    return `Error: Access denied. Path "${args.path}" is not within the workspace.`;
-  }
-  try {
-    // @ts-ignore
-    const res = await window.api.getFiles(args.path);
-    if (res.error) return `Error listing files: ${res.error}`;
-    const entries = res.data.map((f: any) => `${f.isDirectory ? '📁' : '📄'} ${f.name}`);
-    return entries.join('\n') || '(empty directory)';
-  } catch (e: any) {
-    return `Error: ${e.message}`;
-  }
-}
-
-async function executeRunCommand(
-  args: { command: string; cwd?: string },
-  config: AgentConfig,
-  workspaceFolders: string[],
-  requestApproval: (command: string, cwd: string) => Promise<boolean>
-): Promise<string> {
-  const cwd = args.cwd || workspaceFolders[0] || '.';
-
-  if (!config.autoApproveCommands) {
-    const approved = await requestApproval(args.command, cwd);
-    if (!approved) {
-      return 'Command rejected by user.';
-    }
-  }
-
-  try {
-    // @ts-ignore
-    const res = await window.api.runCommand(args.command, cwd);
-    const output = [res.data?.stdout, res.data?.stderr, res.stdout, res.stderr].filter(Boolean).join('\n').trim();
-
-    if (res.error) {
-      // If we have output even on failure, just return that (e.g., validation diffs)
-      if (output) return output;
-      return `Command failed: ${res.error}`;
-    }
-    return output || '(no output)';
-  } catch (e: any) {
-    return `Error: ${e.message}`;
-  }
-}
-
-async function executeSearchCodebase(args: { query: string; path: string; isRegex?: boolean }, workspaceFolders: string[]): Promise<string> {
-  if (!isPathWithinWorkspace(args.path, workspaceFolders)) {
-    return `Error: Access denied. Path "${args.path}" is not within the workspace.`;
-  }
-  try {
-    const escapedQuery = args.query.replace(/'/g, "'\\''");
-    const regexFlag = args.isRegex ? '-E' : '-F';
-    // Use standard grep
-    const cmd = `grep ${regexFlag} -rn '${escapedQuery}' . | head -n 50`;
-
-    // @ts-ignore
-    const res = await window.api.runCommand(cmd, args.path);
-    if (res.error) {
-      if (res.error.includes('exit code: 1')) return 'No matches found.';
-      return `Error searching: ${res.error}`;
-    }
-    const output = [res.data?.stdout, res.data?.stderr].filter(Boolean).join('\n');
-    return output.trim() || 'No matches found.';
-  } catch (e: any) {
-    return `Error: ${e.message}`;
-  }
-}
-
-export async function runSubagent(
-  args: { prompt: string },
-  config: AgentConfig,
-  workspaceFolders: string[],
-  onEvent: (event: AgentStepEvent) => void,
-  requestApproval: (command: string, cwd: string) => Promise<boolean>
-): Promise<string> {
-  try {
-    const finalMessages = await runAgentLoop(
-      `[SUBAGENT DELEGATION]: ${args.prompt}`,
-      [],
-      config,
-      workspaceFolders,
-      // Suppress subagent's UI updates except approvals to avoid chat UI state collision
-      (event: AgentStepEvent) => {
-        if (event.type === 'approval_request' || event.type === 'error') {
-          onEvent(event);
-        }
-      },
-      requestApproval,
-      undefined
-    );
-    const lastAsst = finalMessages.slice().reverse().find(m => m.role === 'assistant' && m.content);
-    return lastAsst ? lastAsst.content : "Subagent completed task but returned no textual output.";
-  } catch (e: any) {
-    return `Subagent crashed: ${e.message}`;
-  }
-}
-
-// ─── Agent Loop ──────────────────────────────────────────────────────
-
-// SYSTEM_PROMPT moved to default_configs/prompts.ts and managed via settings
-
-export async function getSystemPrompt(): Promise<string> {
-  // @ts-ignore
-  const customRes = await window.api.getMergedSystemPrompt();
-  return (customRes && customRes.data) ? customRes.data : "";
-}
-
 export interface AgentConfig {
-  url: string;
+  provider: string;
+  apiKey: string;
+  baseUrl: string;
   model: string;
-  contextWindow: number;
+  compatibility?: 'openai' | 'anthropic' | 'google';
   autoApproveCommands?: boolean;
 }
 
@@ -295,207 +38,182 @@ export async function runAgentLoop(
   abortSignal?: AbortSignal
 ): Promise<AgentMessage[]> {
 
-  const messages: AgentMessage[] = [];
+  const fullHistory: AgentMessage[] = [...history];
 
-  const hasSystem = history.some(m => m.role === 'system');
+  const hasSystem = fullHistory.some(m => m.role === 'system');
   if (!hasSystem) {
-    const sysPrompt = await getSystemPrompt();
-    messages.push({
+    console.log("[Agent] No system prompt found in history, fetching merged prompt...");
+    // @ts-ignore
+    const sysPromptRes = await window.api.getMergedSystemPrompt();
+    const sysPrompt = (sysPromptRes && sysPromptRes.data) ? sysPromptRes.data : "";
+    console.log("[Agent] Injected system prompt length:", sysPrompt.length);
+    const sysMsg: AgentMessage = {
       id: genId(),
       role: 'system',
       content: sysPrompt
-    });
+    };
+    fullHistory.unshift(sysMsg);
   }
 
-  messages.push(...history);
-  messages.push({ id: genId(), role: 'user', content: userMessage });
-
-  const MAX_ITERATIONS = 30;
-  let iterations = 0;
-
-  while (iterations < MAX_ITERATIONS) {
-    iterations++;
-
-    if (abortSignal?.aborted) {
-      onEvent({ type: 'error', content: 'Request aborted.' });
-      break;
-    }
-
-    // Call Ollama — only include fields the API accepts
-    const ollamaMessages = messages.map((m) => {
-      const msg: any = {
-        role: m.role,
-        content: m.content,
+  // Map fullHistory to CoreMessage format
+  const apiMessages = fullHistory.map(m => {
+    if (m.role === 'tool' && !m.tool_call_id) {
+      return {
+        role: 'user',
+        content: `[Tool Output: ${m.name || 'unknown'}]\n${m.content}`
       };
-      if (m.role === 'assistant' && m.tool_calls) {
-        msg.tool_calls = m.tool_calls;
+    }
+    return {
+      role: m.role,
+      content: m.content,
+      ...(m.tool_call_id ? { toolCallId: m.tool_call_id } : {}),
+      ...(m.tool_calls ? { toolCalls: m.tool_calls.map(c => ({
+        toolCallId: c.toolCallId,
+        toolName: c.toolName,
+        args: c.args
+      })) } : {})
+    };
+  });
+
+  const userMsg: AgentMessage = { id: genId(), role: 'user', content: userMessage };
+  apiMessages.push({ role: 'user', content: userMessage });
+
+  console.log("[Agent] Sending messages to backend:", apiMessages.length);
+
+  // @ts-ignore
+  const { requestId, error } = await window.api.aiChat({
+    messages: apiMessages,
+    config: {
+      provider: config.provider,
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl,
+      model: config.model,
+      autoApproveCommands: config.autoApproveCommands,
+      compatibility: config.compatibility
+    },
+    workspaceFolders
+  });
+
+  if (error) {
+    onEvent({ type: 'error', content: `AI Error: ${error}` });
+    return [...fullHistory, userMsg];
+  }
+
+  return new Promise((resolve) => {
+    const loopMessages: AgentMessage[] = [];
+    let currentAssistantMsg: AgentMessage | null = null;
+    const currentToolCalls: any[] = [];
+
+    const finalizeAssistantMsg = () => {
+      if (currentAssistantMsg) {
+        currentAssistantMsg.tool_calls = [...currentToolCalls];
+        loopMessages.push(currentAssistantMsg);
+        currentAssistantMsg = null;
+        currentToolCalls.length = 0;
       }
-      if (m.role === 'tool') {
-        msg.tool_call_id = m.tool_call_id;
-        msg.name = m.name;
+    };
+
+    const ensureAssistantMsg = () => {
+      if (!currentAssistantMsg) {
+        currentAssistantMsg = { 
+          id: genId(), 
+          role: 'assistant', 
+          content: '', 
+          thinking: '',
+          tool_calls: [] 
+        };
       }
-      return msg;
+    };
+
+    // Listen for approval requests
+    // @ts-ignore
+    const removeApprovalListener = window.api.onAiApprovalRequest(async (data: { id: string, command: string, cwd: string }) => {
+      onEvent({
+        type: 'approval_request',
+        content: `Run command: ${data.command}`,
+        toolName: 'run_command',
+        toolArgs: { command: data.command, cwd: data.cwd },
+        approvalId: data.id,
+      });
+      const approved = await requestApproval(data.command, data.cwd);
+      // @ts-ignore
+      window.api.sendAiApprovalResponse({ id: data.id, approved });
     });
 
-    let response: Response;
-    try {
-      if (import.meta.env.DEV) {
-        console.log('Sending request to Ollama:', {
-          model: config.model,
-          messages: ollamaMessages,
-          tools: AGENT_TOOLS
-        });
-      }
-      response = await fetch(`${config.url}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: config.model,
-          messages: ollamaMessages,
-          tools: AGENT_TOOLS,
-          stream: false, // Non-streaming for tool calls to simplify the loop
-          options: { num_ctx: config.contextWindow },
-        }),
-        signal: abortSignal,
-      });
-    } catch (e: any) {
-      if (e.name === 'AbortError') {
+    // @ts-ignore
+    const removeDeltaListener = window.api.onAiChatDelta(requestId, (part: any) => {
+      if (abortSignal?.aborted) {
+        removeDeltaListener();
+        removeApprovalListener();
         onEvent({ type: 'error', content: 'Request aborted.' });
-        break;
-      }
-      onEvent({ type: 'error', content: `Network error: ${e.message}` });
-      break;
-    }
-
-    if (!response.ok) {
-      let errorDetail = response.statusText;
-      try {
-        const errorBody = await response.text();
-        errorDetail = errorBody || errorDetail;
-      } catch { }
-      onEvent({ type: 'error', content: `Ollama API error (${response.status}): ${errorDetail}` });
-      break;
-    }
-
-    const data = await response.json();
-    const assistantMessage = data.message;
-
-    if (!assistantMessage) {
-      onEvent({ type: 'error', content: 'No response from model.' });
-      break;
-    }
-
-    // Check for tool calls
-    if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
-      // Add the assistant message with tool calls to history
-      messages.push({
-        id: genId(),
-        role: 'assistant',
-        content: assistantMessage.content || '',
-        tool_calls: assistantMessage.tool_calls,
-        thinking: assistantMessage.thinking || '',
-      });
-
-      // If assistant provided text before tool calls, emit it
-      if (assistantMessage.content) {
-        onEvent({ type: 'text_delta', content: assistantMessage.content });
+        finalizeAssistantMsg();
+        resolve([...fullHistory, userMsg, ...loopMessages]);
+        return;
       }
 
-      // Execute each tool call
-      for (const toolCall of assistantMessage.tool_calls) {
-        const fnName = toolCall.function?.name;
-        const fnArgs = toolCall.function?.arguments || {};
-        // Use the ID provided by the model if it exists, otherwise generate one
-        const callId = toolCall.id || `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      switch (part.type) {
+        case 'text-delta':
+          ensureAssistantMsg();
+          currentAssistantMsg!.content += (part.text || part.textDelta || part.delta || '');
+          onEvent({ type: 'text_delta', content: part.text || part.textDelta || part.delta || '' });
+          break;
 
-        onEvent({
-          type: 'tool_call',
-          content: `Calling ${fnName}`,
-          toolName: fnName,
-          toolArgs: fnArgs,
-          toolCallId: callId,
-        });
+        case 'reasoning-delta':
+          ensureAssistantMsg();
+          currentAssistantMsg!.thinking += (part.reasoningDelta || part.delta || '');
+          onEvent({ type: 'thinking', content: part.reasoningDelta || part.delta || '' });
+          break;
 
-        let result: string;
+        case 'tool-call':
+          ensureAssistantMsg();
+          const call = {
+            toolName: part.toolName,
+            args: part.input || part.args,
+            toolCallId: part.toolCallId,
+          };
+          currentToolCalls.push(call);
+          onEvent({
+            type: 'tool_call',
+            content: `Calling ${part.toolName}`,
+            toolName: part.toolName,
+            toolArgs: call.args,
+            toolCallId: part.toolCallId,
+          });
+          break;
 
-        switch (fnName) {
-          case 'read_file':
-            result = await executeReadFile(fnArgs, workspaceFolders);
-            break;
-          case 'write_file':
-            result = await executeWriteFile(fnArgs, workspaceFolders);
-            break;
-          case 'list_files':
-            result = await executeListFiles(fnArgs, workspaceFolders);
-            break;
-          case 'run_command':
-            onEvent({
-              type: 'approval_request',
-              content: `Run command: ${fnArgs.command}`,
-              toolName: 'run_command',
-              toolArgs: fnArgs,
-              approvalId: callId,
-            });
-            result = await executeRunCommand(fnArgs, config, workspaceFolders, requestApproval);
-            break;
-          case 'search_codebase':
-            result = await executeSearchCodebase(fnArgs as any, workspaceFolders);
-            break;
-          case 'spawn_subagent':
-            onEvent({
-              type: 'tool_call',
-              content: `Spawning background subagent...`,
-              toolName: 'spawn_subagent',
-            });
-            result = await runSubagent(fnArgs as any, config, workspaceFolders, onEvent, requestApproval);
-            break;
-          default:
-            result = `Unknown tool: ${fnName}`;
-        }
+        case 'tool-result':
+          // Tool results are separate messages in the history
+          const resultMsg: AgentMessage = {
+            id: genId(),
+            role: 'tool',
+            content: typeof part.output === 'string' ? part.output : JSON.stringify(part.output || part.result || ''),
+            tool_call_id: part.toolCallId,
+            name: part.toolName
+          };
+          
+          // Before adding a tool result, we should finalize the preceding assistant message
+          finalizeAssistantMsg();
+          loopMessages.push(resultMsg);
+          
+          onEvent({
+            type: 'tool_result',
+            content: resultMsg.content,
+            toolName: part.toolName,
+            toolCallId: part.toolCallId,
+          });
+          break;
 
-        onEvent({
-          type: 'tool_result',
-          content: result.length > 500 ? result.slice(0, 500) + '…' : result,
-          toolName: fnName,
-          toolCallId: callId,
-        });
+        case 'step-finish':
+          finalizeAssistantMsg();
+          break;
 
-        // Add tool result to message history
-        messages.push({
-          id: genId(),
-          role: 'tool',
-          content: result,
-          tool_call_id: callId,
-          name: fnName,
-        });
+        case 'finish':
+          removeDeltaListener();
+          removeApprovalListener();
+          finalizeAssistantMsg();
+          resolve([...fullHistory, userMsg, ...loopMessages]);
+          break;
       }
-
-      // Continue the loop — model will process tool results
-      continue;
-    }
-
-    // No tool calls — this is the final text response
-    const finalText = assistantMessage.content || '';
-
-    // Auto-fix for local models that silently halt after tool results
-    if (!finalText.trim() && messages.length > 0 && (messages[messages.length - 1].role === 'tool' || messages[messages.length - 1].role === 'assistant')) {
-      if (import.meta.env.DEV) {
-        console.log('Model returned empty response or halted. Nudging...');
-      }
-      messages.push({ id: genId(), role: 'user', content: 'Please continue and complete the remaining steps of your plan.' });
-      continue;
-    }
-
-    messages.push({ id: genId(), role: 'assistant', content: finalText });
-
-    // Stream-like emission of final text
-    onEvent({ type: 'text_done', content: finalText });
-    break;
-  }
-
-  if (iterations >= MAX_ITERATIONS) {
-    onEvent({ type: 'error', content: 'Agent exceeded maximum iterations.' });
-  }
-
-  return messages;
+    });
+  });
 }
