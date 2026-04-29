@@ -215,6 +215,12 @@ iframe {
   border: 1px solid color-mix(in srgb, var(--info), transparent 80%);
 }
 
+.mention-dir {
+  background: color-mix(in srgb, var(--success), transparent 92%);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success), transparent 80%);
+}
+
 .mention-skill {
   background: color-mix(in srgb, var(--primary), transparent 92%);
   color: var(--primary);

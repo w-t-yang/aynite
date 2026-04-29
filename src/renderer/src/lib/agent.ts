@@ -14,6 +14,7 @@ export interface AgentMessage {
   // For tool result messages (tool role)
   tool_call_id?: string;
   name?: string;
+  thinking?: string;
 }
 
 export interface ToolCall {
@@ -201,7 +202,7 @@ async function executeRunCommand(
     // @ts-ignore
     const res = await window.api.runCommand(args.command, cwd);
     const output = [res.data?.stdout, res.data?.stderr, res.stdout, res.stderr].filter(Boolean).join('\n').trim();
-    
+
     if (res.error) {
       // If we have output even on failure, just return that (e.g., validation diffs)
       if (output) return output;
@@ -222,7 +223,7 @@ async function executeSearchCodebase(args: { query: string; path: string; isRege
     const regexFlag = args.isRegex ? '-E' : '-F';
     // Use standard grep
     const cmd = `grep ${regexFlag} -rn '${escapedQuery}' . | head -n 50`;
-    
+
     // @ts-ignore
     const res = await window.api.runCommand(cmd, args.path);
     if (res.error) {
@@ -236,13 +237,12 @@ async function executeSearchCodebase(args: { query: string; path: string; isRege
   }
 }
 
-async function executeSpawnSubagent(
+export async function runSubagent(
   args: { prompt: string },
   config: AgentConfig,
   workspaceFolders: string[],
   onEvent: (event: AgentStepEvent) => void,
-  requestApproval: (command: string, cwd: string) => Promise<boolean>,
-  skillContext?: string
+  requestApproval: (command: string, cwd: string) => Promise<boolean>
 ): Promise<string> {
   try {
     const finalMessages = await runAgentLoop(
@@ -257,8 +257,7 @@ async function executeSpawnSubagent(
         }
       },
       requestApproval,
-      undefined,
-      undefined // DO NOT pass skillContext down to subagents to prevent infinite recursion
+      undefined
     );
     const lastAsst = finalMessages.slice().reverse().find(m => m.role === 'assistant' && m.content);
     return lastAsst ? lastAsst.content : "Subagent completed task but returned no textual output.";
@@ -269,24 +268,12 @@ async function executeSpawnSubagent(
 
 // ─── Agent Loop ──────────────────────────────────────────────────────
 
-export const SYSTEM_PROMPT = `You are Aynite, an industry-grade AI coding assistant. You are rigorous, precise, and systematic.
+// SYSTEM_PROMPT moved to default_configs/prompts.ts and managed via settings
 
-## Operation Rules
-1. **Chain of Thought**: Before ANY tool call or major conclusion, you MUST output a <thought> block explaining your reasoning, the evidence you've gathered, and your next step.
-2. **Industrial Standards**: 
-   - When writing Python scripts, you MUST include a \`if __name__ == "__main__":\` block.
-   - When writing SKILL.md files, ensure they start with clear \`---\` YAML frontmatter.
-3. **Verification**: After writing a file or running a command, verify the result before telling the user you are finished.
-4. **conciseness**: Be direct. Use absolute paths. Format code properly.
-
-## Continuous Execution
-NEVER stop generating without an explanation or a tool call. If tools return results, proceed to analyze them immediately.`;
-
-export function getSystemPrompt(workspaceFolders: string[], config: AgentConfig, skillContext?: string): string {
-  return SYSTEM_PROMPT + 
-    `\n\n### WORKSPACE CONTEXT\nYou are working in the following local directories. ALWAYS use these as base paths for your operations:\n${workspaceFolders.map(f => `- ${f}`).join('\n')}` +
-    (config.model.toLowerCase().includes('gemma') ? "\n\n### COMPACT MODEL ADVISORY\nYou are running in a compact model mode. Be extra careful with syntax. Double-check your tool arguments and ensure all scripts are executable and self-contained." : "") +
-    (skillContext ? `\n\n### ACTIVE SKILLS\nYou have access to the following skills. Their instructions are provided below in XML tags. Follow them strictly. Do not attempt to read the skill files directly; use the provided context:\n\n${skillContext}` : "") ;
+export async function getSystemPrompt(): Promise<string> {
+  // @ts-ignore
+  const customRes = await window.api.getMergedSystemPrompt();
+  return (customRes && customRes.data) ? customRes.data : "";
 }
 
 export interface AgentConfig {
@@ -305,18 +292,18 @@ export async function runAgentLoop(
   workspaceFolders: string[],
   onEvent: (event: AgentStepEvent) => void,
   requestApproval: (command: string, cwd: string) => Promise<boolean>,
-  abortSignal?: AbortSignal,
-  skillContext?: string
+  abortSignal?: AbortSignal
 ): Promise<AgentMessage[]> {
 
   const messages: AgentMessage[] = [];
-  
+
   const hasSystem = history.some(m => m.role === 'system');
   if (!hasSystem) {
-    messages.push({ 
+    const sysPrompt = await getSystemPrompt();
+    messages.push({
       id: genId(),
-      role: 'system', 
-      content: getSystemPrompt(workspaceFolders, config, skillContext)
+      role: 'system',
+      content: sysPrompt
     });
   }
 
@@ -385,7 +372,7 @@ export async function runAgentLoop(
       try {
         const errorBody = await response.text();
         errorDetail = errorBody || errorDetail;
-      } catch {}
+      } catch { }
       onEvent({ type: 'error', content: `Ollama API error (${response.status}): ${errorDetail}` });
       break;
     }
@@ -406,6 +393,7 @@ export async function runAgentLoop(
         role: 'assistant',
         content: assistantMessage.content || '',
         tool_calls: assistantMessage.tool_calls,
+        thinking: assistantMessage.thinking || '',
       });
 
       // If assistant provided text before tool calls, emit it
@@ -459,7 +447,7 @@ export async function runAgentLoop(
               content: `Spawning background subagent...`,
               toolName: 'spawn_subagent',
             });
-            result = await executeSpawnSubagent(fnArgs as any, config, workspaceFolders, onEvent, requestApproval, skillContext);
+            result = await runSubagent(fnArgs as any, config, workspaceFolders, onEvent, requestApproval);
             break;
           default:
             result = `Unknown tool: ${fnName}`;
@@ -488,7 +476,7 @@ export async function runAgentLoop(
 
     // No tool calls — this is the final text response
     const finalText = assistantMessage.content || '';
-    
+
     // Auto-fix for local models that silently halt after tool results
     if (!finalText.trim() && messages.length > 0 && (messages[messages.length - 1].role === 'tool' || messages[messages.length - 1].role === 'assistant')) {
       if (import.meta.env.DEV) {

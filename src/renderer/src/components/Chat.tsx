@@ -32,7 +32,7 @@ function ToolCallItem({ call }: { call: any }) {
   const fnArgs = typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments;
 
   return (
-    <div className="my-1 border border-border/40 rounded bg-muted/5 overflow-hidden">
+    <div className="system-message-block border border-border/10 bg-foreground/[0.02] rounded-lg overflow-hidden mb-1">
       <button 
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between px-2 py-1 text-[10px] hover:bg-accent/50 transition-colors"
@@ -77,6 +77,29 @@ function ThoughtBlock({ content }: { content: string }) {
   );
 }
 
+
+function ToolResultMessage({ name, content }: { name?: string; content: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="my-1 border-l-2 border-primary/20 bg-muted/5 rounded-r px-3 py-1.5 overflow-hidden">
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between group"
+      >
+        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
+          <Check size={12} className="text-green-500/80" />
+          <span>Result: {name}</span>
+        </div>
+        <ChevronRight size={10} className={`text-muted-foreground/40 group-hover:text-primary transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
+      </button>
+      {expanded && (
+        <pre className="mt-2 text-[10px] font-mono text-muted-foreground/60 whitespace-pre-wrap max-h-96 overflow-auto border-t border-border/10 pt-2">
+          {content}
+        </pre>
+      )}
+    </div>
+  );
+}
 
 // ─── Command Approval Modal ─────────────────────────────────────────
 
@@ -211,8 +234,8 @@ function MessageContent({ content = '', role, onOpenFile }: { content?: string; 
   let lastIndex = 0;
   
   // Regex to match our serialized mention formats
-  // @file[label](id), /skill[label](id), >cmd[label](id)
-  const mentionRegex = /(@file|\/skill|>cmd)\[(.*?)\]\((.*?)\)/g;
+  // @file[label](id), @dir[label](id), /skill[label](id), >cmd[label](id)
+  const mentionRegex = /(@file|@dir|\/skill|>cmd)\[(.*?)\]\((.*?)\)/g;
   let match;
 
   while ((match = mentionRegex.exec(content)) !== null) {
@@ -228,6 +251,7 @@ function MessageContent({ content = '', role, onOpenFile }: { content?: string; 
     // Map type to class
     let className = 'mention';
     if (type === '@file') className += ' mention-file';
+    else if (type === '@dir') className += ' mention-dir';
     else if (type === '/skill') className += ' mention-skill';
     else if (type === '>cmd') className += ' mention-command';
 
@@ -256,7 +280,7 @@ function SystemMessage({ content }: { content: string }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="my-2 border border-border/40 rounded-md bg-muted/5 overflow-hidden">
+    <div className="mb-1 border border-border/20 rounded-md bg-muted/5 overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold tracking-tight uppercase text-muted-foreground/50 hover:text-primary/70 transition-colors"
@@ -405,31 +429,83 @@ export default function ChatTab({
       async (text: string) => {
         if (!text.trim() || loading) return;
 
+        const commandMentionRegex = />cmd\[(.*?)\]\((.*?)\)/g;
         const skillMentionRegex = /\/skill\[(.*?)\]\((.*?)\)/g;
-        const skillPaths = new Set<string>();
-        const currentMatches = [...text.matchAll(skillMentionRegex)];
-        currentMatches.forEach((m) => skillPaths.add(m[2]));
-        messages.forEach((msg) => {
-          const matches = [...msg.content.matchAll(skillMentionRegex)];
-          matches.forEach((m) => skillPaths.add(m[2]));
-        });
+        const fileMentionRegex = /@(?:file|dir)\[(.*?)\]\((.*?)\)/g;
 
-        let skillContext = '';
-        if (skillPaths.size > 0) {
-          const skillsData = await Promise.all(
-            [...skillPaths].map(async (sp) => {
-              try {
-                // @ts-ignore
-                const res = await window.api.readFile(`${sp}/SKILL.md`);
-                if (!res.data) return '';
-                const skillName = sp.split(/[/\\]/).filter(Boolean).pop() || sp;
-                return `<skill name="${skillName}">\n${res.data}\n</skill>`;
-              } catch {
-                return '';
-              }
-            })
-          );
-          skillContext = skillsData.filter(Boolean).join('\n\n');
+        // Check if it's a Command-Only Mode (starts with a command)
+        const trimmedText = text.trim();
+        const firstCmdMatch = trimmedText.match(/^>cmd\[(.*?)\]\((.*?)\)/);
+        
+        if (firstCmdMatch) {
+          const [fullMatch, name, path] = firstCmdMatch;
+          const remainingText = trimmedText.slice(fullMatch.length).trim();
+          
+          // Resolve all mentions in the parameters to absolute paths
+          // Format: @file[name](path) -> path, /skill[name](path) -> path
+          const resolvedParamsText = remainingText
+            .replace(fileMentionRegex, '$2')
+            .replace(skillMentionRegex, '$2')
+            .replace(commandMentionRegex, '$2');
+          
+          // Split by spaces but preserve quoted strings if needed? 
+          // For now, simple split is likely enough for basic usage.
+          const params = resolvedParamsText.split(/\s+/).filter(Boolean);
+
+          setLoading(true);
+          try {
+            // @ts-ignore
+            const res = await window.api.runDirectCommand({ 
+              commandPath: path, 
+              params: params, 
+              currentFile: activeTabPath 
+            });
+            
+            const content = [res.data?.stdout, res.data?.stderr].filter(Boolean).join('\n').trim();
+            const userMsg: AgentMessage = { id: genId(), role: 'user', content: text };
+            const cmdMsg: AgentMessage = { 
+              id: genId(), 
+              role: 'tool', 
+              name: name, 
+              content: content || (res.error ? `Error: ${res.error}` : '(No output)')
+            };
+            
+            setMessages([...messages, userMsg, cmdMsg]);
+          } catch (e: any) {
+            setMessages([...messages, { id: genId(), role: 'user', content: text }, { id: genId(), role: 'assistant', content: `❌ **Execution Error**: ${e.message}` }]);
+          } finally {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Normal Mode (AI involved)
+        const currentMatches = [...text.matchAll(skillMentionRegex)];
+        const commandMatches = [...text.matchAll(commandMentionRegex)];
+        const commandResults: { name: string; stdout: string; stderr: string; error?: string }[] = [];
+
+
+        if (commandMatches.length > 0) {
+          setLoading(true);
+          for (const match of commandMatches) {
+            const [full, name, path] = match;
+            try {
+              // @ts-ignore
+              const res = await window.api.runDirectCommand({ 
+                commandPath: path, 
+                params: [], 
+                currentFile: activeTabPath 
+              });
+              commandResults.push({ 
+                name, 
+                stdout: res.data?.stdout || '', 
+                stderr: res.data?.stderr || '',
+                error: res.error 
+              });
+            } catch (e: any) {
+              commandResults.push({ name, stdout: '', stderr: e.message, error: e.message });
+            }
+          }
         }
 
         const agentConfig: AgentConfig = {
@@ -441,7 +517,7 @@ export default function ChatTab({
 
         // 1. Initial System Message
         if (messages.length === 0) {
-          const sysPrompt = getSystemPrompt(workspaceFolders, agentConfig, skillContext);
+          const sysPrompt = await getSystemPrompt();
           const sysMsg: AgentMessage = { id: genId(), role: 'system', content: sysPrompt };
           messages.push(sysMsg);
           setMessages([sysMsg]);
@@ -449,22 +525,48 @@ export default function ChatTab({
 
         // 2. Add User Message
         const userMsg: AgentMessage = { id: genId(), role: 'user', content: text };
-        const updatedMessages = [...messages, userMsg];
+        let updatedMessages = [...messages, userMsg];
+
+        // 3. Add Command Result Messages (if any)
+        if (commandResults.length > 0) {
+          for (const res of commandResults) {
+            const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim();
+            const cmdMsg: AgentMessage = { 
+              id: genId(), 
+              role: 'tool', 
+              name: res.name, 
+              content: content || (res.error ? `Error: ${res.error}` : '(No output)')
+            };
+            updatedMessages.push(cmdMsg);
+          }
+        }
+        
         setMessages(updatedMessages);
         setLoading(true);
 
         const history: AgentMessage[] = updatedMessages.map((m) => ({
           ...m,
-          content: m.content.replace(skillMentionRegex, '[Skill: $1]'),
+          content: m.content,
         }));
+
+        const cleanText = text
+          .replace(skillMentionRegex, '')
+          .replace(commandMentionRegex, '')
+          .trim();
+
+        // If message only contained commands and no actual text/skills, don't trigger AI
+        if (!cleanText && commandMatches.length > 0 && currentMatches.length === 0) {
+          setLoading(false);
+          return;
+        }
 
         const abort = new AbortController();
         abortRef.current = abort;
 
         try {
-          const cleanText = text.replace(skillMentionRegex, '[Skill: $1]');
+          const promptText = text;
           const finalHistory = await runAgentLoop(
-            cleanText,
+            promptText,
             history.slice(0, -1),
             agentConfig,
             workspaceFolders,
@@ -477,8 +579,7 @@ export default function ChatTab({
               }
             },
             requestApproval,
-            abort.signal,
-            skillContext
+            abort.signal
           );
           setMessages(finalHistory);
         } catch (e: any) {
@@ -574,8 +675,8 @@ export default function ChatTab({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto px-4 py-2 rounded-md border border-transparent ${
-              msg.role === 'user' ? 'bg-foreground/[0.05] border-border/10 shadow-sm' : ''
+            className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto py-2 rounded-md border border-transparent ${
+              msg.role === 'user' ? 'bg-foreground/[0.05] border-border/10 shadow-sm px-4' : ''
             }`}
           >
             <div className="flex flex-col gap-1">
@@ -584,7 +685,9 @@ export default function ChatTab({
                   <SystemMessage content={msg.content} />
                 ) : msg.role === 'assistant' ? (
                   <div className="space-y-2">
-                    {/* Handle Thoughts */}
+                    {/* Handle Thoughts (Explicit field) */}
+                    {msg.thinking && <ThoughtBlock content={msg.thinking} />}
+                    {/* Handle Inline Thoughts */}
                     {[...msg.content.matchAll(/<thought>([\s\S]*?)<\/thought>/g)].map((m, idx) => (
                       <ThoughtBlock key={idx} content={m[1].trim()} />
                     ))}
@@ -604,27 +707,22 @@ export default function ChatTab({
                     ))}
                   </div>
                 ) : msg.role === 'tool' ? (
-                  <div className="my-1 border-l-2 border-primary/20 bg-muted/5 rounded-r px-3 py-1.5 overflow-hidden">
-                     <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight mb-1">
-                        <Check size={12} className="text-green-500/80" />
-                        <span>Result: {msg.name}</span>
-                     </div>
-                     <pre className="text-[10px] font-mono text-muted-foreground/60 whitespace-pre-wrap max-h-48 overflow-auto">
-                        {msg.content}
-                     </pre>
-                  </div>
+                  <ToolResultMessage name={msg.name} content={msg.content} />
                 ) : (
-                  msg.content && (
-                    <div className="py-1">
-                      <MessageContent content={msg.content} role={msg.role} onOpenFile={handleOpenFile} />
-                    </div>
-                  )
+                  <div className="flex flex-col gap-2">
+                    {msg.thinking && <ThoughtBlock content={msg.thinking} />}
+                    {msg.content && (
+                      <div className="py-1">
+                        <MessageContent content={msg.content} role={msg.role} onOpenFile={handleOpenFile} />
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Message Actions */}
-            {(msg.role === 'assistant' || msg.role === 'user') && (
+            {msg.role === 'assistant' && !msg.tool_calls?.length && (
               <div className="flex items-center justify-end gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity mt-1">
                 <button
                   onClick={() => copyToClipboard(msg.content || '')}

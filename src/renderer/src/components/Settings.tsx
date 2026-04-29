@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search } from 'lucide-react';
+import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SearchableSelect } from './ui/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
@@ -12,6 +12,9 @@ export interface SettingsState {
   };
   commands?: {
     folders: string[];
+  };
+  prompts?: {
+    files: string[];
   };
   aiConfigs?: {
     gemini?: { apiKey: string; url: string };
@@ -90,7 +93,7 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 export default function Settings({ settings, onSave, onClose }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands'>(() => {
+  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands' | 'prompts'>(() => {
     return (localStorage.getItem('aynite_settings_active_tab') as any) || 'appearance';
   });
 
@@ -108,6 +111,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateName, setDuplicateName] = useState('');
   const [systemFonts, setSystemFonts] = useState<string[]>([]);
+  const [mergedPrompt, setMergedPrompt] = useState('');
   const saveTimerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -125,6 +129,15 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
       setLocalSettings(settings);
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (activeTab === 'prompts') {
+      // @ts-ignore
+      window.api.getMergedSystemPrompt(localSettings.prompts?.files).then(res => {
+        if (res?.data) setMergedPrompt(res.data);
+      });
+    }
+  }, [activeTab, localSettings.prompts?.files]);
 
   const save = (newSettings: SettingsState) => {
     setLocalSettings(newSettings);
@@ -302,10 +315,14 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
     <div className="w-full h-full bg-background flex flex-col text-foreground">
       <div className="flex flex-1 overflow-hidden">
         {/* Settings Sidebar */}
-        <div className="w-48 border-r border-border bg-sidebar/50 p-4 space-y-2 shrink-0">
+        <div className="w-52 border-r border-border bg-sidebar/50 p-4 space-y-1 shrink-0">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mb-2 px-3">Basic</div>
           <button onClick={() => handleTabChange('appearance')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'appearance' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Sun size={16} /> Appearance</button>
           <button onClick={() => handleTabChange('keybindings')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'keybindings' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Keyboard size={16} /> Keybindings</button>
-          <button onClick={() => handleTabChange('ai')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'ai' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Bot size={16} /> AI Agent</button>
+          
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">AI</div>
+          <button onClick={() => handleTabChange('ai')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'ai' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Bot size={16} /> AI Provider</button>
+          <button onClick={() => handleTabChange('prompts')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'prompts' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><FileText size={16} /> System Prompt</button>
           <button onClick={() => handleTabChange('skills')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'skills' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><BrainCircuit size={16} /> Skills</button>
           <button onClick={() => handleTabChange('commands')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'commands' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Terminal size={16} /> Commands</button>
         </div>
@@ -313,7 +330,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
         {/* Settings Content */}
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
-             <h2 className="text-xl font-bold capitalize">{activeTab}</h2>
+             <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'AI Provider' : activeTab === 'prompts' ? 'System Prompt' : activeTab}</h2>
              {activeTab === 'keybindings' && (
                 <button onClick={() => {
                      const defaultKb: SettingsState['keybindings'] = {
@@ -465,7 +482,6 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           {activeTab === 'ai' && (
             <div className="space-y-6 max-w-2xl">
               <div>
-                <h3 className="text-lg font-medium mb-2">AI Agent Configuration</h3>
                 <p className="text-sm text-muted-foreground mb-6">Select and configure your preferred AI provider.</p>
                 <div className="space-y-6">
                   {(['gemini', 'deepseek', 'ollama'] as const).map((provider) => (
@@ -518,6 +534,60 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             </div>
           )}
 
+          {activeTab === 'prompts' && (
+            <div className="space-y-6 max-w-2xl pb-10">
+              <div>
+                <p className="text-sm text-muted-foreground mb-6">Manage files that define the system prompt for the AI agent.</p>
+                <div className="flex items-center justify-between mb-4">
+                   <h3 className="text-lg font-medium">Prompt Files</h3>
+                   <div className="flex items-center gap-2">
+                     <button onClick={async () => {
+                            // @ts-ignore
+                            const res = await window.api.restoreDefaultPrompts();
+                            if (res && res.data) {
+                              save({ ...localSettings, prompts: res.data });
+                            }
+                         }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Defaults</button>
+                     <button onClick={async () => {
+                            // @ts-ignore
+                            const res = await window.api.pickPromptFile();
+                            if (res && res.data) {
+                              const newFiles = [...(localSettings.prompts?.files || []), res.data];
+                              save({ ...localSettings, prompts: { files: Array.from(new Set(newFiles)) } });
+                            }
+                         }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add File</button>
+                   </div>
+                </div>
+                <div className="space-y-2">
+                  {(localSettings.prompts?.files || []).map((filePath) => (
+                    <div key={filePath} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-medium truncate">{filePath.split(/[\/\\]/).pop()}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{filePath}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => {
+                            const newFiles = (localSettings.prompts?.files || []).filter(f => f !== filePath);
+                            save({ ...localSettings, prompts: { files: newFiles } });
+                          }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  ))}
+                  {(localSettings.prompts?.files || []).length === 0 && (
+                    <div className="text-center py-8 border-2 border-dashed border-border rounded-lg text-muted-foreground text-sm">No prompt files added.</div>
+                  )}
+                </div>
+
+                <div className="mt-10 space-y-4">
+                  <h3 className="text-lg font-medium">System Prompt Preview</h3>
+                  <div className="p-4 rounded-lg bg-accent/5 border border-border font-mono text-xs whitespace-pre-wrap">
+                    {mergedPrompt || <span className="text-muted-foreground italic">Preview is empty. Add prompt files to see the combined result.</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'skills' && (
             <div className="space-y-6 max-w-2xl">
               <div>
@@ -539,23 +609,25 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                         <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
                         <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
                       </div>
-                      {index > 0 && (
-                        <button onClick={() => {
-                            const newFolders = (localSettings.skills?.folders || []).filter(f => f !== folder);
-                            save({ ...localSettings, skills: { folders: newFolders } });
-                          }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {index === 0 && (
+                          <button onClick={async () => {
+                              // @ts-ignore
+                              const res = await window.api.restoreDefaultSkills();
+                              if (res && res.data) alert('Default skills restored successfully!');
+                              else alert('Failed to restore default skills.');
+                            }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
+                        )}
+                        {index > 0 && (
+                          <button onClick={() => {
+                              const newFolders = (localSettings.skills?.folders || []).filter(f => f !== folder);
+                              save({ ...localSettings, skills: { folders: newFolders } });
+                            }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="pt-6 border-t border-border">
-                <button onClick={async () => {
-                    // @ts-ignore
-                    const res = await window.api.restoreDefaultSkills();
-                    if (res && res.data) alert('Default skills restored successfully!');
-                    else alert('Failed to restore default skills.');
-                  }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Default Skills</button>
               </div>
             </div>
           )}
@@ -581,23 +653,25 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                         <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
                         <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
                       </div>
-                      {index > 0 && (
-                        <button onClick={() => {
-                            const newFolders = (localSettings.commands?.folders || []).filter(f => f !== folder);
-                            save({ ...localSettings, commands: { folders: newFolders } });
-                          }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {index === 0 && (
+                          <button onClick={async () => {
+                              // @ts-ignore
+                              const res = await window.api.restoreDefaultCommands();
+                              if (res && res.data) alert('Default commands restored successfully!');
+                              else alert('Failed to restore default commands.');
+                            }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
+                        )}
+                        {index > 0 && (
+                          <button onClick={() => {
+                              const newFolders = (localSettings.commands?.folders || []).filter(f => f !== folder);
+                              save({ ...localSettings, commands: { folders: newFolders } });
+                            }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="pt-6 border-t border-border">
-                <button onClick={async () => {
-                    // @ts-ignore
-                    const res = await window.api.restoreDefaultCommands();
-                    if (res && res.data) alert('Default commands restored successfully!');
-                    else alert('Failed to restore default commands.');
-                  }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Default Commands</button>
               </div>
             </div>
           )}

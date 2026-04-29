@@ -6,7 +6,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, saveChatLog, loadChatLog } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, restoreDefaultPrompts, getMergedSystemPrompt, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, saveChatLog, loadChatLog } from './config';
 
 const execAsync = promisify(exec);
 
@@ -460,6 +460,38 @@ ipcMain.handle('api:commands-list', async () => {
   try {
     const commands = await listAvailableCommands();
     return { data: commands };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+
+ipcMain.handle('api:prompts-pick-file', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openFile'],
+      filters: [{ name: 'Markdown', extensions: ['md'] }]
+    });
+    if (canceled || filePaths.length === 0) return { data: null };
+    return { data: filePaths[0] };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:prompts-restore-default', async () => {
+  try {
+    const config = await restoreDefaultPrompts();
+    return { data: config };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:prompts-get-merged', async (_, customFiles?: string[]) => {
+  try {
+    const merged = await getMergedSystemPrompt(customFiles);
+    return { data: merged };
   } catch (error: any) {
     return { error: error.message };
   }

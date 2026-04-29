@@ -33,6 +33,11 @@ const api = {
   getAvailableCommands: () => ipcRenderer.invoke('api:commands-list'),
   runDirectCommand: (payload: { commandPath: string, params: string[], currentFile?: string }) => ipcRenderer.invoke('api:command-run-direct', payload),
   
+  // Prompts API
+  pickPromptFile: () => ipcRenderer.invoke("api:prompts-pick-file"),
+  restoreDefaultPrompts: () => ipcRenderer.invoke("api:prompts-restore-default"),
+  getMergedSystemPrompt: (files?: string[]) => ipcRenderer.invoke("api:prompts-get-merged", files),
+  
   // Theme API
   getThemesList: () => ipcRenderer.invoke('api:themes-list'),
   getTheme: (name: string) => ipcRenderer.invoke('api:theme-get', name),

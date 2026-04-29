@@ -70,6 +70,9 @@ const DEFAULT_SETTINGS: SettingsState = {
         backwardChar: 'CTRL+B'
       }
     }
+  },
+  prompts: {
+    files: []
   }
 };
 
@@ -202,7 +205,8 @@ export default function App() {
           viewer: { ...DEFAULT_SETTINGS.keybindings.content.viewer, ...(kb.content?.viewer || {}) },
           generic: { ...DEFAULT_SETTINGS.keybindings.content.generic, ...(kb.content?.generic || {}) },
         }
-      }
+      },
+      prompts: loaded.prompts || DEFAULT_SETTINGS.prompts
     };
   };
 

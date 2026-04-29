@@ -4,6 +4,9 @@ import { existsSync, readdirSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import yaml from 'js-yaml';
+import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
+import { DEFAULT_THEMES } from './default_configs/themes';
+import { DEFAULT_PROMPTS } from './default_configs/prompts';
 
 // Helper to expand ~ to home directory
 function expandHome(filepath: string): string {
@@ -21,279 +24,7 @@ export function getConfigDir() {
   }
 }
 
-const DEFAULT_KEYBINDINGS = {
-  global: {
-    refresh: 'CTRL+R',
-    quit: 'CTRL+Q'
-  },
-  explorer: {
-    toggleLeftPanel: 'CTRL+T'
-  },
-  agent: {
-    focusChat: 'CTRL+I',
-    toggleRightPanel: 'CTRL+U'
-  },
-  content: {
-    navigation: {
-      switchTab: 'CTRL+TAB',
-      closeTab: 'CTRL+W',
-      focusContent: 'CTRL+Y'
-    },
-    viewer: {
-      enterEdit: 'A',
-      moveDown: 'J',
-      moveUp: 'K',
-      moveLeft: 'H',
-      moveRight: 'L',
-      search: '/'
-    },
-    generic: { // Previously contentKeys
-      exitEdit: 'ESCAPE',
-      endOfLine: 'CTRL+E',
-      startOfLine: 'CTRL+A',
-      killLine: 'CTRL+K',
-      selectAll: 'CTRL+Z',
-      deleteForward: 'CTRL+D',
-      cut: 'CTRL+X',
-      copy: 'CTRL+C',
-      paste: 'CTRL+V',
-      prevLine: 'CTRL+P',
-      nextLine: 'CTRL+N',
-      forwardChar: 'CTRL+F',
-      backwardChar: 'CTRL+B'
-    }
-  }
-};
-
-// ─── Default Themes ────────────────────────────────────────────────
-
-const DEFAULT_THEMES: Record<string, any> = {
-  light: {
-    name: 'Light',
-    type: 'light',
-    isSystem: true,
-    colors: {
-      background: '#ffffff',
-      foreground: '#09090b',
-      sidebar: '#f4f4f5',
-      card: '#ffffff',
-      cardForeground: '#09090b',
-      popover: '#ffffff',
-      popoverForeground: '#09090b',
-      primary: '#18181b',
-      primaryForeground: '#fafafa',
-      secondary: '#f4f4f5',
-      secondaryForeground: '#18181b',
-      muted: '#f4f4f5',
-      mutedForeground: '#71717a',
-      accent: '#f4f4f5',
-      accentForeground: '#18181b',
-      destructive: '#ef4444',
-      destructiveForeground: '#fafafa',
-      border: '#e4e4e7',
-      input: '#e4e4e7',
-      ring: '#18181b',
-      selection: '#bfdbfe',
-      selectionForeground: '#1e3a5f',
-      link: '#2563eb',
-      success: '#16a34a',
-      successForeground: '#f0fdf4',
-      warning: '#ca8a04',
-      warningForeground: '#fefce8',
-      info: '#2563eb',
-      infoForeground: '#eff6ff',
-      tabActive: '#ffffff',
-      tabActiveBorder: '#3b82f6',
-      scrollbarThumb: '#d4d4d8',
-      scrollbarTrack: 'transparent'
-    },
-    fonts: {
-      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
-  },
-  dark: {
-    name: 'Dark',
-    type: 'dark',
-    isSystem: true,
-    colors: {
-      background: '#09090b',
-      foreground: '#fafafa',
-      sidebar: '#121214',
-      card: '#09090b',
-      cardForeground: '#fafafa',
-      popover: '#09090b',
-      popoverForeground: '#fafafa',
-      primary: '#fafafa',
-      primaryForeground: '#18181b',
-      secondary: '#27272a',
-      secondaryForeground: '#fafafa',
-      muted: '#27272a',
-      mutedForeground: '#a1a1aa',
-      accent: '#27272a',
-      accentForeground: '#fafafa',
-      destructive: '#7f1d1d',
-      destructiveForeground: '#fafafa',
-      border: '#27272a',
-      input: '#27272a',
-      ring: '#d4d4d8',
-      selection: '#264f78',
-      selectionForeground: '#ffffff',
-      link: '#60a5fa',
-      success: '#22c55e',
-      successForeground: '#052e16',
-      warning: '#eab308',
-      warningForeground: '#422006',
-      info: '#3b82f6',
-      infoForeground: '#eff6ff',
-      tabActive: '#09090b',
-      tabActiveBorder: '#3b82f6',
-      scrollbarThumb: '#27272a',
-      scrollbarTrack: 'transparent'
-    },
-    fonts: {
-      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
-  },
-  aurora: {
-    name: 'Aurora',
-    type: 'dark',
-    isSystem: true,
-    colors: {
-      background: '#0f0e17',
-      foreground: '#e0def4',
-      sidebar: '#141220',
-      card: '#1a1826',
-      cardForeground: '#e0def4',
-      popover: '#1a1826',
-      popoverForeground: '#e0def4',
-      primary: '#a78bfa',
-      primaryForeground: '#0f0e17',
-      secondary: '#2a2540',
-      secondaryForeground: '#e0def4',
-      muted: '#221f35',
-      mutedForeground: '#908caa',
-      accent: '#2a2540',
-      accentForeground: '#e0def4',
-      destructive: '#eb6f92',
-      destructiveForeground: '#0f0e17',
-      border: '#393552',
-      input: '#2a2540',
-      ring: '#a78bfa',
-      selection: '#3e1f79',
-      selectionForeground: '#e0def4',
-      link: '#7dd3fc',
-      success: '#4ade80',
-      successForeground: '#052e16',
-      warning: '#fbbf24',
-      warningForeground: '#422006',
-      info: '#818cf8',
-      infoForeground: '#eef2ff',
-      tabActive: '#0f0e17',
-      tabActiveBorder: '#a78bfa',
-      scrollbarThumb: '#393552',
-      scrollbarTrack: 'transparent'
-    },
-    fonts: {
-      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
-  },
-  ember: {
-    name: 'Ember',
-    type: 'dark',
-    isSystem: true,
-    colors: {
-      background: '#1a1210',
-      foreground: '#f5e6d3',
-      sidebar: '#151010',
-      card: '#231c18',
-      cardForeground: '#f5e6d3',
-      popover: '#231c18',
-      popoverForeground: '#f5e6d3',
-      primary: '#f59e0b',
-      primaryForeground: '#1a1210',
-      secondary: '#2d2420',
-      secondaryForeground: '#f5e6d3',
-      muted: '#2d2420',
-      mutedForeground: '#a89585',
-      accent: '#2d2420',
-      accentForeground: '#f5e6d3',
-      destructive: '#dc2626',
-      destructiveForeground: '#fef2f2',
-      border: '#3d322c',
-      input: '#2d2420',
-      ring: '#f59e0b',
-      selection: '#78350f',
-      selectionForeground: '#fef3c7',
-      link: '#fbbf24',
-      success: '#84cc16',
-      successForeground: '#1a2e05',
-      warning: '#f59e0b',
-      warningForeground: '#451a03',
-      info: '#fb923c',
-      infoForeground: '#fff7ed',
-      tabActive: '#1a1210',
-      tabActiveBorder: '#f59e0b',
-      scrollbarThumb: '#3d322c',
-      scrollbarTrack: 'transparent'
-    },
-    fonts: {
-      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
-  },
-  nord: {
-    name: 'Nord',
-    type: 'dark',
-    isSystem: true,
-    colors: {
-      background: '#2e3440',
-      foreground: '#d8dee9',
-      sidebar: '#242831',
-      card: '#3b4252',
-      cardForeground: '#e5e9f0',
-      popover: '#3b4252',
-      popoverForeground: '#e5e9f0',
-      primary: '#88c0d0',
-      primaryForeground: '#2e3440',
-      secondary: '#434c5e',
-      secondaryForeground: '#eceff4',
-      muted: '#3b4252',
-      mutedForeground: '#a1a1aa',
-      accent: '#434c5e',
-      accentForeground: '#eceff4',
-      destructive: '#bf616a',
-      destructiveForeground: '#eceff4',
-      border: '#4c566a',
-      input: '#434c5e',
-      ring: '#88c0d0',
-      selection: '#434c5e',
-      selectionForeground: '#eceff4',
-      link: '#88c0d0',
-      success: '#a3be8c',
-      successForeground: '#2e3440',
-      warning: '#ebcb8b',
-      warningForeground: '#2e3440',
-      info: '#81a1c1',
-      infoForeground: '#eceff4',
-      tabActive: '#2e3440',
-      tabActiveBorder: '#88c0d0',
-      scrollbarThumb: '#4c566a',
-      scrollbarTrack: 'transparent'
-    },
-    fonts: {
-      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
-  }
-};
+// Constants imported from default_configs
 
 export async function initThemes() {
   const themesDir = path.join(getConfigDir(), 'themes');
@@ -378,7 +109,7 @@ export function isSystemTheme(name: string): boolean {
 export async function initAppFolders() {
   const baseDir = getConfigDir();
 
-  const folders = ['config', 'skills', 'commands', 'workspaces', 'themes', 'logs'];
+  const folders = ['config', 'skills', 'commands', 'workspaces', 'themes', 'logs', 'prompts'];
   for (const folder of folders) {
     const dir = path.join(baseDir, folder);
     if (!existsSync(dir)) {
@@ -406,7 +137,8 @@ export async function initAppFolders() {
     lastUsed: new Date().toISOString(),
     activeTheme: 'nord',
     skills: { folders: [skillsDir] },
-    commands: { folders: [commandsDir] }
+    commands: { folders: [commandsDir] },
+    prompts: { files: Object.keys(DEFAULT_PROMPTS).map(f => path.join(baseDir, "prompts", f)) }
   };
   const ignoreDefault = ['.git', 'node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
   const workspacesDefault = { active: 'default workspace', list: ['default workspace'] };
@@ -462,6 +194,17 @@ export async function initAppFolders() {
     const cmdPath = path.join(commandsDir, cmdName);
     if (!existsSync(cmdPath)) {
       await restoreCommand(cmdName);
+    }
+  }
+
+  // Ensure default prompts exist
+  const promptsDir = path.join(baseDir, 'prompts');
+  const defaultPrompts = DEFAULT_PROMPTS;
+
+  for (const [filename, content] of Object.entries(defaultPrompts)) {
+    const p = path.join(promptsDir, filename);
+    if (!existsSync(p)) {
+      await fs.writeFile(p, content, 'utf-8');
     }
   }
 }
@@ -862,6 +605,85 @@ export async function loadChatLog(sessionId: string, date: string) {
   } catch {
     return null;
   }
+}
+
+// Prompts Logic
+
+export async function getPromptsConfig() {
+  const configDir = path.join(getConfigDir(), 'config');
+  const mainConfigPath = path.join(configDir, 'config.json');
+
+  if (existsSync(mainConfigPath)) {
+    try {
+      const data = await fs.readFile(mainConfigPath, 'utf-8');
+      const mainConfig = JSON.parse(data);
+      if (mainConfig.prompts) return mainConfig.prompts;
+    } catch { }
+  }
+
+  const baseDir = getConfigDir();
+  return {
+    files: [
+      path.join(baseDir, 'prompts', 'about-me.md'),
+      path.join(baseDir, 'prompts', 'about-skills.md'),
+      path.join(baseDir, 'prompts', 'about-commands.md'),
+      path.join(baseDir, 'prompts', 'about-files.md')
+    ]
+  };
+}
+
+export async function savePromptsConfig(config: any) {
+  const configDir = path.join(getConfigDir(), 'config');
+  const mainConfigPath = path.join(configDir, 'config.json');
+
+  let mainConfig: any = {};
+  if (existsSync(mainConfigPath)) {
+    try {
+      const data = await fs.readFile(mainConfigPath, 'utf-8');
+      mainConfig = JSON.parse(data);
+    } catch { }
+  }
+
+  mainConfig.prompts = config;
+  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
+}
+
+export async function restoreDefaultPrompts() {
+  const baseDir = getConfigDir();
+  const promptsDir = path.join(baseDir, 'prompts');
+
+  if (!existsSync(promptsDir)) {
+    await fs.mkdir(promptsDir, { recursive: true });
+  }
+
+  const defaultPrompts = DEFAULT_PROMPTS;
+
+  for (const [filename, content] of Object.entries(defaultPrompts)) {
+    const p = path.join(promptsDir, filename);
+    await fs.writeFile(p, content, 'utf-8');
+  }
+
+  const config = {
+    files: Object.keys(defaultPrompts).map(f => path.join(promptsDir, f))
+  };
+  await savePromptsConfig(config);
+  return config;
+}
+
+export async function getMergedSystemPrompt(customFiles?: string[]) {
+  const files = customFiles || (await getPromptsConfig()).files || [];
+  let merged = '';
+
+  for (const filePath of files) {
+    try {
+      const content = await fs.readFile(expandHome(filePath), 'utf-8');
+      merged += content + '\n\n';
+    } catch (e) {
+      console.error(`Error reading prompt file ${filePath}`, e);
+    }
+  }
+
+  return merged.trim();
 }
 
 async function getWorkspacesConfig() {

@@ -293,6 +293,21 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, [workspaceFolders]);
     
     
+    const BaseMention = Mention.extend({
+      addAttributes() {
+        return {
+          ...this.parent?.(),
+          isDirectory: {
+            default: false,
+            parseHTML: element => element.getAttribute('data-is-directory') === 'true',
+            renderHTML: attributes => ({
+              'data-is-directory': attributes.isDirectory,
+            }),
+          },
+        };
+      },
+    });
+
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
@@ -306,7 +321,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         Placeholder.configure({
           placeholder: 'Message Aynite… (@ files, / skills, > commands)',
         }),
-        Mention.configure({
+        BaseMention.configure({
           HTMLAttributes: { class: 'mention mention-file' },
           suggestion: createSuggestion('@', (query) => {
             const q = query.toLowerCase();
@@ -336,13 +351,13 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               .slice(0, 20);
           }),
         }),
-        Mention.extend({ name: 'skillMention' }).configure({
+        BaseMention.extend({ name: 'skillMention' }).configure({
           HTMLAttributes: { class: 'mention mention-skill' },
           suggestion: createSuggestion('/', (query) =>
             skillItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
           ),
         }),
-        Mention.extend({ name: 'commandMention' }).configure({
+        BaseMention.extend({ name: 'commandMention' }).configure({
           HTMLAttributes: { class: 'mention mention-command' },
           suggestion: createSuggestion('>', (query) =>
             commandItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
@@ -418,7 +433,8 @@ function serializeTiptapToText(json: any): string {
   }
 
   if (json.type === 'mention') {
-    return `@file[${json.attrs?.label || ''}](${json.attrs?.id || ''})`;
+    const type = json.attrs?.isDirectory ? 'dir' : 'file';
+    return `@${type}[${json.attrs?.label || ''}](${json.attrs?.id || ''})`;
   }
   if (json.type === 'skillMention') {
     return `/skill[${json.attrs?.label || ''}](${json.attrs?.id || ''})`;
