@@ -24,6 +24,8 @@ export interface AgentConfig {
   model: string;
   compatibility?: 'openai' | 'anthropic' | 'google';
   autoApproveCommands?: boolean;
+  thinking?: boolean;
+  thinkingBudget?: number;
 }
 
 const genId = () => Math.random().toString(36).slice(2, 11);
@@ -57,21 +59,62 @@ export async function runAgentLoop(
 
   // Map fullHistory to CoreMessage format
   const apiMessages = fullHistory.map(m => {
+    // 1. Tool result message that lost its call ID (fallback to user message)
     if (m.role === 'tool' && !m.tool_call_id) {
       return {
-        role: 'user',
-        content: `[Tool Output: ${m.name || 'unknown'}]\n${m.content}`
+        role: 'user' as const,
+        content: `[Tool Output: ${m.name || 'unknown'}]\n${m.content || ''}`
       };
     }
+
+    // 2. Standard Tool result message
+    if (m.role === 'tool') {
+      return {
+        role: 'tool' as const,
+        content: m.content || '',
+        toolCallId: m.tool_call_id!,
+        toolName: m.name || 'unknown'
+      };
+    }
+
+    // 3. Assistant message with thinking/reasoning
+    if (m.role === 'assistant' && m.thinking) {
+      const parts: any[] = [{ type: 'reasoning', reasoning: m.thinking }];
+      if (m.content) {
+        parts.push({ type: 'text', text: m.content });
+      }
+      return {
+        role: 'assistant' as const,
+        content: parts,
+        ...(m.tool_calls && m.tool_calls.length > 0 ? { 
+          toolCalls: m.tool_calls.map(c => ({
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            args: c.args
+          })) 
+        } : {})
+      };
+    }
+
+    // 4. Standard Assistant message (no thinking)
+    if (m.role === 'assistant') {
+      return {
+        role: 'assistant' as const,
+        content: m.content || '',
+        ...(m.tool_calls && m.tool_calls.length > 0 ? { 
+          toolCalls: m.tool_calls.map(c => ({
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            args: c.args
+          })) 
+        } : {})
+      };
+    }
+
+    // 5. User or System message
     return {
-      role: m.role,
-      content: m.content,
-      ...(m.tool_call_id ? { toolCallId: m.tool_call_id } : {}),
-      ...(m.tool_calls ? { toolCalls: m.tool_calls.map(c => ({
-        toolCallId: c.toolCallId,
-        toolName: c.toolName,
-        args: c.args
-      })) } : {})
+      role: m.role as 'user' | 'system',
+      content: m.content || ''
     };
   });
 
@@ -89,7 +132,9 @@ export async function runAgentLoop(
       baseUrl: config.baseUrl,
       model: config.model,
       autoApproveCommands: config.autoApproveCommands,
-      compatibility: config.compatibility
+      compatibility: config.compatibility,
+      thinking: config.thinking,
+      thinkingBudget: config.thinkingBudget
     },
     workspaceFolders
   });
@@ -161,8 +206,9 @@ export async function runAgentLoop(
 
         case 'reasoning-delta':
           ensureAssistantMsg();
-          currentAssistantMsg!.thinking += (part.reasoningDelta || part.delta || '');
-          onEvent({ type: 'thinking', content: part.reasoningDelta || part.delta || '' });
+          const reasoning = part.reasoning || part.reasoningDelta || part.delta || part.text || '';
+          currentAssistantMsg!.thinking += reasoning;
+          onEvent({ type: 'thinking', content: reasoning });
           break;
 
         case 'tool-call':

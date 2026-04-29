@@ -612,6 +612,8 @@ export default function ChatTab({
           model: config.model || '',
           compatibility: config.compatibility,
           autoApproveCommands: settings.aiConfigs?.autoApproveCommands || false,
+          thinking: config.thinking,
+          thinkingBudget: config.thinkingBudget
         };
 
 

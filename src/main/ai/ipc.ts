@@ -160,6 +160,38 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
         },
       };
 
+      // Construct provider-specific options for thinking mode
+      const providerOptions: any = {};
+      if (config.thinking) {
+        const prov = config.provider.toLowerCase();
+        if (prov === 'google' || prov === 'gemini') {
+          providerOptions.google = {
+            thinkingConfig: {
+              includeThoughts: true,
+              thinkingBudget: config.thinkingBudget || 2000
+            }
+          };
+        } else if (prov === 'anthropic') {
+          providerOptions.anthropic = {
+            thinking: {
+              type: 'enabled',
+              budgetTokens: config.thinkingBudget || 4000
+            }
+          };
+        } else if (prov === 'openai') {
+          providerOptions.openai = {
+            reasoningEffort: 'medium' // Default for o1/o3
+          };
+        } else if (prov === 'deepseek') {
+          providerOptions.deepseek = {
+            thinking: {
+              type: 'enabled',
+              budgetTokens: config.thinkingBudget || 4000
+            }
+          };
+        }
+      }
+
       // Start streaming
       (async () => {
         try {
@@ -167,19 +199,24 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
             model,
             messages,
             tools,
+            providerOptions,
             stopWhen: (stepCountIs as any)(10), 
           } as any);
 
           let fullResponseText = '';
+          let fullReasoningText = '';
           const fullToolCalls: any[] = [];
           const fullToolResults: any[] = [];
+
+          let stepCount = 0;
+          let lastFinishReason = '';
 
           for await (const part of result.fullStream) {
             // Accumulate for logging
             if (part.type === 'text-delta') {
               fullResponseText += part.text;
             } else if (part.type === 'reasoning-delta') {
-              fullResponseText += (part as any).reasoning || (part as any).delta || '';
+              fullReasoningText += (part as any).reasoning || (part as any).delta || (part as any).text || '';
             } else if (part.type === 'tool-call') {
               fullToolCalls.push({
                 toolName: part.toolName,
@@ -192,14 +229,27 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
                 toolCallId: part.toolCallId,
                 result: (part as any).result || (part as any).output
               });
+            } else if ((part as any).type === 'step-finish') {
+              stepCount++;
+              lastFinishReason = (part as any).finishReason;
+            } else if ((part as any).type === 'finish') {
+              lastFinishReason = (part as any).finishReason;
             }
 
             mainWindow.webContents.send(`api:ai-chat-delta:${requestId}`, part);
           }
 
+          // If we stopped because of the step limit but the AI still wanted to call tools
+          if (stepCount >= 10 && lastFinishReason === 'tool-calls') {
+            const limitError = 'Tool call limit reached (10 steps). The process was stopped for safety.';
+            logAiEvent('ERROR', { error: limitError });
+            mainWindow.webContents.send(`api:ai-chat-delta:${requestId}`, { type: 'error', error: limitError });
+          }
+
           // Log the full response once finished
           logAiEvent('RESPONSE', { 
             text: fullResponseText, 
+            reasoning: fullReasoningText,
             toolCalls: fullToolCalls,
             toolResults: fullToolResults
           });

@@ -20,12 +20,12 @@ export interface SettingsState {
     files: string[];
   };
   aiConfigs?: {
-    gemini?: { apiKey: string; url?: string; modelId?: string };
-    openai?: { apiKey: string; url?: string; modelId?: string };
-    anthropic?: { apiKey: string; modelId?: string };
-    deepseek?: { apiKey: string; url?: string; modelId?: string };
-    others?: { apiKey: string; url: string; modelId: string; compatibility: 'openai' | 'anthropic' | 'google' };
-    ollama?: { url: string; model: string; contextWindow: number };
+    gemini?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
+    openai?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
+    anthropic?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
+    deepseek?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
+    others?: { apiKey: string; url: string; model: string; compatibility: 'openai' | 'anthropic' | 'google'; thinking?: boolean; thinkingBudget?: number };
+    ollama?: { url: string; model: string; contextWindow: number; thinking?: boolean; thinkingBudget?: number };
 
     autoApproveCommands?: boolean;
   };
@@ -128,12 +128,12 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
       setLocalSettings(prev => ({
         ...prev,
         aiConfigs: {
-          ollama: { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192 },
-          deepseek: { apiKey: '', url: 'https://api.deepseek.com', modelId: 'deepseek-chat' },
-          gemini: { apiKey: '', url: 'https://generativelanguage.googleapis.com', modelId: 'gemini-1.5-pro' },
-          openai: { apiKey: '', url: 'https://api.openai.com/v1', modelId: 'gpt-4o' },
-          anthropic: { apiKey: '', url: 'https://api.anthropic.com', modelId: 'claude-3-5-sonnet-20240620' },
-          others: { apiKey: '', url: '', modelId: '', compatibility: 'openai' }
+          ollama: { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192, thinking: true, thinkingBudget: 2048 },
+          deepseek: { apiKey: '', url: 'https://api.deepseek.com', model: 'deepseek-chat', thinking: true, thinkingBudget: 4096 },
+          gemini: { apiKey: '', url: 'https://generativelanguage.googleapis.com', model: 'gemini-2.0-flash-thinking', thinking: true, thinkingBudget: 4096 },
+          openai: { apiKey: '', url: 'https://api.openai.com/v1', model: 'o3-mini', thinking: true, thinkingBudget: 4096 },
+          anthropic: { apiKey: '', url: 'https://api.anthropic.com', model: 'claude-3-7-sonnet-20250219', thinking: true, thinkingBudget: 4096 },
+          others: { apiKey: '', url: '', model: '', compatibility: 'openai', thinking: false, thinkingBudget: 2048 }
         }
       }));
 
@@ -548,6 +548,35 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                             <div className="flex flex-col gap-1.5">
                               <label className="text-xs font-medium text-muted-foreground">Context Window</label>
                               <input type="number" placeholder="8192" value={localSettings.aiConfigs?.ollama?.contextWindow || 8192} onChange={(e) => handleAiConfigChange(provider, 'contextWindow', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between max-w-md p-3 rounded-lg border border-border/40 bg-accent/5 mt-2">
+                            <div className="space-y-0.5">
+                              <label className="text-xs font-semibold flex items-center gap-1.5">
+                                <BrainCircuit size={14} className="text-primary/70" />
+                                <span>Thinking Mode</span>
+                              </label>
+                              <p className="text-[10px] text-muted-foreground">Enable chain-of-thought/reasoning blocks.</p>
+                            </div>
+                            <button 
+                              onClick={() => handleAiConfigChange(provider as any, 'thinking', !(localSettings.aiConfigs as any)?.[provider]?.thinking)}
+                              className={cn("relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "bg-primary" : "bg-muted")}
+                            >
+                              <span className={cn("inline-block h-3 w-3 transform rounded-full bg-white transition-transform", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "translate-x-5" : "translate-x-1")} />
+                            </button>
+                          </div>
+
+                          {(localSettings.aiConfigs as any)?.[provider]?.thinking && (
+                            <div className="flex flex-col gap-1.5 pl-3 border-l-2 border-primary/20">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Thinking Budget (Tokens)</label>
+                              <input 
+                                type="number" 
+                                placeholder="4096" 
+                                value={(localSettings.aiConfigs as any)?.[provider]?.thinkingBudget || 4096} 
+                                onChange={(e) => handleAiConfigChange(provider as any, 'thinkingBudget', parseInt(e.target.value) || 0)} 
+                                className="w-24 bg-transparent border-b border-border/60 px-0 py-1 text-xs focus:outline-none focus:border-primary transition-colors" 
+                              />
                             </div>
                           )}
                         </div>
