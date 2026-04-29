@@ -354,6 +354,14 @@ export default function App() {
     ));
   };
 
+  const handleFileRefresh = (content: string) => {
+    setTabs(prev => prev.map(tab => 
+      tab.id === activeTabId 
+        ? { ...tab, content, originalContent: content, isDirty: false } 
+        : tab
+    ));
+  };
+
   const handleCursorChange = (cursorPos: number) => {
     setTabs(prev => prev.map(tab => 
       tab.id === activeTabId 
@@ -770,6 +778,7 @@ export default function App() {
                     keybindings={settings.keybindings}
                     initialCursorPos={activeTab.cursorPos}
                     onCursorChange={handleCursorChange}
+                    onRefresh={handleFileRefresh}
                     id={activeTab.id}
                     key={activeTab.id}
                   />

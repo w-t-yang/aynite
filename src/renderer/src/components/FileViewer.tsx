@@ -27,11 +27,12 @@ interface FileViewerProps {
   keybindings: any;
   initialCursorPos?: number;
   onCursorChange?: (pos: number) => void;
+  onRefresh?: (content: string) => void;
   id: string;
 }
 
 function FileViewer({ 
-  filename, content, onChange, onSave, isDirty, keybindings, initialCursorPos, onCursorChange, id 
+  filename, content, onChange, onSave, isDirty, keybindings, initialCursorPos, onCursorChange, onRefresh, id 
 }: FileViewerProps) {
   const [localContent, setLocalContent] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,6 +45,7 @@ function FileViewer({
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [externalChangeDetected, setExternalChangeDetected] = useState(false);
   
   // @ts-ignore
   const category = fileInfo ? getFileCategory(fileInfo.extension, fileInfo.isText, fileInfo.path) : 'text';
@@ -106,12 +108,67 @@ function FileViewer({
     };
     fetchInfo();
     setIsEditing(false);
+    setExternalChangeDetected(false);
     // Force focus to show cursor in View Mode
     setTimeout(() => {
       const el = document.getElementById('file-editor-textarea');
       if (el) el.focus();
     }, 150);
   }, [id]);
+
+  useEffect(() => {
+    // Listen for file system changes
+    // @ts-ignore
+    const cleanup = window.api.onFileSystemChange((data) => {
+      const currentPath = id.startsWith('file-') ? id.replace('file-', '') : id;
+      // We normalize paths to be safe (Chokidar might use different slashes)
+      const normalizedChangedPath = data.path.replace(/\\/g, '/');
+      const normalizedCurrentPath = currentPath.replace(/\\/g, '/');
+
+      if (normalizedChangedPath === normalizedCurrentPath && (data.event === 'change' || data.event === 'unlink')) {
+        // If we just saved the file, ignore the change event
+        // This is a simple debouncing/flag mechanism
+        if (!isLocalChange.current) {
+          console.log('[FileViewer] External change detected:', data.path);
+          setExternalChangeDetected(true);
+        }
+      }
+    });
+
+    return cleanup;
+  }, [id]);
+
+  const handleRefresh = async () => {
+    if (isDirty) {
+      const confirm = window.confirm('You have unsaved changes. Refreshing will discard them. Continue?');
+      if (!confirm) return;
+    }
+
+    setLoading(true);
+    try {
+      const path = id.startsWith('file-') ? id.replace('file-', '') : id;
+      // @ts-ignore
+      const res = await window.api.readFile(path);
+      if (res.error) throw new Error(res.error);
+      
+      setLocalContent(res.data);
+      if (onRefresh) {
+        onRefresh(res.data);
+      } else if (onChange) {
+        onChange(res.data);
+      }
+      setExternalChangeDetected(false);
+      // Also update file info to get latest metadata
+      // @ts-ignore
+      const infoRes = await window.api.getFileInfo(path);
+      if (!infoRes.error) setFileInfo(infoRes.data);
+    } catch (e: any) {
+      console.error('Failed to refresh file:', e);
+      setError(`Failed to refresh: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const el = document.getElementById('file-editor-textarea') as HTMLTextAreaElement;
@@ -319,7 +376,7 @@ function FileViewer({
       selectAll: () => {
         textareaRef.current?.select();
         updateCursor();
-      }
+      },
     };
     
     KeyManager.registerEditor(id, api);
@@ -327,7 +384,7 @@ function FileViewer({
     return () => {
       KeyManager.unregisterEditor(id);
     };
-  }, [id, isEditing, showSearch, category, localContent, onChange]);
+  }, [id, isEditing, showSearch, category, localContent, onChange, onRefresh]);
 
   const updateCursor = () => {
     if (textareaRef.current) {
@@ -399,6 +456,22 @@ function FileViewer({
               "flex-1 flex overflow-hidden font-mono text-sm relative bg-background",
               (!isEditing && (effectiveCategory === 'markdown' || effectiveCategory === 'html' || effectiveCategory === 'pdf' || effectiveCategory === 'image' || effectiveCategory === 'video' || effectiveCategory === 'audio' || effectiveCategory === 'unsupported')) && "hidden"
             )}>
+              {/* External Change Banner */}
+              {externalChangeDetected && (
+                <div className="absolute top-0 left-0 right-0 z-30 bg-primary/10 border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-4 py-2 text-xs text-primary animate-in fade-in slide-in-from-top-1 duration-300">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={14} />
+                    <span>This file has been modified externally.</span>
+                  </div>
+                  <button 
+                    onClick={handleRefresh}
+                    className="bg-primary text-primary-foreground px-3 py-1 rounded-sm hover:bg-primary/90 transition-colors font-medium"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              )}
+
               <div 
                 ref={lineNumRef}
                 className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-60 overflow-hidden select-none z-10"

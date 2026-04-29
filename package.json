@@ -7,10 +7,12 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "test:ai": "tsx scripts/test-ai-providers.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.72",
+    "@ai-sdk/deepseek": "^2.0.30",
     "@ai-sdk/google": "^3.0.65",
     "@ai-sdk/openai": "^3.0.54",
     "@google/genai": "^1.29.0",
@@ -52,6 +54,7 @@
     "electron-builder": "^25.1.8",
     "electron-vite": "^3.0.0",
     "tailwindcss": "^4.1.14",
+    "tsx": "^4.19.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

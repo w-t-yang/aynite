@@ -95,8 +95,9 @@ export async function runAgentLoop(
   });
 
   if (error) {
+    const errorMsg: AgentMessage = { id: genId(), role: 'assistant', content: `❌ **AI Error**: ${error}` };
     onEvent({ type: 'error', content: `AI Error: ${error}` });
-    return [...fullHistory, userMsg];
+    return [...fullHistory, userMsg, errorMsg];
   }
 
   return new Promise((resolve) => {
@@ -205,6 +206,19 @@ export async function runAgentLoop(
 
         case 'step-finish':
           finalizeAssistantMsg();
+          break;
+
+        case 'error':
+          removeDeltaListener();
+          removeApprovalListener();
+          onEvent({ type: 'error', content: part.error || part.message || 'Unknown stream error' });
+          finalizeAssistantMsg();
+          const errorMsg: AgentMessage = { 
+            id: genId(), 
+            role: 'assistant', 
+            content: `❌ **AI Stream Error**: ${part.error || part.message || 'Unknown stream error'}` 
+          };
+          resolve([...fullHistory, userMsg, ...loopMessages, errorMsg]);
           break;
 
         case 'finish':

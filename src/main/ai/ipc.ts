@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow, app } from 'electron';
-import { streamText, tool, stepCountIs, zodSchema } from 'ai';
+import { streamText, tool, stepCountIs } from 'ai';
+import { jsonSchema } from '@ai-sdk/provider-utils';
 import { z } from 'zod';
 import { getProviderModel, ProviderConfig } from './factory';
 import fs from 'fs/promises';
@@ -12,7 +13,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 // Helper for logging AI events
-function logAiEvent(type: 'REQUEST' | 'ERROR', payload: any) {
+function logAiEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
 
   if (app.isPackaged) return; // Only log in dev environment
   
@@ -54,11 +55,15 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
       
       // Define tools for the AI SDK
       const tools: any = {
-        read_file: (tool as any)({
+        read_file: {
           description: 'Read the contents of a file.',
-          parameters: zodSchema(z.object({
-            path: z.string().describe('Absolute path to the file'),
-          })),
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Absolute path to the file' }
+            },
+            required: ['path']
+          }),
           execute: async ({ path: filePath }: { path: string }) => {
             if (!(await isPathWithinWorkspace(filePath, workspaceFolders))) {
               return `Error: Access denied. Path "${filePath}" is not within the workspace.`;
@@ -69,13 +74,17 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
               return `Error reading file: ${e.message}`;
             }
           },
-        }),
-        write_file: (tool as any)({
+        },
+        write_file: {
           description: 'Write content to a file.',
-          parameters: zodSchema(z.object({
-            path: z.string().describe('Absolute path to the file'),
-            content: z.string().describe('Content to write'),
-          })),
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Absolute path to the file' },
+              content: { type: 'string', description: 'Content to write' }
+            },
+            required: ['path', 'content']
+          }),
           execute: async ({ path: filePath, content }: { path: string, content: string }) => {
             if (!(await isPathWithinWorkspace(filePath, workspaceFolders))) {
               return `Error: Access denied. Path "${filePath}" is not within the workspace.`;
@@ -88,12 +97,16 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
               return `Error writing file: ${e.message}`;
             }
           },
-        }),
-        list_files: (tool as any)({
+        },
+        list_files: {
           description: 'List files in a directory.',
-          parameters: zodSchema(z.object({
-            path: z.string().describe('Absolute path to the directory'),
-          })),
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Absolute path to the directory' }
+            },
+            required: ['path']
+          }),
           execute: async ({ path: dirPath }: { path: string }) => {
             if (!(await isPathWithinWorkspace(dirPath, workspaceFolders))) {
               return `Error: Access denied. Path "${dirPath}" is not within the workspace.`;
@@ -106,13 +119,17 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
               return `Error listing files: ${e.message}`;
             }
           },
-        }),
-        run_command: (tool as any)({
+        },
+        run_command: {
           description: 'Execute a shell command.',
-          parameters: zodSchema(z.object({
-            command: z.string().describe('The shell command'),
-            cwd: z.string().optional().describe('Directory to run in'),
-          })),
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {
+              command: { type: 'string', description: 'The shell command' },
+              cwd: { type: 'string', description: 'Directory to run in' }
+            },
+            required: ['command']
+          }),
           execute: async ({ command, cwd }: { command: string, cwd?: string }) => {
             const runCwd = cwd || workspaceFolders[0] || '.';
             
@@ -140,7 +157,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
               return `Execution Error:\n${e.message}\n\nSTDOUT:\n${e.stdout}\n\nSTDERR:\n${e.stderr}`;
             }
           },
-        }),
+        },
       };
 
       // Start streaming
@@ -153,9 +170,39 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
             stopWhen: (stepCountIs as any)(10), 
           } as any);
 
+          let fullResponseText = '';
+          const fullToolCalls: any[] = [];
+          const fullToolResults: any[] = [];
+
           for await (const part of result.fullStream) {
+            // Accumulate for logging
+            if (part.type === 'text-delta') {
+              fullResponseText += part.text;
+            } else if (part.type === 'reasoning-delta') {
+              fullResponseText += (part as any).reasoning || (part as any).delta || '';
+            } else if (part.type === 'tool-call') {
+              fullToolCalls.push({
+                toolName: part.toolName,
+                args: (part as any).args || (part as any).input,
+                toolCallId: part.toolCallId
+              });
+            } else if (part.type === 'tool-result') {
+              fullToolResults.push({
+                toolName: part.toolName,
+                toolCallId: part.toolCallId,
+                result: (part as any).result || (part as any).output
+              });
+            }
+
             mainWindow.webContents.send(`api:ai-chat-delta:${requestId}`, part);
           }
+
+          // Log the full response once finished
+          logAiEvent('RESPONSE', { 
+            text: fullResponseText, 
+            toolCalls: fullToolCalls,
+            toolResults: fullToolResults
+          });
 
         } catch (e: any) {
           logAiEvent('ERROR', { error: e.message });

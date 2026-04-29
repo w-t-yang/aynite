@@ -13,101 +13,107 @@ import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig } from '../lib/
 
 // AgentMessage is defined in ../lib/agent.ts
 
-// ─── Tool Icons ──────────────────────────────────────────────────────
+function UnifiedCollapsible({ 
+  title, 
+  icon: Icon, 
+  colorClass, 
+  children, 
+  defaultExpanded = false,
+  borderPosition = 'left'
+}: { 
+  title: string; 
+  icon: any; 
+  colorClass: string; 
+  children: React.ReactNode;
+  defaultExpanded?: boolean;
+  borderPosition?: 'left' | 'bottom';
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const textColor = colorClass.replace('border-', 'text-').replace(/\/.*$/, '');
+  const borderStyle = borderPosition === 'left' ? `border-l-2 ${colorClass}` : '';
 
-function ToolIcon({ name }: { name?: string }) {
-  switch (name) {
-    case 'read_file': return <FileText size={12} className="text-primary" />;
-    case 'write_file': return <FileText size={12} className="text-green-400" />;
-    case 'list_files': return <FolderOpen size={12} className="text-yellow-400" />;
-    case 'run_command': return <Terminal size={12} className="text-orange-400" />;
-    default: return <Bot size={12} className="text-muted-foreground" />;
-  }
+  return (
+    <div className={`my-1 ${borderStyle} bg-muted/5 rounded-r px-3 py-1.5 overflow-hidden transition-all duration-200`}>
+
+      <div className="flex items-center justify-between group">
+        <button 
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
+            <Icon size={12} className={textColor} />
+            <span>{title}</span>
+          </div>
+          <ChevronRight size={10} className={`text-muted-foreground/40 group-hover:text-primary transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
+        </button>
+      </div>
+      {expanded && (
+        <div className="mt-2 border-t border-border/10 pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          {children}
+        </div>
+      )}
+      {borderPosition === 'bottom' && <div className={`border-b ${colorClass} -mx-3 mt-2 opacity-50`} />}
+    </div>
+  );
 }
 
-// ─── Collapsible Step ────────────────────────────────────────────────
+
+
+
+// ─── Tool Call & Result Components ───────────────────────────────────
 
 function ToolCallItem({ call }: { call: any }) {
-  const [expanded, setExpanded] = useState(false);
   const toolName = call.toolName || call.function?.name;
   const toolArgs = call.args || (typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments);
 
+  let Icon = Bot;
+  let colorClass = 'border-primary/40';
+
+  switch (toolName) {
+    case 'read_file': Icon = FileText; colorClass = 'border-cyan-500/40'; break;
+    case 'write_file': Icon = Save; colorClass = 'border-green-500/40'; break;
+    case 'list_files': Icon = FolderOpen; colorClass = 'border-orange-500/40'; break;
+    case 'run_command': Icon = Terminal; colorClass = 'border-red-500/40'; break;
+  }
+
   return (
-    <div className="system-message-block border border-border/10 bg-foreground/[0.02] rounded-lg overflow-hidden mb-1">
-      <button 
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-2 py-1 text-[10px] hover:bg-accent/50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <ToolIcon name={toolName} />
-          <span className="font-bold uppercase tracking-tight text-muted-foreground/70">{toolName}</span>
-        </div>
-        <ChevronRight size={10} className={`transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
-      </button>
-      {expanded && (
-        <div className="px-2 pb-2 text-[10px] font-mono text-muted-foreground/60 border-t border-border/20 pt-1">
-          <pre className="whitespace-pre-wrap">{JSON.stringify(toolArgs, null, 2)}</pre>
-          {call.result && (
-            <div className="mt-2 border-t border-border/10 pt-1">
-              <div className="text-[9px] text-green-500/70 font-bold mb-1 uppercase tracking-wider">Result</div>
-              <pre className="whitespace-pre-wrap opacity-80">{typeof call.result === 'string' ? call.result : JSON.stringify(call.result, null, 2)}</pre>
-            </div>
-          )}
+    <UnifiedCollapsible title={toolName} icon={Icon} colorClass={colorClass}>
+      <pre className="text-[10px] font-mono text-muted-foreground/70 whitespace-pre-wrap overflow-auto max-h-60">
+        {JSON.stringify(toolArgs, null, 2)}
+      </pre>
+      {call.result && (
+        <div className="mt-2 border-t border-border/5 pt-2">
+          <div className="text-[9px] text-green-500/60 font-bold mb-1 uppercase tracking-wider">Result</div>
+          <pre className="text-[10px] font-mono text-muted-foreground/60 whitespace-pre-wrap max-h-96 overflow-auto opacity-90">
+            {typeof call.result === 'string' ? call.result : JSON.stringify(call.result, null, 2)}
+          </pre>
         </div>
       )}
-    </div>
+    </UnifiedCollapsible>
   );
 }
-
 
 function ThoughtBlock({ content }: { content: string }) {
-  const [expanded, setExpanded] = useState(false);
-  if (!content.trim()) return null;
-
+  if (!content?.trim()) return null;
   return (
-    <div className="my-2 border-l-2 border-primary/20 bg-primary/5 rounded-r-md overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold tracking-tight uppercase text-primary/60 hover:text-primary/80 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Bot size={12} />
-          <span>Thought Process</span>
-        </div>
-        <ChevronRight size={10} className={`transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
-      </button>
-      {expanded && (
-        <div className="px-3 pb-3 text-[11px] leading-relaxed text-muted-foreground/70 italic border-t border-primary/10 pt-2 whitespace-pre-wrap">
-          {content}
-        </div>
-      )}
-    </div>
+    <UnifiedCollapsible title="Thinking Process" icon={Bot} colorClass="border-primary/40">
+      <div className="text-[11px] leading-relaxed text-muted-foreground/80 italic whitespace-pre-wrap">
+        {content}
+      </div>
+    </UnifiedCollapsible>
   );
 }
-
 
 function ToolResultMessage({ name, content }: { name?: string; content: string }) {
-  const [expanded, setExpanded] = useState(false);
   return (
-    <div className="my-1 border-l-2 border-primary/20 bg-muted/5 rounded-r px-3 py-1.5 overflow-hidden">
-      <button 
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between group"
-      >
-        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
-          <Check size={12} className="text-green-500/80" />
-          <span>Result: {name}</span>
-        </div>
-        <ChevronRight size={10} className={`text-muted-foreground/40 group-hover:text-primary transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
-      </button>
-      {expanded && (
-        <pre className="mt-2 text-[10px] font-mono text-muted-foreground/60 whitespace-pre-wrap max-h-96 overflow-auto border-t border-border/10 pt-2">
-          {content}
-        </pre>
-      )}
-    </div>
+    <UnifiedCollapsible title={`Result: ${name}`} icon={Check} colorClass="border-green-500/40">
+      <pre className="text-[10px] font-mono text-muted-foreground/60 whitespace-pre-wrap max-h-96 overflow-auto">
+        {content}
+      </pre>
+    </UnifiedCollapsible>
   );
 }
+
 
 // ─── Command Approval Modal ─────────────────────────────────────────
 
@@ -193,110 +199,83 @@ function ChatMessage({
   onCopy: (content: string) => void;
 }) {
   const isLast = idx === total - 1;
-  const hasText = !!(msg.content || '').replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
   const isAssistant = msg.role === 'assistant';
-  // Only collapse assistant messages that have actual text content
-  const shouldBeCollapsible = isAssistant && hasText;
-  const [isCollapsed, setIsCollapsed] = useState(shouldBeCollapsible && !isLast);
+  // Note: We no longer collapse the whole message at the top level
+  // because each internal part is now independently collapsible.
 
-  // Auto-collapse when a new message is added elsewhere
-  useEffect(() => {
-    if (shouldBeCollapsible && !isLast) {
-      setIsCollapsed(true);
-    } else if (shouldBeCollapsible && isLast) {
-      setIsCollapsed(false);
-    }
-  }, [total, isLast, shouldBeCollapsible]);
 
 
 
   return (
     <div
-      className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto py-1.5 rounded-md border border-transparent ${
-        msg.role === 'user' ? 'bg-foreground/[0.05] border-border/10 shadow-sm px-4' : ''
+      className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto py-1 rounded-sm border border-transparent ${
+        msg.role === 'user' ? 'bg-foreground/[0.03] border-border/5 px-4' : ''
       }`}
     >
-      {shouldBeCollapsible && !isLast && (
-        <div className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-          <button 
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 rounded-md hover:bg-accent text-muted-foreground transition-colors"
-          >
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-      )}
-
-
-
       <div className="flex flex-col gap-1">
-        {shouldBeCollapsible && isCollapsed ? (
-          <button 
-            onClick={() => setIsCollapsed(false)}
-            className="text-[10px] text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-2 py-1 font-medium uppercase tracking-widest"
-          >
-            <Bot size={12} />
-            <span>Collapsed AI Response • {msg.content?.slice(0, 40) + '...'}</span>
-          </button>
-        ) : (
+        <div className="text-foreground text-sm leading-relaxed">
+          {msg.role === 'system' ? (
+            <SystemMessage content={msg.content} />
+          ) : msg.role === 'assistant' ? (
+            <div className="space-y-1.5">
+              {/* 1. Thinking Blocks First */}
+              {msg.thinking && <ThoughtBlock content={msg.thinking} />}
+              {[...(msg.content || '').matchAll(/<thought>([\s\S]*?)<\/thought>/g)].map((m, idx) => (
+                <ThoughtBlock key={idx} content={m[1].trim()} />
+              ))}
 
+              {/* 2. Content Block Second (Now Collapsible) */}
+              {(msg.content || '').replace(/<thought>[\s\S]*?<\/thought>/g, '').trim() && (
+                <UnifiedCollapsible 
+                  title="AI Response" 
+                  icon={Bot} 
+                  colorClass="border-primary/40" 
+                  defaultExpanded={isLast}
+                  borderPosition="bottom"
+                >
 
-          <div className="text-foreground">
-            {msg.role === 'system' ? (
-              <SystemMessage content={msg.content} />
-            ) : msg.role === 'assistant' ? (
-              <div className="space-y-2">
-                {/* Handle Thoughts (Explicit field) */}
-                {msg.thinking && <ThoughtBlock content={msg.thinking} />}
-                {/* Handle Inline Thoughts */}
-                {[...(msg.content || '').matchAll(/<thought>([\s\S]*?)<\/thought>/g)].map((m, idx) => (
-                  <ThoughtBlock key={idx} content={m[1].trim()} />
-                ))}
-                {/* Handle Content (stripping thoughts) */}
-                {(msg.content || '').replace(/<thought>[\s\S]*?<\/thought>/g, '').trim() && (
-                  <div className="py-1">
+                  <div className="py-0.5 relative group/content">
                     <MessageContent 
                       content={msg.content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim()} 
                       role="assistant" 
                       onOpenFile={onOpenFile} 
                     />
+                    <div className="flex justify-end mt-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => onCopy(msg.content || '')}
+                        className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider"
+                        title="Copy Response"
+                      >
+                        <Copy size={12} />
+                        <span>Copy</span>
+                      </button>
+                    </div>
                   </div>
-                )}
-                {/* Handle Tool Calls */}
-                {msg.tool_calls?.map((call, idx) => (
-                  <ToolCallItem key={idx} call={call} />
-                ))}
-              </div>
-            ) : msg.role === 'tool' ? (
-              <ToolResultMessage name={msg.name} content={msg.content} />
-            ) : (
-              <div className="flex flex-col gap-2">
-                {msg.content && (
-                  <div className="py-1">
-                    <MessageContent content={msg.content} role={msg.role} onOpenFile={onOpenFile} />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                </UnifiedCollapsible>
+              )}
+
+
+              {/* 3. Tool Calls Block Third */}
+              {msg.tool_calls?.map((call, idx) => (
+                <ToolCallItem key={idx} call={call} />
+              ))}
+            </div>
+          ) : msg.role === 'tool' ? (
+            <ToolResultMessage name={msg.name} content={msg.content} />
+          ) : (
+            <div className="py-0.5">
+              <MessageContent content={msg.content} role={msg.role} onOpenFile={onOpenFile} />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Message Actions */}
-      {msg.role === 'assistant' && !isCollapsed && (
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity mt-1">
-          <button
-            onClick={() => onCopy(msg.content || '')}
-            className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            title="Copy Message"
-          >
-            <Copy size={12} />
-          </button>
-        </div>
-      )}
+
+
     </div>
   );
 }
+
 
 // ─── Message Rendering with Mentions ────────────────────────────────
 
@@ -405,29 +384,15 @@ function MessageContent({ content = '', role, onOpenFile }: { content?: string; 
 // ─── System Message Component ─────────────────────────────────────
 
 function SystemMessage({ content }: { content: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <div className="mb-1 border border-border/20 rounded-md bg-muted/5 overflow-hidden">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold tracking-tight uppercase text-muted-foreground/50 hover:text-primary/70 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Terminal size={12} />
-          <span>System Prompt</span>
-        </div>
-        <ChevronRight size={10} className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
-      </button>
-      
-      {isOpen && (
-        <div className="px-3 pb-3 text-[11px] leading-relaxed text-muted-foreground/60 font-mono whitespace-pre-wrap border-t border-border/20 pt-2">
-          {content}
-        </div>
-      )}
-    </div>
+    <UnifiedCollapsible title="System Configuration" icon={Terminal} colorClass="border-muted-foreground/30">
+      <div className="text-[11px] font-mono text-muted-foreground/70 whitespace-pre-wrap leading-relaxed">
+        {content}
+      </div>
+    </UnifiedCollapsible>
   );
 }
+
 
 export default function ChatTab({
   settings,
@@ -763,6 +728,19 @@ export default function ChatTab({
                 setPendingApproval({
                   command: event.toolArgs?.command || '',
                   cwd: event.toolArgs?.cwd || '',
+                });
+              } else if (event.type === 'error') {
+                setMessages((prev) => {
+                  const last = prev[prev.length - 1];
+                  if (last && last.role === 'assistant' && last.content.includes('❌')) {
+                    // Avoid duplicate error messages if already handled
+                    return prev;
+                  }
+                  return [...prev, { 
+                    id: genId(), 
+                    role: 'assistant', 
+                    content: `❌ **Error**: ${event.content}` 
+                  }];
                 });
               }
             },

@@ -1,6 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 import { LanguageModel } from 'ai';
 
 export interface ProviderConfig {
@@ -32,12 +33,17 @@ export function getProviderModel(config: ProviderConfig): LanguageModel {
         apiKey,
       })(model);
 
-    case 'ollama':
     case 'deepseek':
+      return createDeepSeek({
+        apiKey,
+        baseURL: baseUrl,
+      })(model);
+
+    case 'ollama':
     case 'others':
     case 'openai-compatible':
       // If it's "others", we check the compatibility field
-      const actualCompatibility = provider === 'others' ? compatibility : (provider === 'ollama' || provider === 'deepseek' ? 'openai' : 'openai');
+      const actualCompatibility = provider === 'others' ? compatibility : (provider === 'ollama' ? 'openai' : 'openai');
 
       if (actualCompatibility === 'anthropic') {
         return createAnthropic({

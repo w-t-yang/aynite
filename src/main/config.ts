@@ -125,12 +125,14 @@ export async function initAppFolders() {
     provider: 'ollama',
     configs: {
       ollama: { url: 'http://localhost:11434', model: '', contextWindow: 8192 },
-      deepseek: { apiKey: '', url: 'https://api.deepseek.com', model: '' },
-      gemini: { apiKey: '', url: 'https://generativelanguage.googleapis.com', model: '' },
-      openai: { apiKey: '', url: 'https://api.openai.com/v1', model: '' },
-      anthropic: { apiKey: '', url: 'https://api.anthropic.com', model: '' },
+      deepseek: { apiKey: '', url: 'https://api.deepseek.com', model: 'deepseek-v4-pro' },
+      gemini: { apiKey: '', url: 'https://generativelanguage.googleapis.com', model: 'gemini-3-flash-preview' },
+      openai: { apiKey: '', url: 'https://api.openai.com/v1', model: 'gpt-5.4' },
+      anthropic: { apiKey: '', url: 'https://api.anthropic.com', model: 'claude-sonnet-4.6' },
       others: { apiKey: '', url: '', model: '', compatibility: 'openai' }
     }
+
+
   };
 
   const keybindingsDefault = DEFAULT_KEYBINDINGS;
