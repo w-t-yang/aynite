@@ -21,7 +21,7 @@
   - [] need more advanced editing
   
 ## Spells
-- [] system prompts
+- [x] system prompts
 - [] memory
 - commands
   - [x] add default commands
@@ -38,5 +38,5 @@
 - [] more files types
 
 ## Logs
-- [] conversation history
+- [x] conversation history
 - [] dev log, remove the current key trigger log and ollama call request log in the console, put them into the dev log

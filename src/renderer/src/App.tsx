@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot } from 'lucide-react';
+import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot, MoreHorizontal, Eraser } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ChatTab from './components/Chat';
 import SettingsView from './components/Settings';
@@ -86,6 +86,8 @@ export default function App() {
   const [workspaceFolders, setWorkspaceFolders] = useState<string[]>([]);
   const [activeWorkspaceName, setActiveWorkspaceName] = useState<string>('');
   const [showTabSwitcher, setShowTabSwitcher] = useState(false);
+  const [showTabMenu, setShowTabMenu] = useState(false);
+  const tabMenuRef = useRef<HTMLDivElement>(null);
 
   const loadWorkspaceState = async () => {
     setWorkspaceReady(false);
@@ -239,6 +241,8 @@ export default function App() {
   });
 
   const tabsRef = useRef<HTMLDivElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
 
   const handleTabsWheel = (e: React.WheelEvent) => {
     if (tabsRef.current) {
@@ -254,42 +258,92 @@ export default function App() {
     localStorage.setItem('obsidian_right_width', rightWidth.toString());
   }, [rightWidth]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tabMenuRef.current && !tabMenuRef.current.contains(e.target as Node)) {
+        setShowTabMenu(false);
+      }
+    };
+    if (showTabMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTabMenu]);
+
   const startResizingLeft = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = leftWidth;
+    let finalWidth = startWidth;
+    document.body.classList.add('resizing');
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
+    function onMouseMove(moveEvent: MouseEvent) {
       const newWidth = startWidth + (moveEvent.clientX - startX);
-      setLeftWidth(Math.max(150, Math.min(newWidth, 800)));
-    };
+      finalWidth = Math.max(150, Math.min(newWidth, 800));
+      if (leftPanelRef.current) {
+        leftPanelRef.current.style.width = `${finalWidth}px`;
+      }
+    }
 
-    const onMouseUp = () => {
+    function onMouseUp() {
+      cleanup();
+    }
+
+    function onKeyDown(ke: KeyboardEvent) {
+      if (ke.key === 'Escape' || (ke.ctrlKey && ke.key.toLowerCase() === 'g')) {
+        cleanup();
+      }
+    }
+
+    function cleanup() {
+      document.body.classList.remove('resizing');
+      setLeftWidth(finalWidth);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-    };
+      document.removeEventListener('keydown', onKeyDown);
+    }
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('keydown', onKeyDown);
   }, [leftWidth]);
 
   const startResizingRight = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = rightWidth;
+    let finalWidth = startWidth;
+    document.body.classList.add('resizing');
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
+    function onMouseMove(moveEvent: MouseEvent) {
       const newWidth = startWidth - (moveEvent.clientX - startX);
-      setRightWidth(Math.max(250, Math.min(newWidth, 1200)));
-    };
+      finalWidth = Math.max(250, Math.min(newWidth, 1200));
+      if (rightPanelRef.current) {
+        rightPanelRef.current.style.width = `${finalWidth}px`;
+      }
+    }
 
-    const onMouseUp = () => {
+    function onMouseUp() {
+      cleanup();
+    }
+
+    function onKeyDown(ke: KeyboardEvent) {
+      if (ke.key === 'Escape' || (ke.ctrlKey && ke.key.toLowerCase() === 'g')) {
+        cleanup();
+      }
+    }
+
+    function cleanup() {
+      document.body.classList.remove('resizing');
+      setRightWidth(finalWidth);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-    };
+      document.removeEventListener('keydown', onKeyDown);
+    }
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('keydown', onKeyDown);
   }, [rightWidth]);
 
   const handleFileContentChange = (content: string) => {
@@ -569,6 +623,12 @@ export default function App() {
     }
   };
 
+  const closeAllTabs = () => {
+    setTabs([]);
+    setActiveTabId('');
+    setShowTabMenu(false);
+  };
+
   const activeTab = tabs.find(t => t.id === activeTabId);
 
   if (!settings) {
@@ -579,7 +639,7 @@ export default function App() {
     <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans">
       {/* Sidebar Wrapper */}
       {leftPanelOpen && (
-        <div className="relative shrink-0 flex" style={{ width: leftWidth }}>
+        <div ref={leftPanelRef} className="relative shrink-0 flex will-change-width" style={{ width: leftWidth }}>
           <div className="flex-1 overflow-hidden min-w-0">
             <Sidebar 
               activeTabPath={activeTab?.filepath}
@@ -656,6 +716,32 @@ export default function App() {
               </div>
             ))}
           </div>
+
+          {/* Tab Menu Trigger */}
+          <div className="relative shrink-0 flex items-center px-2 h-full border-l border-border" ref={tabMenuRef}>
+            <button
+              onClick={() => setShowTabMenu(!showTabMenu)}
+              className={cn(
+                "p-1 rounded-md transition-all hover:bg-accent text-muted-foreground hover:text-foreground",
+                showTabMenu && "bg-accent text-foreground"
+              )}
+              title="Tab Actions"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+
+            {showTabMenu && (
+              <div className="absolute top-full right-2 mt-1 w-48 bg-popover border border-border rounded-lg shadow-2xl z-[100] py-1 animate-in fade-in slide-in-from-top-1">
+                <button
+                  onClick={closeAllTabs}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-accent transition-colors text-left"
+                >
+                  <Eraser size={14} className="text-muted-foreground" />
+                  <span>Close all tabs</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tab Content */}
@@ -708,7 +794,7 @@ export default function App() {
 
       {/* Right Panel Wrapper */}
       {rightPanelOpen && (
-        <div className="relative shrink-0 flex" style={{ width: rightWidth }}>
+        <div ref={rightPanelRef} className="relative shrink-0 flex will-change-width" style={{ width: rightWidth }}>
           <div 
             className="w-1 cursor-col-resize hover:bg-primary/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -left-0.5 top-0"
             onMouseDown={startResizingRight}

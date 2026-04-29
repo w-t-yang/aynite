@@ -30,7 +30,7 @@ interface FileViewerProps {
   id: string;
 }
 
-export default function FileViewer({ 
+function FileViewer({ 
   filename, content, onChange, onSave, isDirty, keybindings, initialCursorPos, onCursorChange, id 
 }: FileViewerProps) {
   const [localContent, setLocalContent] = useState(content);
@@ -512,3 +512,5 @@ export default function FileViewer({
     </div>
   );
 }
+
+export default React.memo(FileViewer);

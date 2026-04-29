@@ -134,6 +134,14 @@ iframe {
   .num-scrollbar::-webkit-scrollbar-thumb:hover {
     background: var(--muted-foreground);
   }
+
+  body.resizing iframe {
+    pointer-events: none;
+  }
+
+  .will-change-width {
+    will-change: width;
+  }
 }
 
 @theme {
