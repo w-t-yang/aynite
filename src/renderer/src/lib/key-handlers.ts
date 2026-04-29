@@ -51,6 +51,7 @@ export interface EditorAPI {
   killLine: () => void;
   deleteForward: () => void;
   selectAll: () => void;
+  refresh: () => void;
 }
 
 export class KeyManager {
@@ -162,6 +163,15 @@ export class KeyManager {
     if (this.checkMatch(e, kb.content.navigation.closeTab)) { e.preventDefault(); this.globalApi.closeTab(); return; }
     if (this.checkMatch(e, kb.content.navigation.switchTab)) { e.preventDefault(); this.globalApi.switchTab(); return; }
     if (this.checkMatch(e, kb.content.navigation.focusContent)) { e.preventDefault(); this.globalApi.focusContent(); return; }
+    
+    // 2.5 Tab Refresh (Catch early to prevent browser reload)
+    if (this.checkMatch(e, kb.content.viewer.refresh)) {
+      e.preventDefault();
+      if (this.activeTabId && this.tabApis.has(this.activeTabId)) {
+        this.tabApis.get(this.activeTabId)!.refresh();
+      }
+      return;
+    }
 
     // 3. Tab Switcher Delegation
     const el = e.target as HTMLElement;

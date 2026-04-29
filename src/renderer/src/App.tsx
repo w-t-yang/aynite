@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   aiProvider: 'gemini',
   keybindings: {
     global: {
-      refresh: 'CTRL+R',
+      refresh: 'CTRL+SHIFT+R',
       quit: ''
     },
     explorer: {
@@ -52,7 +52,8 @@ const DEFAULT_SETTINGS: SettingsState = {
         moveUp: 'K',
         moveLeft: 'H',
         moveRight: 'L',
-        search: '/'
+        search: '/',
+        refresh: 'CTRL+R'
       },
       generic: {
         exitEdit: 'ESCAPE',
@@ -146,7 +147,7 @@ export default function App() {
     if (!kb.global) {
       const oldKb = { ...kb };
       kb.global = {
-        refresh: 'CTRL+R',
+        refresh: 'CTRL+SHIFT+R',
         toggleLeftPanel: 'CTRL+T',
         toggleRightPanel: 'CTRL+U',
         quit: 'CTRL+Q'
@@ -175,9 +176,15 @@ export default function App() {
       delete kb.closeTab;
       delete kb.viewMode;
       delete kb.contentKeys;
-      delete kb.commandTab;
-      delete kb.chatTab;
       delete kb.editMode;
+    }
+
+    // Force migrate old refresh key if it's the old default to avoid app-reload on Ctrl+R
+    if (kb.global?.refresh === 'CTRL+R') {
+      kb.global.refresh = 'CTRL+SHIFT+R';
+    }
+    if (kb.content?.viewer && !kb.content.viewer.refresh) {
+      kb.content.viewer.refresh = 'CTRL+R';
     }
 
     // Strip removed CTRL keys from viewer if they still exist in some old configs
@@ -373,6 +380,9 @@ export default function App() {
   const handleSaveActiveTab = async () => {
     const activeTab = tabs.find(t => t.id === activeTabId);
     if (activeTab?.type === 'file' && activeTab.filepath && activeTab.isDirty) {
+      // Notify components that we're about to save to ignore the FS change event
+      window.dispatchEvent(new CustomEvent('file-saving', { detail: activeTab.filepath }));
+      
       // @ts-ignore
       await window.api.saveFile(activeTab.filepath, activeTab.content || '');
       setTabs(prev => prev.map(tab => 
@@ -811,7 +821,7 @@ export default function App() {
           <div className="flex-1 w-full h-full flex flex-col border-l border-border bg-background min-w-0 overflow-hidden">
             <div className="flex items-center justify-between h-10 border-b border-border bg-muted/30 px-3 shrink-0">
               <div className="flex items-center gap-2 text-sm font-medium text-foreground opacity-80">
-                 <Bot size={16} /> AI Agent
+                 <Bot size={16} /> Aynite Assistant
               </div>
               <button 
                  onClick={() => setRightPanelOpen(false)}

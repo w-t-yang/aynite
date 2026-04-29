@@ -57,6 +57,7 @@ export interface SettingsState {
         moveLeft: string;
         moveRight: string;
         search: string;
+        refresh: string;
       };
       generic: {
         exitEdit: string;
@@ -348,12 +349,12 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
              {activeTab === 'keybindings' && (
                 <button onClick={() => {
                      const defaultKb: SettingsState['keybindings'] = {
-                       global: { refresh: 'CTRL+R', quit: '' },
+                       global: { refresh: 'CTRL+SHIFT+R', quit: '' },
                        explorer: { toggleLeftPanel: 'CTRL+T' },
                        agent: { focusChat: 'CTRL+I', focusSkills: 'CTRL+/', focusCommands: 'CTRL+.', toggleRightPanel: 'CTRL+U' },
                        content: {
                          navigation: { switchTab: 'CTRL+TAB', closeTab: 'CTRL+W', focusContent: 'CTRL+Y' },
-                         viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/' },
+                         viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/', refresh: 'CTRL+R' },
                          generic: { exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Q', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B' }
                        }
                      };
@@ -452,7 +453,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                       <KeyRow label="Toggle Left Panel" value={localSettings.keybindings.explorer.toggleLeftPanel} onChange={(v) => handleKeybindingChange('explorer', 'toggleLeftPanel', v)} />
                    </div>
                    <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">AI Agent (Right Panel)</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Aynite Assistant (Right Panel)</div>
                       <KeyRow label="Focus Chat Input" value={localSettings.keybindings.agent.focusChat} onChange={(v) => handleKeybindingChange('agent', 'focusChat', v)} />
                       <KeyRow label="Focus & Skills" value={localSettings.keybindings.agent.focusSkills} onChange={(v) => handleKeybindingChange('agent', 'focusSkills', v)} />
                       <KeyRow label="Focus & Commands" value={localSettings.keybindings.agent.focusCommands} onChange={(v) => handleKeybindingChange('agent', 'focusCommands', v)} />
@@ -472,6 +473,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                       <KeyRow label="Vim Move Left" value={localSettings.keybindings.content.viewer.moveLeft} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveLeft', v)} />
                       <KeyRow label="Vim Move Right" value={localSettings.keybindings.content.viewer.moveRight} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveRight', v)} />
                       <KeyRow label="Search Buffer" value={localSettings.keybindings.content.viewer.search} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'search', v)} />
+                      <KeyRow label="Refresh Tab / Revert" value={localSettings.keybindings.content.viewer.refresh} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'refresh', v)} />
                    </div>
                    <div className="space-y-1">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Generic (Read + Edit)</div>
@@ -603,7 +605,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           {activeTab === 'prompts' && (
             <div className="space-y-6 max-w-2xl pb-10">
               <div>
-                <p className="text-sm text-muted-foreground mb-6">Manage files that define the system prompt for the AI agent.</p>
+                <p className="text-sm text-muted-foreground mb-6">Manage files that define the system prompt for the Aynite Assistant.</p>
                 <div className="flex items-center justify-between mb-4">
                    <h3 className="text-lg font-medium">Prompt Files</h3>
                    <div className="flex items-center gap-2">

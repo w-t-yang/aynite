@@ -20,6 +20,7 @@ interface ChatInputProps {
   onSubmit: (text: string) => void;
   disabled?: boolean;
   workspaceFolders?: string[];
+  focusKeybinding?: string;
 }
 
 // Real registries will be loaded via API
@@ -91,7 +92,7 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
         <div className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/30 bg-muted/20 shrink-0">
           {triggerLabel}
         </div>
-        
+
         <SelectionList
           items={selectionItems}
           selectedIndex={selectedIndex}
@@ -183,13 +184,13 @@ async function flattenWorkspaceFiles(
         const name = parts.pop() || '';
         const parent = parts.pop() || '';
         const relativePath = file.path.replace(rootFolder, '').replace(/^[/\\]/, '');
-        
-        results.push({ 
-          id: file.path, 
-          label: `${rootName}/${relativePath}`, 
+
+        results.push({
+          id: file.path,
+          label: `${rootName}/${relativePath}`,
           name: name,
           subtitle: parent ? `${rootName}/.../${parent}/` : `(Root: ${rootName})`,
-          isDirectory: file.isDirectory 
+          isDirectory: file.isDirectory
         });
         if (file.isDirectory && depth < maxDepth) {
           await walk(file.path, depth + 1, rootFolder, rootName);
@@ -212,7 +213,7 @@ async function flattenWorkspaceFiles(
 // ─── Main ChatInput Component ────────────────────────────────────────
 
 const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
-  ({ onSubmit, disabled, workspaceFolders = [] }, ref) => {
+  ({ onSubmit, disabled, workspaceFolders = [], focusKeybinding }, ref) => {
     const [fileItems, setFileItems] = useState<SuggestionItem[]>([]);
     const [skillItems, setSkillItems] = useState<SuggestionItem[]>([]);
     const [commandItems, setCommandItems] = useState<SuggestionItem[]>([]);
@@ -229,7 +230,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           fileItemsRef.current = items;
           setFileItems(items);
         }
-        
+
         const skillsRes = await (window.api as any).getAvailableSkills();
         if (skillsRes.data) {
           const items = skillsRes.data.map((s: any) => ({ id: s.path, label: s.name, name: s.name, subtitle: 'Skill' }));
@@ -257,7 +258,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         }),
         getWorkspaceFolders: () => workspaceFolders
       };
-      
+
       return () => {
         // @ts-ignore
         delete window.__aynite;
@@ -272,7 +273,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           setFileItems(items);
         });
       }
-      
+
       // Load skills and commands
       // @ts-ignore
       window.api.getAvailableSkills().then((res: any) => {
@@ -291,8 +292,8 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         }
       });
     }, [workspaceFolders]);
-    
-    
+
+
     const BaseMention = Mention.extend({
       addAttributes() {
         return {
@@ -308,69 +309,71 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       },
     });
 
+    const extensions = React.useMemo(() => [
+      StarterKit.configure({
+        heading: false,
+        codeBlock: false,
+        bulletList: false,
+        orderedList: false,
+        blockquote: false,
+        horizontalRule: false,
+      }),
+      Placeholder.configure({
+        placeholder: `Message Aynite Assistant… (Press ${focusKeybinding || 'Ctrl+/'} to start typing)`,
+      }),
+      BaseMention.configure({
+        HTMLAttributes: { class: 'mention mention-file' },
+        suggestion: createSuggestion('@', (query) => {
+          const q = query.toLowerCase();
+          return fileItemsRef.current
+            .filter((item) => item.label.toLowerCase().includes(q))
+            .sort((a, b) => {
+              const aName = (a.name || '').toLowerCase();
+              const bName = (b.name || '').toLowerCase();
+              const aLabel = a.label.toLowerCase();
+              const bLabel = b.label.toLowerCase();
+
+              // 1. Exact name match
+              if (aName === q && bName !== q) return -1;
+              if (bName === q && aName !== q) return 1;
+
+              // 2. Name starts with
+              if (aName.startsWith(q) && !bName.startsWith(q)) return -1;
+              if (bName.startsWith(q) && !aName.startsWith(q)) return 1;
+
+              // 3. Label starts with (root match)
+              if (aLabel.startsWith(q) && !bLabel.startsWith(q)) return -1;
+              if (bLabel.startsWith(q) && !aLabel.startsWith(q)) return 1;
+
+              // 4. Shorter label (closer to root)
+              return aLabel.length - bLabel.length;
+            })
+            .slice(0, 20);
+        }),
+      }),
+      BaseMention.extend({ name: 'skillMention' }).configure({
+        HTMLAttributes: { class: 'mention mention-skill' },
+        suggestion: createSuggestion('/', (query) =>
+          skillItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
+        ),
+      }),
+      BaseMention.extend({ name: 'commandMention' }).configure({
+        HTMLAttributes: { class: 'mention mention-command' },
+        suggestion: createSuggestion('>', (query) =>
+          commandItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
+        ),
+      }),
+    ], [focusKeybinding]);
+
     const editor = useEditor({
-      extensions: [
-        StarterKit.configure({
-          heading: false,
-          codeBlock: false,
-          bulletList: false,
-          orderedList: false,
-          blockquote: false,
-          horizontalRule: false,
-        }),
-        Placeholder.configure({
-          placeholder: 'Message Aynite… (@ files, / skills, > commands)',
-        }),
-        BaseMention.configure({
-          HTMLAttributes: { class: 'mention mention-file' },
-          suggestion: createSuggestion('@', (query) => {
-            const q = query.toLowerCase();
-            return fileItemsRef.current
-              .filter((item) => item.label.toLowerCase().includes(q))
-              .sort((a, b) => {
-                const aName = (a.name || '').toLowerCase();
-                const bName = (b.name || '').toLowerCase();
-                const aLabel = a.label.toLowerCase();
-                const bLabel = b.label.toLowerCase();
-
-                // 1. Exact name match
-                if (aName === q && bName !== q) return -1;
-                if (bName === q && aName !== q) return 1;
-
-                // 2. Name starts with
-                if (aName.startsWith(q) && !bName.startsWith(q)) return -1;
-                if (bName.startsWith(q) && !aName.startsWith(q)) return 1;
-
-                // 3. Label starts with (root match)
-                if (aLabel.startsWith(q) && !bLabel.startsWith(q)) return -1;
-                if (bLabel.startsWith(q) && !aLabel.startsWith(q)) return 1;
-
-                // 4. Shorter label (closer to root)
-                return aLabel.length - bLabel.length;
-              })
-              .slice(0, 20);
-          }),
-        }),
-        BaseMention.extend({ name: 'skillMention' }).configure({
-          HTMLAttributes: { class: 'mention mention-skill' },
-          suggestion: createSuggestion('/', (query) =>
-            skillItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
-          ),
-        }),
-        BaseMention.extend({ name: 'commandMention' }).configure({
-          HTMLAttributes: { class: 'mention mention-command' },
-          suggestion: createSuggestion('>', (query) =>
-            commandItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
-          ),
-        }),
-      ],
+      extensions,
       editorProps: {
         attributes: {
           class: 'chat-input-editor outline-none min-h-[24px] max-h-[200px] overflow-y-auto text-sm leading-relaxed',
         },
       },
       editable: !disabled,
-    });
+    }, [extensions]);
 
     const handleSubmit = useCallback(() => {
       if (!editor || disabled) return;

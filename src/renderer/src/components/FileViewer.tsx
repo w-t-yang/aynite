@@ -46,6 +46,7 @@ function FileViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [externalChangeDetected, setExternalChangeDetected] = useState(false);
+  const lastLocalWriteTime = useRef(0);
   
   // @ts-ignore
   const category = fileInfo ? getFileCategory(fileInfo.extension, fileInfo.isText, fileInfo.path) : 'text';
@@ -117,6 +118,19 @@ function FileViewer({
   }, [id]);
 
   useEffect(() => {
+    const handleSaving = (e: any) => {
+      const path = e.detail;
+      const currentPath = id.startsWith('file-') ? id.replace('file-', '') : id;
+      // Normalize both paths for comparison
+      if (path.replace(/\\/g, '/') === currentPath.replace(/\\/g, '/')) {
+        lastLocalWriteTime.current = Date.now();
+      }
+    };
+    window.addEventListener('file-saving', handleSaving);
+    return () => window.removeEventListener('file-saving', handleSaving);
+  }, [id]);
+
+  useEffect(() => {
     // Listen for file system changes
     // @ts-ignore
     const cleanup = window.api.onFileSystemChange((data) => {
@@ -128,6 +142,12 @@ function FileViewer({
       if (normalizedChangedPath === normalizedCurrentPath && (data.event === 'change' || data.event === 'unlink')) {
         // If we just saved the file, ignore the change event
         // This is a simple debouncing/flag mechanism
+        const now = Date.now();
+        if (now - lastLocalWriteTime.current < 2000) {
+          console.log('[FileViewer] Ignoring change event likely triggered by local save');
+          return;
+        }
+
         if (!isLocalChange.current) {
           console.log('[FileViewer] External change detected:', data.path);
           setExternalChangeDetected(true);
@@ -204,6 +224,7 @@ function FileViewer({
     setLocalContent(e.target.value);
     if (onChange) {
       isLocalChange.current = true;
+      lastLocalWriteTime.current = Date.now();
       onChange(e.target.value);
     }
     updateCursor();
@@ -377,6 +398,7 @@ function FileViewer({
         textareaRef.current?.select();
         updateCursor();
       },
+      refresh: handleRefresh,
     };
     
     KeyManager.registerEditor(id, api);
@@ -488,6 +510,7 @@ function FileViewer({
                     setLocalContent(content);
                     if (onChange) {
                       isLocalChange.current = true;
+                      lastLocalWriteTime.current = Date.now();
                       onChange(content);
                     }
                   }}

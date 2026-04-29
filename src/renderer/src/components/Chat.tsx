@@ -423,12 +423,47 @@ export default function ChatTab({
     }
   }, [messages, loading]);
 
-  const normalizeMessages = (msgs: any[]) => {
-    // Basic normalization (handle legacy logs with 'text' instead of 'content')
-    return msgs.map((m: any) => ({
+  const normalizeAndHealMessages = (msgs: any[]): AgentMessage[] => {
+    // 1. Basic normalization (handle legacy logs with 'text' instead of 'content')
+    const normalized = msgs.map((m: any) => ({
       ...m,
+      id: m.id || Math.random().toString(36).slice(2, 11),
       content: m.content || m.text || ""
     }));
+
+    const healed: AgentMessage[] = [];
+    for (let i = 0; i < normalized.length; i++) {
+      const m = normalized[i];
+      healed.push(m);
+
+      // If it's an assistant message with tool calls, ensure they have results
+      if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
+        const existingResultIds = new Set<string>();
+        let j = i + 1;
+        // Scan forward for following tool results
+        while (j < normalized.length && normalized[j].role === 'tool') {
+          if (normalized[j].tool_call_id) {
+            existingResultIds.add(normalized[j].tool_call_id);
+          }
+          j++;
+        }
+
+        // Add placeholder results for any missing tool call IDs
+        for (const call of m.tool_calls) {
+          const callId = call.toolCallId || call.id;
+          if (callId && !existingResultIds.has(callId)) {
+            healed.push({
+              id: Math.random().toString(36).slice(2, 11),
+              role: 'tool',
+              content: "Task interrupted before completion.",
+              tool_call_id: callId,
+              name: call.toolName || call.function?.name
+            });
+          }
+        }
+      }
+    }
+    return healed;
   };
 
   useEffect(() => {
@@ -439,7 +474,7 @@ export default function ChatTab({
         // @ts-ignore
         window.api.loadChatLog(id, date).then((res: any) => {
           if (res && res.data) {
-            setMessages(normalizeMessages(res.data));
+            setMessages(normalizeAndHealMessages(res.data));
             setSessionId(id || null);
           }
         });
@@ -945,6 +980,7 @@ export default function ChatTab({
             onSubmit={sendMessage}
             disabled={loading}
             workspaceFolders={workspaceFolders}
+            focusKeybinding={settings.keybindings.agent.focusChat}
           />
         </div>
       </div>

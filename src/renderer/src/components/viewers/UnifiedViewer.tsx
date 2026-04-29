@@ -127,7 +127,8 @@ export const UnifiedViewer: React.FC<{
           
           // Block common IDE command keys
           const ideCommands = ['a', '/', 'j', 'k', 'h', 'l', 'w', 'r'];
-          if (!isCmd && !e.altKey && ideCommands.includes(key)) {
+          const isCommandKey = (isCmd && ['r', 's', 'w', 'p', 'i', 'u', 't', '/', '.'].includes(key));
+          if ((!isCmd && !e.altKey && ideCommands.includes(key)) || isCommandKey) {
             e.preventDefault();
           }
 

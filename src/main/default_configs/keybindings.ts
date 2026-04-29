@@ -1,6 +1,6 @@
 export const DEFAULT_KEYBINDINGS = {
   global: {
-    refresh: 'CTRL+R',
+    refresh: 'CTRL+SHIFT+R',
     quit: 'CTRL+Q'
   },
   explorer: {
@@ -22,7 +22,8 @@ export const DEFAULT_KEYBINDINGS = {
       moveUp: 'K',
       moveLeft: 'H',
       moveRight: 'L',
-      search: '/'
+      search: '/',
+      refresh: 'CTRL+R'
     },
     generic: { // Previously contentKeys
       exitEdit: 'ESCAPE',

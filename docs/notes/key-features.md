@@ -1,8 +1,8 @@
 ## Config
 - AI Backend
   - [x] ollama connection
-  - [] gemini connection
-  - [] deepseek connection
+  - [x] gemini connection
+  - [x] deepseek connection
   - [] other api key connections
 - Key binding
   - [x] basics
@@ -32,6 +32,10 @@
   - [x] add config to maintain a list of folder for skills, same for commands
 
 ## git
+- []treeview
+- []file state
+- []view diff
+- []other git functions
 
 ## Files
 - [] sync
