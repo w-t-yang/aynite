@@ -26,8 +26,6 @@ export interface SettingsState {
     deepseek?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
     others?: { apiKey: string; url: string; model: string; compatibility: 'openai' | 'anthropic' | 'google'; thinking?: boolean; thinkingBudget?: number };
     ollama?: { url: string; model: string; contextWindow: number; thinking?: boolean; thinkingBudget?: number };
-
-    autoApproveCommands?: boolean;
   };
 
   keybindings: {
@@ -207,17 +205,6 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
       aiConfigs: {
         ...currentConfigs,
         [provider]: newProviderConfig
-      }
-    });
-  };
-
-
-  const handleToggleAutoApprove = () => {
-    save({
-      ...localSettings,
-      aiConfigs: {
-        ...localSettings.aiConfigs,
-        autoApproveCommands: !localSettings.aiConfigs?.autoApproveCommands
       }
     });
   };
@@ -586,17 +573,6 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     </div>
                   ))}
 
-                </div>
-                <div className="pt-8 border-t border-border/50">
-                  <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-accent/5">
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-medium">Auto-Approve Commands</h4>
-                      <p className="text-xs text-muted-foreground">Skip the approval prompt when the AI needs to run shell commands.</p>
-                    </div>
-                    <button onClick={handleToggleAutoApprove} className={cn("relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none", localSettings.aiConfigs?.autoApproveCommands ? "bg-primary" : "bg-muted")}>
-                      <span className={cn("inline-block h-4 w-4 transform rounded-full bg-white transition-transform", localSettings.aiConfigs?.autoApproveCommands ? "translate-x-6" : "translate-x-1")} />
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>

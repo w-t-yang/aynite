@@ -43,7 +43,7 @@ async function isPathWithinWorkspace(filePath: string, workspaceFolders: string[
 export function setupAiIpc(mainWindow: BrowserWindow) {
   ipcMain.handle('api:ai-chat', async (event, { messages, config, workspaceFolders }: { 
     messages: any[], 
-    config: ProviderConfig & { autoApproveCommands?: boolean },
+    config: ProviderConfig,
     workspaceFolders: string[]
   }) => {
     // Log the initial request
@@ -133,8 +133,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           execute: async ({ command, cwd }: { command: string, cwd?: string }) => {
             const runCwd = cwd || workspaceFolders[0] || '.';
             
-            if (!config.autoApproveCommands) {
-              const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+            const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
               mainWindow.webContents.send('api:ai-approval-request', { id: approvalId, command, cwd: runCwd });
               
               const approved = await new Promise<boolean>((resolve) => {
@@ -148,7 +147,6 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
               });
               
               if (!approved) return 'Command rejected by user.';
-            }
 
             try {
               const { stdout, stderr } = await execAsync(command, { cwd: runCwd });

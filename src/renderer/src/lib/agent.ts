@@ -23,7 +23,6 @@ export interface AgentConfig {
   baseUrl: string;
   model: string;
   compatibility?: 'openai' | 'anthropic' | 'google';
-  autoApproveCommands?: boolean;
   thinking?: boolean;
   thinkingBudget?: number;
 }
@@ -173,7 +172,6 @@ export async function runAgentLoop(
       apiKey: config.apiKey,
       baseUrl: config.baseUrl,
       model: config.model,
-      autoApproveCommands: config.autoApproveCommands,
       compatibility: config.compatibility,
       thinking: config.thinking,
       thinkingBudget: config.thinkingBudget

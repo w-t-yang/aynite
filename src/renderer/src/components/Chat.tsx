@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check } from 'lucide-react';
+import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { SettingsState } from './Settings';
@@ -129,28 +129,46 @@ function ApprovalModal({
   onReject: () => void;
 }) {
   return (
-    <div className="border border-orange-500/30 bg-orange-500/5 rounded-lg p-3 my-2 space-y-2">
-      <div className="flex items-center gap-2 text-orange-400 text-xs font-medium">
-        <AlertTriangle size={14} />
-        <span>Command Approval Required</span>
-      </div>
-      <div className="bg-background border border-border rounded-md px-3 py-2">
-        <code className="text-xs text-foreground font-mono">{command}</code>
-        <div className="text-[10px] text-muted-foreground mt-1">cwd: {cwd}</div>
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={onApprove}
-          className="px-3 py-1.5 text-xs rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors font-medium"
-        >
-          Approve
-        </button>
-        <button
-          onClick={onReject}
-          className="px-3 py-1.5 text-xs rounded-md bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors font-medium"
-        >
-          Reject
-        </button>
+    <div className="relative group/approval my-2 overflow-hidden rounded-md border border-warning/30 bg-warning/5 backdrop-blur-md shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-transparent opacity-30" />
+      
+      <div className="relative p-3 space-y-3">
+        <div className="flex items-center gap-2 text-warning">
+          <div className="w-6 h-6 rounded bg-warning/20 flex items-center justify-center shrink-0">
+            <AlertTriangle size={12} />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Command Approval</span>
+        </div>
+
+        <div className="bg-background/40 border border-border/30 rounded px-2 py-1.5 shadow-inner">
+          <div className="flex items-start gap-2">
+             <Terminal size={12} className="text-muted-foreground mt-0.5 shrink-0" />
+             <div className="flex flex-col gap-1 min-w-0 flex-1">
+                <code className="text-xs text-foreground font-mono break-all leading-normal bg-accent/5 px-1.5 py-0.5 rounded border border-border/10 whitespace-pre-wrap">{command}</code>
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 font-medium">
+                  <Folder size={8} />
+                  <span className="truncate">{cwd}</span>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onApprove}
+            className="flex-1 h-8 rounded bg-warning text-warning-foreground hover:bg-warning/90 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest shadow shadow-warning/10 flex items-center justify-center gap-1.5 group/btn"
+          >
+            <Check size={12} className="group-hover/btn:scale-110 transition-transform" />
+            Approve
+          </button>
+          <button
+            onClick={onReject}
+            className="flex-1 h-8 rounded bg-muted/30 border border-border/20 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 group/btn"
+          >
+            <X size={12} className="group-hover/btn:scale-110 transition-transform" />
+            Reject
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -671,7 +689,6 @@ export default function ChatTab({
           baseUrl: config.url || '',
           model: config.model || '',
           compatibility: config.compatibility,
-          autoApproveCommands: settings.aiConfigs?.autoApproveCommands || false,
           thinking: config.thinking,
           thinkingBudget: config.thinkingBudget
         };
@@ -918,7 +935,7 @@ export default function ChatTab({
 
         {/* Inline Approval Modal */}
         {pendingApproval && (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-xl mx-auto">
             <ApprovalModal
               command={pendingApproval.command}
               cwd={pendingApproval.cwd}

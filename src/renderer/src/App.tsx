@@ -199,9 +199,15 @@ export default function App() {
       delete loaded.theme;
     }
 
+    const aiConfigs = loaded.aiConfigs || {};
+    if (aiConfigs.autoApproveCommands !== undefined) {
+      delete aiConfigs.autoApproveCommands;
+    }
+
     return {
       ...DEFAULT_SETTINGS,
       ...loaded,
+      aiConfigs,
       activeTheme: loaded.activeTheme || DEFAULT_SETTINGS.activeTheme,
       keybindings: {
         ...DEFAULT_SETTINGS.keybindings,
