@@ -139,7 +139,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
         for (const p of pathsToOpen) {
           treeRef.current.open(p);
         }
-        treeRef.current.select(targetPath);
+        // Use scrollTo instead of select to avoid stealing focus
         treeRef.current.scrollTo(targetPath);
       }, changed ? 100 : 0);
     };

@@ -45,9 +45,15 @@ export default function FileViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const category = fileInfo ? getFileCategory(fileInfo.extension, fileInfo.isText) : 'text';
-  const Handler = FileHandlerComponents[category];
-  const canEdit = category === 'text' || category === 'markdown' || category === 'html';
+  // @ts-ignore
+  const category = fileInfo ? getFileCategory(fileInfo.extension, fileInfo.isText, fileInfo.path) : 'text';
+  const MAX_TEXT_SIZE = 10 * 1024 * 1024;
+  const isTextLike = category === 'text' || category === 'markdown' || category === 'html';
+  const isTooLarge = isTextLike && (fileInfo?.size || 0) > MAX_TEXT_SIZE;
+  const effectiveCategory = isTooLarge ? 'unsupported' : category;
+  
+  const Handler = FileHandlerComponents[effectiveCategory];
+  const canEdit = !isTooLarge && (category === 'text' || category === 'markdown' || category === 'html');
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumRef = useRef<HTMLDivElement>(null);
@@ -275,6 +281,28 @@ export default function FileViewer({
           setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = pos; textarea.focus(); updateCursor(); }, 0);
         }
       },
+      deleteForward: () => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          if (start === end) {
+            if (start < localContent.length) {
+              undoStack.current.push(localContent);
+              const newContent = localContent.substring(0, start) + localContent.substring(start + 1);
+              setLocalContent(newContent);
+              if (onChange) { isLocalChange.current = true; onChange(newContent); }
+              setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = start; textarea.focus(); updateCursor(); }, 0);
+            }
+          } else {
+            undoStack.current.push(localContent);
+            const newContent = localContent.substring(0, start) + localContent.substring(end);
+            setLocalContent(newContent);
+            if (onChange) { isLocalChange.current = true; onChange(newContent); }
+            setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = start; textarea.focus(); updateCursor(); }, 0);
+          }
+        }
+      },
       selectAll: () => {
         textareaRef.current?.select();
         updateCursor();
@@ -403,9 +431,13 @@ export default function FileViewer({
             </div>
 
             {/* Specialized Viewer */}
-            {(!isEditing && (category === 'markdown' || category === 'html' || category === 'pdf' || category === 'image' || category === 'video' || category === 'audio' || category === 'unsupported')) && (
+            {(!isEditing && (effectiveCategory === 'markdown' || effectiveCategory === 'html' || effectiveCategory === 'pdf' || effectiveCategory === 'image' || effectiveCategory === 'video' || effectiveCategory === 'audio' || effectiveCategory === 'unsupported')) && (
               <div className="absolute inset-0 z-20 bg-background">
-                <Handler file={fileInfo!} content={localContent} />
+                <Handler 
+                  file={fileInfo!} 
+                  content={localContent} 
+                  reason={isTooLarge ? 'too_large' : (effectiveCategory === 'unsupported' ? 'binary' : undefined)} 
+                />
               </div>
             )}
           </div>

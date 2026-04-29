@@ -16,7 +16,7 @@ export * from './AudioViewer';
 export * from './PdfViewer';
 export * from './UnsupportedViewer';
 
-export const FileHandlerComponents: Record<FileCategory, React.FC<{ file: FileInfo; content?: string }>> = {
+export const FileHandlerComponents: Record<FileCategory, React.FC<{ file: FileInfo; content?: string; reason?: 'too_large' | 'binary' | 'other' }>> = {
   markdown: MarkdownViewer,
   html: HtmlViewer,
   image: ImageViewer,

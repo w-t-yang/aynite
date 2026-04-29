@@ -49,6 +49,7 @@ export interface EditorAPI {
   endOfLine: () => void;
   startOfLine: () => void;
   killLine: () => void;
+  deleteForward: () => void;
   selectAll: () => void;
 }
 
@@ -200,7 +201,7 @@ export class KeyManager {
     // 4. Delegate to Active Component
     let context: 'editor' | 'chat' | 'settings' | 'sidebar' | 'other' = 'editor';
     
-    if (el) {
+    if (el && ((el as any) instanceof HTMLElement || (el as any) instanceof Element) && typeof (el as any).closest === 'function') {
       if (el.closest('.chat-input-editor') || el.closest('.chat-input-wrapper')) {
         context = 'chat';
       } else if (el.closest('.settings-panel')) {
@@ -273,12 +274,13 @@ export class KeyManager {
     const isAlt = e.altKey;
     const key = e.key.toUpperCase();
 
-    if (e.key === 'Tab') {
+    if (e.key === 'Tab' && !isCmd && !isAlt) {
       const target = e.target as HTMLElement;
-      if (!target.isContentEditable && !api.isSearchActive()) {
-        e.preventDefault();
-        return true;
+      if (api.isSearchActive() && api.isSearchInputFocused(target)) {
+        return false; // Let standard tab behavior work in search input
       }
+      e.preventDefault();
+      return true;
     }
 
     // ─── Search Gate ───
@@ -299,6 +301,11 @@ export class KeyManager {
 
     // ─── Edit Mode Gate ───
     if (!api.isEditing()) {
+      if (key === 'A') {
+        e.preventDefault();
+        api.setIsEditing(true);
+        return true;
+      }
       // Prevent deletion in view mode
       if (e.key === 'Backspace' || e.key === 'Delete') {
         e.preventDefault(); return true;
@@ -308,7 +315,9 @@ export class KeyManager {
       const v = keybindings.content.viewer;
       
       if (isPlainKey && key === v.enterEdit?.toUpperCase()) {
-        e.preventDefault(); api.setIsEditing(true); return true;
+        e.preventDefault();
+        api.setIsEditing(true);
+        return true;
       } else if (isPlainKey && key === v.moveDown?.toUpperCase()) {
         e.preventDefault(); api.moveCursor('down'); return true;
       } else if (isPlainKey && key === v.moveUp?.toUpperCase()) {
@@ -347,6 +356,9 @@ export class KeyManager {
       e.preventDefault(); api.moveCursor('right'); return true;
     } else if (isMatch(g.backwardChar)) {
       e.preventDefault(); api.moveCursor('left'); return true;
+    } else if (isCmd && key === 'D') {
+      if (!api.isEditing()) return true;
+      e.preventDefault(); api.deleteForward?.(); return true;
     }
 
     return false;

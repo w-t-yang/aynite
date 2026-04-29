@@ -116,44 +116,54 @@ export const UnifiedViewer: React.FC<{
     if (!doc) return;
 
     try {
-      // Forward key events to the top window for central handling
-      const handleKeyDown = (e: KeyboardEvent) => {
-        const event = new KeyboardEvent('keydown', {
-          key: e.key, code: e.code, ctrlKey: e.ctrlKey,
-          shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey,
-          bubbles: true, cancelable: true, composed: true
-        });
-        window.top?.dispatchEvent(event);
-      };
-      doc.removeEventListener('keydown', handleKeyDown);
-      doc.addEventListener('keydown', handleKeyDown);
+      // 1. Inject styles (only for portal-based)
+      if (!src && !srcDoc) {
+        injectStyles(doc);
+      }
 
-      // Make body focusable
+      // 2. Make body focusable and setup key forwarding
       if (doc.body) {
         doc.body.tabIndex = 0;
         doc.body.style.outline = 'none';
-        doc.body.focus();
+        
+        const handleKeyDown = (e: KeyboardEvent) => {
+          const key = e.key.toLowerCase();
+          const isCmd = e.ctrlKey || e.metaKey;
+          
+          // Block common IDE command keys from being processed by the browser inside the iframe
+          // This prevents them from being 'typed' when focus switches to the editor.
+          const ideCommands = ['a', '/', 'j', 'k', 'h', 'l', 'w', 'r'];
+          if (!isCmd && !e.altKey && ideCommands.includes(key)) {
+            e.preventDefault();
+          }
+
+          const event = new KeyboardEvent('keydown', {
+            key: e.key, code: e.code, ctrlKey: e.ctrlKey,
+            shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey,
+            bubbles: true, cancelable: true, composed: true
+          });
+          window.top?.dispatchEvent(event);
+        };
+        doc.body.removeEventListener('keydown', handleKeyDown);
+        doc.body.addEventListener('keydown', handleKeyDown);
+        
+        // Initial focus only if it's the active viewer
+        if (!src && !srcDoc) doc.body.focus();
       }
 
-      // 3. Inject styles (only for portal-based)
-      if (!src && !srcDoc) {
-        injectStyles(doc);
-        setReady(true);
-      } else {
-        setReady(true);
-      }
+      setReady(true);
     } catch (e) {
       console.warn('UnifiedViewer: Could not access iframe document:', e);
-      setReady(true); // Still show it even if we can't bridge keys
+      setReady(true);
     }
   }, [contentRef, src, srcDoc, injectStyles]);
 
   React.useEffect(() => {
-    // If src or srcDoc changes, we might need to re-attach or re-check
-    if (contentRef && (src || srcDoc)) {
+    // Ensure we trigger initialization as soon as the ref is available
+    if (contentRef) {
       handleLoad();
     }
-  }, [contentRef, src, srcDoc, handleLoad]);
+  }, [contentRef, handleLoad, src, srcDoc]);
 
   return (
     <iframe 

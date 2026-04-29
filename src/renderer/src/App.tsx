@@ -386,8 +386,35 @@ export default function App() {
       if (tabEl) {
         tabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
+
+      // Force focus to the new tab content
+      setTimeout(() => {
+        // Try to focus standard editor
+        const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLElement;
+        if (textarea) {
+          textarea.focus();
+          return;
+        }
+
+        // Try to focus specialized viewer iframe
+        const iframes = document.querySelectorAll('iframe');
+        if (iframes.length > 0) {
+           // The active one is usually the only one visible or the last one mounted
+           const activeIframe = iframes[iframes.length - 1];
+           try {
+             activeIframe.contentWindow?.document.body.focus();
+           } catch (e) {
+             activeIframe.focus();
+           }
+           return;
+        }
+
+        // Fallback to settings panel
+        const settingsPanel = document.querySelector('.settings-panel') as HTMLElement;
+        if (settingsPanel) settingsPanel.focus();
+      }, 150);
     }
-  }, [activeTabId, tabs]);
+  }, [activeTabId]);
 
   useEffect(() => {
     // @ts-ignore
@@ -480,11 +507,19 @@ export default function App() {
     const existingTab = tabs.find(t => t.filepath?.replace(/\\/g, '/') === normalizedPath);
     
     if (!existingTab) {
-      const ext = file.path.split('.').pop() || '';
-      const category = getFileCategory(ext);
+      // @ts-ignore
+      const infoRes = await window.api.fileInfo(file.path);
+      const info = infoRes.data || {};
+      // @ts-ignore
+      const category = getFileCategory(info.extension || '', info.isText, info.path || file.path);
       let content = '';
 
-      if (category === 'text' || category === 'markdown' || category === 'html') {
+      // Safety: Only read if it's a supported text type and under 10MB
+      const MAX_TEXT_SIZE = 10 * 1024 * 1024; // 10MB
+      const isLarge = (info.size || 0) > MAX_TEXT_SIZE;
+      const isTextType = category === 'text' || category === 'markdown' || category === 'html';
+
+      if (isTextType && !isLarge && info.isText !== false) {
         // @ts-ignore
         const res = await window.api.readFile(file.path);
         content = res.data || '';
@@ -497,7 +532,8 @@ export default function App() {
         filepath: file.path, // Store original path for saving
         content,
         originalContent: content,
-        isDirty: false
+        isDirty: false,
+        size: info.size
       }]);
       setActiveTabId(tabId);
     } else {

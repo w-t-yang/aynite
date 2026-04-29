@@ -9,25 +9,39 @@ export interface FileInfo {
 
 export type FileCategory = 'text' | 'image' | 'video' | 'audio' | 'pdf' | 'markdown' | 'html' | 'unsupported';
 
-export function getFileCategory(extension: string, isText?: boolean): FileCategory {
+/**
+ * Determines the file category based on extension, text content check, and filename.
+ */
+export function getFileCategory(extension: string): FileCategory;
+export function getFileCategory(extension: string, isText: boolean | undefined): FileCategory;
+export function getFileCategory(extension: string, isText: boolean | undefined, filePath: string | undefined): FileCategory;
+export function getFileCategory(extension: string, isText?: boolean, filePath?: string): FileCategory {
   const ext = extension.toLowerCase();
+  
+  const binaryExts = {
+    image: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff'],
+    video: ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'],
+    audio: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'opus'],
+    pdf: ['pdf'],
+    unsupported: [
+      'zip', 'tar', 'gz', '7z', 'rar', 'exe', 'dll', 'so', 'dylib', 'bin',
+      'docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp', 'pyc', 'class', 'o', 'deb', 'wmv'
+    ]
+  };
+
   if (['md', 'markdown'].includes(ext)) return 'markdown';
   if (ext === 'html' || ext === 'htm') return 'html';
-  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'].includes(ext)) return 'image';
-  if (['mp4', 'webm', 'ogg', 'mov'].includes(ext)) return 'video';
-  if (['mp3', 'wav', 'flac', 'aac', 'm4a'].includes(ext)) return 'audio';
-  if (ext === 'pdf') return 'pdf';
+  if (binaryExts.image.includes(ext)) return 'image';
+  if (binaryExts.video.includes(ext)) return 'video';
+  if (binaryExts.audio.includes(ext)) return 'audio';
+  if (binaryExts.pdf.includes(ext)) return 'pdf';
+  if (binaryExts.unsupported.includes(ext)) return 'unsupported';
   
-  if (isText) return 'text';
+  // If backend explicitly says it's binary via null-byte check, respect it
+  if (isText === false) return 'unsupported';
   
-  const textExts = [
-    'txt', 'js', 'ts', 'jsx', 'tsx', 'css', 'scss', 'html', 'json', 'yaml', 'yml', 
-    'py', 'rs', 'go', 'c', 'cpp', 'h', 'hpp', 'sh', 'bash', 'zsh', 'env', 'gitignore',
-    'lock', 'xml', 'sql', 'php', 'rb', 'java', 'kt', 'swift', 'toml', 'ignore'
-  ];
-  if (textExts.includes(ext) || ext === '') return 'text';
-  
-  return 'unsupported';
+  // Default to text for anything else
+  return 'text';
 }
 
 export function formatFileSize(bytes: number): string {
