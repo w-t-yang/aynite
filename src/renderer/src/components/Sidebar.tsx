@@ -523,13 +523,11 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
           </Tree>
         ) : (
           <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
-            <p>No folders in this workspace.</p>
-            <p className="opacity-50">Active: {activeWorkspace}</p>
             <button 
               onClick={handleAddFolder}
               className="mt-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
             >
-              Add Folder
+              Open Folder
             </button>
           </div>
         )}

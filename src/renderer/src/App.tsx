@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot, MoreHorizontal, Eraser } from 'lucide-react';
+import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot, MoreHorizontal, Eraser, History } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import UpdateNotification from './components/UpdateNotification';
 import ChatTab from './components/Chat';
@@ -845,12 +845,11 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tab Content */}
         <div className="flex-1 overflow-hidden relative bg-background">
           {tabs.length === 0 ? (
             <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-60">
               <Terminal size={48} className="mb-4 opacity-50 text-primary" />
-              <p>Select a file to open or press Meta+X for terminal</p>
+              <p>Select a file to open</p>
             </div>
           ) : (
             <>
@@ -905,6 +904,13 @@ export default function App() {
             <div className="flex items-center justify-between h-10 border-b border-border bg-muted/30 px-3 shrink-0">
               <div className="flex items-center gap-2 text-sm font-medium text-foreground opacity-80">
                  <Bot size={16} /> Aynite Assistant
+                 <button 
+                   onClick={() => (window as any).showChatHistory?.()}
+                   className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1"
+                   title="View History Sessions"
+                 >
+                   <History size={14} />
+                 </button>
               </div>
               <button 
                  onClick={() => setRightPanelOpen(false)}

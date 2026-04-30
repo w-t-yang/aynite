@@ -629,9 +629,14 @@ export default function ChatTab({
         }
       });
     };
+    (window as any).showChatHistory = () => {
+      loadSessions();
+      setShowHistory(true);
+    };
     return () => {
       delete (window as any).focusChatInput;
       delete (window as any).setChatSession;
+      delete (window as any).showChatHistory;
     };
 
   }, []);
@@ -1046,13 +1051,6 @@ export default function ChatTab({
               <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
                 {(settings.aiConfigs as any)?.[settings.aiProvider || 'ollama']?.model || ''}
               </span>
-              <button 
-                onClick={() => { loadSessions(); setShowHistory(true); }}
-                className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1 -mr-1"
-                title="View History Sessions"
-              >
-                <History size={12} />
-              </button>
             </div>
 
 

@@ -238,10 +238,10 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
             type: 'object',
             properties: {
               path: { type: 'string', description: 'Starting directory (optional)' },
-              depth: { type: 'number', description: 'Max depth (default 3)' }
+              depth: { type: 'number', description: 'Max depth (default 100)' }
             }
           }),
-          execute: async ({ path: dirPath, depth = 3 }: { path?: string, depth?: number }) => {
+          execute: async ({ path: dirPath, depth = 100 }: { path?: string, depth?: number }) => {
             const root = dirPath || workspaceFolders[0] || '.';
             if (!(await isPathWithinWorkspace(root, workspaceFolders))) {
               return 'Error: Access denied.';

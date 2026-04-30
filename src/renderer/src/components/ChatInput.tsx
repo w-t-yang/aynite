@@ -169,7 +169,7 @@ function createSuggestion(
 
 async function flattenWorkspaceFiles(
   folders: string[],
-  maxDepth: number = 3
+  maxDepth: number = 100
 ): Promise<SuggestionItem[]> {
   const results: SuggestionItem[] = [];
 
@@ -222,31 +222,68 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const skillItemsRef = React.useRef<SuggestionItem[]>([]);
     const commandItemsRef = React.useRef<SuggestionItem[]>([]);
 
-    // Debug utility exposed to window
+    // Unified effect for indexing workspace files, skills, and commands
     useEffect(() => {
+      let isMounted = true;
+      
       const rebuild = async () => {
+        // 1. Immediately clear indexes to prevent cross-workspace pollution
+        fileItemsRef.current = [];
+        setFileItems([]);
+        skillItemsRef.current = [];
+        setSkillItems([]);
+        commandItemsRef.current = [];
+        setCommandItems([]);
+
+        console.log('[ChatInput] Rebuilding indexes for folders:', workspaceFolders);
+
+        // 2. Index Files
         if (workspaceFolders.length > 0) {
-          const items = await flattenWorkspaceFiles(workspaceFolders);
-          fileItemsRef.current = items;
-          setFileItems(items);
+          try {
+            const items = await flattenWorkspaceFiles(workspaceFolders);
+            if (isMounted) {
+              fileItemsRef.current = items;
+              setFileItems(items);
+            }
+          } catch (e) {
+            console.error('[ChatInput] File indexing failed:', e);
+          }
         }
 
-        const skillsRes = await (window.api as any).getAvailableSkills();
-        if (skillsRes.data) {
-          const items = skillsRes.data.map((s: any) => ({ id: s.path, label: s.name, name: s.name, subtitle: 'Skill' }));
-          skillItemsRef.current = items;
-          setSkillItems(items);
+        // 3. Index Skills and Commands in parallel
+        try {
+          const [skillsRes, cmdsRes] = await Promise.all([
+            // @ts-ignore
+            window.api.getAvailableSkills(),
+            // @ts-ignore
+            window.api.getAvailableCommands()
+          ]);
+
+          if (isMounted && skillsRes.data) {
+            const items = skillsRes.data.map((s: any) => ({ 
+              id: s.path, label: s.name, name: s.name, subtitle: 'Skill' 
+            }));
+            skillItemsRef.current = items;
+            setSkillItems(items);
+          }
+
+          if (isMounted && cmdsRes.data) {
+            const items = cmdsRes.data.map((c: any) => ({ 
+              id: c.path, label: c.name, name: c.name, subtitle: 'Command' 
+            }));
+            commandItemsRef.current = items;
+            setCommandItems(items);
+          }
+        } catch (e) {
+          console.error('[ChatInput] Skills/Commands indexing failed:', e);
         }
 
-        const cmdsRes = await (window.api as any).getAvailableCommands();
-        if (cmdsRes.data) {
-          const items = cmdsRes.data.map((c: any) => ({ id: c.path, label: c.name, name: c.name, subtitle: 'Command' }));
-          commandItemsRef.current = items;
-          setCommandItems(items);
+        if (isMounted) {
+          console.log('[ChatInput] All indexes rebuilt.');
         }
-
-        console.log('[Aynite Debug] All indexes rebuilt.');
       };
+
+      rebuild();
 
       // @ts-ignore
       window.__aynite = {
@@ -260,37 +297,10 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       };
 
       return () => {
+        isMounted = false;
         // @ts-ignore
         delete window.__aynite;
       };
-    }, [workspaceFolders]);
-
-    // Initial load
-    useEffect(() => {
-      if (workspaceFolders.length > 0) {
-        flattenWorkspaceFiles(workspaceFolders).then((items) => {
-          fileItemsRef.current = items;
-          setFileItems(items);
-        });
-      }
-
-      // Load skills and commands
-      // @ts-ignore
-      window.api.getAvailableSkills().then((res: any) => {
-        if (res.data) {
-          const items = res.data.map((s: any) => ({ id: s.path, label: s.name, name: s.name, subtitle: 'Skill' }));
-          skillItemsRef.current = items;
-          setSkillItems(items);
-        }
-      });
-      // @ts-ignore
-      window.api.getAvailableCommands().then((res: any) => {
-        if (res.data) {
-          const items = res.data.map((c: any) => ({ id: c.path, label: c.name, name: c.name, subtitle: 'Command' }));
-          commandItemsRef.current = items;
-          setCommandItems(items);
-        }
-      });
     }, [workspaceFolders]);
 
 
