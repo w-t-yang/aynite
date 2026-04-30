@@ -397,8 +397,20 @@ export default function App() {
     ));
   };
 
+  const tabsStateRef = useRef(tabs);
+  const activeTabIdRef = useRef(activeTabId);
+  const showTabSwitcherRef = useRef(showTabSwitcher);
+
+  // Sync refs with state on every render
+  tabsStateRef.current = tabs;
+  activeTabIdRef.current = activeTabId;
+  showTabSwitcherRef.current = showTabSwitcher;
+
   const handleSaveActiveTab = async () => {
-    const activeTab = tabs.find(t => t.id === activeTabId);
+    const currentTabs = tabsStateRef.current;
+    const currentActiveTabId = activeTabIdRef.current;
+    const activeTab = currentTabs.find(t => t.id === currentActiveTabId);
+    
     if (activeTab?.type === 'file' && activeTab.filepath && activeTab.isDirty) {
       // Notify components that we're about to save to ignore the FS change event
       window.dispatchEvent(new CustomEvent('file-saving', { detail: activeTab.filepath }));
@@ -406,7 +418,7 @@ export default function App() {
       // @ts-ignore
       await window.api.saveFile(activeTab.filepath, activeTab.content || '');
       setTabs(prev => prev.map(tab => 
-        tab.id === activeTabId
+        tab.id === currentActiveTabId
           ? { ...tab, isDirty: false, originalContent: activeTab.content }
           : tab
       ));
@@ -518,12 +530,13 @@ export default function App() {
       if (event === 'unlink' || event === 'unlinkDir') {
         window.dispatchEvent(new CustomEvent('file-deleted', { detail: path }));
       }
-      // Note: renames are unlink + add. 
-      // If we want to support smooth rename transitions from external sources, 
-      // we'd need more complex tracking. For now, unlink will safely close the tab.
     });
+    return () => unsubscribe();
+  }, []);
 
-    // Initialize KeyManager
+  useEffect(() => {
+    if (!settings) return;
+
     const globalApi = {
       saveActiveTab: handleSaveActiveTab,
       reload: () => window.location.reload(),
@@ -532,23 +545,26 @@ export default function App() {
       focusChat: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.(), 150); },
       focusSkills: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.('/'), 150); },
       focusCommands: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.('>'), 150); },
-      closeTab: () => { if (activeTabId) closeTab({ stopPropagation: () => {} } as any, activeTabId); },
+      closeTab: () => { 
+        const id = activeTabIdRef.current;
+        if (id) closeTab({ stopPropagation: () => {} } as any, id); 
+      },
       switchTab: () => setShowTabSwitcher(true),
       focusContent: () => (document.querySelector('textarea[track-cursor="true"]') as HTMLElement)?.focus(),
       closeTabSwitcher: () => setShowTabSwitcher(false),
-      isTabSwitcherOpen: () => showTabSwitcher,
+      isTabSwitcherOpen: () => showTabSwitcherRef.current,
     };
 
-    if (settings) {
-      KeyManager.init(settings, globalApi);
-      KeyManager.setActiveTab(activeTabId);
-    }
-
+    KeyManager.init(settings, globalApi);
+    
     return () => {
-      unsubscribe();
       KeyManager.cleanup();
     };
-  }, [settings, activeTabId, showTabSwitcher]);
+  }, [settings]);
+
+  useEffect(() => {
+    KeyManager.setActiveTab(activeTabId);
+  }, [activeTabId]);
 
   const lastOpenedRef = useRef({ path: '', time: 0 });
 

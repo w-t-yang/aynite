@@ -28,7 +28,7 @@ Aynite is built on three simple ideas:
 
 See what Aynite can do — for real. No mockups, no "imagine if." Just working code.
 
-### 🔮 [Trading Showcase](./showcase/trading/)
+### 🔮 [Trading Showcase](./showcase/trading/README.md)
 
 A complete, end-to-end example built entirely with Aynite commands:
 
@@ -37,7 +37,7 @@ A complete, end-to-end example built entirely with Aynite commands:
 | `> stock-fetch --symbol AAPL` | Fetches 1 year of daily stock data from Yahoo Finance, saves as JSON |
 | `> stock-view --file AAPL.json` | Generates an interactive HTML chart with price history, volume, and company info |
 
-**[→ Open the Trading Showcase](./showcase/trading/)** to see the commands, sample data, live demo charts, and step-by-step instructions to add them to your own Aynite.
+**[→ Open the Trading Showcase](./showcase/trading/README.md)** to see the commands, sample data, live demo charts, and step-by-step instructions to add them to your own Aynite.
 
 > 💡 More showcases coming soon. Built something cool? It could be here.
 
