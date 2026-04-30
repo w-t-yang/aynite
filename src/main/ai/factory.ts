@@ -10,8 +10,6 @@ export interface ProviderConfig {
   baseUrl?: string;
   model: string;
   compatibility?: 'openai' | 'anthropic' | 'google';
-  thinking?: boolean;
-  thinkingBudget?: number;
 }
 
 export function getProviderModel(config: ProviderConfig): LanguageModel {
@@ -33,6 +31,7 @@ export function getProviderModel(config: ProviderConfig): LanguageModel {
     case 'gemini':
       return createGoogleGenerativeAI({
         apiKey,
+        baseURL: baseUrl,
       })(model);
 
     case 'deepseek':

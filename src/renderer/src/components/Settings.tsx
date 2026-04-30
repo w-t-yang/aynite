@@ -1,84 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug } from 'lucide-react';
+import { DEFAULT_KEYBINDINGS } from '../default_configs/keybindings';
+import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS } from '../default_configs/ai';
 import { cn } from '../lib/utils';
 import { SearchableSelect } from './ui/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
-
-export interface SettingsState {
-  activeTheme: string;
-  aiProvider?: 'gemini' | 'deepseek' | 'ollama' | 'openai' | 'anthropic' | 'others';
+import { AIProviderInstance, SettingsState } from '../lib/types';
 
 
 
-  skills?: {
-    folders: string[];
-  };
-  commands?: {
-    folders: string[];
-  };
-  prompts?: {
-    files: string[];
-  };
-  aiConfigs?: {
-    gemini?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
-    openai?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
-    anthropic?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
-    deepseek?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
-    others?: { apiKey: string; url: string; model: string; compatibility: 'openai' | 'anthropic' | 'google'; thinking?: boolean; thinkingBudget?: number };
-    ollama?: { url: string; model: string; contextWindow: number; thinking?: boolean; thinkingBudget?: number };
-  };
-  aiTools?: {
-    [key: string]: boolean;
-  };
-
-  keybindings: {
-    global: {
-      refresh: string;
-      quit: string;
-    };
-    explorer: {
-      toggleLeftPanel: string;
-    };
-    agent: {
-      focusChat: string;
-      focusSkills: string;
-      focusCommands: string;
-      toggleRightPanel: string;
-      submit: string;
-    };
-    content: {
-      navigation: {
-        switchTab: string;
-        closeTab: string;
-        focusContent: string;
-      };
-      viewer: {
-        enterEdit: string;
-        moveDown: string;
-        moveUp: string;
-        moveLeft: string;
-        moveRight: string;
-        search: string;
-        refresh: string;
-      };
-      generic: {
-        exitEdit: string;
-        endOfLine: string;
-        startOfLine: string;
-        killLine: string;
-        selectAll: string;
-        deleteForward: string;
-        cut: string;
-        copy: string;
-        paste: string;
-        prevLine: string;
-        nextLine: string;
-        forwardChar: string;
-        backwardChar: string;
-      };
-    };
-  };
-}
 
 interface SettingsProps {
   settings: SettingsState;
@@ -167,24 +97,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   }, []);
 
   useEffect(() => {
-    // Ensure aiConfigs is initialized
-    if (!settings.aiConfigs) {
-      setLocalSettings(prev => ({
-        ...prev,
-        aiConfigs: {
-          ollama: { url: 'http://localhost:11434', model: 'deepseek-r1:14b', contextWindow: 8192, thinking: true, thinkingBudget: 2048 },
-          deepseek: { apiKey: '', url: 'https://api.deepseek.com', model: 'deepseek-chat', thinking: true, thinkingBudget: 4096 },
-          gemini: { apiKey: '', url: 'https://generativelanguage.googleapis.com', model: 'gemini-2.0-flash-thinking', thinking: true, thinkingBudget: 4096 },
-          openai: { apiKey: '', url: 'https://api.openai.com/v1', model: 'o3-mini', thinking: true, thinkingBudget: 4096 },
-          anthropic: { apiKey: '', url: 'https://api.anthropic.com', model: 'claude-3-7-sonnet-20250219', thinking: true, thinkingBudget: 4096 },
-          others: { apiKey: '', url: '', model: '', compatibility: 'openai', thinking: false, thinkingBudget: 2048 }
-        }
-      }));
-
-    } else {
-      setLocalSettings(settings);
-    }
-
+    setLocalSettings(settings);
   }, [settings]);
 
   useEffect(() => {
@@ -236,20 +149,88 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
     });
   };
 
-  const handleAiConfigChange = (provider: 'gemini' | 'deepseek' | 'ollama' | 'openai' | 'anthropic' | 'others', field: string, value: any) => {
-    const currentConfigs = localSettings.aiConfigs || {};
-    const providerConfig = (currentConfigs as any)[provider] || {};
-
-    const newProviderConfig = {
-      ...providerConfig,
-      [field]: field === 'contextWindow' ? (parseInt(value, 10) || 8192) : value
+  const handleAddProvider = () => {
+    const id = `provider-${Date.now()}`;
+    const newProvider: AIProviderInstance = {
+      id,
+      name: 'Ollama - gemma4:e4b',
+      provider: 'ollama',
+      url: 'http://localhost:11434',
+      model: 'gemma4:e4b',
+      contextWindow: 8192
     };
-
+    const newProviders = [...(localSettings.ai?.providers || []), newProvider];
     save({
       ...localSettings,
-      aiConfigs: {
-        ...currentConfigs,
-        [provider]: newProviderConfig
+      ai: {
+        activeId: localSettings.ai?.activeId || id,
+        providers: newProviders
+      }
+    });
+  };
+
+  const handleDeleteProvider = (id: string) => {
+    const newProviders = (localSettings.ai?.providers || []).filter(p => p.id !== id);
+    let newActiveId = localSettings.ai?.activeId;
+    if (newActiveId === id) {
+      newActiveId = newProviders.length > 0 ? newProviders[0].id : '';
+    }
+    save({
+      ...localSettings,
+      ai: {
+        activeId: newActiveId || '',
+        providers: newProviders
+      }
+    });
+  };
+
+  const handleUpdateProvider = (id: string, field: string, value: any) => {
+    const newProviders = (localSettings.ai?.providers || []).map(p => {
+      if (p.id === id) {
+        const updated = {
+          ...p,
+          [field]: field === 'contextWindow' ? (parseInt(value, 10) || 8192) : value
+        };
+
+        // Auto-update name if provider or model changes
+        if (field === 'provider' || field === 'model') {
+          // If provider changed, also update the model and URL to its default
+          if (field === 'provider') {
+            updated.model = DEFAULT_PROVIDER_MODELS[value] || updated.model;
+            updated.url = DEFAULT_PROVIDER_URLS[value] !== undefined ? DEFAULT_PROVIDER_URLS[value] : updated.url;
+          }
+
+          const providerLabel = {
+            ollama: 'Ollama',
+            openai: 'OpenAI',
+            anthropic: 'Anthropic',
+            gemini: 'Gemini',
+            deepseek: 'DeepSeek',
+            others: 'Compatible'
+          }[updated.provider] || updated.provider;
+
+          updated.name = `${providerLabel} - ${updated.model || 'Default'}`;
+        }
+
+        return updated;
+      }
+      return p;
+    });
+    save({
+      ...localSettings,
+      ai: {
+        ...localSettings.ai,
+        providers: newProviders
+      }
+    });
+  };
+
+  const handleSetActiveProvider = (id: string) => {
+    save({
+      ...localSettings,
+      ai: {
+        ...localSettings.ai,
+        activeId: id
       }
     });
   };
@@ -539,98 +520,141 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             {activeTab === 'ai' && (
               <div className="space-y-6 max-w-2xl">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-6">Select and configure your preferred AI model and reasoning settings.</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-sm text-muted-foreground">Manage multiple AI provider configurations and select the active one.</p>
+                    <button 
+                      onClick={handleAddProvider}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"
+                    >
+                      <Plus size={14} /> Add Provider
+                    </button>
+                  </div>
+                  
                   <div className="space-y-6">
-                    {(['ollama', 'deepseek', 'gemini', 'openai', 'anthropic', 'others'] as const).map((provider) => (
-                      <div key={provider} className="flex flex-col gap-2">
-                        <label className="flex items-center gap-3 cursor-pointer py-1">
-                          <input type="radio" name="ai-provider" value={provider} checked={localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'ollama')} onChange={() => save({ ...localSettings, aiProvider: provider as any })} className="w-4 h-4 text-primary border-gray-300 focus:ring-primary" />
-                          <span className="font-medium capitalize">{provider}</span>
-                        </label>
-                        {(localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'ollama')) && (
-                          <div className="ml-7 space-y-4 pt-2 pb-4">
-                            {provider !== 'ollama' && (
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium text-muted-foreground">API Key</label>
-                                <input type="password" placeholder={`Enter ${provider} API Key`} value={(localSettings.aiConfigs as any)?.[provider]?.apiKey || ''} onChange={(e) => handleAiConfigChange(provider as any, 'apiKey', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
-                              </div>
-                            )}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">URL Endpoint</label>
-                              <input type="text" placeholder={provider === 'ollama' ? "http://localhost:11434" : "API URL"} value={(localSettings.aiConfigs as any)?.[provider]?.url || ''} onChange={(e) => handleAiConfigChange(provider as any, 'url', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
-                            </div>
+                    {(localSettings.ai?.providers || []).map((provider) => (
+                      <div key={provider.id} className={cn(
+                        "p-5 rounded-xl border transition-all space-y-4",
+                        localSettings.ai?.activeId === provider.id ? "border-primary bg-accent/5 ring-0" : "border-border bg-accent/5"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="radio" 
+                              name="active-ai-provider" 
+                              checked={localSettings.ai?.activeId === provider.id} 
+                              onChange={() => handleSetActiveProvider(provider.id)} 
+                              className="w-4 h-4 text-primary border-gray-300 focus:ring-primary cursor-pointer" 
+                            />
+                            <input 
+                              type="text" 
+                              value={provider.name} 
+                              onChange={(e) => handleUpdateProvider(provider.id, 'name', e.target.value)}
+                              className="font-bold bg-transparent border-none p-0 focus:outline-none focus:ring-0 text-sm w-64"
+                              placeholder="Config Name"
+                            />
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteProvider(provider.id)}
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all"
+                            title="Delete Configuration"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
 
-                            {provider === 'others' && (
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium text-muted-foreground">Compatibility</label>
-                                <select
-                                  value={(localSettings.aiConfigs as any)?.[provider]?.compatibility || 'openai'}
-                                  onChange={(e) => handleAiConfigChange(provider as any, 'compatibility', e.target.value)}
-                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer"
-                                >
-                                  <option value="openai" className="bg-background text-foreground">OpenAI Compatible</option>
-                                  <option value="anthropic" className="bg-background text-foreground">Claude/Anthropic Compatible</option>
-                                  <option value="google" className="bg-background text-foreground">Gemini/Google Compatible</option>
-                                </select>
-                              </div>
-                            )}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">Model</label>
-                              <input
-                                type="text"
-                                placeholder={provider === 'ollama' ? "deepseek-r1:14b" : "e.g. gpt-4o"}
-                                value={(localSettings.aiConfigs as any)?.[provider]?.model || ''}
-                                onChange={(e) => handleAiConfigChange(provider as any, 'model', e.target.value)}
-                                className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
+                        <div className="grid grid-cols-2 gap-4 ml-7">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Type</label>
+                            <select
+                              value={provider.provider}
+                              onChange={(e) => handleUpdateProvider(provider.id, 'provider', e.target.value)}
+                              className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer"
+                            >
+                              <option value="ollama" className="bg-background text-foreground">Ollama</option>
+                              <option value="openai" className="bg-background text-foreground">OpenAI</option>
+                              <option value="anthropic" className="bg-background text-foreground">Anthropic</option>
+                              <option value="gemini" className="bg-background text-foreground">Gemini/Google</option>
+                              <option value="deepseek" className="bg-background text-foreground">DeepSeek</option>
+                              <option value="others" className="bg-background text-foreground">Other (Compatible)</option>
+                            </select>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Model</label>
+                            <input 
+                              type="text" 
+                              value={provider.model} 
+                              onChange={(e) => handleUpdateProvider(provider.id, 'model', e.target.value)}
+                              placeholder="e.g. gpt-4o or deepseek-r1"
+                              className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
+                            />
+                          </div>
+
+                          {provider.provider !== 'ollama' && (
+                            <div className="flex flex-col gap-1.5 col-span-2">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">API Key</label>
+                              <input 
+                                type="password" 
+                                value={provider.apiKey || ''} 
+                                onChange={(e) => handleUpdateProvider(provider.id, 'apiKey', e.target.value)}
+                                placeholder="sk-..."
+                                className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
                               />
                             </div>
+                          )}
 
-
-
-                            {provider === 'ollama' && (
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium text-muted-foreground">Context Window</label>
-                                <input type="number" placeholder="8192" value={localSettings.aiConfigs?.ollama?.contextWindow || 8192} onChange={(e) => handleAiConfigChange(provider, 'contextWindow', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between max-w-md p-3 rounded-lg border border-border/40 bg-accent/5 mt-2">
-                              <div className="space-y-0.5">
-                                <label className="text-xs font-semibold flex items-center gap-1.5">
-                                  <BrainCircuit size={14} className="text-primary/70" />
-                                  <span>Thinking Mode</span>
-                                </label>
-                                <p className="text-[10px] text-muted-foreground">Enable chain-of-thought/reasoning blocks.</p>
-                              </div>
-                              <button
-                                onClick={() => handleAiConfigChange(provider as any, 'thinking', !(localSettings.aiConfigs as any)?.[provider]?.thinking)}
-                                className={cn("relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "bg-primary" : "bg-muted")}
-                              >
-                                <span className={cn("inline-block h-3 w-3 transform rounded-full bg-white transition-transform", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "translate-x-5" : "translate-x-1")} />
-                              </button>
-                            </div>
-
-                            {(localSettings.aiConfigs as any)?.[provider]?.thinking && (
-                              <div className="flex flex-col gap-1.5 pl-3 border-l-2 border-primary/20">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Thinking Budget (Tokens)</label>
-                                <input
-                                  type="number"
-                                  placeholder="4096"
-                                  value={(localSettings.aiConfigs as any)?.[provider]?.thinkingBudget || 4096}
-                                  onChange={(e) => handleAiConfigChange(provider as any, 'thinkingBudget', parseInt(e.target.value) || 0)}
-                                  className="w-24 bg-transparent border-b border-border/60 px-0 py-1 text-xs focus:outline-none focus:border-primary transition-colors"
-                                />
-                              </div>
-                            )}
+                          <div className="flex flex-col gap-1.5 col-span-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Base URL</label>
+                            <input 
+                              type="text" 
+                              value={provider.url || ''} 
+                              onChange={(e) => handleUpdateProvider(provider.id, 'url', e.target.value)}
+                              placeholder={provider.provider === 'ollama' ? "http://localhost:11434" : "API URL"}
+                              className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
+                            />
                           </div>
-                        )}
+
+                          {provider.provider === 'others' && (
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Compatibility</label>
+                              <select
+                                value={provider.compatibility || 'openai'}
+                                onChange={(e) => handleUpdateProvider(provider.id, 'compatibility', e.target.value)}
+                                className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer"
+                              >
+                                <option value="openai" className="bg-background text-foreground">OpenAI</option>
+                                <option value="anthropic" className="bg-background text-foreground">Anthropic</option>
+                                <option value="google" className="bg-background text-foreground">Google</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {provider.provider === 'ollama' && (
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Context Window</label>
+                              <input 
+                                type="number" 
+                                value={provider.contextWindow || 8192} 
+                                onChange={(e) => handleUpdateProvider(provider.id, 'contextWindow', e.target.value)}
+                                className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
 
+                    {(!localSettings.ai?.providers || localSettings.ai.providers.length === 0) && (
+                      <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border rounded-xl opacity-50">
+                        <Bot size={48} className="mb-4 text-muted-foreground" />
+                        <p className="text-sm">No AI providers configured. Add one to get started.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             )}
+
 
             {activeTab === 'prompts' && (
               <div className="space-y-6 max-w-2xl pb-10">

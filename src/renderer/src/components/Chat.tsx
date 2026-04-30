@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X, Settings, History, Calendar, Clock } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { SettingsState } from './Settings';
+import { SettingsState } from '../lib/types';
 import ChatInput, { ChatInputHandle } from './ChatInput';
 import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig } from '../lib/agent';
 
@@ -773,18 +773,15 @@ export default function ChatTab({
           }
         }
 
-        const provider = settings.aiProvider || 'ollama';
-
-        const config = (settings.aiConfigs as any)?.[provider] || {};
+        const activeId = settings.ai?.activeId;
+        const activeProvider = settings.ai?.providers?.find(p => p.id === activeId) || settings.ai?.providers?.[0];
 
         const agentConfig: AgentConfig = {
-          provider: provider,
-          apiKey: config.apiKey || '',
-          baseUrl: config.url || '',
-          model: config.model || '',
-          compatibility: config.compatibility,
-          thinking: config.thinking,
-          thinkingBudget: config.thinkingBudget,
+          provider: activeProvider?.provider || 'ollama',
+          apiKey: activeProvider?.apiKey || '',
+          baseUrl: activeProvider?.url || '',
+          model: activeProvider?.model || '',
+          compatibility: activeProvider?.compatibility,
           enabledTools: settings.aiTools
         };
 
@@ -1072,11 +1069,18 @@ export default function ChatTab({
           {/* Floating Status Pill */}
           <div className="absolute -top-10 left-0 right-0 flex items-center justify-between px-2 pointer-events-none">
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/40 backdrop-blur-md border border-border/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shadow-xl pointer-events-auto">
-              <Bot size={10} className="text-primary" />
-              <span>{settings.aiProvider || 'ollama'}</span>
-              <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
-                {(settings.aiConfigs as any)?.[settings.aiProvider || 'ollama']?.model || ''}
-              </span>
+              {(() => {
+                const active = settings.ai?.providers?.find(p => p.id === settings.ai?.activeId) || settings.ai?.providers?.[0];
+                return (
+                  <>
+                    <Bot size={10} className="text-primary" />
+                    <span>{active?.provider || 'ollama'}</span>
+                    <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
+                      {active?.model || ''}
+                    </span>
+                  </>
+                );
+              })()}
             </div>
 
 

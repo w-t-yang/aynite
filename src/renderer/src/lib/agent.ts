@@ -23,8 +23,6 @@ export interface AgentConfig {
   baseUrl: string;
   model: string;
   compatibility?: 'openai' | 'anthropic' | 'google';
-  thinking?: boolean;
-  thinkingBudget?: number;
   enabledTools?: { [key: string]: boolean };
 }
 
@@ -174,8 +172,6 @@ export async function runAgentLoop(
       baseUrl: config.baseUrl,
       model: config.model,
       compatibility: config.compatibility,
-      thinking: config.thinking,
-      thinkingBudget: config.thinkingBudget,
       enabledTools: config.enabledTools
     },
     workspaceFolders

@@ -6,12 +6,14 @@ import ChatTab from './components/Chat';
 import SettingsView from './components/Settings';
 import FileViewer from './components/FileViewer';
 import TabSwitcher from './components/TabSwitcher';
-import { SettingsState } from './components/Settings';
+import { SettingsState } from './lib/types';
 import { cn } from './lib/utils';
 import { getFileCategory } from './lib/file-handlers';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { KeyManager } from './lib/key-handlers';
+import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
+import { DEFAULT_AI_CONFIG } from './default_configs/ai';
 
 type Tab = {
   id: string;
@@ -27,54 +29,8 @@ type Tab = {
 
 const DEFAULT_SETTINGS: SettingsState = {
   activeTheme: 'light',
-  aiProvider: 'ollama',
-  keybindings: {
-    global: {
-      refresh: 'CTRL+SHIFT+R',
-      quit: ''
-    },
-    explorer: {
-      toggleLeftPanel: 'CTRL+T'
-    },
-    agent: {
-      focusChat: 'CTRL+I',
-      focusSkills: 'CTRL+/',
-      focusCommands: 'CTRL+.',
-      toggleRightPanel: 'CTRL+U',
-      submit: 'CTRL+ENTER'
-    },
-    content: {
-      navigation: {
-        switchTab: 'CTRL+TAB',
-        closeTab: 'CTRL+W',
-        focusContent: 'CTRL+Y'
-      },
-      viewer: {
-        enterEdit: 'A',
-        moveDown: 'J',
-        moveUp: 'K',
-        moveLeft: 'H',
-        moveRight: 'L',
-        search: '/',
-        refresh: 'CTRL+R'
-      },
-      generic: {
-        exitEdit: 'ESCAPE',
-        endOfLine: 'CTRL+E',
-        startOfLine: 'CTRL+A',
-        killLine: 'CTRL+K',
-        selectAll: 'CTRL+Q',
-        deleteForward: 'CTRL+D',
-        cut: 'CTRL+X',
-        copy: 'CTRL+C',
-        paste: 'CTRL+V',
-        prevLine: 'CTRL+P',
-        nextLine: 'CTRL+N',
-        forwardChar: 'CTRL+F',
-        backwardChar: 'CTRL+B'
-      }
-    }
-  },
+  ai: DEFAULT_AI_CONFIG,
+  keybindings: DEFAULT_KEYBINDINGS,
   prompts: {
     files: []
   },
@@ -980,27 +936,27 @@ export default function App() {
       {/* Toast Notifications */}
       <div className="fixed bottom-4 left-4 z-[1000] flex flex-col gap-2">
         {toasts.map(toast => (
-          <div 
+          <div
             key={toast.id}
             className={cn(
               "px-4 py-3 rounded-lg shadow-2xl border flex items-center gap-3 min-w-[300px] animate-in slide-in-from-left-2 fade-in",
               toast.type === 'error' ? "bg-destructive/10 border-destructive/20 text-destructive" :
-              toast.type === 'success' ? "bg-success/10 border-success/20 text-success" :
-              "bg-popover border-border text-foreground"
+                toast.type === 'success' ? "bg-success/10 border-success/20 text-success" :
+                  "bg-popover border-border text-foreground"
             )}
           >
             <div className={cn(
               "p-1.5 rounded-md",
               toast.type === 'error' ? "bg-destructive/20" :
-              toast.type === 'success' ? "bg-success/20" :
-              "bg-primary/20 text-primary"
+                toast.type === 'success' ? "bg-success/20" :
+                  "bg-primary/20 text-primary"
             )}>
-              {toast.type === 'error' ? <AlertCircle size={16} /> : 
-               toast.type === 'success' ? <Bot size={16} className="text-success" /> :
-               <Bot size={16} />}
+              {toast.type === 'error' ? <AlertCircle size={16} /> :
+                toast.type === 'success' ? <Bot size={16} className="text-success" /> :
+                  <Bot size={16} />}
             </div>
             <div className="flex-1 text-sm font-medium">{toast.message}</div>
-            <button 
+            <button
               onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
               className="p-1 hover:bg-foreground/10 rounded-md transition-colors"
             >

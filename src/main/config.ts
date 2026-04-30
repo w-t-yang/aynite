@@ -11,6 +11,7 @@ const execAsync = promisify(exec);
 import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
 import { DEFAULT_THEMES } from './default_configs/themes';
 import { DEFAULT_PROMPTS } from './default_configs/prompts';
+import { DEFAULT_AI_CONFIG } from './default_configs/ai';
 
 // Helper to expand ~ to home directory
 function expandHome(filepath: string): string {
@@ -143,19 +144,7 @@ export async function initAppFolders() {
   const workspacesDir = path.join(baseDir, 'workspaces');
 
   // Default values
-  const aiDefault = {
-    provider: 'ollama',
-    configs: {
-      ollama: { url: 'http://localhost:11434', model: '', contextWindow: 8192 },
-      deepseek: { apiKey: '', url: 'https://api.deepseek.com', model: 'deepseek-v4-pro' },
-      gemini: { apiKey: '', url: 'https://generativelanguage.googleapis.com', model: 'gemini-3-flash-preview' },
-      openai: { apiKey: '', url: 'https://api.openai.com/v1', model: 'gpt-5.4' },
-      anthropic: { apiKey: '', url: 'https://api.anthropic.com', model: 'claude-sonnet-4.6' },
-      others: { apiKey: '', url: '', model: '', compatibility: 'openai' }
-    }
-
-
-  };
+  const aiDefault = DEFAULT_AI_CONFIG;
 
   const keybindingsDefault = DEFAULT_KEYBINDINGS;
   const skillsDir = path.join(baseDir, 'skills');
@@ -363,8 +352,7 @@ export async function loadConfig() {
     activeTheme: mainConfig.activeTheme || 'light',
     ignore: await getIgnorePatterns(),
     keybindings: keybindings,
-    aiProvider: ai.provider || 'gemini',
-    aiConfigs: ai.configs || {},
+    ai: ai,
     ...restConfig
   };
 }
@@ -383,11 +371,11 @@ export async function getIgnorePatterns(): Promise<string[]> {
 export async function saveConfig(settings: any) {
   const configDir = path.join(getConfigDir(), 'config');
 
-  const ai = { provider: settings.aiProvider, configs: settings.aiConfigs };
+  const ai = settings.ai || DEFAULT_AI_CONFIG;
   const keybindings = settings.keybindings || DEFAULT_KEYBINDINGS;
 
   // Extract fields, specifically removing 'ignore' from config.json
-  const { aiProvider, aiConfigs, keybindings: _, ignore, ...rest } = settings;
+  const { ai: _ai, keybindings: _, ignore, ...rest } = settings;
   const mainConfig = { ...rest, updatedAt: new Date().toISOString() };
 
   await fs.writeFile(path.join(configDir, 'ai.json'), JSON.stringify(ai, null, 2), 'utf-8');

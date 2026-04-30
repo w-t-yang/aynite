@@ -279,37 +279,8 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
         }
       });
 
-      // Construct provider-specific options for thinking mode
+      // Construct provider-specific options
       const providerOptions: any = {};
-      if (config.thinking) {
-        const prov = config.provider.toLowerCase();
-        if (prov === 'google' || prov === 'gemini') {
-          providerOptions.google = {
-            thinkingConfig: {
-              includeThoughts: true,
-              thinkingBudget: config.thinkingBudget || 2000
-            }
-          };
-        } else if (prov === 'anthropic') {
-          providerOptions.anthropic = {
-            thinking: {
-              type: 'enabled',
-              budgetTokens: config.thinkingBudget || 4000
-            }
-          };
-        } else if (prov === 'openai') {
-          providerOptions.openai = {
-            reasoningEffort: 'medium' // Default for o1/o3
-          };
-        } else if (prov === 'deepseek') {
-          providerOptions.deepseek = {
-            thinking: {
-              type: 'enabled',
-              budgetTokens: config.thinkingBudget || 4000
-            }
-          };
-        }
-      }
 
       // Start streaming
       (async () => {
