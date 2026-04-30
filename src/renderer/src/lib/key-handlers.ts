@@ -80,9 +80,6 @@ export class KeyManager {
     window.removeEventListener('keydown', this.handleGlobalKeyDown, true);
     window.removeEventListener('keyup', this.handleGlobalKeyUp, true);
     this.isInitialized = false;
-    this.globalApi = null;
-    this.tabApis.clear();
-    this.tabSwitcherApi = null;
   }
 
   static setActiveTab(tabId: string | null) {

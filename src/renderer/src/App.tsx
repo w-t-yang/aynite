@@ -547,7 +547,7 @@ export default function App() {
       unsubscribe();
       KeyManager.cleanup();
     };
-  }, [settings, activeTabId]);
+  }, [settings, activeTabId, showTabSwitcher]);
 
   const lastOpenedRef = useRef({ path: '', time: 0 });
 
