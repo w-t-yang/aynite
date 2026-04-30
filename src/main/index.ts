@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, protocol, net } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, protocol, net, shell } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
@@ -606,6 +606,15 @@ ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
     const expandedPath = expandHome(filePath);
     await fs.mkdir(require('path').dirname(expandedPath), { recursive: true });
     await fs.writeFile(expandedPath, content, 'utf-8');
+    return { data: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('api:open-external', async (event, url: string) => {
+  try {
+    await shell.openExternal(url);
     return { data: true };
   } catch (error: any) {
     return { error: error.message };

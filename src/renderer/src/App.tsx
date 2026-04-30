@@ -21,6 +21,7 @@ type Tab = {
   originalContent?: string;
   isDirty?: boolean;
   cursorPos?: number;
+  size?: number;
 };
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -546,6 +547,44 @@ export default function App() {
       unsubscribe();
       KeyManager.cleanup();
     };
+  }, [settings, activeTabId]);
+
+  const lastOpenedRef = useRef({ path: '', time: 0 });
+
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'open-file' && e.data.path) {
+        const filePath = e.data.path;
+        const now = Date.now();
+        if (filePath === lastOpenedRef.current.path && now - lastOpenedRef.current.time < 100) return;
+        lastOpenedRef.current = { path: filePath, time: now };
+
+        console.log('[App] Opening file via message:', filePath);
+        const name = filePath.split(/[/\\]/).pop() || filePath;
+        handleSelectFile({ name, path: filePath, isDirectory: false });
+      }
+    };
+    
+    const handleOpenFileEvent = (e: any) => {
+      if (e.detail && e.detail.path) {
+        const filePath = e.detail.path;
+        const now = Date.now();
+        if (filePath === lastOpenedRef.current.path && now - lastOpenedRef.current.time < 100) return;
+        lastOpenedRef.current = { path: filePath, time: now };
+
+        console.log('[App] Opening file via custom event:', filePath);
+        const name = filePath.split(/[/\\]/).pop() || filePath;
+        handleSelectFile({ name, path: filePath, isDirectory: false });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    window.addEventListener('aynite:open-file', handleOpenFileEvent as any);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('aynite:open-file', handleOpenFileEvent as any);
+    };
   }, [settings, tabs, activeTabId, showTabSwitcher]);
 
   useEffect(() => {
@@ -597,44 +636,53 @@ export default function App() {
     const normalizedPath = file.path.replace(/\\/g, '/');
     const tabId = `file-${normalizedPath}`;
     
-    // Check if a tab with this normalized path already exists
+    // 1. Fast check: if already in current state, just switch
     const existingTab = tabs.find(t => t.filepath?.replace(/\\/g, '/') === normalizedPath);
-    
-    if (!existingTab) {
-      // @ts-ignore
-      const infoRes = await window.api.getFileInfo(file.path);
-      const info = infoRes.data || {};
-      // @ts-ignore
-      const category = getFileCategory(info.extension || '', info.isText, info.path || file.path);
-      let content = '';
-
-      // Safety: Only read if it's a supported text type and under 10MB
-      const MAX_TEXT_SIZE = 10 * 1024 * 1024; // 10MB
-      const isLarge = (info.size || 0) > MAX_TEXT_SIZE;
-      const isTextType = category === 'text' || category === 'markdown' || category === 'html';
-
-      if (isTextType && !isLarge && info.isText !== false) {
-        // @ts-ignore
-        const res = await window.api.readFile(file.path);
-        content = res.data || '';
-      }
-
-      setTabs(prev => [...prev, {
-        id: tabId,
-        type: 'file',
-        title: file.name,
-        filepath: file.path, // Store original path for saving
-        content,
-        originalContent: content,
-        isDirty: false,
-        size: info.size
-      }]);
-      setActiveTabId(tabId);
-    } else {
+    if (existingTab) {
       setActiveTabId(existingTab.id);
+      return;
     }
 
-    // Focus the editor after a selection (sidebar or elsewhere)
+    // 2. Fetch file info and content
+    // @ts-ignore
+    const infoRes = await window.api.getFileInfo(file.path);
+    const info = infoRes.data || {};
+    // @ts-ignore
+    const category = getFileCategory(info.extension || '', info.isText, info.path || file.path);
+    let content = '';
+
+    // Safety: Only read if it's a supported text type and under 10MB
+    const MAX_TEXT_SIZE = 10 * 1024 * 1024; // 10MB
+    const isLarge = (info.size || 0) > MAX_TEXT_SIZE;
+    const isTextType = category === 'text' || category === 'markdown' || category === 'html';
+
+    if (isTextType && !isLarge && info.isText !== false) {
+      // @ts-ignore
+      const res = await window.api.readFile(file.path);
+      content = res.data || '';
+    }
+
+    const newTab: Tab = {
+      id: tabId,
+      type: 'file',
+      title: file.name,
+      filepath: file.path, 
+      content,
+      originalContent: content,
+      isDirty: false,
+      size: info.size
+    };
+
+    // 3. Final check inside setTabs to avoid race conditions from async calls
+    setTabs(prev => {
+      const alreadyOpen = prev.find(t => t.filepath?.replace(/\\/g, '/') === normalizedPath);
+      if (alreadyOpen) return prev;
+      return [...prev, newTab];
+    });
+    
+    setActiveTabId(tabId);
+
+    // Focus the editor after a selection
     setTimeout(() => {
       const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLTextAreaElement;
       if (textarea) textarea.focus();
