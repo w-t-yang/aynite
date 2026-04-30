@@ -929,7 +929,7 @@ export default function App() {
                 <button
                   onClick={() => (window as any).copyChat?.()}
                   className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1"
-                  title="Copy Conversation"
+                  title="Copy Session"
                 >
                   <LucideCopy size={14} />
                 </button>

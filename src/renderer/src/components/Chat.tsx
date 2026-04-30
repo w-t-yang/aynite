@@ -430,7 +430,7 @@ function SessionsModal({
             </div>
             <div>
               <h2 className="text-sm font-bold uppercase tracking-widest">Chat Sessions</h2>
-              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight opacity-70">Historical conversations</p>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight opacity-70">Historical sessions</p>
             </div>
           </div>
           <button 
