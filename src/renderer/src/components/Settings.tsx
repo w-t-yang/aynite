@@ -6,6 +6,7 @@ import { cn } from '../lib/utils';
 import { SearchableSelect } from './ui/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
 import { AIProviderInstance, SettingsState } from '../lib/types';
+import { UnifiedCollapsible } from './Chat';
 
 
 
@@ -34,7 +35,7 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 export default function Settings({ settings, onSave, onClose }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands' | 'prompts' | 'tools' | 'about'>(() => {
+  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands' | 'agents' | 'tools' | 'about'>(() => {
     return (localStorage.getItem('aynite_settings_active_tab') as any) || 'appearance';
   });
 
@@ -103,9 +104,10 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   }, [settings]);
 
   useEffect(() => {
-    if (activeTab === 'prompts') {
+    if (activeTab === 'agents') {
+      const activeAgent = localSettings.agents?.list?.find(a => a.id === localSettings.agents?.activeId);
       // @ts-ignore
-      window.api.getMergedSystemPrompt(localSettings.prompts?.files).then(res => {
+      window.api.getMergedSystemPrompt(localSettings.prompts?.files, activeAgent?.promptFiles).then(res => {
         if (res?.data) setMergedPrompt(res.data);
       });
     }
@@ -121,7 +123,49 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
         if (res?.data) setAvailableCommands(res.data);
       });
     }
-  }, [activeTab, localSettings.prompts?.files]);
+  }, [activeTab, localSettings.prompts?.files, localSettings.agents]);
+
+  const handleAddAgent = () => {
+    const id = `agent-${Date.now()}`;
+    const newAgent = { id, name: 'New Agent', promptFiles: [] };
+    const newList = [...(localSettings.agents?.list || []), newAgent];
+    save({
+      ...localSettings,
+      agents: {
+        activeId: localSettings.agents?.activeId || id,
+        list: newList
+      }
+    });
+  };
+
+  const handleDeleteAgent = (id: string) => {
+    const newList = (localSettings.agents?.list || []).filter(a => a.id !== id);
+    let newActiveId = localSettings.agents?.activeId;
+    if (newActiveId === id) {
+      newActiveId = newList.length > 0 ? newList[0].id : '';
+    }
+    save({
+      ...localSettings,
+      agents: {
+        activeId: newActiveId || '',
+        list: newList
+      }
+    });
+  };
+
+  const handleUpdateAgent = (id: string, field: string, value: any) => {
+    const newList = (localSettings.agents?.list || []).map(a => {
+      if (a.id === id) return { ...a, [field]: value };
+      return a;
+    });
+    save({
+      ...localSettings,
+      agents: {
+        ...localSettings.agents,
+        list: newList
+      }
+    });
+  };
 
   const save = (newSettings: SettingsState) => {
     setLocalSettings(newSettings);
@@ -363,8 +407,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           <button onClick={() => handleTabChange('keybindings')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'keybindings' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Keyboard size={16} /> Keybindings</button>
 
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">AI</div>
-          <button onClick={() => handleTabChange('ai')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'ai' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Bot size={16} /> AI Provider</button>
-          <button onClick={() => handleTabChange('prompts')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'prompts' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><FileText size={16} /> System Prompt</button>
+          <button onClick={() => handleTabChange('ai')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'ai' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Bot size={16} /> Providers</button>
+          <button onClick={() => handleTabChange('agents')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'agents' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><FileText size={16} /> Agents</button>
           <button onClick={() => handleTabChange('tools')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'tools' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Wrench size={16} /> Tools</button>
           <button onClick={() => handleTabChange('skills')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'skills' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Zap size={16} /> Skills</button>
           <button onClick={() => handleTabChange('commands')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'commands' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Terminal size={16} /> Commands</button>
@@ -378,7 +422,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           <div className="max-w-5xl mx-auto w-full min-w-[640px]">
             {activeTab !== 'about' && (
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'AI Provider' : activeTab === 'prompts' ? 'System Prompt' : activeTab === 'tools' ? 'Tools' : activeTab}</h2>
+                <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'Providers' : activeTab === 'agents' ? 'Agents' : activeTab === 'tools' ? 'Tools' : activeTab}</h2>
                 {activeTab === 'keybindings' && (
                   <button onClick={() => {
                     const defaultKb: SettingsState['keybindings'] = {
@@ -670,20 +714,28 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
 
-            {activeTab === 'prompts' && (
-              <div className="space-y-6 max-w-4xl pb-10">
+            {activeTab === 'agents' && (
+              <div className="space-y-10 max-w-4xl pb-10">
+                <div className="flex items-center justify-between border-b border-border/30 pb-4">
+                  <p className="text-sm text-muted-foreground">Manage global prompts and specialized agents.</p>
+                  <button onClick={async () => {
+                    // @ts-ignore
+                    const res = await window.api.restoreDefaultPrompts();
+                    if (res && res.data) {
+                      save({ 
+                        ...localSettings, 
+                        prompts: res.data.prompts,
+                        agents: res.data.agents
+                      });
+                      (window as any).showToast('Agents and Prompts restored successfully!', 'success');
+                    }
+                  }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors" title="Restore Agents and Prompts to Defaults"><RotateCcw size={14} /> Restore Defaults</button>
+                </div>
+                {/* Global System Prompts */}
                 <div>
-                  <p className="text-sm text-muted-foreground mb-6">Define the behavior, persona, and rules for the Aynite Assistant.</p>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium">Prompt Files</h3>
+                    <h3 className="text-lg font-medium">Global System Prompts</h3>
                     <div className="flex items-center gap-2">
-                      <button onClick={async () => {
-                        // @ts-ignore
-                        const res = await window.api.restoreDefaultPrompts();
-                        if (res && res.data) {
-                          save({ ...localSettings, prompts: res.data });
-                        }
-                      }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Defaults</button>
                       <button onClick={async () => {
                         // @ts-ignore
                         const res = await window.api.pickPromptFile();
@@ -691,34 +743,98 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                           const newFiles = [...(localSettings.prompts?.files || []), res.data];
                           save({ ...localSettings, prompts: { files: Array.from(new Set(newFiles)) } });
                         }
-                      }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add File</button>
+                      }} className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add File</button>
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground mb-4">These prompts are applied to all agents.</p>
                   <div className="space-y-2">
                     {(localSettings.prompts?.files || []).map((filePath) => (
-                      <div key={filePath} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
+                      <div key={filePath} className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-accent/5 group">
                         <div className="flex flex-col min-w-0">
                           <span className="text-xs font-medium truncate">{filePath.split(/[\/\\]/).pop()}</span>
                           <span className="text-[10px] text-muted-foreground truncate">{filePath}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => {
-                            const newFiles = (localSettings.prompts?.files || []).filter(f => f !== filePath);
-                            save({ ...localSettings, prompts: { files: newFiles } });
-                          }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                        <button onClick={() => {
+                          const newFiles = (localSettings.prompts?.files || []).filter(f => f !== filePath);
+                          save({ ...localSettings, prompts: { files: newFiles } });
+                        }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Agents List */}
+                <div className="pt-6 border-t border-border">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-medium">Agents</h3>
+                    <button onClick={handleAddAgent} className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Agent</button>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    {(localSettings.agents?.list || []).map((agent) => (
+                      <div key={agent.id} className={cn(
+                        "p-5 rounded-xl border transition-all space-y-4",
+                        localSettings.agents?.activeId === agent.id ? "border-primary bg-accent/5" : "border-border bg-accent/5"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="radio" 
+                              name="active-agent" 
+                              checked={localSettings.agents?.activeId === agent.id} 
+                              onChange={() => save({ ...localSettings, agents: { ...localSettings.agents, activeId: agent.id } })} 
+                              className="w-4 h-4 text-primary border-gray-300 focus:ring-primary cursor-pointer" 
+                            />
+                            <input 
+                              type="text" 
+                              value={agent.name} 
+                              onChange={(e) => handleUpdateAgent(agent.id, 'name', e.target.value)}
+                              className="font-bold bg-transparent border-none p-0 focus:outline-none focus:ring-0 text-sm w-64"
+                              placeholder="Agent Name"
+                            />
+                          </div>
+                          <button onClick={() => handleDeleteAgent(agent.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all"><Trash2 size={16} /></button>
+                        </div>
+
+                        <div className="ml-7 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Agent Prompt Files</h4>
+                            <button onClick={async () => {
+                              // @ts-ignore
+                              const res = await window.api.pickPromptFile();
+                              if (res && res.data) {
+                                const newFiles = [...(agent.promptFiles || []), res.data];
+                                handleUpdateAgent(agent.id, 'promptFiles', Array.from(new Set(newFiles)));
+                              }
+                            }} className="text-[10px] font-bold text-primary hover:underline transition-all flex items-center gap-1"><Plus size={10} /> Add File</button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {(agent.promptFiles || []).map((filePath) => (
+                              <div key={filePath} className="flex items-center justify-between p-2 rounded-lg border border-border/50 bg-background/40 group/file">
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-[11px] font-medium truncate">{filePath.split(/[\/\\]/).pop()}</span>
+                                  <span className="text-[9px] text-muted-foreground truncate">{filePath}</span>
+                                </div>
+                                <button onClick={() => {
+                                  const newFiles = (agent.promptFiles || []).filter(f => f !== filePath);
+                                  handleUpdateAgent(agent.id, 'promptFiles', newFiles);
+                                }} className="p-1 text-muted-foreground hover:text-destructive transition-all opacity-0 group-hover/file:opacity-100"><X size={12} /></button>
+                              </div>
+                            ))}
+                            {(agent.promptFiles || []).length === 0 && <div className="text-[10px] text-muted-foreground italic opacity-50 py-2">No agent-specific prompt files.</div>}
+                          </div>
+
+                          <div className="pt-2">
+                            <UnifiedCollapsible title="System Prompt Preview" icon={FileText} colorClass="border-primary/20" defaultExpanded={false}>
+                              <div className="p-4 rounded-lg bg-background/50 border border-border/40 font-mono text-[10px] whitespace-pre-wrap max-h-60 overflow-y-auto">
+                                {localSettings.agents?.activeId === agent.id ? mergedPrompt : <span className="text-muted-foreground italic">Switch to this agent to see the preview.</span>}
+                              </div>
+                            </UnifiedCollapsible>
+                          </div>
                         </div>
                       </div>
                     ))}
-                    {(localSettings.prompts?.files || []).length === 0 && (
-                      <div className="text-center py-8 border-2 border-dashed border-border rounded-lg text-muted-foreground text-sm">No prompt files added.</div>
-                    )}
-                  </div>
-
-                  <div className="mt-10 space-y-4">
-                    <h3 className="text-lg font-medium">System Prompt Preview</h3>
-                    <div className="p-4 rounded-lg bg-accent/5 border border-border font-mono text-xs whitespace-pre-wrap">
-                      {mergedPrompt || <span className="text-muted-foreground italic">Preview is empty. Add prompt files to see the combined result.</span>}
-                    </div>
                   </div>
                 </div>
               </div>

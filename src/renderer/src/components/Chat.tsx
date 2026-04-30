@@ -13,7 +13,7 @@ import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig } from '../lib/
 
 // AgentMessage is defined in ../lib/agent.ts
 
-function UnifiedCollapsible({ 
+export function UnifiedCollapsible({ 
   title, 
   icon: Icon, 
   colorClass, 
@@ -819,13 +819,17 @@ export default function ChatTab({
         const activeId = settings.ai?.activeId;
         const activeProvider = settings.ai?.providers?.find(p => p.id === activeId) || settings.ai?.providers?.[0];
 
+        const activeAgent = settings.agents?.list?.find(a => a.id === settings.agents?.activeId);
+        const agentPromptFiles = activeAgent?.promptFiles || [];
+
         const agentConfig: AgentConfig = {
           provider: activeProvider?.provider || 'ollama',
           apiKey: activeProvider?.apiKey || '',
           baseUrl: activeProvider?.url || '',
           model: activeProvider?.model || '',
           compatibility: activeProvider?.compatibility,
-          enabledTools: settings.aiTools
+          enabledTools: settings.aiTools,
+          agentPromptFiles // Add this to AgentConfig interface if needed, or pass separately
         };
 
 
@@ -1043,6 +1047,65 @@ export default function ChatTab({
     <div className="chat-panel flex flex-col h-full bg-background relative overflow-hidden">
       {/* Atmosphere Layer */}
       <div className="absolute inset-0 bg-ambient-gradient z-0 opacity-40" />
+
+      {/* Session Header */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border/50 bg-background/80 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+            <Bot size={18} className="text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Active Agent</span>
+            </div>
+            <div className="relative group">
+              <button 
+                className="flex items-center gap-1.5 text-sm font-bold hover:text-primary transition-colors"
+                onClick={() => {
+                  const el = document.getElementById('agent-switcher-dropdown');
+                  if (el) el.classList.toggle('hidden');
+                }}
+              >
+                {settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Agent Aynite'}
+                <ChevronDown size={14} className="opacity-40" />
+              </button>
+              
+              {/* Simple dropdown */}
+              <div id="agent-switcher-dropdown" className="hidden absolute top-full left-0 mt-2 w-48 bg-sidebar border border-border shadow-2xl rounded-xl p-1 z-50">
+                {(settings.agents?.list || []).map(agent => (
+                  <button
+                    key={agent.id}
+                    onClick={() => {
+                      onUpdateSettings({
+                        ...settings,
+                        agents: { ...settings.agents, activeId: agent.id }
+                      });
+                      document.getElementById('agent-switcher-dropdown')?.classList.add('hidden');
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-accent",
+                      settings.agents?.activeId === agent.id ? "text-primary bg-primary/5" : "text-muted-foreground"
+                    )}
+                  >
+                    {agent.name}
+                    {settings.agents?.activeId === agent.id && <Check size={12} />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setMessages([])} 
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-all"
+            title="Clear Chat"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
       
       {/* Message Area */}
       <div className="flex-1 overflow-y-auto px-6 pt-10 pb-32 space-y-1.5 mask-fade-vertical z-10" ref={scrollRef}>

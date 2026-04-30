@@ -523,9 +523,9 @@ ipcMain.handle('api:prompts-restore-default', async () => {
   }
 });
 
-ipcMain.handle('api:prompts-get-merged', async (_, customFiles?: string[]) => {
+ipcMain.handle('api:prompts-get-merged', async (_, globalFiles?: string[], agentFiles?: string[]) => {
   try {
-    const merged = await getMergedSystemPrompt(customFiles);
+    const merged = await getMergedSystemPrompt(globalFiles, agentFiles);
     return { data: merged };
   } catch (error: any) {
     return { error: error.message };

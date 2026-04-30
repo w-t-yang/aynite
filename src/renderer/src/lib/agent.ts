@@ -24,6 +24,7 @@ export interface AgentConfig {
   model: string;
   compatibility?: 'openai' | 'anthropic' | 'google';
   enabledTools?: { [key: string]: boolean };
+  agentPromptFiles?: string[];
 }
 
 const genId = () => Math.random().toString(36).slice(2, 11);
@@ -42,9 +43,9 @@ export async function runAgentLoop(
 
   const hasSystem = fullHistory.some(m => m.role === 'system');
   if (!hasSystem) {
-    console.log("[Agent] No system prompt found in history, fetching merged prompt...");
+    console.log("[Agent] No system prompt found in history, fetching merged prompt for agent files:", config.agentPromptFiles);
     // @ts-ignore
-    const sysPromptRes = await window.api.getMergedSystemPrompt();
+    const sysPromptRes = await window.api.getMergedSystemPrompt(undefined, config.agentPromptFiles);
     const sysPrompt = (sysPromptRes && sysPromptRes.data) ? sysPromptRes.data : "";
     console.log("[Agent] Injected system prompt length:", sysPrompt.length);
     const sysMsg: AgentMessage = {

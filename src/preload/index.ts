@@ -37,7 +37,7 @@ const api = {
   // Prompts API
   pickPromptFile: () => ipcRenderer.invoke("api:prompts-pick-file"),
   restoreDefaultPrompts: () => ipcRenderer.invoke("api:prompts-restore-default"),
-  getMergedSystemPrompt: (files?: string[]) => ipcRenderer.invoke("api:prompts-get-merged", files),
+  getMergedSystemPrompt: (globalFiles?: string[], agentFiles?: string[]) => ipcRenderer.invoke("api:prompts-get-merged", globalFiles, agentFiles),
   
   // Theme API
   getThemesList: () => ipcRenderer.invoke('api:themes-list'),

@@ -153,6 +153,8 @@ export async function initAppFolders() {
     }
   }
 
+
+
   const configDir = path.join(baseDir, 'config');
   const workspacesDir = path.join(baseDir, 'workspaces');
 
@@ -168,7 +170,18 @@ export async function initAppFolders() {
     activeTheme: 'light',
     skills: { folders: [skillsDir] },
     commands: { folders: [commandsDir] },
-    prompts: { files: Object.keys(DEFAULT_PROMPTS).map(f => path.join(baseDir, "prompts", f)) }
+    prompts: { files: Object.keys(DEFAULT_PROMPTS).filter(f => !f.startsWith('agent-')).map(f => path.join(baseDir, "prompts", f)) },
+    agents: {
+      activeId: 'aynite',
+      list: [
+        { id: 'aynite', name: 'Agent Aynite', promptFiles: [path.join(baseDir, "prompts", "agent-aynite.md")] },
+        { id: 'void', name: 'Void (Coder)', promptFiles: [path.join(baseDir, "prompts", "agent-void.md")] },
+        { id: 'alpha', name: 'Alpha (Trader)', promptFiles: [path.join(baseDir, "prompts", "agent-alpha.md")] },
+        { id: 'sonic', name: 'Sonic (Producer)', promptFiles: [path.join(baseDir, "prompts", "agent-sonic.md")] },
+        { id: 'ghost', name: 'Ghost (Writer)', promptFiles: [path.join(baseDir, "prompts", "agent-ghost.md")] },
+        { id: 'prism', name: 'Prism (Photographer)', promptFiles: [path.join(baseDir, "prompts", "agent-prism.md")] }
+      ]
+    }
   };
   const ignoreDefault = ['node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
   const workspacesDefault = { active: 'aynite-workspace', list: ['aynite-workspace'] };
@@ -343,6 +356,23 @@ export async function loadConfig() {
   }
   if (!mainConfig.commands) {
     mainConfig.commands = await getCommandsConfig();
+  }
+  if (mainConfig.prompts && mainConfig.prompts.files) {
+    mainConfig.prompts.files = mainConfig.prompts.files.filter((f: string) => !path.basename(f).startsWith('agent-'));
+  }
+  if (!mainConfig.agents) {
+    const baseDir = getConfigDir();
+    mainConfig.agents = {
+      activeId: 'aynite',
+      list: [
+        { id: 'aynite', name: 'Agent Aynite', promptFiles: [path.join(baseDir, "prompts", "agent-aynite.md")] },
+        { id: 'void', name: 'Void (Coder)', promptFiles: [path.join(baseDir, "prompts", "agent-void.md")] },
+        { id: 'alpha', name: 'Alpha (Trader)', promptFiles: [path.join(baseDir, "prompts", "agent-alpha.md")] },
+        { id: 'sonic', name: 'Sonic (Producer)', promptFiles: [path.join(baseDir, "prompts", "agent-sonic.md")] },
+        { id: 'ghost', name: 'Ghost (Writer)', promptFiles: [path.join(baseDir, "prompts", "agent-ghost.md")] },
+        { id: 'prism', name: 'Prism (Photographer)', promptFiles: [path.join(baseDir, "prompts", "agent-prism.md")] }
+      ]
+    };
   }
 
   // Migrate: if old appearance.json exists, move theme to config.json activeTheme then delete it
@@ -854,15 +884,43 @@ export async function restoreDefaultPrompts() {
     await fs.writeFile(p, content, 'utf-8');
   }
 
-  const config = {
-    files: Object.keys(defaultPrompts).map(f => path.join(promptsDir, f))
+  const prompts = {
+    files: Object.keys(defaultPrompts)
+      .filter(f => !f.startsWith('agent-'))
+      .map(f => path.join(promptsDir, f))
   };
-  await savePromptsConfig(config);
-  return config;
+
+  const agents = {
+    activeId: 'aynite',
+    list: [
+      { id: 'aynite', name: 'Agent Aynite', promptFiles: [path.join(promptsDir, "agent-aynite.md")] },
+      { id: 'void', name: 'Void Coder', promptFiles: [path.join(promptsDir, "agent-void.md")] },
+      { id: 'alpha', name: 'Alpha Trader', promptFiles: [path.join(promptsDir, "agent-alpha.md")] },
+      { id: 'sonic', name: 'Sonic Producer', promptFiles: [path.join(promptsDir, "agent-sonic.md")] },
+      { id: 'ghost', name: 'Ghost Writer', promptFiles: [path.join(promptsDir, "agent-ghost.md")] },
+      { id: 'prism', name: 'Prism Photographer', promptFiles: [path.join(promptsDir, "agent-prism.md")] }
+    ]
+  };
+
+  // Save to config.json
+  const mainConfigPath = path.join(baseDir, 'config', 'config.json');
+  let mainConfig: any = {};
+  if (existsSync(mainConfigPath)) {
+    try {
+      const data = await fs.readFile(mainConfigPath, 'utf-8');
+      mainConfig = JSON.parse(data);
+    } catch { }
+  }
+  mainConfig.prompts = prompts;
+  mainConfig.agents = agents;
+  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
+
+  return { prompts, agents };
 }
 
-export async function getMergedSystemPrompt(customFiles?: string[]) {
-  const promptFiles = customFiles || (await getPromptsConfig()).files || [];
+export async function getMergedSystemPrompt(globalFiles?: string[], agentFiles?: string[]) {
+  const globalPromptFiles = globalFiles || (await getPromptsConfig()).files || [];
+  const promptFiles = [...globalPromptFiles, ...(agentFiles || [])];
   let merged = '';
 
   for (const filePath of promptFiles) {

@@ -9,11 +9,21 @@ export interface AIProviderInstance {
   contextWindow?: number;
 }
 
+export interface Agent {
+  id: string;
+  name: string;
+  promptFiles: string[];
+}
+
 export interface SettingsState {
   activeTheme: string;
   ai: {
     activeId: string;
     providers: AIProviderInstance[];
+  };
+  agents: {
+    activeId: string;
+    list: Agent[];
   };
   skills?: {
     folders: string[];
