@@ -740,6 +740,52 @@ export async function loadChatLog(sessionId: string, date: string) {
   }
 }
 
+export async function listChatLogs() {
+  const baseDir = getConfigDir();
+  const logsBaseDir = path.join(baseDir, 'logs');
+  const allLogs: any[] = [];
+  
+  if (!existsSync(logsBaseDir)) return [];
+  
+  try {
+    const dates = await fs.readdir(logsBaseDir);
+    for (const date of dates) {
+      const dateDir = path.join(logsBaseDir, date);
+      const stats = await fs.stat(dateDir);
+      if (!stats.isDirectory()) continue;
+      
+      const sessions = await fs.readdir(dateDir);
+      for (const session of sessions) {
+        if (!session.endsWith('.json')) continue;
+        const sessionPath = path.join(dateDir, session);
+        try {
+          const sessionStats = await fs.stat(sessionPath);
+          const data = await fs.readFile(sessionPath, 'utf-8');
+          const messages = JSON.parse(data);
+          // Get a preview from the first user message or first message
+          const firstMsg = messages.find((m: any) => m.role === 'user')?.content || messages[0]?.content || '';
+          const preview = firstMsg.slice(0, 60) + (firstMsg.length > 60 ? '...' : '');
+
+          allLogs.push({
+            id: session.replace('.json', ''),
+            date: date,
+            lastModified: sessionStats.mtime,
+            size: sessionStats.size,
+            preview: preview
+          });
+        } catch (e) {
+          console.error(`Error reading session ${session}`, e);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error listing chat logs', e);
+  }
+  
+  // Sort by last modified descending
+  return allLogs.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
+}
+
 // Prompts Logic
 
 export async function getPromptsConfig() {
