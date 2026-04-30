@@ -82,8 +82,19 @@
     },
     "files": [
       "out/**/*",
-      "resources/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/skills",
+        "to": "skills",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "resources/commands",
+        "to": "commands",
+        "filter": ["**/*"]
+      }
     ],
     "mac": {
       "target": [

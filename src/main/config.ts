@@ -194,7 +194,10 @@ export async function initAppFolders() {
   for (const skillName of skillsToInstall) {
     const skillPath = path.join(skillsDir, skillName);
     if (!existsSync(skillPath)) {
-      await restoreSkill(skillName);
+      console.log(`[Config] Skill "${skillName}" missing, attempting restoration...`);
+      const success = await restoreSkill(skillName);
+      if (success) console.log(`[Config] Successfully restored skill: ${skillName}`);
+      else console.error(`[Config] Failed to restore skill: ${skillName}`);
     }
   }
 
@@ -203,7 +206,10 @@ export async function initAppFolders() {
   for (const cmdName of commandsToInstall) {
     const cmdPath = path.join(commandsDir, cmdName);
     if (!existsSync(cmdPath)) {
-      await restoreCommand(cmdName);
+      console.log(`[Config] Command "${cmdName}" missing, attempting restoration...`);
+      const success = await restoreCommand(cmdName);
+      if (success) console.log(`[Config] Successfully restored command: ${cmdName}`);
+      else console.error(`[Config] Failed to restore command: ${cmdName}`);
     }
   }
 
@@ -371,18 +377,35 @@ export async function saveSkillsConfig(config: any) {
 
 export async function restoreSkill(skillName: string) {
   const skillsDir = path.join(getConfigDir(), 'skills');
-  const bundledSkillsPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'skills')
-    : path.join(app.getAppPath(), 'resources', 'skills');
+  
+  // Robust bundled path detection
+  let bundledSkillsPath = '';
+  if (app.isPackaged) {
+    bundledSkillsPath = path.join(process.resourcesPath, 'skills');
+  } else {
+    // In dev mode, resources are in the project root
+    bundledSkillsPath = path.join(app.getAppPath(), 'resources', 'skills');
+  }
 
   const srcDir = path.join(bundledSkillsPath, skillName);
   const destDir = path.join(skillsDir, skillName);
 
+  console.log(`[Restore] Source: ${srcDir}`);
+  console.log(`[Restore] Destination: ${destDir}`);
+
   if (existsSync(srcDir)) {
-    await fs.cp(srcDir, destDir, { recursive: true });
-    return true;
+    try {
+      await fs.mkdir(path.dirname(destDir), { recursive: true });
+      await fs.cp(srcDir, destDir, { recursive: true });
+      return true;
+    } catch (e) {
+      console.error(`[Restore] Error copying skill ${skillName}:`, e);
+      return false;
+    }
+  } else {
+    console.warn(`[Restore] Source skill directory not found: ${srcDir}`);
+    return false;
   }
-  return false;
 }
 
 export async function restoreDefaultSkills() {
@@ -578,18 +601,33 @@ export async function restoreDefaultCommands() {
 
 export async function restoreCommand(commandName: string) {
   const commandsDir = path.join(getConfigDir(), 'commands');
-  const bundledCommandsPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'commands')
-    : path.join(app.getAppPath(), 'resources', 'commands');
+  
+  let bundledCommandsPath = '';
+  if (app.isPackaged) {
+    bundledCommandsPath = path.join(process.resourcesPath, 'commands');
+  } else {
+    bundledCommandsPath = path.join(app.getAppPath(), 'resources', 'commands');
+  }
 
   const srcDir = path.join(bundledCommandsPath, commandName);
   const destDir = path.join(commandsDir, commandName);
 
+  console.log(`[Restore] Source: ${srcDir}`);
+  console.log(`[Restore] Destination: ${destDir}`);
+
   if (existsSync(srcDir)) {
-    await fs.cp(srcDir, destDir, { recursive: true });
-    return true;
+    try {
+      await fs.mkdir(path.dirname(destDir), { recursive: true });
+      await fs.cp(srcDir, destDir, { recursive: true });
+      return true;
+    } catch (e) {
+      console.error(`[Restore] Error copying command ${commandName}:`, e);
+      return false;
+    }
+  } else {
+    console.warn(`[Restore] Source command directory not found: ${srcDir}`);
+    return false;
   }
-  return false;
 }
 
 // Workspace Logic
