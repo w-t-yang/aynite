@@ -250,7 +250,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     const name = newWorkspaceName.trim();
     if (!name) return;
     if (workspaces.includes(name)) {
-      alert('Workspace already exists');
+      (window as any).showToast('Workspace already exists', 'error');
       return;
     }
     // @ts-ignore
@@ -273,7 +273,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     if (parentId === null) {
       const isAllRoots = dragIds.every(id => rootFilesPaths.includes(id));
       if (!isAllRoots) {
-        alert("Cannot move subfolders to the workspace root.");
+        (window as any).showToast("Cannot move subfolders to the workspace root.", 'error');
         return;
       }
       const newOrder = rootFilesPaths.filter(id => !dragIds.includes(id));
@@ -284,7 +284,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     } else {
       const hasRoot = dragIds.some(id => rootFilesPaths.includes(id));
       if (hasRoot) {
-        alert("Cannot move a workspace folder into a subfolder.");
+        (window as any).showToast("Cannot move a workspace folder into a subfolder.", 'error');
         return;
       }
       
@@ -358,7 +358,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
         if (action === 'remove-from-workspace') loadWorkspaceData();
       } catch (e) {
         console.error(e);
-        alert(String(e));
+        (window as any).showToast(String(e), 'error');
       }
     };
 

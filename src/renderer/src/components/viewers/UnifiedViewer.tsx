@@ -137,10 +137,8 @@ export const UnifiedViewer: React.FC<{
           e.stopPropagation();
 
           if (isExternal) {
-            if (confirm(`Open external website?\n\n${url}`)) {
-              // @ts-ignore
-              window.api?.openExternal(url);
-            }
+            // @ts-ignore
+            window.api?.openExternal(url);
           } else {
             let cleanPath = url;
             if (url.startsWith('aynite-resource://')) {

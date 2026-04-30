@@ -8,7 +8,10 @@ export const DEFAULT_KEYBINDINGS = {
   },
   agent: {
     focusChat: 'CTRL+I',
-    toggleRightPanel: 'CTRL+U'
+    focusSkills: 'CTRL+/',
+    focusCommands: 'CTRL+.',
+    toggleRightPanel: 'CTRL+U',
+    submit: 'CTRL+ENTER'
   },
   content: {
     navigation: {

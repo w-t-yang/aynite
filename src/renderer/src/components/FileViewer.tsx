@@ -46,6 +46,7 @@ function FileViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [externalChangeDetected, setExternalChangeDetected] = useState(false);
+  const [showRefreshConfirm, setShowRefreshConfirm] = useState(false);
   const lastLocalWriteTime = useRef(0);
   
   // @ts-ignore
@@ -159,10 +160,13 @@ function FileViewer({
   }, [id]);
 
   const handleRefresh = async () => {
-    if (isDirty) {
-      const confirm = window.confirm('You have unsaved changes. Refreshing will discard them. Continue?');
-      if (!confirm) return;
+    if (isDirty && !showRefreshConfirm) {
+      setShowRefreshConfirm(true);
+      setTimeout(() => setShowRefreshConfirm(false), 3000);
+      return;
     }
+    
+    setShowRefreshConfirm(false);
 
     setLoading(true);
     try {
@@ -485,12 +489,18 @@ function FileViewer({
                     <AlertCircle size={14} />
                     <span>This file has been modified externally.</span>
                   </div>
-                  <button 
-                    onClick={handleRefresh}
-                    className="bg-primary text-primary-foreground px-3 py-1 rounded-sm hover:bg-primary/90 transition-colors font-medium"
-                  >
-                    Refresh
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {showRefreshConfirm && <span className="text-[10px] font-bold uppercase tracking-tighter mr-1 animate-pulse">Discard changes?</span>}
+                    <button 
+                      onClick={handleRefresh}
+                      className={cn(
+                        "px-3 py-1 rounded-sm transition-all font-medium",
+                        showRefreshConfirm ? "bg-destructive text-destructive-foreground shadow-lg scale-105" : "bg-primary text-primary-foreground hover:bg-primary/90"
+                      )}
+                    >
+                      {showRefreshConfirm ? 'Confirm Refresh' : 'Refresh'}
+                    </button>
+                  </div>
                 </div>
               )}
 

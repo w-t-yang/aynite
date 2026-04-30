@@ -505,6 +505,7 @@ export default function ChatTab({
   const [pendingApproval, setPendingApproval] = useState<{ command: string; cwd: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
 
   const loadSessions = async () => {
@@ -520,6 +521,8 @@ export default function ChatTab({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+
 
   const normalizeAndHealMessages = (msgs: any[]): AgentMessage[] => {
     // 1. Basic normalization (handle legacy logs with 'text' instead of 'content')
@@ -627,19 +630,25 @@ export default function ChatTab({
           localStorage.setItem('lastSession', JSON.stringify({ id, date: dateStr }));
           console.log(`[Chat] Started new session with ID: ${id}`);
         }
+        setTimeout(() => inputRef.current?.focus(), 100);
       });
     };
     (window as any).showChatHistory = () => {
       loadSessions();
       setShowHistory(true);
     };
+
     return () => {
       delete (window as any).focusChatInput;
       delete (window as any).setChatSession;
       delete (window as any).showChatHistory;
+      delete (window as any).clearChat;
+      delete (window as any).copyChat;
     };
 
   }, []);
+  
+
 
 
   const handleOpenFile = async (filepath: string) => {
@@ -937,11 +946,19 @@ export default function ChatTab({
     );
 
   const clearHistory = useCallback(() => {
+    if (!showClearConfirm) {
+      setShowClearConfirm(true);
+      setTimeout(() => setShowClearConfirm(false), 3000); // Reset after 3 seconds
+      return;
+    }
+    
     setMessages([]);
     setSessionId(null);
     localStorage.removeItem('lastSession');
     abortRef.current?.abort();
-  }, []);
+    setShowClearConfirm(false);
+
+  }, [showClearConfirm]);
   const copyHistoryAsJson = useCallback(() => {
     const jsonStr = JSON.stringify(messages, null, 2);
     navigator.clipboard.writeText(jsonStr).then(() => {
@@ -949,6 +966,16 @@ export default function ChatTab({
       setTimeout(() => setCopied(false), 2000);
     }).catch(err => console.error('Failed to copy', err));
   }, [messages]);
+
+  useEffect(() => {
+    (window as any).clearChat = () => {
+      setMessages([]);
+      setSessionId(null);
+      localStorage.removeItem('lastSession');
+      abortRef.current?.abort();
+    };
+    (window as any).copyChat = copyHistoryAsJson;
+  }, [copyHistoryAsJson]);
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
@@ -957,9 +984,8 @@ export default function ChatTab({
   }, []);
 
   const saveMessageToFile = useCallback(async (text: string) => {
-    const filename = prompt('Enter filename to save message content:', `ai-message-${Date.now()}.md`);
-    if (!filename) return;
-
+    const filename = `ai-message-${Date.now()}.md`;
+    
     // Use first workspace folder as base if available
     const baseDir = workspaceFolders.length > 0 ? workspaceFolders[0] : '';
     // @ts-ignore
@@ -1056,25 +1082,6 @@ export default function ChatTab({
 
 
             <div className="flex items-center gap-1.5 pointer-events-auto">
-              <button
-                onClick={copyHistoryAsJson}
-                disabled={messages.length === 0}
-                className={`p-1.5 rounded-full backdrop-blur-md border border-border/20 transition-all ${
-                  copied 
-                    ? 'bg-green-500/20 text-green-500 border-green-500/20' 
-                    : 'bg-background/40 hover:bg-primary/10 text-muted-foreground hover:text-primary'
-                } ${messages.length === 0 ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
-                title="Copy conversation as JSON"
-              >
-                {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
-              </button>
-              <button
-                onClick={clearHistory}
-                className={`p-1.5 rounded-full bg-background/40 backdrop-blur-md border border-border/20 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all ${messages.length === 0 ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
-                title="Clear History"
-              >
-                <Trash2 size={12} />
-              </button>
             </div>
           </div>
 
@@ -1084,6 +1091,7 @@ export default function ChatTab({
             disabled={loading}
             workspaceFolders={workspaceFolders}
             focusKeybinding={settings.keybindings.agent.focusChat}
+            submitKeybinding={settings.keybindings.agent.submit}
           />
         </div>
       </div>

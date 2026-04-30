@@ -44,6 +44,7 @@ export interface SettingsState {
       focusSkills: string;
       focusCommands: string;
       toggleRightPanel: string;
+      submit: string;
     };
     content: {
       navigation: {
@@ -388,7 +389,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     const defaultKb: SettingsState['keybindings'] = {
                       global: { refresh: 'CTRL+SHIFT+R', quit: '' },
                       explorer: { toggleLeftPanel: 'CTRL+T' },
-                      agent: { focusChat: 'CTRL+I', focusSkills: 'CTRL+/', focusCommands: 'CTRL+.', toggleRightPanel: 'CTRL+U' },
+                      agent: { focusChat: 'CTRL+I', focusSkills: 'CTRL+/', focusCommands: 'CTRL+.', toggleRightPanel: 'CTRL+U', submit: 'CTRL+ENTER' },
                       content: {
                         navigation: { switchTab: 'CTRL+TAB', closeTab: 'CTRL+W', focusContent: 'CTRL+Y' },
                         viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/', refresh: 'CTRL+R' },
@@ -496,6 +497,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     <KeyRow label="Focus Chat Input" value={localSettings.keybindings.agent.focusChat} onChange={(v) => handleKeybindingChange('agent', 'focusChat', v)} />
                     <KeyRow label="Focus & Skills" value={localSettings.keybindings.agent.focusSkills} onChange={(v) => handleKeybindingChange('agent', 'focusSkills', v)} />
                     <KeyRow label="Focus & Commands" value={localSettings.keybindings.agent.focusCommands} onChange={(v) => handleKeybindingChange('agent', 'focusCommands', v)} />
+                    <KeyRow label="Chat Submit" value={localSettings.keybindings.agent.submit} onChange={(v) => handleKeybindingChange('agent', 'submit', v)} />
                     <KeyRow label="Toggle Right Panel" value={localSettings.keybindings.agent.toggleRightPanel} onChange={(v) => handleKeybindingChange('agent', 'toggleRightPanel', v)} />
                   </div>
                   <div className="space-y-1">
@@ -711,8 +713,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                             <button onClick={async () => {
                               // @ts-ignore
                               const res = await window.api.restoreDefaultSkills();
-                              if (res && res.data) alert('Default skills restored successfully!');
-                              else alert('Failed to restore default skills.');
+                              if (res && res.data) (window as any).showToast('Default skills restored successfully!', 'success');
+                              else (window as any).showToast('Failed to restore default skills.', 'error');
                             }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
                           )}
                           {index > 0 && (
@@ -756,8 +758,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                             <button onClick={async () => {
                               // @ts-ignore
                               const res = await window.api.restoreDefaultCommands();
-                              if (res && res.data) alert('Default commands restored successfully!');
-                              else alert('Failed to restore default commands.');
+                              if (res && res.data) (window as any).showToast('Default commands restored successfully!', 'success');
+                              else (window as any).showToast('Failed to restore default commands.', 'error');
                             }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
                           )}
                           {index > 0 && (

@@ -5,7 +5,7 @@ import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { SelectionList, SelectionItem } from './ui/SelectionList';
-import { FileText, Folder, Zap, Terminal } from 'lucide-react';
+import { FileText, Folder, Zap, Terminal, Send } from 'lucide-react';
 import { KeyManager } from '../lib/key-handlers';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ interface ChatInputProps {
   disabled?: boolean;
   workspaceFolders?: string[];
   focusKeybinding?: string;
+  submitKeybinding?: string;
 }
 
 // Real registries will be loaded via API
@@ -213,7 +214,7 @@ async function flattenWorkspaceFiles(
 // ─── Main ChatInput Component ────────────────────────────────────────
 
 const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
-  ({ onSubmit, disabled, workspaceFolders = [], focusKeybinding }, ref) => {
+  ({ onSubmit, disabled, workspaceFolders = [], focusKeybinding, submitKeybinding }, ref) => {
     const [fileItems, setFileItems] = useState<SuggestionItem[]>([]);
     const [skillItems, setSkillItems] = useState<SuggestionItem[]>([]);
     const [commandItems, setCommandItems] = useState<SuggestionItem[]>([]);
@@ -329,7 +330,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         horizontalRule: false,
       }),
       Placeholder.configure({
-        placeholder: `Message Aynite Assistant… (Press ${focusKeybinding || 'Ctrl+/'} to start typing)`,
+        placeholder: `Message Aynite Assistant...`,
       }),
       BaseMention.configure({
         HTMLAttributes: { class: 'mention mention-file' },
@@ -383,7 +384,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         },
       },
       editable: !disabled,
-    }, [extensions]);
+    }, []);
 
     const handleSubmit = useCallback(() => {
       if (!editor || disabled) return;
@@ -415,19 +416,42 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, [disabled, editor]);
 
     useImperativeHandle(ref, () => ({
-      focus: () => editor?.commands.focus(),
+      focus: () => {
+        if (editor) {
+          editor.commands.focus('end');
+        }
+      },
       clear: () => editor?.commands.clearContent(),
       trigger: (prefix: string) => {
         if (!editor) return;
-        editor.commands.focus();
+        editor.commands.focus('end');
         editor.commands.clearContent();
         editor.commands.insertContent(prefix);
       }
     }));
 
     return (
-      <div className={`chat-input-wrapper bg-background/60 backdrop-blur-xl border border-border/40 rounded-2xl px-4 py-3.5 shadow-2xl shadow-black/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300 active:scale-[0.995] ${disabled ? 'opacity-50 grayscale-[0.5]' : ''}`}>
-        <EditorContent editor={editor} />
+      <div 
+        onClick={() => {
+          if (editor) {
+            editor.commands.focus('end');
+            // Force focus on next tick if needed
+            setTimeout(() => editor.commands.focus('end'), 5);
+          }
+        }}
+        className={`chat-input-wrapper flex items-end gap-2 bg-background/60 backdrop-blur-xl border border-border/40 rounded-2xl pl-4 pr-2 py-2.5 shadow-2xl shadow-black/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300 cursor-text ${disabled ? 'opacity-50 grayscale-[0.5]' : ''}`}
+      >
+        <div className="flex-1 min-h-[24px] py-1">
+          <EditorContent editor={editor} />
+        </div>
+        <button
+          onClick={() => handleSubmit()}
+          disabled={disabled}
+          className="p-2 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-xl transition-all duration-200 shrink-0"
+          title="Send Message (Ctrl+Enter)"
+        >
+          <Send size={18} />
+        </button>
       </div>
     );
   }

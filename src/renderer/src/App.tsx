@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot, MoreHorizontal, Eraser, History } from 'lucide-react';
+import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot, MoreHorizontal, Eraser, History, Copy as LucideCopy, PlusCircle, AlertCircle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import UpdateNotification from './components/UpdateNotification';
 import ChatTab from './components/Chat';
@@ -27,7 +27,7 @@ type Tab = {
 
 const DEFAULT_SETTINGS: SettingsState = {
   activeTheme: 'light',
-  aiProvider: 'gemini',
+  aiProvider: 'ollama',
   keybindings: {
     global: {
       refresh: 'CTRL+SHIFT+R',
@@ -40,7 +40,8 @@ const DEFAULT_SETTINGS: SettingsState = {
       focusChat: 'CTRL+I',
       focusSkills: 'CTRL+/',
       focusCommands: 'CTRL+.',
-      toggleRightPanel: 'CTRL+U'
+      toggleRightPanel: 'CTRL+U',
+      submit: 'CTRL+ENTER'
     },
     content: {
       navigation: {
@@ -101,6 +102,20 @@ export default function App() {
   const [showTabMenu, setShowTabMenu] = useState(false);
   const tabMenuRef = useRef<HTMLDivElement>(null);
 
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'info' | 'error' | 'success' }[]>([]);
+
+  const showToast = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
+
+  useEffect(() => {
+    (window as any).showToast = showToast;
+  }, []);
+
   const loadWorkspaceState = async () => {
     setWorkspaceReady(false);
     // @ts-ignore
@@ -114,15 +129,15 @@ export default function App() {
         if (tab.type === 'file' && tab.filepath) {
           const ext = tab.filepath.split('.').pop() || '';
           const category = getFileCategory(ext);
-          
+
           if (category === 'text' || category === 'markdown' || category === 'html') {
             // @ts-ignore
             const fRes = await window.api.readFile(tab.filepath);
             if (fRes && !fRes.error) {
-               validTabs.push({ ...tab, content: fRes.data, originalContent: fRes.data, isDirty: false });
+              validTabs.push({ ...tab, content: fRes.data, originalContent: fRes.data, isDirty: false });
             }
           } else {
-             validTabs.push({ ...tab, content: '', originalContent: '', isDirty: false });
+            validTabs.push({ ...tab, content: '', originalContent: '', isDirty: false });
           }
         } else {
           validTabs.push(tab);
@@ -132,14 +147,14 @@ export default function App() {
       setTabs(validTabs);
       const restoredActiveId = res.data.activeTabId;
       setActiveTabId(validTabs.find(t => t.id === restoredActiveId) ? restoredActiveId : (validTabs.length > 0 ? validTabs[validTabs.length - 1].id : ''));
-      
+
       // Focus the editor if a tab is active
       setTimeout(() => {
         const textarea = document.querySelector('textarea[track-cursor="true"]') as HTMLTextAreaElement;
         if (textarea) textarea.focus();
       }, 300);
     }
-    
+
     // Load workspace folders for the chat agent
     // @ts-ignore
     const foldersRes = await window.api.getWorkspaceFolders();
@@ -153,7 +168,7 @@ export default function App() {
   // Migrate old settings structure to new one
   const migrateSettings = (loaded: any): SettingsState => {
     const kb = loaded.keybindings || {};
-    
+
     // If the old structure is detected, convert it
     if (!kb.global) {
       const oldKb = { ...kb };
@@ -245,7 +260,7 @@ export default function App() {
       if (res.data) setSettings(migrateSettings(res.data));
       else setSettings(DEFAULT_SETTINGS);
     }).catch(() => setSettings(DEFAULT_SETTINGS));
-    
+
     loadWorkspaceState();
   }, []);
 
@@ -374,25 +389,25 @@ export default function App() {
   }, [rightWidth]);
 
   const handleFileContentChange = (content: string) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === activeTabId 
-        ? { ...tab, content, isDirty: content !== tab.originalContent } 
+    setTabs(prev => prev.map(tab =>
+      tab.id === activeTabId
+        ? { ...tab, content, isDirty: content !== tab.originalContent }
         : tab
     ));
   };
 
   const handleFileRefresh = (content: string) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === activeTabId 
-        ? { ...tab, content, originalContent: content, isDirty: false } 
+    setTabs(prev => prev.map(tab =>
+      tab.id === activeTabId
+        ? { ...tab, content, originalContent: content, isDirty: false }
         : tab
     ));
   };
 
   const handleCursorChange = (cursorPos: number) => {
-    setTabs(prev => prev.map(tab => 
-      tab.id === activeTabId 
-        ? { ...tab, cursorPos } 
+    setTabs(prev => prev.map(tab =>
+      tab.id === activeTabId
+        ? { ...tab, cursorPos }
         : tab
     ));
   };
@@ -410,14 +425,14 @@ export default function App() {
     const currentTabs = tabsStateRef.current;
     const currentActiveTabId = activeTabIdRef.current;
     const activeTab = currentTabs.find(t => t.id === currentActiveTabId);
-    
+
     if (activeTab?.type === 'file' && activeTab.filepath && activeTab.isDirty) {
       // Notify components that we're about to save to ignore the FS change event
       window.dispatchEvent(new CustomEvent('file-saving', { detail: activeTab.filepath }));
-      
+
       // @ts-ignore
       await window.api.saveFile(activeTab.filepath, activeTab.content || '');
-      setTabs(prev => prev.map(tab => 
+      setTabs(prev => prev.map(tab =>
         tab.id === currentActiveTabId
           ? { ...tab, isDirty: false, originalContent: activeTab.content }
           : tab
@@ -467,7 +482,7 @@ export default function App() {
 
   useEffect(() => {
     if (!workspaceReady || !activeWorkspaceName) return;
-    
+
     const timer = setTimeout(() => {
       const strippedTabs = tabs.map(t => {
         const { content, originalContent, isDirty, ...rest } = t;
@@ -507,14 +522,14 @@ export default function App() {
         // Try to focus specialized viewer iframe
         const iframes = document.querySelectorAll('iframe');
         if (iframes.length > 0) {
-           // The active one is usually the only one visible or the last one mounted
-           const activeIframe = iframes[iframes.length - 1];
-           try {
-             activeIframe.contentWindow?.document.body.focus();
-           } catch (e) {
-             activeIframe.focus();
-           }
-           return;
+          // The active one is usually the only one visible or the last one mounted
+          const activeIframe = iframes[iframes.length - 1];
+          try {
+            activeIframe.contentWindow?.document.body.focus();
+          } catch (e) {
+            activeIframe.focus();
+          }
+          return;
         }
 
         // Fallback to settings panel
@@ -545,9 +560,9 @@ export default function App() {
       focusChat: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.(), 150); },
       focusSkills: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.('/'), 150); },
       focusCommands: () => { setRightPanelOpen(true); setTimeout(() => (window as any).focusChatInput?.('>'), 150); },
-      closeTab: () => { 
+      closeTab: () => {
         const id = activeTabIdRef.current;
-        if (id) closeTab({ stopPropagation: () => {} } as any, id); 
+        if (id) closeTab({ stopPropagation: () => { } } as any, id);
       },
       switchTab: () => setShowTabSwitcher(true),
       focusContent: () => (document.querySelector('textarea[track-cursor="true"]') as HTMLElement)?.focus(),
@@ -556,7 +571,7 @@ export default function App() {
     };
 
     KeyManager.init(settings, globalApi);
-    
+
     return () => {
       KeyManager.cleanup();
     };
@@ -581,7 +596,7 @@ export default function App() {
         handleSelectFile({ name, path: filePath, isDirectory: false });
       }
     };
-    
+
     const handleOpenFileEvent = (e: any) => {
       if (e.detail && e.detail.path) {
         const filePath = e.detail.path;
@@ -609,14 +624,14 @@ export default function App() {
       const p = e.detail;
       const newTabs = tabs.filter(t => !t.filepath || (t.filepath !== p && !t.filepath.startsWith(p + '/')));
       setTabs(newTabs);
-      
+
       const activeT = tabs.find(t => t.id === activeTabId);
       if (activeT?.filepath && (activeT.filepath === p || activeT.filepath.startsWith(p + '/'))) {
         if (newTabs.length > 0) setActiveTabId(newTabs[newTabs.length - 1].id);
         else setActiveTabId('');
       }
     };
-    
+
     const handleFileRenamed = (e: any) => {
       const { oldPath, newPath } = e.detail;
       let updatedActiveId = activeTabId;
@@ -635,7 +650,7 @@ export default function App() {
         }
         return t;
       });
-      
+
       setTabs(newTabs);
       if (updatedActiveId !== activeTabId) setActiveTabId(updatedActiveId);
     };
@@ -652,7 +667,7 @@ export default function App() {
     // Normalize path to ensure tab reuse works across platforms/sources
     const normalizedPath = file.path.replace(/\\/g, '/');
     const tabId = `file-${normalizedPath}`;
-    
+
     // 1. Fast check: if already in current state, just switch
     const existingTab = tabs.find(t => t.filepath?.replace(/\\/g, '/') === normalizedPath);
     if (existingTab) {
@@ -683,7 +698,7 @@ export default function App() {
       id: tabId,
       type: 'file',
       title: file.name,
-      filepath: file.path, 
+      filepath: file.path,
       content,
       originalContent: content,
       isDirty: false,
@@ -696,7 +711,7 @@ export default function App() {
       if (alreadyOpen) return prev;
       return [...prev, newTab];
     });
-    
+
     setActiveTabId(tabId);
 
     // Focus the editor after a selection
@@ -742,16 +757,16 @@ export default function App() {
       {leftPanelOpen && (
         <div ref={leftPanelRef} className="relative shrink-0 flex will-change-width" style={{ width: leftWidth }}>
           <div className="flex-1 overflow-hidden min-w-0">
-            <Sidebar 
+            <Sidebar
               activeTabPath={activeTab?.filepath}
               onWorkspaceChange={loadWorkspaceState}
-              onSelectFile={handleSelectFile} 
-              onOpenSettings={openSettings} 
-              onClose={() => setLeftPanelOpen(false)} 
+              onSelectFile={handleSelectFile}
+              onOpenSettings={openSettings}
+              onClose={() => setLeftPanelOpen(false)}
               dirtyFiles={tabs.filter(t => t.isDirty && t.filepath).map(t => t.filepath as string)}
             />
           </div>
-          <div 
+          <div
             className="w-1 cursor-col-resize hover:bg-primary/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -right-0.5 top-0"
             onMouseDown={startResizingLeft}
           />
@@ -760,7 +775,7 @@ export default function App() {
 
       {!leftPanelOpen && (
         <div className="w-10 border-r border-border flex flex-col items-center py-2 shrink-0 bg-sidebar/50">
-          <button 
+          <button
             onClick={() => setLeftPanelOpen(true)}
             title="Open Explorer"
             className="p-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -768,7 +783,7 @@ export default function App() {
             <PanelLeftOpen size={18} />
           </button>
           <div className="flex-1" />
-          <button 
+          <button
             onClick={openSettings}
             title="Settings"
             className="p-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -780,17 +795,17 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-background">
-        
+
         {/* Tab Bar */}
         <div className="flex items-center h-10 border-b border-border bg-muted/30 shrink-0">
           {/* Scrollable Tabs */}
-          <div 
+          <div
             ref={tabsRef}
             onWheel={handleTabsWheel}
             className="flex-1 flex overflow-x-auto overflow-y-hidden no-scrollbar h-full scroll-smooth"
           >
             {tabs.map((tab) => (
-              <div 
+              <div
                 key={tab.id}
                 id={`tab-${tab.id}`}
                 onClick={() => setActiveTabId(tab.id)}
@@ -802,10 +817,10 @@ export default function App() {
                 {tab.type === 'file' && <FileText size={14} className="mr-2 shrink-0" />}
                 {tab.type === 'settings' && <SettingsIcon size={14} className="mr-2 shrink-0" />}
                 <span className={cn("truncate text-sm font-medium", tab.isDirty && "italic")}>
-                   {tab.title}{tab.isDirty && " •"}
+                  {tab.title}{tab.isDirty && " •"}
                 </span>
-                
-                <button 
+
+                <button
                   onClick={(e) => closeTab(e, tab.id)}
                   className={cn(
                     "ml-auto p-0.5 rounded-sm hover:bg-accent-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity",
@@ -855,15 +870,15 @@ export default function App() {
             <>
               {activeTab?.type === 'settings' && (
                 <div className="absolute inset-0 z-10 bg-background overflow-hidden">
-                  <SettingsView settings={settings} onSave={setSettings} onClose={() => closeTab({ stopPropagation: () => {} } as any, 'settings')} />
+                  <SettingsView settings={settings} onSave={setSettings} onClose={() => closeTab({ stopPropagation: () => { } } as any, 'settings')} />
                 </div>
               )}
-              
+
               {activeTab?.type === 'file' && (
                 <div className="absolute inset-0 z-10 bg-background overflow-hidden flex flex-col">
-                  <FileViewer 
-                    filename={activeTab.title} 
-                    content={activeTab.content || ''} 
+                  <FileViewer
+                    filename={activeTab.title}
+                    content={activeTab.content || ''}
                     onChange={handleFileContentChange}
                     onSave={handleSaveActiveTab}
                     isDirty={activeTab.isDirty}
@@ -883,7 +898,7 @@ export default function App() {
 
       {!rightPanelOpen && (
         <div className="w-10 border-l border-border flex flex-col items-center py-2 shrink-0 bg-sidebar/50">
-          <button 
+          <button
             onClick={() => setRightPanelOpen(true)}
             title="Open Right Panel"
             className="p-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -896,35 +911,49 @@ export default function App() {
       {/* Right Panel Wrapper */}
       {rightPanelOpen && (
         <div ref={rightPanelRef} className="relative shrink-0 flex will-change-width" style={{ width: rightWidth }}>
-          <div 
+          <div
             className="w-1 cursor-col-resize hover:bg-primary/50 bg-transparent flex-shrink-0 z-20 transition-colors h-full absolute -left-0.5 top-0"
             onMouseDown={startResizingRight}
           />
           <div className="flex-1 w-full h-full flex flex-col border-l border-border bg-background min-w-0 overflow-hidden">
             <div className="flex items-center justify-between h-10 border-b border-border bg-muted/30 px-3 shrink-0">
               <div className="flex items-center gap-2 text-sm font-medium text-foreground opacity-80">
-                 <Bot size={16} /> Aynite Assistant
-                 <button 
-                   onClick={() => (window as any).showChatHistory?.()}
-                   className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1"
-                   title="View History Sessions"
-                 >
-                   <History size={14} />
-                 </button>
+                <Bot size={16} /> Aynite Assistant
+                <button
+                  onClick={() => (window as any).showChatHistory?.()}
+                  className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1"
+                  title="View History Sessions"
+                >
+                  <History size={14} />
+                </button>
+                <button
+                  onClick={() => (window as any).copyChat?.()}
+                  className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1"
+                  title="Copy Conversation"
+                >
+                  <LucideCopy size={14} />
+                </button>
+                <button
+                  onClick={() => (window as any).clearChat?.()}
+                  className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1"
+                  title="Start New Session"
+                >
+                  <PlusCircle size={14} />
+                </button>
               </div>
-              <button 
-                 onClick={() => setRightPanelOpen(false)}
-                 className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-                 title="Close Panel"
-               >
-                 <PanelRightClose size={16} />
-               </button>
+              <button
+                onClick={() => setRightPanelOpen(false)}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                title="Close Panel"
+              >
+                <PanelRightClose size={16} />
+              </button>
             </div>
-            
+
             <div className="flex-1 overflow-hidden relative bg-background">
-              <ChatTab 
-                settings={settings} 
-                workspaceFolders={workspaceFolders} 
+              <ChatTab
+                settings={settings}
+                workspaceFolders={workspaceFolders}
                 onOpenFile={handleSelectFile}
                 activeTabPath={activeTab?.filepath}
               />
@@ -948,6 +977,38 @@ export default function App() {
         />
       )}
       <UpdateNotification />
+      {/* Toast Notifications */}
+      <div className="fixed bottom-4 left-4 z-[1000] flex flex-col gap-2">
+        {toasts.map(toast => (
+          <div 
+            key={toast.id}
+            className={cn(
+              "px-4 py-3 rounded-lg shadow-2xl border flex items-center gap-3 min-w-[300px] animate-in slide-in-from-left-2 fade-in",
+              toast.type === 'error' ? "bg-destructive/10 border-destructive/20 text-destructive" :
+              toast.type === 'success' ? "bg-success/10 border-success/20 text-success" :
+              "bg-popover border-border text-foreground"
+            )}
+          >
+            <div className={cn(
+              "p-1.5 rounded-md",
+              toast.type === 'error' ? "bg-destructive/20" :
+              toast.type === 'success' ? "bg-success/20" :
+              "bg-primary/20 text-primary"
+            )}>
+              {toast.type === 'error' ? <AlertCircle size={16} /> : 
+               toast.type === 'success' ? <Bot size={16} className="text-success" /> :
+               <Bot size={16} />}
+            </div>
+            <div className="flex-1 text-sm font-medium">{toast.message}</div>
+            <button 
+              onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+              className="p-1 hover:bg-foreground/10 rounded-md transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

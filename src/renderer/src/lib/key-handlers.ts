@@ -221,7 +221,7 @@ export class KeyManager {
     }
 
     if (context === 'chat' && this.chatApi) {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (this.checkMatch(e, kb.agent.submit)) {
         e.preventDefault();
         this.chatApi.submit();
         return;
