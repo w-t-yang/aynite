@@ -30,6 +30,14 @@ function getBundledResourcesPath(): string {
   }
 }
 
+/**
+ * Checks if 'child' is a subpath of 'parent' (or the same path)
+ */
+function isSubpath(parent: string, child: string): boolean {
+  const relative = path.relative(parent, child);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
 export function getConfigDir() {
   if (process.platform === 'win32') {
     return path.join(app.getPath('appData'), 'aynite');
@@ -876,10 +884,23 @@ export async function addWorkspaceFolder(folderPath: string) {
   const wsData = await safeReadWorkspaceData(workspacePath);
   if (!wsData) return; // Prevent overwriting if read failed
 
-  if (!wsData.folders.includes(folderPath)) {
-    wsData.folders.push(folderPath);
-    await fs.writeFile(workspacePath, JSON.stringify(wsData, null, 2), 'utf-8');
+  const normalizedNew = path.normalize(folderPath);
+
+  // 1. Check if new folder is already covered by an existing one
+  const isAlreadyCovered = wsData.folders.some((existing: string) => isSubpath(existing, normalizedNew));
+  if (isAlreadyCovered) {
+    console.log(`[Workspace] Folder ${normalizedNew} is already covered by an existing workspace root.`);
+    return;
   }
+
+  // 2. Remove any existing folders that are now covered by the new folder (subfolders)
+  const remainingFolders = wsData.folders.filter((existing: string) => !isSubpath(normalizedNew, existing));
+  
+  // 3. Add the new folder
+  remainingFolders.push(normalizedNew);
+  wsData.folders = remainingFolders;
+
+  await fs.writeFile(workspacePath, JSON.stringify(wsData, null, 2), 'utf-8');
 }
 
 export async function removeWorkspaceFolder(folderPath: string) {
@@ -929,8 +950,17 @@ export async function getWorkspaceFolders() {
 
     const data = await fs.readFile(workspacePath, 'utf-8');
     const parsed = JSON.parse(data);
-    const folders = parsed.folders || [];
-    return { data: folders.map((f: string) => expandHome(f)), debugPath: workspacePath };
+    let folders = parsed.folders || [];
+
+    // Deduplicate and flatten just in case the file was manually edited or has legacy data
+    folders = folders.map((f: string) => path.normalize(f));
+    const uniqueFolders = folders.filter((f: string, index: number) => {
+      return !folders.some((other: string, otherIndex: number) => 
+        otherIndex !== index && isSubpath(other, f)
+      );
+    });
+
+    return { data: uniqueFolders.map((f: string) => expandHome(f)), debugPath: workspacePath };
   } catch (e) {
     console.error('getWorkspaceFolders failed:', e);
     return { data: [], error: String(e) };
