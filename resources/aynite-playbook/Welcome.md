@@ -24,6 +24,25 @@ Aynite is built on three simple ideas:
 
 ---
 
+## ✨ Showcase
+
+See what Aynite can do — for real. No mockups, no "imagine if." Just working code.
+
+### 🔮 [Trading Showcase](./showcase/trading/)
+
+A complete, end-to-end example built entirely with Aynite commands:
+
+| Command | What It Does |
+| :--- | :--- |
+| `> stock-fetch --symbol AAPL` | Fetches 1 year of daily stock data from Yahoo Finance, saves as JSON |
+| `> stock-view --file AAPL.json` | Generates an interactive HTML chart with price history, volume, and company info |
+
+**[→ Open the Trading Showcase](./showcase/trading/)** to see the commands, sample data, live demo charts, and step-by-step instructions to add them to your own Aynite.
+
+> 💡 More showcases coming soon. Built something cool? It could be here.
+
+---
+
 ## ⚡ Quick Start: Three Shortcuts to Rule Them All
 
 You can do almost anything in Aynite from the keyboard. Here are the three shortcuts to burn into your muscle memory right now:
@@ -100,7 +119,7 @@ This is where Aynite truly becomes *yours*. You can extend it infinitely with tw
 
 ### Create a Skill with `/skill-creator`
 
-**Skills** teach the AI agent how to do something new. They're written in plain Markdown and can include bundled scripts, reference docs, and assets. 
+**Skills** teach the AI agent how to do something new. They're written in plain Markdown and can include bundled scripts, reference docs, and assets.
 
 Think: "I want the AI to know how to write commit messages in my company's format," or "I want the AI to be able to generate deployment configs for my specific stack."
 
@@ -125,22 +144,6 @@ Just type:
 ```
 
 > 🌟 **The real power of Aynite is this:** you don't need to wait for anyone. If you can describe it, you can build it. Skills and commands are your bridge from *"I wish Aynite could..."* to *"Aynite can."*
-
----
-
-## ✨ Showcase
-
-> *We'll be adding community showcases here — amazing themes, clever commands, and inspiring skills created by people like you. Stay tuned!*
-
-In the meantime, here are a few ideas to spark your imagination:
-
-- A skill that integrates with your Notion workspace to pull in documentation
-- A command that auto-formats and lints your code on save
-- A theme that matches your terminal and desktop setup perfectly
-- A skill that writes release notes by reading your git history
-- A command that deploys to your cloud provider with a single keystroke
-
-What will you build?
 
 ---
 
