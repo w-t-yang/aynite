@@ -527,15 +527,18 @@ export default function ChatTab({
   workspaceFolders = [],
   onOpenFile,
   activeTabPath,
+  onUpdateSettings,
 }: {
   settings: SettingsState;
   workspaceFolders?: string[];
   onOpenFile?: (file: { name: string; path: string, isDirectory: boolean }, content: string) => void;
   activeTabPath?: string;
+  onUpdateSettings: (settings: SettingsState) => void;
 }) {
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+   const [loading, setLoading] = useState(false);
+  const [showProviderSwitcher, setShowProviderSwitcher] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<ChatInputHandle>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -1108,19 +1111,67 @@ export default function ChatTab({
         <div className="max-w-4xl mx-auto relative">
           {/* Floating Status Pill */}
           <div className="absolute -top-10 left-0 right-0 flex items-center justify-between px-2 pointer-events-none">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/40 backdrop-blur-md border border-border/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shadow-xl pointer-events-auto">
-              {(() => {
-                const active = settings.ai?.providers?.find(p => p.id === settings.ai?.activeId) || settings.ai?.providers?.[0];
-                return (
-                  <>
-                    <Bot size={10} className="text-primary" />
-                    <span>{active?.provider || 'ollama'}</span>
-                    <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
-                      {active?.model || ''}
-                    </span>
-                  </>
-                );
-              })()}
+            <div className="relative pointer-events-auto">
+              <button 
+                onClick={() => setShowProviderSwitcher(!showProviderSwitcher)}
+                className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/40 backdrop-blur-md border border-border/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shadow-xl hover:bg-background/60 hover:border-primary/30 transition-all group"
+              >
+                {(() => {
+                  const active = settings.ai?.providers?.find(p => p.id === settings.ai?.activeId) || settings.ai?.providers?.[0];
+                  return (
+                    <>
+                      <Bot size={10} className="text-primary group-hover:scale-110 transition-transform" />
+                      <span>{active?.provider || 'ollama'}</span>
+                      <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
+                        {active?.model || ''}
+                      </span>
+                      <ChevronDown size={10} className={`opacity-40 transition-transform duration-200 ${showProviderSwitcher ? 'rotate-180' : ''}`} />
+                    </>
+                  );
+                })()}
+              </button>
+
+              {showProviderSwitcher && (
+                <div className="absolute bottom-full mb-2 left-0 w-64 bg-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 z-50">
+                  <div className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 bg-muted/20">
+                    Switch AI Provider
+                  </div>
+                  <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
+                    {(settings.ai?.providers || []).map((p) => {
+                      const isActive = p.id === settings.ai?.activeId;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            onUpdateSettings({
+                              ...settings,
+                              ai: { ...settings.ai, activeId: p.id }
+                            });
+                            setShowProviderSwitcher(false);
+                          }}
+                          className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg transition-all text-left group ${
+                            isActive 
+                              ? 'bg-primary/10 border border-primary/20' 
+                              : 'hover:bg-accent/50 border border-transparent'
+                          }`}
+                        >
+                          <div className={`mt-0.5 p-1 rounded-md ${isActive ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground group-hover:bg-muted-foreground/10'}`}>
+                            <Bot size={12} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-[11px] font-bold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                              {p.name || p.provider}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground/70 truncate font-mono mt-0.5">
+                              {p.model}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
 

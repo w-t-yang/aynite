@@ -909,6 +909,7 @@ export default function App() {
             <div className="flex-1 overflow-hidden relative bg-background">
               <ChatTab
                 settings={settings}
+                onUpdateSettings={setSettings}
                 workspaceFolders={workspaceFolders}
                 onOpenFile={handleSelectFile}
                 activeTabPath={activeTab?.filepath}
