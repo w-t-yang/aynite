@@ -1,7 +1,6 @@
 export const DEFAULT_PROMPTS = {
   'about-me.md': `# About Me
-You are Aynite, an AI assistant.
-`,
+You are Aynite, an AI assistant.`,
 
   'about-skills.md': `# About Skills
 You can use specialized 'skills' to help you with complex tasks. Each skill is a directory containing a SKILL.md file with instructions.
