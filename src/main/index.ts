@@ -8,6 +8,7 @@ import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
 import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, restoreDefaultPrompts, getMergedSystemPrompt, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, saveChatLog, loadChatLog } from './config';
 import { setupAiIpc } from './ai/ipc';
+import { setupUpdater } from './updater';
 
 
 const execAsync = promisify(exec);
@@ -92,6 +93,7 @@ app.whenReady().then(async () => {
   createWindow();
   if (mainWindow) {
     setupAiIpc(mainWindow);
+    setupUpdater(mainWindow);
   }
 
 
@@ -619,6 +621,10 @@ ipcMain.handle('api:open-external', async (event, url: string) => {
   } catch (error: any) {
     return { error: error.message };
   }
+});
+
+ipcMain.handle('api:app-version', () => {
+  return app.getVersion();
 });
 
 ipcMain.handle('api:app-quit', () => {

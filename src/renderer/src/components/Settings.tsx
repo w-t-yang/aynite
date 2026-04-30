@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap } from 'lucide-react';
+import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SearchableSelect } from './ui/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
@@ -103,7 +103,7 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 export default function Settings({ settings, onSave, onClose }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands' | 'prompts' | 'tools'>(() => {
+  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands' | 'prompts' | 'tools' | 'about'>(() => {
     return (localStorage.getItem('aynite_settings_active_tab') as any) || 'appearance';
   });
 
@@ -122,7 +122,48 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   const [duplicateName, setDuplicateName] = useState('');
   const [systemFonts, setSystemFonts] = useState<string[]>([]);
   const [mergedPrompt, setMergedPrompt] = useState('');
+  const [appVersion, setAppVersion] = useState<string>('');
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'>('idle');
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
   const saveTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    // @ts-ignore
+    window.api.getAppVersion().then(v => setAppVersion(v));
+
+    if (!window.api) return;
+
+    const unsubChecking = window.api.onUpdateChecking(() => setUpdateStatus('checking'));
+    const unsubAvailable = (info: any) => {
+      setUpdateStatus('available');
+      setUpdateInfo(info);
+    };
+    const offAvailable = window.api.onUpdateAvailable(unsubAvailable);
+
+    const unsubNotAvailable = window.api.onUpdateNotAvailable(() => setUpdateStatus('idle'));
+    const unsubError = window.api.onUpdateError(() => {
+      setUpdateStatus('error');
+    });
+    const unsubProgress = () => {
+      setUpdateStatus('downloading');
+    };
+    const offProgress = window.api.onUpdateProgress(unsubProgress);
+
+    const unsubDownloaded = (info: any) => {
+      setUpdateStatus('downloaded');
+      setUpdateInfo(info);
+    };
+    const offDownloaded = window.api.onUpdateDownloaded(unsubDownloaded);
+
+    return () => {
+      unsubChecking?.();
+      offAvailable?.();
+      unsubNotAvailable?.();
+      unsubError?.();
+      offProgress?.();
+      offDownloaded?.();
+    };
+  }, []);
 
   useEffect(() => {
     // Ensure aiConfigs is initialized
@@ -197,7 +238,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   const handleAiConfigChange = (provider: 'gemini' | 'deepseek' | 'ollama' | 'openai' | 'anthropic' | 'others', field: string, value: any) => {
     const currentConfigs = localSettings.aiConfigs || {};
     const providerConfig = (currentConfigs as any)[provider] || {};
-    
+
     const newProviderConfig = {
       ...providerConfig,
       [field]: field === 'contextWindow' ? (parseInt(value, 10) || 8192) : value
@@ -231,8 +272,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
     window.api.getSystemFonts().then((res: any) => { if (res?.data) setSystemFonts(res.data); });
   }, []);
 
-  useEffect(() => { 
-    if (localSettings.activeTheme) loadEditingTheme(localSettings.activeTheme); 
+  useEffect(() => {
+    if (localSettings.activeTheme) loadEditingTheme(localSettings.activeTheme);
   }, [localSettings.activeTheme, loadEditingTheme]);
 
   const handleSelectTheme = (id: string) => { save({ ...localSettings, activeTheme: id }); };
@@ -324,456 +365,546 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mb-2 px-3">Basic</div>
           <button onClick={() => handleTabChange('appearance')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'appearance' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Sun size={16} /> Appearance</button>
           <button onClick={() => handleTabChange('keybindings')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'keybindings' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Keyboard size={16} /> Keybindings</button>
-          
+
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">AI</div>
           <button onClick={() => handleTabChange('ai')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'ai' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Bot size={16} /> AI Provider</button>
           <button onClick={() => handleTabChange('prompts')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'prompts' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><FileText size={16} /> System Prompt</button>
           <button onClick={() => handleTabChange('tools')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'tools' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Wrench size={16} /> Tools</button>
           <button onClick={() => handleTabChange('skills')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'skills' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Zap size={16} /> Skills</button>
           <button onClick={() => handleTabChange('commands')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'commands' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Terminal size={16} /> Commands</button>
+
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">App</div>
+          <button onClick={() => handleTabChange('about')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'about' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Info size={16} /> About</button>
         </div>
 
         {/* Settings Content */}
         <div className="flex-1 p-6 overflow-y-auto overflow-x-auto">
           <div className="max-w-3xl mx-auto w-full min-w-[640px]">
-          <div className="flex items-center justify-between mb-6">
-             <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'AI Provider' : activeTab === 'prompts' ? 'System Prompt' : activeTab === 'tools' ? 'Tools' : activeTab}</h2>
-             {activeTab === 'keybindings' && (
-                <button onClick={() => {
-                     const defaultKb: SettingsState['keybindings'] = {
-                       global: { refresh: 'CTRL+SHIFT+R', quit: '' },
-                       explorer: { toggleLeftPanel: 'CTRL+T' },
-                       agent: { focusChat: 'CTRL+I', focusSkills: 'CTRL+/', focusCommands: 'CTRL+.', toggleRightPanel: 'CTRL+U' },
-                       content: {
-                         navigation: { switchTab: 'CTRL+TAB', closeTab: 'CTRL+W', focusContent: 'CTRL+Y' },
-                         viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/', refresh: 'CTRL+R' },
-                         generic: { exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Q', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B' }
-                       }
-                     };
-                     save({ ...localSettings, keybindings: defaultKb });
-                   }} className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors" title="Reset Keybindings to Defaults"><RotateCcw size={18} /></button>
-             )}
-          </div>
+            {activeTab !== 'about' && (
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'AI Provider' : activeTab === 'prompts' ? 'System Prompt' : activeTab === 'tools' ? 'Tools' : activeTab}</h2>
+                {activeTab === 'keybindings' && (
+                  <button onClick={() => {
+                    const defaultKb: SettingsState['keybindings'] = {
+                      global: { refresh: 'CTRL+SHIFT+R', quit: '' },
+                      explorer: { toggleLeftPanel: 'CTRL+T' },
+                      agent: { focusChat: 'CTRL+I', focusSkills: 'CTRL+/', focusCommands: 'CTRL+.', toggleRightPanel: 'CTRL+U' },
+                      content: {
+                        navigation: { switchTab: 'CTRL+TAB', closeTab: 'CTRL+W', focusContent: 'CTRL+Y' },
+                        viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/', refresh: 'CTRL+R' },
+                        generic: { exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Q', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B' }
+                      }
+                    };
+                    save({ ...localSettings, keybindings: defaultKb });
+                  }} className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors" title="Reset Keybindings to Defaults"><RotateCcw size={18} /></button>
+                )}
+              </div>
+            )}
 
-          {activeTab === 'appearance' && (
-            <div className="space-y-6 max-w-2xl">
-              <p className="text-sm text-muted-foreground mb-6">Customize themes, fonts, and the visual aesthetic of your workspace.</p>
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium">Theme</h3>
-                  <div className="flex items-center gap-2">
-                    {editingTheme && !editingTheme.isSystem && (
-                      <button onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-1.5 border border-destructive/30 text-destructive hover:bg-destructive/10 rounded-md text-xs font-medium transition-colors"><Trash2 size={14} /> Delete</button>
-                    )}
-                    <button onClick={() => { setShowDuplicateModal(true); setDuplicateName((editingTheme?.name || 'My Theme') + ' Copy'); }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><Copy size={14} /> Duplicate</button>
+            {activeTab === 'appearance' && (
+              <div className="space-y-6 max-w-2xl">
+                <p className="text-sm text-muted-foreground mb-6">Customize themes, fonts, and the visual aesthetic of your workspace.</p>
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">Theme</h3>
+                    <div className="flex items-center gap-2">
+                      {editingTheme && !editingTheme.isSystem && (
+                        <button onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-1.5 border border-destructive/30 text-destructive hover:bg-destructive/10 rounded-md text-xs font-medium transition-colors"><Trash2 size={14} /> Delete</button>
+                      )}
+                      <button onClick={() => { setShowDuplicateModal(true); setDuplicateName((editingTheme?.name || 'My Theme') + ' Copy'); }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><Copy size={14} /> Duplicate</button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {themes.map(t => (
-                    <button key={t.id} onClick={() => handleSelectTheme(t.id)} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all min-w-[100px]", localSettings.activeTheme === t.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40")}>
-                      <div className="w-20 h-14 rounded-md border flex items-center justify-center shadow-sm overflow-hidden" style={{ background: t.colors?.background, borderColor: t.colors?.border }}>
-                        <div className="flex gap-1">
-                          <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.primary }} />
-                          <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.accent }} />
-                          <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.destructive }} />
+                  <div className="flex flex-wrap gap-3">
+                    {themes.map(t => (
+                      <button key={t.id} onClick={() => handleSelectTheme(t.id)} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all min-w-[100px]", localSettings.activeTheme === t.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40")}>
+                        <div className="w-20 h-14 rounded-md border flex items-center justify-center shadow-sm overflow-hidden" style={{ background: t.colors?.background, borderColor: t.colors?.border }}>
+                          <div className="flex gap-1">
+                            <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.primary }} />
+                            <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.accent }} />
+                            <div className="w-3 h-3 rounded-full" style={{ background: t.colors?.destructive }} />
+                          </div>
                         </div>
-                      </div>
-                      <span className="text-xs font-medium">{t.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-border">
-                <button onClick={() => setShowEditor(!showEditor)} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"><Palette size={16} /> {showEditor ? 'Hide Theme Editor' : 'Customize Theme'}</button>
-              </div>
-
-              {showEditor && editingTheme?.colors && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                    {Object.entries(editingTheme.colors).map(([key, val]) => (
-                      <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/20 group">
-                        <label className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{COLOR_LABELS[key] || key}</label>
-                        <div className="flex items-center gap-2">
-                          <input type="color" value={val as string} onChange={(e) => handleColorPicker(key, e.target.value)} className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent" />
-                          <input type="text" value={val as string} onChange={(e) => handleColorText(key, e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-20 bg-accent/20 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-mono focus:outline-none focus:border-primary" />
-                        </div>
-                      </div>
+                        <span className="text-xs font-medium">{t.name}</span>
+                      </button>
                     ))}
                   </div>
-                  <div className="space-y-4 pt-2 border-t border-border">
-                    <h4 className="text-sm font-medium">Typography</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-muted-foreground">Font Family</label>
-                        <div className="flex items-center gap-2">
-                          <SearchableSelect value="" options={systemFonts} onChange={(v) => handleFontSelect('fontFamily', v + ', ui-sans-serif, system-ui, sans-serif')} placeholder="System fonts..." className="w-[140px]" />
-                          <input type="text" value={editingTheme?.fonts?.fontFamily || ''} onChange={(e) => handleFontChange('fontFamily', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
+                </div>
+
+                <div className="pt-2 border-t border-border">
+                  <button onClick={() => setShowEditor(!showEditor)} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"><Palette size={16} /> {showEditor ? 'Hide Theme Editor' : 'Customize Theme'}</button>
+                </div>
+
+                {showEditor && editingTheme?.colors && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      {Object.entries(editingTheme.colors).map(([key, val]) => (
+                        <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/20 group">
+                          <label className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{COLOR_LABELS[key] || key}</label>
+                          <div className="flex items-center gap-2">
+                            <input type="color" value={val as string} onChange={(e) => handleColorPicker(key, e.target.value)} className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent" />
+                            <input type="text" value={val as string} onChange={(e) => handleColorText(key, e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-20 bg-accent/20 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-mono focus:outline-none focus:border-primary" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-muted-foreground">Monospace Font</label>
-                        <div className="flex items-center gap-2">
-                          <SearchableSelect value="" options={systemFonts} onChange={(v) => handleFontSelect('fontMono', v + ', ui-monospace, SFMono-Regular, monospace')} placeholder="System fonts..." className="w-[140px]" />
-                          <input type="text" value={editingTheme?.fonts?.fontMono || ''} onChange={(e) => handleFontChange('fontMono', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
+                      ))}
+                    </div>
+                    <div className="space-y-4 pt-2 border-t border-border">
+                      <h4 className="text-sm font-medium">Typography</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-muted-foreground">Font Family</label>
+                          <div className="flex items-center gap-2">
+                            <SearchableSelect value="" options={systemFonts} onChange={(v) => handleFontSelect('fontFamily', v + ', ui-sans-serif, system-ui, sans-serif')} placeholder="System fonts..." className="w-[140px]" />
+                            <input type="text" value={editingTheme?.fonts?.fontFamily || ''} onChange={(e) => handleFontChange('fontFamily', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-muted-foreground">Base Font Size</label>
-                        <input type="text" value={editingTheme?.fonts?.fontSize || '14px'} onChange={(e) => handleFontChange('fontSize', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-24 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-muted-foreground">Monospace Font</label>
+                          <div className="flex items-center gap-2">
+                            <SearchableSelect value="" options={systemFonts} onChange={(v) => handleFontSelect('fontMono', v + ', ui-monospace, SFMono-Regular, monospace')} placeholder="System fonts..." className="w-[140px]" />
+                            <input type="text" value={editingTheme?.fonts?.fontMono || ''} onChange={(e) => handleFontChange('fontMono', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-muted-foreground">Base Font Size</label>
+                          <input type="text" value={editingTheme?.fonts?.fontSize || '14px'} onChange={(e) => handleFontChange('fontSize', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-24 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
+                        </div>
                       </div>
                     </div>
+                    {editingTheme.isSystem && (
+                      <button onClick={handleRestore} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Defaults</button>
+                    )}
                   </div>
-                  {editingTheme.isSystem && (
-                    <button onClick={handleRestore} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Defaults</button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
-          {activeTab === 'keybindings' && (
-             <div className="space-y-6 max-w-2xl">
+            {activeTab === 'keybindings' && (
+              <div className="space-y-6 max-w-2xl">
                 <p className="text-sm text-muted-foreground mb-6">Configure keyboard shortcuts for navigation, editing, and assistant actions.</p>
                 <div className="space-y-6 pb-10">
-                   <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1">Global</div>
-                      <KeyRow label="Refresh App" value={localSettings.keybindings.global.refresh} onChange={(v) => handleKeybindingChange('global', 'refresh', v)} />
-                      <KeyRow label="Quit App" value={localSettings.keybindings.global.quit} onChange={(v) => handleKeybindingChange('global', 'quit', v)} />
-                   </div>
-                   <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Explorer (Left Panel)</div>
-                      <KeyRow label="Toggle Left Panel" value={localSettings.keybindings.explorer.toggleLeftPanel} onChange={(v) => handleKeybindingChange('explorer', 'toggleLeftPanel', v)} />
-                   </div>
-                   <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Aynite Assistant (Right Panel)</div>
-                      <KeyRow label="Focus Chat Input" value={localSettings.keybindings.agent.focusChat} onChange={(v) => handleKeybindingChange('agent', 'focusChat', v)} />
-                      <KeyRow label="Focus & Skills" value={localSettings.keybindings.agent.focusSkills} onChange={(v) => handleKeybindingChange('agent', 'focusSkills', v)} />
-                      <KeyRow label="Focus & Commands" value={localSettings.keybindings.agent.focusCommands} onChange={(v) => handleKeybindingChange('agent', 'focusCommands', v)} />
-                      <KeyRow label="Toggle Right Panel" value={localSettings.keybindings.agent.toggleRightPanel} onChange={(v) => handleKeybindingChange('agent', 'toggleRightPanel', v)} />
-                   </div>
-                   <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Navigation</div>
-                      <KeyRow label="Switch Tab" value={localSettings.keybindings.content.navigation.switchTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'switchTab', v)} />
-                      <KeyRow label="Close Active Tab" value={localSettings.keybindings.content.navigation.closeTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'closeTab', v)} />
-                      <KeyRow label="Focus Active Tab" value={localSettings.keybindings.content.navigation.focusContent} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'focusContent', v)} />
-                   </div>
-                   <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Viewer (Read Only Mode)</div>
-                      <KeyRow label="Enter Edit Mode" value={localSettings.keybindings.content.viewer.enterEdit} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'enterEdit', v)} />
-                      <KeyRow label="Vim Move Down" value={localSettings.keybindings.content.viewer.moveDown} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveDown', v)} />
-                      <KeyRow label="Vim Move Up" value={localSettings.keybindings.content.viewer.moveUp} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveUp', v)} />
-                      <KeyRow label="Vim Move Left" value={localSettings.keybindings.content.viewer.moveLeft} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveLeft', v)} />
-                      <KeyRow label="Vim Move Right" value={localSettings.keybindings.content.viewer.moveRight} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveRight', v)} />
-                      <KeyRow label="Search Buffer" value={localSettings.keybindings.content.viewer.search} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'search', v)} />
-                      <KeyRow label="Refresh Tab / Revert" value={localSettings.keybindings.content.viewer.refresh} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'refresh', v)} />
-                   </div>
-                   <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Generic (Read + Edit)</div>
-                      <KeyRow label="Exit Edit (Esc)" value={localSettings.keybindings.content.generic.exitEdit} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'exitEdit', v)} />
-                      <KeyRow label="Select All" value={localSettings.keybindings.content.generic.selectAll} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'selectAll', v)} />
-                      <KeyRow label="Delete Character" value={localSettings.keybindings.content.generic.deleteForward} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'deleteForward', v)} />
-                      <KeyRow label="Cut" value={localSettings.keybindings.content.generic.cut} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'cut', v)} />
-                      <KeyRow label="Copy" value={localSettings.keybindings.content.generic.copy} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'copy', v)} />
-                      <KeyRow label="Paste" value={localSettings.keybindings.content.generic.paste} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'paste', v)} />
-                      <KeyRow label="Go to Start of Line" value={localSettings.keybindings.content.generic.startOfLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'startOfLine', v)} />
-                      <KeyRow label="Go to End of Line" value={localSettings.keybindings.content.generic.endOfLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'endOfLine', v)} />
-                      <KeyRow label="Kill to End of Line" value={localSettings.keybindings.content.generic.killLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'killLine', v)} />
-                      <KeyRow label="Prev Line" value={localSettings.keybindings.content.generic.prevLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'prevLine', v)} />
-                      <KeyRow label="Next Line" value={localSettings.keybindings.content.generic.nextLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'nextLine', v)} />
-                      <KeyRow label="Forward Character" value={localSettings.keybindings.content.generic.forwardChar} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'forwardChar', v)} />
-                      <KeyRow label="Backward Character" value={localSettings.keybindings.content.generic.backwardChar} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'backwardChar', v)} />
-                   </div>
-                </div>
-             </div>
-          )}
-
-          {activeTab === 'ai' && (
-            <div className="space-y-6 max-w-2xl">
-              <div>
-                <p className="text-sm text-muted-foreground mb-6">Select and configure your preferred AI model and reasoning settings.</p>
-                <div className="space-y-6">
-                  {(['ollama', 'deepseek', 'gemini', 'openai', 'anthropic', 'others'] as const).map((provider) => (
-                    <div key={provider} className="flex flex-col gap-2">
-                      <label className="flex items-center gap-3 cursor-pointer py-1">
-                        <input type="radio" name="ai-provider" value={provider} checked={localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'ollama')} onChange={() => save({ ...localSettings, aiProvider: provider as any })} className="w-4 h-4 text-primary border-gray-300 focus:ring-primary" />
-                        <span className="font-medium capitalize">{provider}</span>
-                      </label>
-                      {(localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'ollama')) && (
-                        <div className="ml-7 space-y-4 pt-2 pb-4">
-                          {provider !== 'ollama' && (
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">API Key</label>
-                              <input type="password" placeholder={`Enter ${provider} API Key`} value={(localSettings.aiConfigs as any)?.[provider]?.apiKey || ''} onChange={(e) => handleAiConfigChange(provider as any, 'apiKey', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
-                            </div>
-                          )}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">URL Endpoint</label>
-                            <input type="text" placeholder={provider === 'ollama' ? "http://localhost:11434" : "API URL"} value={(localSettings.aiConfigs as any)?.[provider]?.url || ''} onChange={(e) => handleAiConfigChange(provider as any, 'url', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
-                          </div>
-
-                          {provider === 'others' && (
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">Compatibility</label>
-                              <select 
-                                value={(localSettings.aiConfigs as any)?.[provider]?.compatibility || 'openai'} 
-                                onChange={(e) => handleAiConfigChange(provider as any, 'compatibility', e.target.value)}
-                                className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer"
-                              >
-                                <option value="openai" className="bg-background text-foreground">OpenAI Compatible</option>
-                                <option value="anthropic" className="bg-background text-foreground">Claude/Anthropic Compatible</option>
-                                <option value="google" className="bg-background text-foreground">Gemini/Google Compatible</option>
-                              </select>
-                            </div>
-                          )}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted-foreground">Model</label>
-                            <input 
-                              type="text" 
-                              placeholder={provider === 'ollama' ? "deepseek-r1:14b" : "e.g. gpt-4o"} 
-                              value={(localSettings.aiConfigs as any)?.[provider]?.model || ''} 
-                              onChange={(e) => handleAiConfigChange(provider as any, 'model', e.target.value)} 
-                              className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" 
-                            />
-                          </div>
-
-
-
-                          {provider === 'ollama' && (
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">Context Window</label>
-                              <input type="number" placeholder="8192" value={localSettings.aiConfigs?.ollama?.contextWindow || 8192} onChange={(e) => handleAiConfigChange(provider, 'contextWindow', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between max-w-md p-3 rounded-lg border border-border/40 bg-accent/5 mt-2">
-                            <div className="space-y-0.5">
-                              <label className="text-xs font-semibold flex items-center gap-1.5">
-                                <BrainCircuit size={14} className="text-primary/70" />
-                                <span>Thinking Mode</span>
-                              </label>
-                              <p className="text-[10px] text-muted-foreground">Enable chain-of-thought/reasoning blocks.</p>
-                            </div>
-                            <button 
-                              onClick={() => handleAiConfigChange(provider as any, 'thinking', !(localSettings.aiConfigs as any)?.[provider]?.thinking)}
-                              className={cn("relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "bg-primary" : "bg-muted")}
-                            >
-                              <span className={cn("inline-block h-3 w-3 transform rounded-full bg-white transition-transform", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "translate-x-5" : "translate-x-1")} />
-                            </button>
-                          </div>
-
-                          {(localSettings.aiConfigs as any)?.[provider]?.thinking && (
-                            <div className="flex flex-col gap-1.5 pl-3 border-l-2 border-primary/20">
-                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Thinking Budget (Tokens)</label>
-                              <input 
-                                type="number" 
-                                placeholder="4096" 
-                                value={(localSettings.aiConfigs as any)?.[provider]?.thinkingBudget || 4096} 
-                                onChange={(e) => handleAiConfigChange(provider as any, 'thinkingBudget', parseInt(e.target.value) || 0)} 
-                                className="w-24 bg-transparent border-b border-border/60 px-0 py-1 text-xs focus:outline-none focus:border-primary transition-colors" 
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1">Global</div>
+                    <KeyRow label="Refresh App" value={localSettings.keybindings.global.refresh} onChange={(v) => handleKeybindingChange('global', 'refresh', v)} />
+                    <KeyRow label="Quit App" value={localSettings.keybindings.global.quit} onChange={(v) => handleKeybindingChange('global', 'quit', v)} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Explorer (Left Panel)</div>
+                    <KeyRow label="Toggle Left Panel" value={localSettings.keybindings.explorer.toggleLeftPanel} onChange={(v) => handleKeybindingChange('explorer', 'toggleLeftPanel', v)} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Aynite Assistant (Right Panel)</div>
+                    <KeyRow label="Focus Chat Input" value={localSettings.keybindings.agent.focusChat} onChange={(v) => handleKeybindingChange('agent', 'focusChat', v)} />
+                    <KeyRow label="Focus & Skills" value={localSettings.keybindings.agent.focusSkills} onChange={(v) => handleKeybindingChange('agent', 'focusSkills', v)} />
+                    <KeyRow label="Focus & Commands" value={localSettings.keybindings.agent.focusCommands} onChange={(v) => handleKeybindingChange('agent', 'focusCommands', v)} />
+                    <KeyRow label="Toggle Right Panel" value={localSettings.keybindings.agent.toggleRightPanel} onChange={(v) => handleKeybindingChange('agent', 'toggleRightPanel', v)} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Navigation</div>
+                    <KeyRow label="Switch Tab" value={localSettings.keybindings.content.navigation.switchTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'switchTab', v)} />
+                    <KeyRow label="Close Active Tab" value={localSettings.keybindings.content.navigation.closeTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'closeTab', v)} />
+                    <KeyRow label="Focus Active Tab" value={localSettings.keybindings.content.navigation.focusContent} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'focusContent', v)} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Viewer (Read Only Mode)</div>
+                    <KeyRow label="Enter Edit Mode" value={localSettings.keybindings.content.viewer.enterEdit} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'enterEdit', v)} />
+                    <KeyRow label="Vim Move Down" value={localSettings.keybindings.content.viewer.moveDown} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveDown', v)} />
+                    <KeyRow label="Vim Move Up" value={localSettings.keybindings.content.viewer.moveUp} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveUp', v)} />
+                    <KeyRow label="Vim Move Left" value={localSettings.keybindings.content.viewer.moveLeft} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveLeft', v)} />
+                    <KeyRow label="Vim Move Right" value={localSettings.keybindings.content.viewer.moveRight} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveRight', v)} />
+                    <KeyRow label="Search Buffer" value={localSettings.keybindings.content.viewer.search} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'search', v)} />
+                    <KeyRow label="Refresh Tab / Revert" value={localSettings.keybindings.content.viewer.refresh} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'refresh', v)} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1 border-t border-border/20 pt-4">Content Generic (Read + Edit)</div>
+                    <KeyRow label="Exit Edit (Esc)" value={localSettings.keybindings.content.generic.exitEdit} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'exitEdit', v)} />
+                    <KeyRow label="Select All" value={localSettings.keybindings.content.generic.selectAll} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'selectAll', v)} />
+                    <KeyRow label="Delete Character" value={localSettings.keybindings.content.generic.deleteForward} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'deleteForward', v)} />
+                    <KeyRow label="Cut" value={localSettings.keybindings.content.generic.cut} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'cut', v)} />
+                    <KeyRow label="Copy" value={localSettings.keybindings.content.generic.copy} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'copy', v)} />
+                    <KeyRow label="Paste" value={localSettings.keybindings.content.generic.paste} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'paste', v)} />
+                    <KeyRow label="Go to Start of Line" value={localSettings.keybindings.content.generic.startOfLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'startOfLine', v)} />
+                    <KeyRow label="Go to End of Line" value={localSettings.keybindings.content.generic.endOfLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'endOfLine', v)} />
+                    <KeyRow label="Kill to End of Line" value={localSettings.keybindings.content.generic.killLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'killLine', v)} />
+                    <KeyRow label="Prev Line" value={localSettings.keybindings.content.generic.prevLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'prevLine', v)} />
+                    <KeyRow label="Next Line" value={localSettings.keybindings.content.generic.nextLine} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'nextLine', v)} />
+                    <KeyRow label="Forward Character" value={localSettings.keybindings.content.generic.forwardChar} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'forwardChar', v)} />
+                    <KeyRow label="Backward Character" value={localSettings.keybindings.content.generic.backwardChar} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'backwardChar', v)} />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'prompts' && (
-            <div className="space-y-6 max-w-2xl pb-10">
-              <div>
-                <p className="text-sm text-muted-foreground mb-6">Define the behavior, persona, and rules for the Aynite Assistant.</p>
-                <div className="flex items-center justify-between mb-4">
-                   <h3 className="text-lg font-medium">Prompt Files</h3>
-                   <div className="flex items-center gap-2">
-                     <button onClick={async () => {
-                            // @ts-ignore
-                            const res = await window.api.restoreDefaultPrompts();
-                            if (res && res.data) {
-                              save({ ...localSettings, prompts: res.data });
-                            }
-                         }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Defaults</button>
-                     <button onClick={async () => {
-                            // @ts-ignore
-                            const res = await window.api.pickPromptFile();
-                            if (res && res.data) {
-                              const newFiles = [...(localSettings.prompts?.files || []), res.data];
-                              save({ ...localSettings, prompts: { files: Array.from(new Set(newFiles)) } });
-                            }
-                         }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add File</button>
-                   </div>
-                </div>
-                <div className="space-y-2">
-                  {(localSettings.prompts?.files || []).map((filePath) => (
-                    <div key={filePath} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-medium truncate">{filePath.split(/[\/\\]/).pop()}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">{filePath}</span>
+            {activeTab === 'ai' && (
+              <div className="space-y-6 max-w-2xl">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-6">Select and configure your preferred AI model and reasoning settings.</p>
+                  <div className="space-y-6">
+                    {(['ollama', 'deepseek', 'gemini', 'openai', 'anthropic', 'others'] as const).map((provider) => (
+                      <div key={provider} className="flex flex-col gap-2">
+                        <label className="flex items-center gap-3 cursor-pointer py-1">
+                          <input type="radio" name="ai-provider" value={provider} checked={localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'ollama')} onChange={() => save({ ...localSettings, aiProvider: provider as any })} className="w-4 h-4 text-primary border-gray-300 focus:ring-primary" />
+                          <span className="font-medium capitalize">{provider}</span>
+                        </label>
+                        {(localSettings.aiProvider === provider || (!localSettings.aiProvider && provider === 'ollama')) && (
+                          <div className="ml-7 space-y-4 pt-2 pb-4">
+                            {provider !== 'ollama' && (
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">API Key</label>
+                                <input type="password" placeholder={`Enter ${provider} API Key`} value={(localSettings.aiConfigs as any)?.[provider]?.apiKey || ''} onChange={(e) => handleAiConfigChange(provider as any, 'apiKey', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
+                              </div>
+                            )}
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">URL Endpoint</label>
+                              <input type="text" placeholder={provider === 'ollama' ? "http://localhost:11434" : "API URL"} value={(localSettings.aiConfigs as any)?.[provider]?.url || ''} onChange={(e) => handleAiConfigChange(provider as any, 'url', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
+                            </div>
+
+                            {provider === 'others' && (
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">Compatibility</label>
+                                <select
+                                  value={(localSettings.aiConfigs as any)?.[provider]?.compatibility || 'openai'}
+                                  onChange={(e) => handleAiConfigChange(provider as any, 'compatibility', e.target.value)}
+                                  className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer"
+                                >
+                                  <option value="openai" className="bg-background text-foreground">OpenAI Compatible</option>
+                                  <option value="anthropic" className="bg-background text-foreground">Claude/Anthropic Compatible</option>
+                                  <option value="google" className="bg-background text-foreground">Gemini/Google Compatible</option>
+                                </select>
+                              </div>
+                            )}
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">Model</label>
+                              <input
+                                type="text"
+                                placeholder={provider === 'ollama' ? "deepseek-r1:14b" : "e.g. gpt-4o"}
+                                value={(localSettings.aiConfigs as any)?.[provider]?.model || ''}
+                                onChange={(e) => handleAiConfigChange(provider as any, 'model', e.target.value)}
+                                className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
+                              />
+                            </div>
+
+
+
+                            {provider === 'ollama' && (
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">Context Window</label>
+                                <input type="number" placeholder="8192" value={localSettings.aiConfigs?.ollama?.contextWindow || 8192} onChange={(e) => handleAiConfigChange(provider, 'contextWindow', e.target.value)} className="w-full max-w-md bg-transparent border-b border-border/60 px-0 py-1 text-sm focus:outline-none focus:border-primary transition-colors" />
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between max-w-md p-3 rounded-lg border border-border/40 bg-accent/5 mt-2">
+                              <div className="space-y-0.5">
+                                <label className="text-xs font-semibold flex items-center gap-1.5">
+                                  <BrainCircuit size={14} className="text-primary/70" />
+                                  <span>Thinking Mode</span>
+                                </label>
+                                <p className="text-[10px] text-muted-foreground">Enable chain-of-thought/reasoning blocks.</p>
+                              </div>
+                              <button
+                                onClick={() => handleAiConfigChange(provider as any, 'thinking', !(localSettings.aiConfigs as any)?.[provider]?.thinking)}
+                                className={cn("relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "bg-primary" : "bg-muted")}
+                              >
+                                <span className={cn("inline-block h-3 w-3 transform rounded-full bg-white transition-transform", (localSettings.aiConfigs as any)?.[provider]?.thinking ? "translate-x-5" : "translate-x-1")} />
+                              </button>
+                            </div>
+
+                            {(localSettings.aiConfigs as any)?.[provider]?.thinking && (
+                              <div className="flex flex-col gap-1.5 pl-3 border-l-2 border-primary/20">
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Thinking Budget (Tokens)</label>
+                                <input
+                                  type="number"
+                                  placeholder="4096"
+                                  value={(localSettings.aiConfigs as any)?.[provider]?.thinkingBudget || 4096}
+                                  onChange={(e) => handleAiConfigChange(provider as any, 'thinkingBudget', parseInt(e.target.value) || 0)}
+                                  className="w-24 bg-transparent border-b border-border/60 px-0 py-1 text-xs focus:outline-none focus:border-primary transition-colors"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => {
+                    ))}
+
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'prompts' && (
+              <div className="space-y-6 max-w-2xl pb-10">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-6">Define the behavior, persona, and rules for the Aynite Assistant.</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">Prompt Files</h3>
+                    <div className="flex items-center gap-2">
+                      <button onClick={async () => {
+                        // @ts-ignore
+                        const res = await window.api.restoreDefaultPrompts();
+                        if (res && res.data) {
+                          save({ ...localSettings, prompts: res.data });
+                        }
+                      }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"><RotateCcw size={14} /> Restore Defaults</button>
+                      <button onClick={async () => {
+                        // @ts-ignore
+                        const res = await window.api.pickPromptFile();
+                        if (res && res.data) {
+                          const newFiles = [...(localSettings.prompts?.files || []), res.data];
+                          save({ ...localSettings, prompts: { files: Array.from(new Set(newFiles)) } });
+                        }
+                      }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add File</button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {(localSettings.prompts?.files || []).map((filePath) => (
+                      <div key={filePath} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-medium truncate">{filePath.split(/[\/\\]/).pop()}</span>
+                          <span className="text-[10px] text-muted-foreground truncate">{filePath}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => {
                             const newFiles = (localSettings.prompts?.files || []).filter(f => f !== filePath);
                             save({ ...localSettings, prompts: { files: newFiles } });
                           }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {(localSettings.prompts?.files || []).length === 0 && (
-                    <div className="text-center py-8 border-2 border-dashed border-border rounded-lg text-muted-foreground text-sm">No prompt files added.</div>
-                  )}
-                </div>
+                    ))}
+                    {(localSettings.prompts?.files || []).length === 0 && (
+                      <div className="text-center py-8 border-2 border-dashed border-border rounded-lg text-muted-foreground text-sm">No prompt files added.</div>
+                    )}
+                  </div>
 
-                <div className="mt-10 space-y-4">
-                  <h3 className="text-lg font-medium">System Prompt Preview</h3>
-                  <div className="p-4 rounded-lg bg-accent/5 border border-border font-mono text-xs whitespace-pre-wrap">
-                    {mergedPrompt || <span className="text-muted-foreground italic">Preview is empty. Add prompt files to see the combined result.</span>}
+                  <div className="mt-10 space-y-4">
+                    <h3 className="text-lg font-medium">System Prompt Preview</h3>
+                    <div className="p-4 rounded-lg bg-accent/5 border border-border font-mono text-xs whitespace-pre-wrap">
+                      {mergedPrompt || <span className="text-muted-foreground italic">Preview is empty. Add prompt files to see the combined result.</span>}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'skills' && (
-            <div className="space-y-6 max-w-2xl">
-              <p className="text-sm text-muted-foreground mb-6">Manage advanced skill directories and automated agent workflows.</p>
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                   <h3 className="text-lg font-medium">Skill Folders</h3>
-                   <button onClick={async () => {
-                          // @ts-ignore
-                          const res = await window.api.pickSkillFolder();
-                          if (res && res.data) {
-                            const newFolders = [...(localSettings.skills?.folders || []), res.data];
-                            save({ ...localSettings, skills: { folders: Array.from(new Set(newFolders)) } });
-                          }
-                       }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Folder</button>
-                </div>
-                <div className="space-y-2">
-                  {(localSettings.skills?.folders || []).map((folder, index) => (
-                    <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {index === 0 && (
-                          <button onClick={async () => {
+            {activeTab === 'skills' && (
+              <div className="space-y-6 max-w-2xl">
+                <p className="text-sm text-muted-foreground mb-6">Manage advanced skill directories and automated agent workflows.</p>
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">Skill Folders</h3>
+                    <button onClick={async () => {
+                      // @ts-ignore
+                      const res = await window.api.pickSkillFolder();
+                      if (res && res.data) {
+                        const newFolders = [...(localSettings.skills?.folders || []), res.data];
+                        save({ ...localSettings, skills: { folders: Array.from(new Set(newFolders)) } });
+                      }
+                    }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Folder</button>
+                  </div>
+                  <div className="space-y-2">
+                    {(localSettings.skills?.folders || []).map((folder, index) => (
+                      <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
+                          <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {index === 0 && (
+                            <button onClick={async () => {
                               // @ts-ignore
                               const res = await window.api.restoreDefaultSkills();
                               if (res && res.data) alert('Default skills restored successfully!');
                               else alert('Failed to restore default skills.');
                             }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
-                        )}
-                        {index > 0 && (
-                          <button onClick={() => {
+                          )}
+                          {index > 0 && (
+                            <button onClick={() => {
                               const newFolders = (localSettings.skills?.folders || []).filter(f => f !== folder);
                               save({ ...localSettings, skills: { folders: newFolders } });
                             }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'commands' && (
-            <div className="space-y-6 max-w-2xl">
-              <p className="text-sm text-muted-foreground mb-6">Configure custom shell command directories for assistant execution.</p>
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                   <h3 className="text-lg font-medium">Command Folders</h3>
-                   <button onClick={async () => {
-                          // @ts-ignore
-                          const res = await window.api.pickCommandFolder();
-                          if (res && res.data) {
-                            const newFolders = [...(localSettings.commands?.folders || []), res.data];
-                            save({ ...localSettings, commands: { folders: Array.from(new Set(newFolders)) } });
-                          }
-                       }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Folder</button>
-                </div>
-                <div className="space-y-2">
-                  {(localSettings.commands?.folders || []).map((folder, index) => (
-                    <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {index === 0 && (
-                          <button onClick={async () => {
+            {activeTab === 'commands' && (
+              <div className="space-y-6 max-w-2xl">
+                <p className="text-sm text-muted-foreground mb-6">Configure custom shell command directories for assistant execution.</p>
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">Command Folders</h3>
+                    <button onClick={async () => {
+                      // @ts-ignore
+                      const res = await window.api.pickCommandFolder();
+                      if (res && res.data) {
+                        const newFolders = [...(localSettings.commands?.folders || []), res.data];
+                        save({ ...localSettings, commands: { folders: Array.from(new Set(newFolders)) } });
+                      }
+                    }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Folder</button>
+                  </div>
+                  <div className="space-y-2">
+                    {(localSettings.commands?.folders || []).map((folder, index) => (
+                      <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
+                          <span className="text-[10px] text-muted-foreground truncate">{folder}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {index === 0 && (
+                            <button onClick={async () => {
                               // @ts-ignore
                               const res = await window.api.restoreDefaultCommands();
                               if (res && res.data) alert('Default commands restored successfully!');
                               else alert('Failed to restore default commands.');
                             }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
-                        )}
-                        {index > 0 && (
-                          <button onClick={() => {
+                          )}
+                          {index > 0 && (
+                            <button onClick={() => {
                               const newFolders = (localSettings.commands?.folders || []).filter(f => f !== folder);
                               save({ ...localSettings, commands: { folders: newFolders } });
                             }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'tools' && (
-            <div className="space-y-6 max-w-2xl pb-10">
-               <div>
+            {activeTab === "tools" && (
+              <div className="space-y-6 max-w-2xl pb-10">
+                <div>
                   <p className="text-sm text-muted-foreground mb-6">Enable or disable individual capabilities available to the Aynite Assistant.</p>
                   <div className="grid grid-cols-1 gap-3">
-                     {[
-                       { id: 'read_file', name: 'Read File', desc: 'Allow AI to read file contents' },
-                       { id: 'write_file', name: 'Write File', desc: 'Allow AI to create and modify files' },
-                       { id: 'list_files', name: 'List Files', desc: 'Allow AI to see directory contents' },
-                       { id: 'run_command', name: 'Run Command', desc: 'Allow AI to execute shell commands' },
-                       { id: 'grep_search', name: 'Pattern Search', desc: 'Search for text patterns across the workspace' },
-                       { id: 'read_url', name: 'URL Scraper', desc: 'Fetch and read content from websites' },
-                       { id: 'get_file_tree', name: 'Workspace Tree', desc: 'Get a recursive view of the project structure' }
-                     ].map(tool => (
-                       <div key={tool.id} className="flex items-center justify-between p-3.5 rounded-lg border border-border/40 bg-accent/5 hover:bg-accent/10 transition-colors group">
-                          <div className="space-y-0.5">
-                             <h4 className="text-sm font-semibold">{tool.name}</h4>
-                             <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity">{tool.desc}</p>
-                          </div>
-                          <button 
-                             onClick={() => {
-                               const current = localSettings.aiTools || {};
-                               save({
-                                 ...localSettings,
-                                 aiTools: {
-                                   ...current,
-                                   [tool.id]: current[tool.id] === false ? true : false
-                                 }
-                               });
-                             }} 
-                             className={cn(
-                               "relative inline-flex h-5 w-9 items-center rounded-full transition-all focus:outline-none", 
-                               localSettings.aiTools?.[tool.id] !== false ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.3)]" : "bg-muted"
-                             )}
-                          >
-                             <span className={cn(
-                               "inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200", 
-                               localSettings.aiTools?.[tool.id] !== false ? "translate-x-5" : "translate-x-1"
-                             )} />
-                          </button>
-                       </div>
-                     ))}
+                    {[
+                      { id: 'read_file', name: 'Read File', desc: 'Allow AI to read file contents' },
+                      { id: 'write_file', name: 'Write File', desc: 'Allow AI to create and modify files' },
+                      { id: 'list_files', name: 'List Files', desc: 'Allow AI to see directory contents' },
+                      { id: 'run_command', name: 'Run Command', desc: 'Allow AI to execute shell commands' },
+                      { id: 'grep_search', name: 'Pattern Search', desc: 'Search for text patterns across the workspace' },
+                      { id: 'read_url', name: 'URL Scraper', desc: 'Fetch and read content from websites' },
+                      { id: 'get_file_tree', name: 'Workspace Tree', desc: 'Get a recursive view of the project structure' }
+                    ].map(tool => (
+                      <div key={tool.id} className="flex items-center justify-between p-3.5 rounded-lg border border-border/40 bg-accent/5 hover:bg-accent/10 transition-colors group">
+                        <div className="space-y-0.5">
+                          <h4 className="text-sm font-semibold">{tool.name}</h4>
+                          <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity">{tool.desc}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const current = localSettings.aiTools || {};
+                            save({
+                              ...localSettings,
+                              aiTools: {
+                                ...current,
+                                [tool.id]: current[tool.id] === false ? true : false
+                              }
+                            });
+                          }}
+                          className={cn(
+                            "relative inline-flex h-5 w-9 items-center rounded-full transition-all focus:outline-none",
+                            localSettings.aiTools?.[tool.id] !== false ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.3)]" : "bg-muted"
+                          )}
+                        >
+                          <span className={cn(
+                            "inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200",
+                            localSettings.aiTools?.[tool.id] !== false ? "translate-x-5" : "translate-x-1"
+                          )} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-               </div>
-             </div>
-           )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'about' && (
+              <div className="space-y-10 max-w-2xl pb-10">
+                <div className="flex flex-col items-center text-center space-y-4 pt-4">
+                  <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20">
+                    <Bot size={48} className="text-primary-foreground" />
+                  </div>
+                  <div className="space-y-1.5 text-center">
+                    <h3 className="text-3xl font-black tracking-tight text-foreground">Aynite</h3>
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-sm font-semibold text-primary tracking-widest uppercase">A.Y.N.I.T.E</p>
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">All You Need Is The Editor</p>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1 bg-accent/30 rounded-full border border-border/50 text-[11px] font-mono text-muted-foreground">
+                    Version {appVersion || '0.0.0'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 pt-4">
+                  <div className="p-6 rounded-2xl border border-border bg-accent/5 flex items-center justify-between group">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <CloudDownload size={16} className="text-primary" />
+                        Software Update
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        {updateStatus === 'idle' && 'Your software is up to date.'}
+                        {updateStatus === 'checking' && 'Checking for updates...'}
+                        {updateStatus === 'available' && `New version available: v${updateInfo?.version}`}
+                        {updateStatus === 'downloading' && 'Downloading update in background...'}
+                        {updateStatus === 'downloaded' && `Version v${updateInfo?.version} is ready to install.`}
+                        {updateStatus === 'error' && 'Failed to check for updates.'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(updateStatus === 'idle' || updateStatus === 'error') && (
+                        <button
+                          onClick={() => window.api.checkUpdates()}
+                          className="px-4 py-1.5 bg-accent hover:bg-accent/80 rounded-lg text-xs font-medium transition-all"
+                        >
+                          Check for Updates
+                        </button>
+                      )}
+                      {updateStatus === 'checking' && (
+                        <button disabled className="px-4 py-1.5 bg-accent/50 rounded-lg text-xs font-medium flex items-center gap-2">
+                          <RefreshCw size={12} className="animate-spin" /> Checking
+                        </button>
+                      )}
+                      {updateStatus === 'available' && (
+                        <button disabled className="px-4 py-1.5 bg-primary/20 text-primary rounded-lg text-xs font-medium">
+                          Downloading...
+                        </button>
+                      )}
+                      {updateStatus === 'downloaded' && (
+                        <button
+                          onClick={() => window.api.installUpdate()}
+                          className="px-4 py-1.5 bg-primary text-primary-foreground hover:brightness-110 rounded-lg text-xs font-medium shadow-lg shadow-primary/20 transition-all"
+                        >
+                          Update and Restart
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl border border-border bg-accent/5 space-y-4">
+                    <h4 className="text-sm font-semibold">Resources</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => window.api.openExternal('https://github.com/w-t-yang/aynite')} className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border">
+                        <Github size={14} /> GitHub Project
+                      </button>
+                      <button onClick={() => window.api.openExternal('https://github.com/w-t-yang/aynite/issues')} className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border">
+                        <Bug size={14} /> Report an Issue
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-10 text-center">
+                  <p className="text-[10px] text-muted-foreground/50 font-mono italic">
+                    Built with ❤️ for the AI lifestyle
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

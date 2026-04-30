@@ -54,6 +54,7 @@ const api = {
   saveFile: (path: string, content: string) => ipcRenderer.invoke('api:file-save', { path, content }),
   openExternal: (url: string) => ipcRenderer.invoke('api:open-external', url),
   quitApp: () => ipcRenderer.invoke('api:app-quit'),
+  getAppVersion: () => ipcRenderer.invoke('api:app-version'),
   
   // Util
   joinPath: (...paths: string[]) => require('path').join(...paths),
@@ -79,6 +80,40 @@ const api = {
     const listener = (_: any, data: any) => callback(data);
     ipcRenderer.on('api:ai-approval-request', listener);
     return () => ipcRenderer.removeListener('api:ai-approval-request', listener);
+  },
+
+  // Update API
+  checkUpdates: () => ipcRenderer.invoke('update:check'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  onUpdateChecking: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('update:checking', listener);
+    return () => ipcRenderer.removeListener('update:checking', listener);
+  },
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    const listener = (_: any, info: any) => callback(info);
+    ipcRenderer.on('update:available', listener);
+    return () => ipcRenderer.removeListener('update:available', listener);
+  },
+  onUpdateNotAvailable: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('update:not-available', listener);
+    return () => ipcRenderer.removeListener('update:not-available', listener);
+  },
+  onUpdateError: (callback: (err: string) => void) => {
+    const listener = (_: any, err: string) => callback(err);
+    ipcRenderer.on('update:error', listener);
+    return () => ipcRenderer.removeListener('update:error', listener);
+  },
+  onUpdateProgress: (callback: (progress: any) => void) => {
+    const listener = (_: any, progress: any) => callback(progress);
+    ipcRenderer.on('update:download-progress', listener);
+    return () => ipcRenderer.removeListener('update:download-progress', listener);
+  },
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    const listener = (_: any, info: any) => callback(info);
+    ipcRenderer.on('update:downloaded', listener);
+    return () => ipcRenderer.removeListener('update:downloaded', listener);
   }
 };
 

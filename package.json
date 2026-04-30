@@ -26,6 +26,9 @@
     "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "electron-is-dev": "^3.0.1",
+    "electron-log": "^5.3.0",
+    "electron-updater": "^6.8.3",
     "js-yaml": "^4.1.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
@@ -57,5 +60,47 @@
     "tsx": "^4.19.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
+  },
+  "build": {
+    "appId": "com.aynite.app",
+    "productName": "Aynite",
+    "directories": {
+      "output": "dist"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "w-t-yang",
+      "repo": "aynite"
+    },
+    "files": [
+      "out/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm",
+        "pacman"
+      ],
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot, MoreHorizontal, Eraser } from 'lucide-react';
 import Sidebar from './components/Sidebar';
+import UpdateNotification from './components/UpdateNotification';
 import ChatTab from './components/Chat';
 import SettingsView from './components/Settings';
 import FileViewer from './components/FileViewer';
@@ -924,6 +925,7 @@ export default function App() {
           onClose={() => setShowTabSwitcher(false)}
         />
       )}
+      <UpdateNotification />
     </div>
   );
 }
