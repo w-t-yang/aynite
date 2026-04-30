@@ -1098,9 +1098,9 @@ export default function ChatTab({
         )}
 
         {loading && !pendingApproval && (
-          <div className="flex gap-4 max-w-4xl mx-auto justify-start">
-            <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
-              <RefreshCw size={18} className="animate-spin" />
+          <div className="max-w-4xl mx-auto mb-8 px-2">
+            <div className="loading-bar-container">
+              <div className="loading-bar-progress" />
             </div>
           </div>
         )}

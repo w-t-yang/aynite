@@ -11,7 +11,7 @@ export const DEFAULT_PROVIDER_URLS: Record<string, string> = {
   ollama: 'http://localhost:11434',
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com',
-  gemini: 'https://generativelanguage.googleapis.com',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
   deepseek: 'https://api.deepseek.com',
   others: ''
 };
