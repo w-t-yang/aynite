@@ -58,14 +58,14 @@ export default function App() {
   const [showTabMenu, setShowTabMenu] = useState(false);
   const tabMenuRef = useRef<HTMLDivElement>(null);
 
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'info' | 'error' | 'success' }[]>([]);
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'info' | 'error' | 'success'; title?: string }[]>([]);
 
-  const showToast = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
+  const showToast = (message: string, type: 'info' | 'error' | 'success' = 'info', title?: string) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type, title }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 5000);
+    }, 8000);
   };
 
   useEffect(() => {
@@ -506,6 +506,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // @ts-ignore
+    if (!window.api?.onConfigError) return;
+    // @ts-ignore
+    const unsubscribe = window.api.onConfigError((data) => {
+      const fileName = data.path.split(/[/\\]/).pop();
+      showToast(data.error, 'error', `YAML error in ${fileName}`);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (!settings) return;
 
     const globalApi = {
@@ -935,38 +946,58 @@ export default function App() {
       )}
       <UpdateNotification />
       {/* Toast Notifications */}
-      <div className="fixed bottom-4 left-4 z-[1000] flex flex-col gap-2">
-        {toasts.map(toast => (
-          <div
-            key={toast.id}
-            className={cn(
-              "px-4 py-3 rounded-lg shadow-2xl border flex items-center gap-3 min-w-[300px] animate-in slide-in-from-left-2 fade-in",
-              toast.type === 'error' ? "bg-destructive/10 border-destructive/20 text-destructive" :
-                toast.type === 'success' ? "bg-success/10 border-success/20 text-success" :
-                  "bg-popover border-border text-foreground"
-            )}
-          >
-            <div className={cn(
-              "p-1.5 rounded-md",
-              toast.type === 'error' ? "bg-destructive/20" :
-                toast.type === 'success' ? "bg-success/20" :
-                  "bg-primary/20 text-primary"
-            )}>
-              {toast.type === 'error' ? <AlertCircle size={16} /> :
-                toast.type === 'success' ? <Bot size={16} className="text-success" /> :
-                  <Bot size={16} />}
-            </div>
-            <div className="flex-1 text-sm font-medium">{toast.message}</div>
-            <button
-              onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-              className="p-1 hover:bg-foreground/10 rounded-md transition-colors"
+      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col gap-3">
+        {toasts.map(toast => {
+          const isError = toast.type === 'error';
+          return (
+            <div
+              key={toast.id}
+              className={cn(
+                "bg-popover border shadow-2xl rounded-xl p-4 min-w-[320px] max-w-md flex flex-col gap-3 animate-in slide-in-from-bottom-2 fade-in transition-all duration-300",
+                isError ? "border-destructive/50" : "border-border"
+              )}
             >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "p-2 rounded-lg shrink-0",
+                  isError ? "bg-destructive/10 text-destructive" :
+                    toast.type === 'success' ? "bg-success/10 text-success" :
+                      "bg-primary/10 text-primary"
+                )}>
+                  {isError ? <AlertCircle size={18} /> :
+                    toast.type === 'success' ? <Bot size={18} className="text-success" /> :
+                      <Bot size={18} />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-foreground truncate">
+                    {toast.title || (isError ? 'Error' : 'Notification')}
+                  </h4>
+                </div>
+
+                <button
+                  onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                  className="p-1 hover:bg-accent rounded-md text-muted-foreground transition-colors shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {isError ? (
+                <div className="bg-destructive/5 rounded-lg p-2 max-h-[120px] overflow-auto scrollbar-thin">
+                  <p className="text-xs text-destructive/90 break-words whitespace-pre-wrap font-mono leading-relaxed">
+                    {toast.message}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground px-1">
+                  {toast.message}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
-

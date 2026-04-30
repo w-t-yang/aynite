@@ -5,7 +5,7 @@ import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { SelectionList, SelectionItem } from './ui/SelectionList';
-import { FileText, Folder, Zap, Terminal, Send } from 'lucide-react';
+import { FileText, Folder, Zap, Terminal, Send, AlertTriangle } from 'lucide-react';
 import { KeyManager } from '../lib/key-handlers';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -77,13 +77,15 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
 
     const selectionItems: SelectionItem[] = items.map(item => {
       let icon = <FileText size={14} />;
-      if (triggerChar === '/') icon = <Zap size={14} />;
+      if (item.error) icon = <AlertTriangle size={14} className="text-warning" />;
+      else if (triggerChar === '/') icon = <Zap size={14} />;
       else if (triggerChar === '>') icon = <Terminal size={14} />;
       else if (item.isDirectory) icon = <Folder size={14} />;
 
       return {
         ...item,
         label: item.name || item.label,
+        subtitle: item.error ? `Error: ${item.error}` : item.subtitle,
         icon
       };
     });
@@ -262,7 +264,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
           if (isMounted && skillsRes.data) {
             const items = skillsRes.data.map((s: any) => ({ 
-              id: s.path, label: s.name, name: s.name, subtitle: 'Skill' 
+              id: s.path, label: s.name, name: s.name, subtitle: 'Skill', error: s.error 
             }));
             skillItemsRef.current = items;
             setSkillItems(items);
@@ -270,7 +272,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
           if (isMounted && cmdsRes.data) {
             const items = cmdsRes.data.map((c: any) => ({ 
-              id: c.path, label: c.name, name: c.name, subtitle: 'Command' 
+              id: c.path, label: c.name, name: c.name, subtitle: 'Command', error: c.error 
             }));
             commandItemsRef.current = items;
             setCommandItems(items);

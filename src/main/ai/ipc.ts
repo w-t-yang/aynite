@@ -9,6 +9,7 @@ import path from 'path';
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { getConfigDir } from '../config';
 
 const execAsync = promisify(exec);
 
@@ -18,7 +19,7 @@ function logAiEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
   if (app.isPackaged) return; // Only log in dev environment
   
   try {
-    const logDir = path.join(os.homedir(), '.aynite', 'logs');
+    const logDir = path.join(getConfigDir(), 'logs');
     const logFile = path.join(logDir, 'dev.log');
     
     mkdirSync(logDir, { recursive: true });
@@ -34,6 +35,14 @@ function logAiEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
 
 async function isPathWithinWorkspace(filePath: string, workspaceFolders: string[]): Promise<boolean> {
   const normalized = path.resolve(filePath).replace(/\\/g, '/');
+
+  // Always allow access to the application config directory
+  const configDir = getConfigDir();
+  const normalizedConfigDir = path.resolve(configDir).replace(/\\/g, '/');
+  if (normalized.startsWith(normalizedConfigDir + '/') || normalized === normalizedConfigDir) {
+    return true;
+  }
+
   return workspaceFolders.some((folder) => {
     const normalizedFolder = path.resolve(folder).replace(/\\/g, '/');
     return normalized.startsWith(normalizedFolder + '/') || normalized === normalizedFolder;
@@ -46,6 +55,12 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
     config: ProviderConfig & { enabledTools?: { [key: string]: boolean } },
     workspaceFolders: string[]
   }) => {
+    // Always include the config directory in workspace folders for AI tools
+    const configDir = getConfigDir();
+    if (!workspaceFolders.some(f => path.resolve(f) === path.resolve(configDir))) {
+      workspaceFolders = [...workspaceFolders, configDir];
+    }
+
     // Log the initial request
     logAiEvent('REQUEST', { config, messages });
 

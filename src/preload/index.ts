@@ -115,6 +115,11 @@ const api = {
     const listener = (_: any, info: any) => callback(info);
     ipcRenderer.on('update:downloaded', listener);
     return () => ipcRenderer.removeListener('update:downloaded', listener);
+  },
+  onConfigError: (callback: (data: { type: 'skill' | 'command', path: string, error: string }) => void) => {
+    const listener = (_: any, data: any) => callback(data);
+    ipcRenderer.on('api:config-error', listener);
+    return () => ipcRenderer.removeListener('api:config-error', listener);
   }
 };
 

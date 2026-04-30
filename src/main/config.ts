@@ -13,6 +13,19 @@ import { DEFAULT_THEMES } from './default_configs/themes';
 import { DEFAULT_PROMPTS } from './default_configs/prompts';
 import { DEFAULT_AI_CONFIG } from './default_configs/ai';
 
+let notificationCallback: ((data: { type: 'skill' | 'command', path: string, error: string }) => void) | null = null;
+let reportedErrors = new Map<string, string>();
+
+export function setConfigNotificationCallback(cb: typeof notificationCallback) {
+  notificationCallback = cb;
+}
+
+function notifyError(type: 'skill' | 'command', path: string, error: string) {
+  if (reportedErrors.get(path) === error) return;
+  reportedErrors.set(path, error);
+  if (notificationCallback) notificationCallback({ type, path, error });
+}
+
 // Helper to expand ~ to home directory
 function expandHome(filepath: string): string {
   if (filepath.startsWith('~')) {
@@ -157,7 +170,7 @@ export async function initAppFolders() {
     commands: { folders: [commandsDir] },
     prompts: { files: Object.keys(DEFAULT_PROMPTS).map(f => path.join(baseDir, "prompts", f)) }
   };
-  const ignoreDefault = ['.git', 'node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
+  const ignoreDefault = ['node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
   const workspacesDefault = { active: 'aynite-workspace', list: ['aynite-workspace'] };
 
   const checkAndWrite = async (filename: string, content: any) => {
@@ -226,14 +239,14 @@ export async function initAppFolders() {
   }
 
   if (shouldInitWorkspaceFile) {
-    await fs.writeFile(defaultWorkspacePath, JSON.stringify({ 
-      folders: [playbookPath], 
+    await fs.writeFile(defaultWorkspacePath, JSON.stringify({
+      folders: [playbookPath],
       tabs: [{
         id: `file-${welcomeMdPath}`,
         type: 'file',
         title: 'Welcome.md',
         filepath: welcomeMdPath
-      }], 
+      }],
       activeTabId: `file-${welcomeMdPath}`
     }, null, 2), 'utf-8');
   }
@@ -435,7 +448,7 @@ export async function saveSkillsConfig(config: any) {
 
 export async function restoreSkill(skillName: string) {
   const skillsDir = path.join(getConfigDir(), 'skills');
-  
+
   // Robust bundled path detection
   const bundledResourcesPath = getBundledResourcesPath();
   const srcDir = path.join(bundledResourcesPath, 'skills', skillName);
@@ -536,17 +549,20 @@ export async function listAvailableSkills() {
           // Optional YAML frontmatter
           const match = content.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/);
           let meta: any = {};
+          let yamlError: string | null = null;
           if (match) {
             try {
               meta = yaml.load(match[1]) || {};
-            } catch (e) {
+            } catch (e: any) {
               console.error(`Error parsing YAML in ${skillMdPath}`, e);
+              yamlError = e.message;
+              notifyError('skill', skillMdPath, e.message);
             }
           }
 
           const name = meta.name || item;
 
-          if (seenNames.has(name)) {
+          if (seenNames.has(name) && !yamlError) {
             if (seenNames.get(name) === itemPath) {
               // Already registered from same path, ignore
               continue;
@@ -560,9 +576,10 @@ export async function listAvailableSkills() {
           skills.push({
             name: name,
             description: meta.description || '',
-            path: itemPath
+            path: itemPath,
+            error: yamlError
           });
-          seenNames.set(name, itemPath);
+          if (!yamlError) seenNames.set(name, itemPath);
         } catch (e) {
           console.error(`Error reading skill at ${skillMdPath}`, e);
         }
@@ -631,32 +648,39 @@ export async function listAvailableCommands() {
         try {
           const content = await fs.readFile(cmdMdPath, 'utf-8');
           const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
+          let meta: any = {};
+          let yamlError: string | null = null;
+
           if (match) {
             try {
-              const meta: any = yaml.load(match[1]);
-              const name = meta.name || item;
-
-              if (seenNames.has(name)) {
-                if (seenNames.get(name) === itemPath) {
-                  continue;
-                } else {
-                  console.warn(`Command name collision: "${name}" at ${itemPath} ignored. Already registered from ${seenNames.get(name)}`);
-                  continue;
-                }
-              }
-
-              commands.push({
-                name: name,
-                description: meta.description || '',
-                parameters: meta.parameters || [],
-                example: meta.example || '',
-                path: itemPath
-              });
-              seenNames.set(name, itemPath);
-            } catch (e) {
+              meta = yaml.load(match[1]) || {};
+            } catch (e: any) {
               console.error(`Error parsing YAML in ${cmdMdPath}`, e);
+              yamlError = e.message;
+              notifyError('command', cmdMdPath, e.message);
             }
           }
+
+          const name = meta.name || item;
+
+          if (seenNames.has(name) && !yamlError) {
+            if (seenNames.get(name) === itemPath) {
+              continue;
+            } else {
+              console.warn(`Command name collision: "${name}" at ${itemPath} ignored. Already registered from ${seenNames.get(name)}`);
+              continue;
+            }
+          }
+
+          commands.push({
+            name: name,
+            description: meta.description || '',
+            parameters: meta.parameters || [],
+            example: meta.example || '',
+            path: itemPath,
+            error: yamlError
+          });
+          if (!yamlError) seenNames.set(name, itemPath);
         } catch (e) {
           console.error(`Error reading command at ${cmdMdPath}`, e);
         }
@@ -680,7 +704,7 @@ export async function restoreDefaultCommands() {
 
 export async function restoreCommand(commandName: string) {
   const commandsDir = path.join(getConfigDir(), 'commands');
-  
+
   const bundledResourcesPath = getBundledResourcesPath();
   const srcDir = path.join(bundledResourcesPath, 'commands', commandName);
   const destDir = path.join(commandsDir, commandName);
@@ -732,16 +756,16 @@ export async function listChatLogs() {
   const baseDir = getConfigDir();
   const logsBaseDir = path.join(baseDir, 'logs');
   const allLogs: any[] = [];
-  
+
   if (!existsSync(logsBaseDir)) return [];
-  
+
   try {
     const dates = await fs.readdir(logsBaseDir);
     for (const date of dates) {
       const dateDir = path.join(logsBaseDir, date);
       const stats = await fs.stat(dateDir);
       if (!stats.isDirectory()) continue;
-      
+
       const sessions = await fs.readdir(dateDir);
       for (const session of sessions) {
         if (!session.endsWith('.json')) continue;
@@ -769,7 +793,7 @@ export async function listChatLogs() {
   } catch (e) {
     console.error('Error listing chat logs', e);
   }
-  
+
   // Sort by last modified descending
   return allLogs.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
 }
@@ -838,10 +862,10 @@ export async function restoreDefaultPrompts() {
 }
 
 export async function getMergedSystemPrompt(customFiles?: string[]) {
-  const files = customFiles || (await getPromptsConfig()).files || [];
+  const promptFiles = customFiles || (await getPromptsConfig()).files || [];
   let merged = '';
 
-  for (const filePath of files) {
+  for (const filePath of promptFiles) {
     try {
       const content = await fs.readFile(expandHome(filePath), 'utf-8');
       merged += content + '\n\n';
@@ -929,7 +953,7 @@ export async function addWorkspaceFolder(folderPath: string) {
 
   // 2. Remove any existing folders that are now covered by the new folder (subfolders)
   const remainingFolders = wsData.folders.filter((existing: string) => !isSubpath(normalizedNew, existing));
-  
+
   // 3. Add the new folder
   remainingFolders.push(normalizedNew);
   wsData.folders = remainingFolders;
@@ -989,7 +1013,7 @@ export async function getWorkspaceFolders() {
     // Deduplicate and flatten just in case the file was manually edited or has legacy data
     folders = folders.map((f: string) => path.normalize(f));
     const uniqueFolders = folders.filter((f: string, index: number) => {
-      return !folders.some((other: string, otherIndex: number) => 
+      return !folders.some((other: string, otherIndex: number) =>
         otherIndex !== index && isSubpath(other, f)
       );
     });

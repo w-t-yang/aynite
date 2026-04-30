@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug } from 'lucide-react';
+import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug, AlertCircle } from 'lucide-react';
 import { DEFAULT_KEYBINDINGS } from '../default_configs/keybindings';
 import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS } from '../default_configs/ai';
 import { cn } from '../lib/utils';
@@ -56,6 +56,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   const [appVersion, setAppVersion] = useState<string>('');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [availableSkills, setAvailableSkills] = useState<any[]>([]);
+  const [availableCommands, setAvailableCommands] = useState<any[]>([]);
   const saveTimerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -105,6 +107,18 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
       // @ts-ignore
       window.api.getMergedSystemPrompt(localSettings.prompts?.files).then(res => {
         if (res?.data) setMergedPrompt(res.data);
+      });
+    }
+    if (activeTab === 'skills') {
+      // @ts-ignore
+      window.api.getAvailableSkills().then(res => {
+        if (res?.data) setAvailableSkills(res.data);
+      });
+    }
+    if (activeTab === 'commands') {
+      // @ts-ignore
+      window.api.getAvailableCommands().then(res => {
+        if (res?.data) setAvailableCommands(res.data);
       });
     }
   }, [activeTab, localSettings.prompts?.files]);
@@ -752,6 +766,28 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     ))}
                   </div>
                 </div>
+
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium mb-4">Detected Skills</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {availableSkills.map(skill => (
+                      <div key={skill.path} className={cn("p-3 rounded-lg border bg-accent/5", skill.error ? "border-destructive/30" : "border-border")}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {skill.error && <AlertCircle size={14} className="text-destructive" />}
+                          <span className={cn("text-xs font-semibold", skill.error && "text-destructive")}>{skill.name}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground line-clamp-2 mb-2">{skill.description || 'No description'}</p>
+                        {skill.error && (
+                          <div className="p-2 rounded bg-destructive/10 text-[9px] text-destructive font-mono leading-tight whitespace-pre-wrap">
+                            {skill.error}
+                          </div>
+                        )}
+                        {!skill.error && <div className="text-[9px] text-muted-foreground/50 truncate font-mono">{skill.path}</div>}
+                      </div>
+                    ))}
+                    {availableSkills.length === 0 && <div className="col-span-full py-8 text-center text-xs text-muted-foreground italic border border-dashed border-border rounded-lg">No skills detected in the configured folders.</div>}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -795,6 +831,28 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium mb-4">Detected Commands</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {availableCommands.map(cmd => (
+                      <div key={cmd.path} className={cn("p-3 rounded-lg border bg-accent/5", cmd.error ? "border-destructive/30" : "border-border")}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {cmd.error && <AlertCircle size={14} className="text-destructive" />}
+                          <span className={cn("text-xs font-semibold", cmd.error && "text-destructive")}>{cmd.name}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground line-clamp-2 mb-2">{cmd.description || 'No description'}</p>
+                        {cmd.error && (
+                          <div className="p-2 rounded bg-destructive/10 text-[9px] text-destructive font-mono leading-tight whitespace-pre-wrap">
+                            {cmd.error}
+                          </div>
+                        )}
+                        {!cmd.error && <div className="text-[9px] text-muted-foreground/50 truncate font-mono">{cmd.path}</div>}
+                      </div>
+                    ))}
+                    {availableCommands.length === 0 && <div className="col-span-full py-8 text-center text-xs text-muted-foreground italic border border-dashed border-border rounded-lg">No commands detected in the configured folders.</div>}
                   </div>
                 </div>
               </div>

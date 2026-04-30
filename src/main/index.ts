@@ -6,7 +6,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, restoreDefaultPrompts, getMergedSystemPrompt, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, saveChatLog, loadChatLog, listChatLogs } from './config';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, restoreDefaultPrompts, getMergedSystemPrompt, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, saveChatLog, loadChatLog, listChatLogs, setConfigNotificationCallback } from './config';
 import { setupAiIpc } from './ai/ipc';
 import { setupUpdater } from './updater';
 
@@ -94,6 +94,13 @@ app.whenReady().then(async () => {
   if (mainWindow) {
     setupAiIpc(mainWindow);
     setupUpdater(mainWindow);
+
+    // Set up configuration error notifications
+    setConfigNotificationCallback((data) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('api:config-error', data);
+      }
+    });
   }
 
 
@@ -148,8 +155,7 @@ ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
       if (!a.isDirectory && b.isDirectory) return 1;
       return a.name.localeCompare(b.name);
     });
-
-    return { data: result, debug: { resolvedPath, ignorePatterns } };
+    return { data: result };
   } catch (error: any) {
     console.error('api:files error:', error);
     return { error: error.message, debug: { dirPath } };
@@ -627,7 +633,7 @@ ipcMain.handle('api:file-delete', async (event, filePath: string) => {
 ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
   try {
     const expandedPath = expandHome(filePath);
-    await fs.mkdir(require('path').dirname(expandedPath), { recursive: true });
+    await fs.mkdir(path.dirname(expandedPath), { recursive: true });
     await fs.writeFile(expandedPath, content, 'utf-8');
     return { data: true };
   } catch (error: any) {
