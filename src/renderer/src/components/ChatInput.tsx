@@ -5,7 +5,7 @@ import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { SelectionList, SelectionItem } from './ui/SelectionList';
-import { FileText, Folder, Zap, Play } from 'lucide-react';
+import { FileText, Folder, Zap, Terminal } from 'lucide-react';
 import { KeyManager } from '../lib/key-handlers';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
     const selectionItems: SelectionItem[] = items.map(item => {
       let icon = <FileText size={14} />;
       if (triggerChar === '/') icon = <Zap size={14} />;
-      else if (triggerChar === '>') icon = <Play size={14} />;
+      else if (triggerChar === '>') icon = <Terminal size={14} />;
       else if (item.isDirectory) icon = <Folder size={14} />;
 
       return {

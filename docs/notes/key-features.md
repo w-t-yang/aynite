@@ -13,7 +13,16 @@
 - [x] tag files and folders
 - [] artifact files, e.g. tasks, plans, temporary scripts, etc.
 - [] how to access files? system prompt, memory, artifacts?
+- [] memory
+- [] plan
+- [] tools (include skills and tasks)?
 - [] advanced agent features
+
+## git
+- []treeview
+- []file state
+- []view diff
+- []other git functions
 
 ## Editor
   - [x] syntax highlight
@@ -30,12 +39,6 @@
      - create skill
      - create command
   - [x] add config to maintain a list of folder for skills, same for commands
-
-## git
-- []treeview
-- []file state
-- []view diff
-- []other git functions
 
 ## Files
 - [] sync

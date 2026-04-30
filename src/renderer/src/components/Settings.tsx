@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText } from 'lucide-react';
+import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SearchableSelect } from './ui/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
@@ -26,6 +26,9 @@ export interface SettingsState {
     deepseek?: { apiKey: string; url?: string; model?: string; thinking?: boolean; thinkingBudget?: number };
     others?: { apiKey: string; url: string; model: string; compatibility: 'openai' | 'anthropic' | 'google'; thinking?: boolean; thinkingBudget?: number };
     ollama?: { url: string; model: string; contextWindow: number; thinking?: boolean; thinkingBudget?: number };
+  };
+  aiTools?: {
+    [key: string]: boolean;
   };
 
   keybindings: {
@@ -100,7 +103,7 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 export default function Settings({ settings, onSave, onClose }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands' | 'prompts'>(() => {
+  const [activeTab, setActiveTab] = useState<'appearance' | 'keybindings' | 'ai' | 'skills' | 'commands' | 'prompts' | 'tools'>(() => {
     return (localStorage.getItem('aynite_settings_active_tab') as any) || 'appearance';
   });
 
@@ -325,14 +328,16 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">AI</div>
           <button onClick={() => handleTabChange('ai')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'ai' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Bot size={16} /> AI Provider</button>
           <button onClick={() => handleTabChange('prompts')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'prompts' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><FileText size={16} /> System Prompt</button>
-          <button onClick={() => handleTabChange('skills')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'skills' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><BrainCircuit size={16} /> Skills</button>
+          <button onClick={() => handleTabChange('tools')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'tools' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Wrench size={16} /> Tools</button>
+          <button onClick={() => handleTabChange('skills')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'skills' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Zap size={16} /> Skills</button>
           <button onClick={() => handleTabChange('commands')} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium", activeTab === 'commands' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50 text-muted-foreground hover:text-foreground")}><Terminal size={16} /> Commands</button>
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-6 overflow-y-auto overflow-x-auto">
+          <div className="max-w-3xl mx-auto w-full min-w-[640px]">
           <div className="flex items-center justify-between mb-6">
-             <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'AI Provider' : activeTab === 'prompts' ? 'System Prompt' : activeTab}</h2>
+             <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'AI Provider' : activeTab === 'prompts' ? 'System Prompt' : activeTab === 'tools' ? 'Tools' : activeTab}</h2>
              {activeTab === 'keybindings' && (
                 <button onClick={() => {
                      const defaultKb: SettingsState['keybindings'] = {
@@ -352,6 +357,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
           {activeTab === 'appearance' && (
             <div className="space-y-6 max-w-2xl">
+              <p className="text-sm text-muted-foreground mb-6">Customize themes, fonts, and the visual aesthetic of your workspace.</p>
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium">Theme</h3>
@@ -428,7 +434,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
           {activeTab === 'keybindings' && (
              <div className="space-y-6 max-w-2xl">
-                <p className="text-sm text-muted-foreground mb-6 text-xs">Customize shortcuts. Use 'Meta' for Cmd/Win. Global 'Close Tab' is priority.</p>
+                <p className="text-sm text-muted-foreground mb-6">Configure keyboard shortcuts for navigation, editing, and assistant actions.</p>
                 <div className="space-y-6 pb-10">
                    <div className="space-y-1">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-2 px-1">Global</div>
@@ -485,7 +491,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           {activeTab === 'ai' && (
             <div className="space-y-6 max-w-2xl">
               <div>
-                <p className="text-sm text-muted-foreground mb-6">Select and configure your preferred AI provider.</p>
+                <p className="text-sm text-muted-foreground mb-6">Select and configure your preferred AI model and reasoning settings.</p>
                 <div className="space-y-6">
                   {(['ollama', 'deepseek', 'gemini', 'openai', 'anthropic', 'others'] as const).map((provider) => (
                     <div key={provider} className="flex flex-col gap-2">
@@ -581,7 +587,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
           {activeTab === 'prompts' && (
             <div className="space-y-6 max-w-2xl pb-10">
               <div>
-                <p className="text-sm text-muted-foreground mb-6">Manage files that define the system prompt for the Aynite Assistant.</p>
+                <p className="text-sm text-muted-foreground mb-6">Define the behavior, persona, and rules for the Aynite Assistant.</p>
                 <div className="flex items-center justify-between mb-4">
                    <h3 className="text-lg font-medium">Prompt Files</h3>
                    <div className="flex items-center gap-2">
@@ -634,6 +640,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
           {activeTab === 'skills' && (
             <div className="space-y-6 max-w-2xl">
+              <p className="text-sm text-muted-foreground mb-6">Manage advanced skill directories and automated agent workflows.</p>
               <div>
                 <div className="flex items-center justify-between mb-4">
                    <h3 className="text-lg font-medium">Skill Folders</h3>
@@ -678,6 +685,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
           {activeTab === 'commands' && (
             <div className="space-y-6 max-w-2xl">
+              <p className="text-sm text-muted-foreground mb-6">Configure custom shell command directories for assistant execution.</p>
               <div>
                 <div className="flex items-center justify-between mb-4">
                    <h3 className="text-lg font-medium">Command Folders</h3>
@@ -719,6 +727,54 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
               </div>
             </div>
           )}
+
+          {activeTab === 'tools' && (
+            <div className="space-y-6 max-w-2xl pb-10">
+               <div>
+                  <p className="text-sm text-muted-foreground mb-6">Enable or disable individual capabilities available to the Aynite Assistant.</p>
+                  <div className="grid grid-cols-1 gap-3">
+                     {[
+                       { id: 'read_file', name: 'Read File', desc: 'Allow AI to read file contents' },
+                       { id: 'write_file', name: 'Write File', desc: 'Allow AI to create and modify files' },
+                       { id: 'list_files', name: 'List Files', desc: 'Allow AI to see directory contents' },
+                       { id: 'run_command', name: 'Run Command', desc: 'Allow AI to execute shell commands' },
+                       { id: 'grep_search', name: 'Pattern Search', desc: 'Search for text patterns across the workspace' },
+                       { id: 'read_url', name: 'URL Scraper', desc: 'Fetch and read content from websites' },
+                       { id: 'get_file_tree', name: 'Workspace Tree', desc: 'Get a recursive view of the project structure' }
+                     ].map(tool => (
+                       <div key={tool.id} className="flex items-center justify-between p-3.5 rounded-lg border border-border/40 bg-accent/5 hover:bg-accent/10 transition-colors group">
+                          <div className="space-y-0.5">
+                             <h4 className="text-sm font-semibold">{tool.name}</h4>
+                             <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity">{tool.desc}</p>
+                          </div>
+                          <button 
+                             onClick={() => {
+                               const current = localSettings.aiTools || {};
+                               save({
+                                 ...localSettings,
+                                 aiTools: {
+                                   ...current,
+                                   [tool.id]: current[tool.id] === false ? true : false
+                                 }
+                               });
+                             }} 
+                             className={cn(
+                               "relative inline-flex h-5 w-9 items-center rounded-full transition-all focus:outline-none", 
+                               localSettings.aiTools?.[tool.id] !== false ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.3)]" : "bg-muted"
+                             )}
+                          >
+                             <span className={cn(
+                               "inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200", 
+                               localSettings.aiTools?.[tool.id] !== false ? "translate-x-5" : "translate-x-1"
+                             )} />
+                          </button>
+                       </div>
+                     ))}
+                  </div>
+               </div>
+             </div>
+           )}
+          </div>
         </div>
       </div>
 

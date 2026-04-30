@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X } from 'lucide-react';
+import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X, Settings } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { SettingsState } from './Settings';
@@ -403,7 +403,7 @@ function MessageContent({ content = '', role, onOpenFile }: { content?: string; 
 
 function SystemMessage({ content }: { content: string }) {
   return (
-    <UnifiedCollapsible title="System Configuration" icon={Terminal} colorClass="border-muted-foreground/30">
+    <UnifiedCollapsible title="System Prompt" icon={FileText} colorClass="border-muted-foreground/30">
       <div className="text-[11px] font-mono text-muted-foreground/70 whitespace-pre-wrap leading-relaxed">
         {content}
       </div>
@@ -690,7 +690,8 @@ export default function ChatTab({
           model: config.model || '',
           compatibility: config.compatibility,
           thinking: config.thinking,
-          thinkingBudget: config.thinkingBudget
+          thinkingBudget: config.thinkingBudget,
+          enabledTools: settings.aiTools
         };
 
 

@@ -74,6 +74,15 @@ const DEFAULT_SETTINGS: SettingsState = {
   },
   prompts: {
     files: []
+  },
+  aiTools: {
+    read_file: true,
+    write_file: true,
+    list_files: true,
+    run_command: true,
+    grep_search: true,
+    read_url: true,
+    get_file_tree: true
   }
 };
 
@@ -204,10 +213,13 @@ export default function App() {
       delete aiConfigs.autoApproveCommands;
     }
 
+    const aiTools = loaded.aiTools || DEFAULT_SETTINGS.aiTools;
+
     return {
       ...DEFAULT_SETTINGS,
       ...loaded,
       aiConfigs,
+      aiTools,
       activeTheme: loaded.activeTheme || DEFAULT_SETTINGS.activeTheme,
       keybindings: {
         ...DEFAULT_SETTINGS.keybindings,

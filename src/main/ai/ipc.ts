@@ -43,7 +43,7 @@ async function isPathWithinWorkspace(filePath: string, workspaceFolders: string[
 export function setupAiIpc(mainWindow: BrowserWindow) {
   ipcMain.handle('api:ai-chat', async (event, { messages, config, workspaceFolders }: { 
     messages: any[], 
-    config: ProviderConfig,
+    config: ProviderConfig & { enabledTools?: { [key: string]: boolean } },
     workspaceFolders: string[]
   }) => {
     // Log the initial request
@@ -156,7 +156,128 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
             }
           },
         },
+        grep_search: {
+          description: 'Search for a regex pattern in the workspace files.',
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {
+              pattern: { type: 'string', description: 'Regex pattern to search for' },
+              include: { type: 'string', description: 'Optional glob pattern for files to include' }
+            },
+            required: ['pattern']
+          }),
+          execute: async ({ pattern, include }: { pattern: string, include?: string }) => {
+            const results: string[] = [];
+            const regex = new RegExp(pattern, 'i');
+            
+            const walk = async (dir: string) => {
+              const files = await fs.readdir(dir, { withFileTypes: true });
+              for (const file of files) {
+                const res = path.resolve(dir, file.name);
+                if (file.isDirectory()) {
+                  if (file.name === 'node_modules' || file.name === '.git') continue;
+                  await walk(res);
+                } else {
+                  // Basic text file check by extension for now
+                  const ext = path.extname(file.name).toLowerCase();
+                  if (['.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt', '.html', '.css', '.scss'].includes(ext)) {
+                    try {
+                      const content = await fs.readFile(res, 'utf-8');
+                      if (regex.test(content)) {
+                        const lines = content.split('\n');
+                        lines.forEach((line, i) => {
+                          if (regex.test(line)) {
+                            results.push(`${path.relative(workspaceFolders[0], res)}:${i+1}: ${line.trim()}`);
+                          }
+                        });
+                      }
+                    } catch (e) {}
+                  }
+                }
+              }
+            };
+
+            for (const folder of workspaceFolders) {
+              await walk(folder);
+            }
+            
+            return results.slice(0, 50).join('\n') || 'No matches found.';
+          }
+        },
+        read_url: {
+          description: 'Fetch and read the content of a URL.',
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {
+              url: { type: 'string', description: 'The URL to fetch' }
+            },
+            required: ['url']
+          }),
+          execute: async ({ url }: { url: string }) => {
+            try {
+              const response = await fetch(url, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36' }
+              });
+              if (!response.ok) return `Error fetching URL: ${response.statusText}`;
+              const text = await response.text();
+              // Strip HTML tags for cleaner AI reading
+              return text.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
+                         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
+                         .replace(/<[^>]*>/g, ' ')
+                         .replace(/\s+/g, ' ')
+                         .trim()
+                         .slice(0, 10000);
+            } catch (e: any) {
+              return `Error: ${e.message}`;
+            }
+          }
+        },
+        get_file_tree: {
+          description: 'Get a recursive file tree of the workspace.',
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Starting directory (optional)' },
+              depth: { type: 'number', description: 'Max depth (default 3)' }
+            }
+          }),
+          execute: async ({ path: dirPath, depth = 3 }: { path?: string, depth?: number }) => {
+            const root = dirPath || workspaceFolders[0] || '.';
+            if (!(await isPathWithinWorkspace(root, workspaceFolders))) {
+              return 'Error: Access denied.';
+            }
+
+            const buildTree = async (dir: string, currentDepth: number): Promise<string> => {
+              if (currentDepth > depth) return '';
+              let output = '';
+              try {
+                const files = await fs.readdir(dir, { withFileTypes: true });
+                for (const file of files) {
+                  if (file.name === 'node_modules' || file.name === '.git') continue;
+                  const indent = '  '.repeat(currentDepth);
+                  output += `${indent}${file.isDirectory() ? '📁' : '📄'} ${file.name}\n`;
+                  if (file.isDirectory()) {
+                    output += await buildTree(path.join(dir, file.name), currentDepth + 1);
+                  }
+                }
+              } catch (e) {}
+              return output;
+            };
+
+            return await buildTree(root, 0) || '(empty)';
+          }
+        }
       };
+
+      // Filter tools based on user configuration
+      const enabledTools: any = {};
+      const toolSettings = config.enabledTools || {};
+      
+      Object.keys(tools).forEach(toolName => {
+        if (toolSettings[toolName] !== false) {
+          enabledTools[toolName] = tools[toolName];
+        }
+      });
 
       // Construct provider-specific options for thinking mode
       const providerOptions: any = {};
@@ -196,7 +317,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           const result = await streamText({
             model,
             messages,
-            tools,
+            tools: enabledTools,
             providerOptions,
             stopWhen: (stepCountIs as any)(10), 
           } as any);
