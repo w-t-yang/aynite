@@ -159,6 +159,12 @@ ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
 ipcMain.handle('api:command', async (event, { command, cwd }: { command: string, cwd?: string }) => {
   try {
     const { stdout, stderr } = await execAsync(command, { cwd: cwd || process.cwd() });
+    try {
+      const parsed = JSON.parse(stdout.trim());
+      if (parsed && typeof parsed === 'object' && parsed.status === 'error') {
+        return { error: stdout.trim(), stdout, stderr };
+      }
+    } catch (e) {}
     return { data: { stdout, stderr } };
   } catch (error: any) {
     return { error: error.message, stdout: error.stdout, stderr: error.stderr };
@@ -195,6 +201,12 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
       cwd: commandPath,
       env
     });
+    try {
+      const parsed = JSON.parse(stdout.trim());
+      if (parsed && typeof parsed === 'object' && parsed.status === 'error') {
+        return { error: stdout.trim(), stdout, stderr };
+      }
+    } catch (e) {}
     return { data: { stdout, stderr } };
   } catch (error: any) {
     return { error: error.message, stdout: error.stdout, stderr: error.stderr };

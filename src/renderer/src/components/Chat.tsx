@@ -61,8 +61,15 @@ function UnifiedCollapsible({
 
 
 // ─── Tool Call & Result Components ───────────────────────────────────
+const isErrorMessage = (content: any) => {
+  if (!content) return false;
+  const c = typeof content === 'string' ? content.trim() : JSON.stringify(content);
+  return c.startsWith('Error:') || c.startsWith('Execution Error:') || c.startsWith('❌') || c.includes('"status": "error"');
+};
 
-function ToolCallItem({ call }: { call: any }) {
+const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
+
+function ToolCallItem({ call, defaultExpanded = false }: { call: any; defaultExpanded?: boolean }) {
   const toolName = call.toolName || call.function?.name;
   const toolArgs = call.args || (typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments);
 
@@ -77,14 +84,22 @@ function ToolCallItem({ call }: { call: any }) {
   }
 
   return (
-    <UnifiedCollapsible title={toolName} icon={Icon} colorClass={colorClass}>
+    <UnifiedCollapsible title={toolName} icon={Icon} colorClass={colorClass} defaultExpanded={defaultExpanded}>
       <pre className="text-[10px] font-mono text-muted-foreground/70 whitespace-pre-wrap overflow-auto max-h-60">
         {JSON.stringify(toolArgs, null, 2)}
       </pre>
       {call.result && (
         <div className="mt-2 border-t border-border/5 pt-2">
-          <div className="text-[9px] text-green-500/60 font-bold mb-1 uppercase tracking-wider">Result</div>
-          <pre className="text-[10px] font-mono text-muted-foreground/60 whitespace-pre-wrap max-h-96 overflow-auto opacity-90">
+          <div className={cn(
+            "text-[9px] font-bold mb-1 uppercase tracking-wider",
+            isErrorMessage(call.result) ? "text-destructive/60" : "text-green-500/60"
+          )}>
+            {isErrorMessage(call.result) ? 'Error' : 'Result'}
+          </div>
+          <pre className={cn(
+            "text-[10px] font-mono whitespace-pre-wrap max-h-96 overflow-auto opacity-90",
+            isErrorMessage(call.result) ? "text-destructive/80" : "text-muted-foreground/60"
+          )}>
             {typeof call.result === 'string' ? call.result : JSON.stringify(call.result, null, 2)}
           </pre>
         </div>
@@ -93,10 +108,10 @@ function ToolCallItem({ call }: { call: any }) {
   );
 }
 
-function ThoughtBlock({ content }: { content: string }) {
+function ThoughtBlock({ content, defaultExpanded = false }: { content: string; defaultExpanded?: boolean }) {
   if (!content?.trim()) return null;
   return (
-    <UnifiedCollapsible title="Thinking Process" icon={Bot} colorClass="border-primary/40">
+    <UnifiedCollapsible title="Thinking Process" icon={Bot} colorClass="border-primary/40" defaultExpanded={defaultExpanded}>
       <div className="text-[11px] leading-relaxed text-muted-foreground/80 italic whitespace-pre-wrap">
         {content}
       </div>
@@ -104,10 +119,19 @@ function ThoughtBlock({ content }: { content: string }) {
   );
 }
 
-function ToolResultMessage({ name, content }: { name?: string; content: string }) {
+function ToolResultMessage({ name, content, defaultExpanded = false }: { name?: string; content: string; defaultExpanded?: boolean }) {
+  const isError = isErrorMessage(content);
   return (
-    <UnifiedCollapsible title={`Result: ${name}`} icon={Check} colorClass="border-green-500/40">
-      <pre className="text-[10px] font-mono text-muted-foreground/60 whitespace-pre-wrap max-h-96 overflow-auto">
+    <UnifiedCollapsible 
+      title={isError ? `Error: ${name}` : `Result: ${name}`} 
+      icon={isError ? XCircle : Check} 
+      colorClass={isError ? "border-destructive/40" : "border-green-500/40"} 
+      defaultExpanded={defaultExpanded}
+    >
+      <pre className={cn(
+        "text-[10px] font-mono whitespace-pre-wrap max-h-96 overflow-auto",
+        isError ? "text-destructive/80" : "text-muted-foreground/60"
+      )}>
         {content}
       </pre>
     </UnifiedCollapsible>
@@ -234,52 +258,68 @@ function ChatMessage({
         <div className="text-foreground text-sm leading-relaxed">
           {msg.role === 'system' ? (
             <SystemMessage content={msg.content} />
-          ) : msg.role === 'assistant' ? (
-            <div className="space-y-1.5">
-              {/* 1. Thinking Blocks First */}
-              {msg.thinking && <ThoughtBlock content={msg.thinking} />}
-              {[...(msg.content || '').matchAll(/<thought>([\s\S]*?)<\/thought>/g)].map((m, idx) => (
-                <ThoughtBlock key={idx} content={m[1].trim()} />
-              ))}
+          ) : msg.role === 'assistant' ? (() => {
+            const hasToolCalls = msg.tool_calls && msg.tool_calls.length > 0;
+            const hasContent = !!(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim();
+            
+            return (
+              <div className="space-y-1.5">
+                {/* 1. Thinking Blocks First */}
+                {msg.thinking && (
+                  <ThoughtBlock 
+                    content={msg.thinking} 
+                    defaultExpanded={isLast && !hasContent && !hasToolCalls} 
+                  />
+                )}
+                {[...(msg.content || '').matchAll(/<(?:thought|think)>([\s\S]*?)<\/(?:thought|think)>/g)].map((m, idx, array) => (
+                  <ThoughtBlock 
+                    key={idx} 
+                    content={m[1].trim()} 
+                    defaultExpanded={isLast && !hasContent && !hasToolCalls && idx === array.length - 1} 
+                  />
+                ))}
 
-              {/* 2. Content Block Second (Now Collapsible) */}
-              {(msg.content || '').replace(/<thought>[\s\S]*?<\/thought>/g, '').trim() && (
-                <UnifiedCollapsible 
-                  title="AI Response" 
-                  icon={Bot} 
-                  colorClass="border-primary/40" 
-                  defaultExpanded={isLast}
-                  borderPosition="bottom"
-                >
-
-                  <div className="py-0.5 relative group/content">
-                    <MessageContent 
-                      content={msg.content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim()} 
-                      role="assistant" 
-                      onOpenFile={onOpenFile} 
-                    />
-                    <div className="flex justify-end mt-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => onCopy(msg.content || '')}
-                        className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider"
-                        title="Copy Response"
-                      >
-                        <Copy size={12} />
-                        <span>Copy</span>
-                      </button>
+                {/* 2. Content Block Second */}
+                {(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim() && (
+                  <UnifiedCollapsible 
+                    title="AI Response" 
+                    icon={Bot} 
+                    colorClass="border-primary/40" 
+                    defaultExpanded={isLast && !hasToolCalls}
+                    borderPosition="bottom"
+                  >
+                    <div className="py-0.5 relative group/content">
+                      <MessageContent 
+                        content={msg.content.replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim()} 
+                        role="assistant" 
+                        onOpenFile={onOpenFile} 
+                      />
+                      <div className="flex justify-end mt-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => onCopy(msg.content || '')}
+                          className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider"
+                          title="Copy Response"
+                        >
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </UnifiedCollapsible>
-              )}
+                  </UnifiedCollapsible>
+                )}
 
-
-              {/* 3. Tool Calls Block Third */}
-              {msg.tool_calls?.map((call, idx) => (
-                <ToolCallItem key={idx} call={call} />
-              ))}
-            </div>
-          ) : msg.role === 'tool' ? (
-            <ToolResultMessage name={msg.name} content={msg.content} />
+                {/* 3. Tool Calls Block Third */}
+                {msg.tool_calls?.map((call, idx) => (
+                  <ToolCallItem 
+                    key={idx} 
+                    call={call} 
+                    defaultExpanded={isLast && idx === msg.tool_calls!.length - 1} 
+                  />
+                ))}
+              </div>
+            );
+          })() : msg.role === 'tool' ? (
+            <ToolResultMessage name={msg.name} content={msg.content} defaultExpanded={isLast} />
           ) : (
             <div className="py-0.5">
               <MessageContent content={msg.content} role={msg.role} onOpenFile={onOpenFile} />

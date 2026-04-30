@@ -12,7 +12,10 @@
           "theme",
           "plugin",
           "layer",
-          "import"
+          "import",
+          "utility",
+          "variant",
+          "source"
         ]
       }
     ]

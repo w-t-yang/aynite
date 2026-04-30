@@ -361,7 +361,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
         {/* Settings Content */}
         <div className="flex-1 p-6 overflow-y-auto overflow-x-auto">
-          <div className="max-w-3xl mx-auto w-full min-w-[640px]">
+          <div className="max-w-5xl mx-auto w-full min-w-[640px]">
             {activeTab !== 'about' && (
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'AI Provider' : activeTab === 'prompts' ? 'System Prompt' : activeTab === 'tools' ? 'Tools' : activeTab}</h2>
@@ -384,7 +384,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
             {activeTab === 'appearance' && (
-              <div className="space-y-6 max-w-2xl">
+              <div className="space-y-6 max-w-4xl">
                 <p className="text-sm text-muted-foreground mb-6">Customize themes, fonts, and the visual aesthetic of your workspace.</p>
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -461,7 +461,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
             {activeTab === 'keybindings' && (
-              <div className="space-y-6 max-w-2xl">
+              <div className="space-y-6 max-w-4xl">
                 <p className="text-sm text-muted-foreground mb-6">Configure keyboard shortcuts for navigation, editing, and assistant actions.</p>
                 <div className="space-y-6 pb-10">
                   <div className="space-y-1">
@@ -518,7 +518,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
             {activeTab === 'ai' && (
-              <div className="space-y-6 max-w-2xl">
+              <div className="space-y-6 max-w-4xl">
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-sm text-muted-foreground">Manage multiple AI provider configurations and select the active one.</p>
@@ -657,7 +657,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
 
             {activeTab === 'prompts' && (
-              <div className="space-y-6 max-w-2xl pb-10">
+              <div className="space-y-6 max-w-4xl pb-10">
                 <div>
                   <p className="text-sm text-muted-foreground mb-6">Define the behavior, persona, and rules for the Aynite Assistant.</p>
                   <div className="flex items-center justify-between mb-4">
@@ -711,7 +711,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
             {activeTab === 'skills' && (
-              <div className="space-y-6 max-w-2xl">
+              <div className="space-y-6 max-w-4xl">
                 <p className="text-sm text-muted-foreground mb-6">Manage advanced skill directories and automated agent workflows.</p>
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -756,7 +756,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
             {activeTab === 'commands' && (
-              <div className="space-y-6 max-w-2xl">
+              <div className="space-y-6 max-w-4xl">
                 <p className="text-sm text-muted-foreground mb-6">Configure custom shell command directories for assistant execution.</p>
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -801,7 +801,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
             {activeTab === "tools" && (
-              <div className="space-y-6 max-w-2xl pb-10">
+              <div className="space-y-6 max-w-4xl pb-10">
                 <div>
                   <p className="text-sm text-muted-foreground mb-6">Enable or disable individual capabilities available to the Aynite Assistant.</p>
                   <div className="grid grid-cols-1 gap-3">
@@ -848,7 +848,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             )}
 
             {activeTab === 'about' && (
-              <div className="space-y-10 max-w-2xl pb-10">
+              <div className="space-y-10 max-w-4xl pb-10">
                 <div className="flex flex-col items-center text-center space-y-4 pt-4">
                   <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20">
                     <Bot size={48} className="text-primary-foreground" />

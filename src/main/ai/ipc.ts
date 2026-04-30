@@ -150,9 +150,21 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
 
             try {
               const { stdout, stderr } = await execAsync(command, { cwd: runCwd });
-              return `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+              const output = `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+              
+              // Check if output is JSON and indicates an error status
+              try {
+                const parsed = JSON.parse(stdout.trim());
+                if (parsed && typeof parsed === 'object' && parsed.status === 'error') {
+                  throw new Error(output);
+                }
+              } catch (jsonErr) {
+                // Not JSON or not an error status, continue as normal
+              }
+              
+              return output;
             } catch (e: any) {
-              return `Execution Error:\n${e.message}\n\nSTDOUT:\n${e.stdout}\n\nSTDERR:\n${e.stderr}`;
+              return `Execution Error:\n${e.message}\n\nSTDOUT:\n${e.stdout || ''}\n\nSTDERR:\n${e.stderr || ''}`;
             }
           },
         },

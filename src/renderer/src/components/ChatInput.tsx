@@ -469,6 +469,9 @@ function serializeTiptapToText(json: any): string {
     return json.text || '';
   }
 
+  if (json.type === 'hardBreak') {
+    return '\n';
+  }
   if (json.type === 'mention') {
     const type = json.attrs?.isDirectory ? 'dir' : 'file';
     return `@${type}[${json.attrs?.label || ''}](${json.attrs?.id || ''})`;

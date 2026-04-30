@@ -7,32 +7,7 @@
   const jsonFile = window.STOCK_JSON || params.get('json') || 'AAPL.json';
   document.title = `Stock View — ${jsonFile.replace('.json', '')}`;
 
-  // ── Build file picker if multiple JSONs exist ──────────────
-  try {
-    const dirList = await fetch('./');
-    const text = await dirList.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/html');
-    const links = [...doc.querySelectorAll('a')]
-      .map(a => a.getAttribute('href'))
-      .filter(h => h && h.endsWith('.json'));
-
-    if (links.length > 1) {
-      const picker = document.createElement('div');
-      picker.className = 'file-picker';
-      picker.innerHTML = `
-        <span>📁 Stock data:</span>
-        <select id="json-picker">${links.map(f => {
-          const sel = f === jsonFile ? ' selected' : '';
-          return `<option value="${f}"${sel}>${f}</option>`;
-        }).join('')}</select>
-      `;
-      document.body.insertBefore(picker, document.body.firstChild);
-      document.getElementById('json-picker').addEventListener('change', function () {
-        window.location.search = '?json=' + encodeURIComponent(this.value);
-      });
-    }
-  } catch (_) { /* no directory listing — use the default jsonFile */ }
+  // (Directory listing removed to avoid ERR_UNEXPECTED on custom protocols)
 
   // ── Fetch the JSON data ────────────────────────────────────
   let data;
