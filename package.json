@@ -10,7 +10,13 @@
     "preview": "electron-vite preview",
     "test:ai": "tsx scripts/test-ai-providers.ts",
     "patch-tag": "npm version patch && git push && git push --tags",
-    "patch-beta": "npm version prerelease --preid=beta && git push && git push --tags"
+    "patch-beta": "npm version prerelease --preid=beta && git push && git push --tags",
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "build:appimage": "electron-vite build && electron-builder --linux AppImage",
+    "build:deb": "electron-vite build && electron-builder --linux deb",
+    "build:pacman": "electron-vite build && electron-builder --linux pacman",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:win": "electron-vite build && electron-builder --win"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.72",

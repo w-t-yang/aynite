@@ -4,6 +4,10 @@ import { existsSync, readdirSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import yaml from 'js-yaml';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
 import { DEFAULT_THEMES } from './default_configs/themes';
 import { DEFAULT_PROMPTS } from './default_configs/prompts';
@@ -94,7 +98,7 @@ export async function deleteTheme(name: string): Promise<boolean> {
 
 export async function getSystemFonts(): Promise<string[]> {
   try {
-    const { stdout } = await (await import('util')).promisify((await import('child_process')).exec)('fc-list :lang=en --format="%{family}\n"');
+    const { stdout } = await execAsync('fc-list :lang=en --format="%{family}\n"');
     const fonts = [...new Set(stdout.split('\n').map(f => f.trim()).filter(Boolean))].sort();
     return fonts;
   } catch {

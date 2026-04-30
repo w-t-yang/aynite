@@ -5,7 +5,12 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin({
+      exclude: [
+        'ai', '@ai-sdk/openai', '@ai-sdk/anthropic', '@ai-sdk/google', '@ai-sdk/deepseek', '@ai-sdk/provider-utils', 'zod',
+        'chokidar', 'js-yaml', 'electron-is-dev', 'electron-log', 'dotenv', 'electron-updater'
+      ]
+    })]
   },
   preload: {
     plugins: [externalizeDepsPlugin()]

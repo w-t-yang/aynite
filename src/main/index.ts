@@ -76,7 +76,6 @@ if (process.platform === 'linux') {
 }
 
 app.whenReady().then(async () => {
-  const { protocol, net } = await import('electron');
   protocol.handle('aynite-resource', (request) => {
     const url = request.url.replace('aynite-resource://', '');
     try {
