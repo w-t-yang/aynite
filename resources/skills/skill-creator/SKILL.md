@@ -29,6 +29,17 @@ Then after the skill is done (but again, the order is flexible), you can also ru
 
 Cool? Cool.
 
+## Output Location
+
+Before creating any files, confirm the output folder with the user. If the user doesn't specify one:
+
+- **Linux / Mac**: Skills are stored in `~/.aynite/skills/`
+- **Windows**: Skills are stored in `%AppData%/aynite/skills/`
+
+Each skill lives in its own subdirectory: `<output-folder>/<skill-name>/`
+
+Create the folder (and the skills parent folder) if they don't exist.
+
 ## Communicating with the user
 
 The skill creator is liable to be used by people across a wide range of familiarity with technical jargon. If you haven't heard (and how could you, it's only very recently that it started), there's a trend now where the power of Claude is inspiring plumbers to open up their terminals, parents and grandparents to google "how to install npm". On the other hand, the bulk of users are probably fairly computer-literate.
@@ -417,6 +428,16 @@ After packaging, direct the user to the resulting `.skill` file path so they can
 
 ---
 
+## After Creation: Informing the User (Aynite)
+
+When the skill is finalized and saved to the output folder, you MUST tell the user:
+
+1. **What was created** — The name of the skill and where it was saved (full path).
+2. **How to invoke it** — Type `/` followed by the skill name in the chat (e.g., `/my-skill`). The skill will be available for the AI agent to use whenever its description matches the user's request.
+3. **Reload the app** — Tell the user to press **`Ctrl+Shift+R`** to reload Aynite. Until they reload, the new skill won't be discovered and won't be available for triggering.
+
+---
+
 ## Claude.ai-specific instructions
 
 In Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:
@@ -479,6 +500,7 @@ Repeating one more time the core loop here for emphasis:
   - Run quantitative evals
 - Repeat until you and the user are satisfied
 - Package the final skill and return it to the user.
+- **After finalizing**: Tell the user the skill name, how to invoke it with `/skill-name`, and remind them to press `Ctrl+Shift+R` to reload Aynite so the new skill is discovered.
 
 Please add steps to your TodoList, if you have such a thing, to make sure you don't forget. If you're in Cowork, please specifically put "Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases" in your TodoList to make sure it happens.
 

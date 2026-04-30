@@ -7,6 +7,15 @@ description: Create custom Aynite themes. Use this skill when a user wants to cr
 
 Create beautiful, harmonious Aynite themes from user descriptions.
 
+## Output Location
+
+Before creating any files, confirm the output folder with the user. If the user doesn't specify one:
+
+- **Linux / Mac**: Themes are stored in `~/.aynite/themes/`
+- **Windows**: Themes are stored in `%AppData%/aynite/themes/`
+
+If the folder doesn't exist, create it.
+
 ## Theme File Format
 
 Aynite themes are stored as JSON files in `~/.aynite/themes/`. Each file contains:
@@ -102,12 +111,22 @@ When creating themes, follow these principles:
 
 ## Workflow
 
-1. Ask the user what mood, style, or colors they want (e.g., "ocean blue", "warm sunset", "cyberpunk neon", "forest green")
-2. Generate a complete theme JSON with all 32 color properties
-3. Save it to `~/.aynite/themes/<theme-id>.json` where `<theme-id>` is the lowercase, hyphenated name
-4. Set `"isSystem": false` for user-created themes
-5. Set `"type"` to `"dark"` or `"light"` based on the background luminance
-6. Tell the user they can switch to the new theme in Settings > Appearance
+1. **Confirm the output folder** — Ask the user where to save the theme. If they don't specify, use the default Aynite themes folder (`~/.aynite/themes/` on Linux/Mac, `%AppData%/aynite/themes/` on Windows). Create the folder if it doesn't exist.
+
+2. **Ask the user** what mood, style, or colors they want (e.g., "ocean blue", "warm sunset", "cyberpunk neon", "forest green").
+
+3. **Generate** a complete theme JSON with all 32 color properties.
+
+4. **Save** it to `<themes-folder>/<theme-id>.json` where `<theme-id>` is the lowercase, hyphenated name (e.g., `ocean.json`, `sunset-glow.json`).
+
+5. **Set** `"isSystem": false` for user-created themes.
+
+6. **Set** `"type"` to `"dark"` or `"light"` based on the background luminance.
+
+7. **Tell the user what you created** — After saving, clearly tell the user:
+   - The name of the theme and where it was saved
+   - How to switch to it: go to **Settings → Appearance** and select it from the dropdown
+   - **Important**: They should press **`Ctrl+Shift+R`** to reload the app so Aynite discovers the new theme. Until they reload, it won't appear in the theme list.
 
 ## Example
 
