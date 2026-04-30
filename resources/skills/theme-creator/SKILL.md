@@ -1,11 +1,11 @@
 ---
 name: theme-creator
-description: Create custom Aynite IDE themes. Use this skill when a user wants to create a new color theme, customize their editor appearance, design a dark/light theme, or generate a theme based on a mood, image, or color palette. Also use when users mention "theme", "color scheme", "appearance", or "look and feel" of the IDE.
+description: Create custom Aynite themes. Use this skill when a user wants to create a new color theme, customize their editor appearance, design a dark/light theme, or generate a theme based on a mood, image, or color palette. Also use when users mention "theme", "color scheme", "appearance", or "look and feel" of the editor.
 ---
 
 # Theme Creator
 
-Create beautiful, harmonious Aynite IDE themes from user descriptions.
+Create beautiful, harmonious Aynite themes from user descriptions.
 
 ## Theme File Format
 

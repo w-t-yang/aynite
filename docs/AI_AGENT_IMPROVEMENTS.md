@@ -1,6 +1,6 @@
 # AI Agent Improvements — Roadmap
 
-This document tracks the AI Agent features implemented and planned for the Aynite IDE.
+This document tracks the AI Agent features implemented and planned for Aynite.
 
 ## ✅ Completed (v0.2)
 
@@ -22,7 +22,7 @@ This document tracks the AI Agent features implemented and planned for the Aynit
   - `list_files` — lists directory contents within the workspace
   - `run_command` — executes a shell command (requires user approval)
 - Iterative loop: model can call tools multiple times before producing a final answer (max 10 iterations).
-- System prompt establishes Aynite as a coding assistant.
+- System prompt establishes Aynite as an assistant.
 
 ### Security & Permissions
 - **Path validation**: All file operations validate that the target path resolves within registered workspace folders. Requests outside the workspace are rejected with an error.

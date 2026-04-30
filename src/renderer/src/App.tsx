@@ -26,7 +26,7 @@ type Tab = {
 };
 
 const DEFAULT_SETTINGS: SettingsState = {
-  activeTheme: 'dark',
+  activeTheme: 'light',
   aiProvider: 'gemini',
   keybindings: {
     global: {

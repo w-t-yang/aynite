@@ -1,6 +1,6 @@
 # Frontend Design Guidelines & Skill Profile
 
-This document serves as both a design principle guideline for the Aynite IDE and a reference skill profile for generating frontend components. It consolidates general frontend design philosophies with the specific, highly-polished aesthetic choices observed in the Aynite app.
+This document serves as both a design principle guideline for Aynite and a reference skill profile for generating frontend components. It consolidates general frontend design philosophies with the specific, highly-polished aesthetic choices observed in the Aynite app.
 
 ## 1. Core Design Philosophy
 *Consolidated from the `frontend-design` skill profile.*
@@ -19,7 +19,7 @@ Our goal is to create distinctive, production-grade frontend interfaces that avo
 ## 2. Aynite App Visual Design Principles
 *Derived from the current `src/renderer` implementation.*
 
-The Aynite IDE frontend executes a refined, highly functional, and seamless visual experience. The core design principles observed in the current app are:
+The Aynite frontend executes a refined, highly functional, and seamless visual experience. The core design principles observed in the current app are:
 
 ### A. Dynamic, Variable-Driven Theming
 - **Tokenized Color System**: The app relies exclusively on dynamic CSS variables (`--background`, `--foreground`, `--muted`, `--accent`, etc.) mapped to logical UI regions via Tailwind. 

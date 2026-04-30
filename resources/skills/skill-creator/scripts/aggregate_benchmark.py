@@ -97,7 +97,7 @@ def load_run_results(benchmark_dir: Path) -> dict:
             except ValueError:
                 eval_id = eval_idx
 
-        # Discover config directories dynamically rather than hardcoding names
+        # Discover config directories dynamically rather than explicitly naming names
         for config_dir in sorted(eval_dir.iterdir()):
             if not config_dir.is_dir():
                 continue

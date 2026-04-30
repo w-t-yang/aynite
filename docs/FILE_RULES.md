@@ -1,6 +1,6 @@
 # Aynite File Handling Rules
 
-This document outlines the official rules for file handling, rendering, and editing within the Aynite IDE.
+This document outlines the official rules for file handling, rendering, and editing within Aynite.
 
 ## 1. Supported File Types
 

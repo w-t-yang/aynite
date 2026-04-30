@@ -94,6 +94,11 @@
         "from": "resources/commands",
         "to": "commands",
         "filter": ["**/*"]
+      },
+      {
+        "from": "resources/aynite-playbook",
+        "to": "aynite-playbook",
+        "filter": ["**/*"]
       }
     ],
     "mac": {

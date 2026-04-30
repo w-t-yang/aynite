@@ -9,7 +9,7 @@ example: ">hello-command MyName"
 ---
 
 # Hello World Command
-This is a demonstration command for Aynite IDE. It shows how to:
+This is a demonstration command for Aynite. It shows how to:
 1. Use an entry point (`run.sh`).
 2. Use support scripts (`scripts/hello.py`).
-3. Read environment variables provided by the IDE.
+3. Read environment variables provided by the editor.

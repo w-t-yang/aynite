@@ -5,10 +5,10 @@ description: A friendly skill that provides a warm welcome and explains its capa
 
 # Hello Skill
 
-This is a demonstration skill for the Aynite IDE. 
+This is a demonstration skill for Aynite. 
 
 ## Capabilities
-- **Friendly Greetings**: I can greet you and explain the features of the IDE.
+- **Friendly Greetings**: I can greet you and explain the features of the editor.
 - **Tutorial Mode**: I can provide step-by-step guidance on how to create commands and skills.
 - **System Information**: I can help you understand how to use the slash commands (/) for skills and mentions (>) for direct commands.
 

@@ -9,7 +9,7 @@ def main():
     # Demonstrating environment variable usage
     current_file = os.environ.get('AYNITE_CURRENT_FILE')
     
-    print("\n[Command Logic] This command can read environment variables provided by Aynite IDE.")
+    print("\n[Command Logic] This command can read environment variables provided by Aynite.")
     
     if current_file:
         print(f"AYNITE_CURRENT_FILE is set to: {current_file}")

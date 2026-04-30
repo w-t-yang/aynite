@@ -26,7 +26,7 @@ interface SidebarProps {
 export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceChange, onSelectFile, onOpenSettings, onClose }: SidebarProps) {
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [workspaces, setWorkspaces] = useState<string[]>([]);
-  const [activeWorkspace, setActiveWorkspace] = useState('default workspace');
+  const [activeWorkspace, setActiveWorkspace] = useState('aynite-workspace');
   const [showNewWorkspaceModal, setShowNewWorkspaceModal] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileNode } | null>(null);

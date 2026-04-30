@@ -1,6 +1,6 @@
 ---
 name: command-creator
-description: Create new direct commands, modify existing commands. Use when users want to create a deterministic command that is directly executed by the IDE via a shell script.
+description: Create new direct commands, modify existing commands. Use when users want to create a deterministic command that is directly executed by the editor via a shell script.
 ---
 
 # Command Creator
@@ -38,7 +38,7 @@ Detailed instructions on how to use this command...
 
 ## The run.sh Entry Point
 The `run.sh` script is the primary execution point. It should:
-1. Parse parameters passed by the IDE.
+1. Parse parameters passed by the editor.
 2. Delegate to scripts in the `scripts/` folder if necessary (e.g., `python3 scripts/process.py`).
 3. Provide clear output or error messages.
 

@@ -20,6 +20,16 @@ function expandHome(filepath: string): string {
   return filepath;
 }
 
+function getBundledResourcesPath(): string {
+  if (app.isPackaged) {
+    return process.resourcesPath;
+  } else {
+    // In dev mode, resources are in the project root
+    // Using process.cwd() is more reliable than app.getAppPath() in some electron-vite setups
+    return path.join(process.cwd(), 'resources');
+  }
+}
+
 export function getConfigDir() {
   if (process.platform === 'win32') {
     return path.join(app.getPath('appData'), 'aynite');
@@ -69,7 +79,7 @@ export async function getTheme(name: string): Promise<any> {
     const data = await fs.readFile(themePath, 'utf-8');
     return JSON.parse(data);
   } catch {
-    return DEFAULT_THEMES['dark'];
+    return DEFAULT_THEMES['light'];
   }
 }
 
@@ -145,13 +155,13 @@ export async function initAppFolders() {
 
   const configDefault = {
     lastUsed: new Date().toISOString(),
-    activeTheme: 'nord',
+    activeTheme: 'light',
     skills: { folders: [skillsDir] },
     commands: { folders: [commandsDir] },
     prompts: { files: Object.keys(DEFAULT_PROMPTS).map(f => path.join(baseDir, "prompts", f)) }
   };
   const ignoreDefault = ['.git', 'node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
-  const workspacesDefault = { active: 'default workspace', list: ['default workspace'] };
+  const workspacesDefault = { active: 'aynite-workspace', list: ['aynite-workspace'] };
 
   const checkAndWrite = async (filename: string, content: any) => {
     const p = path.join(configDir, filename);
@@ -170,13 +180,65 @@ export async function initAppFolders() {
     await fs.writeFile(ignorePath, ignoreDefault, 'utf-8');
   }
 
-  // Initialize themes
+  // 1. Restore aynite-playbook FIRST
+  await restoreAynitePlaybook();
+
+  // 2. Initialize themes
   await initThemes();
 
-  // Ensure default workspace exists
-  const defaultWorkspacePath = path.join(workspacesDir, 'default workspace.json');
-  if (!existsSync(defaultWorkspacePath)) {
-    await fs.writeFile(defaultWorkspacePath, JSON.stringify({ folders: [], tabs: [], activeTabId: '' }, null, 2), 'utf-8');
+  // 3. Migrate/Initialize workspaces.json
+  const workspacesJsonPath = path.join(configDir, 'workspaces.json');
+  let workspacesConfig: any = null;
+  if (existsSync(workspacesJsonPath)) {
+    try {
+      const data = await fs.readFile(workspacesJsonPath, 'utf-8');
+      workspacesConfig = JSON.parse(data);
+      // Migrate if old name exists
+      if (workspacesConfig.active === 'default workspace') {
+        workspacesConfig.active = 'aynite-workspace';
+        workspacesConfig.list = (workspacesConfig.list || []).map((ws: string) => ws === 'default workspace' ? 'aynite-workspace' : ws);
+        if (!workspacesConfig.list.includes('aynite-workspace')) workspacesConfig.list.push('aynite-workspace');
+        await fs.writeFile(workspacesJsonPath, JSON.stringify(workspacesConfig, null, 2), 'utf-8');
+      }
+    } catch (e) {
+      console.error('Error migrating workspaces.json:', e);
+    }
+  }
+
+  if (!workspacesConfig) {
+    await checkAndWrite('workspaces.json', workspacesDefault);
+  }
+
+  // 4. Ensure aynite-workspace.json exists and is populated
+  const defaultWorkspacePath = path.join(workspacesDir, 'aynite-workspace.json');
+  const playbookPath = path.join(baseDir, 'aynite-playbook');
+  const welcomeMdPath = path.join(playbookPath, 'Welcome.md');
+
+  let shouldInitWorkspaceFile = !existsSync(defaultWorkspacePath);
+  if (!shouldInitWorkspaceFile) {
+    try {
+      const data = await fs.readFile(defaultWorkspacePath, 'utf-8');
+      const wsData = JSON.parse(data);
+      // If workspace exists but has no folders or tabs, we force the playbook
+      if ((!wsData.folders || wsData.folders.length === 0) && (!wsData.tabs || wsData.tabs.length === 0)) {
+        shouldInitWorkspaceFile = true;
+      }
+    } catch {
+      shouldInitWorkspaceFile = true;
+    }
+  }
+
+  if (shouldInitWorkspaceFile) {
+    await fs.writeFile(defaultWorkspacePath, JSON.stringify({ 
+      folders: [playbookPath], 
+      tabs: [{
+        id: `file-${welcomeMdPath}`,
+        type: 'file',
+        title: 'Welcome.md',
+        filepath: welcomeMdPath
+      }], 
+      activeTabId: `file-${welcomeMdPath}`
+    }, null, 2), 'utf-8');
   }
 
   // Ensure skills folder exists
@@ -290,7 +352,7 @@ export async function loadConfig() {
   const { ignore: _, ...restConfig } = mainConfig;
 
   return {
-    activeTheme: mainConfig.activeTheme || 'dark',
+    activeTheme: mainConfig.activeTheme || 'light',
     ignore: await getIgnorePatterns(),
     keybindings: keybindings,
     aiProvider: ai.provider || 'gemini',
@@ -379,15 +441,8 @@ export async function restoreSkill(skillName: string) {
   const skillsDir = path.join(getConfigDir(), 'skills');
   
   // Robust bundled path detection
-  let bundledSkillsPath = '';
-  if (app.isPackaged) {
-    bundledSkillsPath = path.join(process.resourcesPath, 'skills');
-  } else {
-    // In dev mode, resources are in the project root
-    bundledSkillsPath = path.join(app.getAppPath(), 'resources', 'skills');
-  }
-
-  const srcDir = path.join(bundledSkillsPath, skillName);
+  const bundledResourcesPath = getBundledResourcesPath();
+  const srcDir = path.join(bundledResourcesPath, 'skills', skillName);
   const destDir = path.join(skillsDir, skillName);
 
   console.log(`[Restore] Source: ${srcDir}`);
@@ -404,6 +459,34 @@ export async function restoreSkill(skillName: string) {
     }
   } else {
     console.warn(`[Restore] Source skill directory not found: ${srcDir}`);
+    return false;
+  }
+}
+
+export async function restoreAynitePlaybook() {
+  const baseDir = getConfigDir();
+  const destDir = path.join(baseDir, 'aynite-playbook');
+  const welcomeMdPath = path.join(destDir, 'Welcome.md');
+
+  if (existsSync(welcomeMdPath)) {
+    // If it exists, we don't do anything as per user request
+    return true;
+  }
+
+  const bundledResourcesPath = getBundledResourcesPath();
+  const bundledPlaybookPath = path.join(bundledResourcesPath, 'aynite-playbook');
+
+  if (existsSync(bundledPlaybookPath)) {
+    try {
+      await fs.mkdir(destDir, { recursive: true });
+      await fs.cp(bundledPlaybookPath, destDir, { recursive: true });
+      return true;
+    } catch (e) {
+      console.error(`[Restore] Error copying aynite-playbook:`, e);
+      return false;
+    }
+  } else {
+    console.warn(`[Restore] Source aynite-playbook directory not found: ${bundledPlaybookPath}`);
     return false;
   }
 }
@@ -602,14 +685,8 @@ export async function restoreDefaultCommands() {
 export async function restoreCommand(commandName: string) {
   const commandsDir = path.join(getConfigDir(), 'commands');
   
-  let bundledCommandsPath = '';
-  if (app.isPackaged) {
-    bundledCommandsPath = path.join(process.resourcesPath, 'commands');
-  } else {
-    bundledCommandsPath = path.join(app.getAppPath(), 'resources', 'commands');
-  }
-
-  const srcDir = path.join(bundledCommandsPath, commandName);
+  const bundledResourcesPath = getBundledResourcesPath();
+  const srcDir = path.join(bundledResourcesPath, 'commands', commandName);
   const destDir = path.join(commandsDir, commandName);
 
   console.log(`[Restore] Source: ${srcDir}`);
@@ -740,7 +817,7 @@ async function getWorkspacesConfig() {
     const data = await fs.readFile(configPath, 'utf-8');
     return JSON.parse(data);
   } catch {
-    return { active: 'default workspace', list: ['default workspace'] };
+    return { active: 'aynite-workspace', list: ['aynite-workspace'] };
   }
 }
 
