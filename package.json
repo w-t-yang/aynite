@@ -1,6 +1,6 @@
 {
   "name": "aynite-app",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "main": "./out/main/index.js",
   "author": "Wentao Yang <winterock.yang@gmail.com>",
   "license": "MIT",
