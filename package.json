@@ -1,14 +1,16 @@
 {
   "name": "aynite-app",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0-beta.1",
   "main": "./out/main/index.js",
-  "author": "Wentao",
+  "author": "Wentao Yang <winterock.yang@gmail.com>",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "test:ai": "tsx scripts/test-ai-providers.ts"
+    "test:ai": "tsx scripts/test-ai-providers.ts",
+    "patch-tag": "npm version patch && git push && git push --tags",
+    "patch-beta": "npm version prerelease --preid=beta && git push && git push --tags"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.72",
@@ -96,6 +98,7 @@
         "rpm",
         "pacman"
       ],
+      "maintainer": "Wentao <winterock.yang@gmail.com>",
       "category": "Development"
     },
     "nsis": {

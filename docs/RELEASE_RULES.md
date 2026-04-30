@@ -29,7 +29,7 @@ Tags must be prefixed with `v`.
    ```
 3. Push the tag to GitHub:
    ```bash
-   git push origin main --tags
+   git push --tags
    ```
 
 ## Automated Pipeline
