@@ -19,6 +19,7 @@
 - [] plan
 - [] tools (include skills and tasks)?
 - [] advanced agent features
+- [] rag
 
 ## git
 - []treeview

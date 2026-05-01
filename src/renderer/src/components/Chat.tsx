@@ -5,6 +5,8 @@ import remarkGfm from 'remark-gfm';
 import { SettingsState } from '../lib/types';
 import ChatInput, { ChatInputHandle } from './ChatInput';
 import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig } from '../lib/agent';
+import { SelectionPopover } from './ui/SelectionPopover';
+import { cn } from '../lib/utils';
 
 
 // ─── Message Types ───────────────────────────────────────────────────
@@ -41,7 +43,7 @@ export function UnifiedCollapsible({
           className="flex-1 flex items-center justify-between"
         >
           <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
-            <Icon size={12} className={textColor} />
+            {Icon && <Icon size={12} className={textColor} />}
             <span>{title}</span>
           </div>
           <ChevronRight size={10} className={`text-muted-foreground/40 group-hover:text-primary transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
@@ -66,8 +68,6 @@ const isErrorMessage = (content: any) => {
   const c = typeof content === 'string' ? content.trim() : JSON.stringify(content);
   return c.startsWith('Error:') || c.startsWith('Execution Error:') || c.startsWith('❌') || c.includes('"status": "error"');
 };
-
-const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
 
 function ToolCallItem({ call, defaultExpanded = false }: { call: any; defaultExpanded?: boolean }) {
   const toolName = call.toolName || call.function?.name;
@@ -137,6 +137,7 @@ function ToolResultMessage({ name, content, defaultExpanded = false }: { name?: 
     </UnifiedCollapsible>
   );
 }
+
 
 
 // ─── Command Approval Modal ─────────────────────────────────────────
@@ -232,13 +233,15 @@ function ChatMessage({
   idx, 
   total, 
   onOpenFile, 
-  onCopy 
+  onCopy,
+  settings
 }: { 
   msg: AgentMessage; 
   idx: number; 
   total: number; 
   onOpenFile: (path: string) => void;
   onCopy: (content: string) => void;
+  settings: SettingsState;
 }) {
   const isLast = idx === total - 1;
   const isAssistant = msg.role === 'assistant';
@@ -282,8 +285,8 @@ function ChatMessage({
                 {/* 2. Content Block Second */}
                 {(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim() && (
                   <UnifiedCollapsible 
-                    title="AI Response" 
-                    icon={Bot} 
+                    title={settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Assistant'} 
+                    icon={null} 
                     colorClass="border-primary/40" 
                     defaultExpanded={isLast && !hasToolCalls}
                     borderPosition="bottom"
@@ -1048,71 +1051,12 @@ export default function ChatTab({
       {/* Atmosphere Layer */}
       <div className="absolute inset-0 bg-ambient-gradient z-0 opacity-40" />
 
-      {/* Session Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border/50 bg-background/80 backdrop-blur-md z-20">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-            <Bot size={18} className="text-primary" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Active Agent</span>
-            </div>
-            <div className="relative group">
-              <button 
-                className="flex items-center gap-1.5 text-sm font-bold hover:text-primary transition-colors"
-                onClick={() => {
-                  const el = document.getElementById('agent-switcher-dropdown');
-                  if (el) el.classList.toggle('hidden');
-                }}
-              >
-                {settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Agent Aynite'}
-                <ChevronDown size={14} className="opacity-40" />
-              </button>
-              
-              {/* Simple dropdown */}
-              <div id="agent-switcher-dropdown" className="hidden absolute top-full left-0 mt-2 w-48 bg-sidebar border border-border shadow-2xl rounded-xl p-1 z-50">
-                {(settings.agents?.list || []).map(agent => (
-                  <button
-                    key={agent.id}
-                    onClick={() => {
-                      onUpdateSettings({
-                        ...settings,
-                        agents: { ...settings.agents, activeId: agent.id }
-                      });
-                      document.getElementById('agent-switcher-dropdown')?.classList.add('hidden');
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-accent",
-                      settings.agents?.activeId === agent.id ? "text-primary bg-primary/5" : "text-muted-foreground"
-                    )}
-                  >
-                    {agent.name}
-                    {settings.agents?.activeId === agent.id && <Check size={12} />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setMessages([])} 
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-all"
-            title="Clear Chat"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      </div>
       
       {/* Message Area */}
-      <div className="flex-1 overflow-y-auto px-6 pt-10 pb-32 space-y-1.5 mask-fade-vertical z-10" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto px-6 pt-4 pb-32 space-y-1.5 mask-fade-vertical z-10" ref={scrollRef}>
 
         {messages.length === 0 && (
           <div className="text-muted-foreground flex flex-col items-center justify-center h-full space-y-6">
-            <Bot size={48} className="opacity-50" />
             <div className="space-y-3 text-sm opacity-80">
               <p className="flex items-center gap-3">
                 <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">Aa</span>
@@ -1142,6 +1086,7 @@ export default function ChatTab({
             total={messages.length} 
             onOpenFile={handleOpenFile} 
             onCopy={copyToClipboard} 
+            settings={settings}
           />
         ))}
 
@@ -1179,11 +1124,25 @@ export default function ChatTab({
                 onClick={() => setShowProviderSwitcher(!showProviderSwitcher)}
                 className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/40 backdrop-blur-md border border-border/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shadow-xl hover:bg-background/60 hover:border-primary/30 transition-all group"
               >
+                {showProviderSwitcher && (
+                <SelectionPopover 
+                  title="Switch AI Provider"
+                  position="top"
+                  items={(settings.ai?.providers || []).map(p => ({ id: p.id, label: `${p.provider} - ${p.model}` }))}
+                  activeId={settings.ai?.activeId || ''}
+                  onSelect={(id) => {
+                    onUpdateSettings({
+                      ...settings,
+                      ai: { ...settings.ai, activeId: id }
+                    });
+                  }}
+                  onClose={() => setShowProviderSwitcher(false)}
+                />
+              )}
                 {(() => {
                   const active = settings.ai?.providers?.find(p => p.id === settings.ai?.activeId) || settings.ai?.providers?.[0];
                   return (
                     <>
-                      <Bot size={10} className="text-primary group-hover:scale-110 transition-transform" />
                       <span>{active?.provider || 'ollama'}</span>
                       <span className="normal-case font-medium opacity-80 border-l border-border/20 pl-2">
                         {active?.model || ''}
@@ -1193,48 +1152,6 @@ export default function ChatTab({
                   );
                 })()}
               </button>
-
-              {showProviderSwitcher && (
-                <div className="absolute bottom-full mb-2 left-0 w-64 bg-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 z-50">
-                  <div className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 bg-muted/20">
-                    Switch AI Provider
-                  </div>
-                  <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
-                    {(settings.ai?.providers || []).map((p) => {
-                      const isActive = p.id === settings.ai?.activeId;
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            onUpdateSettings({
-                              ...settings,
-                              ai: { ...settings.ai, activeId: p.id }
-                            });
-                            setShowProviderSwitcher(false);
-                          }}
-                          className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg transition-all text-left group ${
-                            isActive 
-                              ? 'bg-primary/10 border border-primary/20' 
-                              : 'hover:bg-accent/50 border border-transparent'
-                          }`}
-                        >
-                          <div className={`mt-0.5 p-1 rounded-md ${isActive ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground group-hover:bg-muted-foreground/10'}`}>
-                            <Bot size={12} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className={`text-[11px] font-bold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                              {p.name || p.provider}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground/70 truncate font-mono mt-0.5">
-                              {p.model}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
 
 

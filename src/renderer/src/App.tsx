@@ -8,12 +8,14 @@ import FileViewer from './components/FileViewer';
 import TabSwitcher from './components/TabSwitcher';
 import { SettingsState } from './lib/types';
 import { cn } from './lib/utils';
+import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
+import { DEFAULT_AI_CONFIG } from './default_configs/ai';
+import { SelectionPopover } from './components/ui/SelectionPopover';
+import { ChevronDown } from 'lucide-react';
 import { getFileCategory } from './lib/file-handlers';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { KeyManager } from './lib/key-handlers';
-import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
-import { DEFAULT_AI_CONFIG } from './default_configs/ai';
 
 type Tab = {
   id: string;
@@ -42,6 +44,10 @@ const DEFAULT_SETTINGS: SettingsState = {
     grep_search: true,
     read_url: true,
     get_file_tree: true
+  },
+  agents: {
+    list: [],
+    activeId: ''
   }
 };
 
@@ -56,6 +62,7 @@ export default function App() {
   const [activeWorkspaceName, setActiveWorkspaceName] = useState<string>('');
   const [showTabSwitcher, setShowTabSwitcher] = useState(false);
   const [showTabMenu, setShowTabMenu] = useState(false);
+  const [showAgentSwitcher, setShowAgentSwitcher] = useState(false);
   const tabMenuRef = useRef<HTMLDivElement>(null);
 
   const [toasts, setToasts] = useState<{ id: string; message: string; type: 'info' | 'error' | 'success'; title?: string }[]>([]);
@@ -883,9 +890,33 @@ export default function App() {
             onMouseDown={startResizingRight}
           />
           <div className="flex-1 w-full h-full flex flex-col border-l border-border bg-background min-w-0 overflow-hidden">
-            <div className="flex items-center justify-between h-10 border-b border-border bg-muted/30 px-3 shrink-0">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground opacity-80">
-                <Bot size={16} /> Aynite Assistant
+            <div className="flex items-center justify-between h-10 border-b border-border bg-muted/30 px-6 shrink-0 z-30 relative">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <div className="relative group">
+                  <button 
+                    className="flex items-center gap-1.5 text-sm font-bold hover:text-primary transition-colors tracking-tight"
+                    onClick={() => setShowAgentSwitcher(!showAgentSwitcher)}
+                  >
+                    {settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Assistant'}
+                    <ChevronDown size={14} className="opacity-40" />
+                  </button>
+                  {showAgentSwitcher && (
+                    <SelectionPopover 
+                      title="Switch Agent"
+                      items={(settings.agents?.list || []).map(a => ({ id: a.id, label: a.name }))}
+                      activeId={settings.agents?.activeId || ''}
+                      onSelect={(id) => {
+                        setSettings({
+                          ...settings,
+                          agents: { ...settings.agents, activeId: id }
+                        });
+                      }}
+                      onClose={() => setShowAgentSwitcher(false)}
+                      className="top-full mt-2 left-0"
+                    />
+                  )}
+                </div>
+
                 <button
                   onClick={() => (window as any).showChatHistory?.()}
                   className="p-1 hover:bg-primary/20 hover:text-primary rounded-md transition-all ml-1"
