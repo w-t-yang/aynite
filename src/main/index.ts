@@ -24,9 +24,9 @@ function setupWatcher(folders: string[]) {
   if (watcher) {
     watcher.close();
   }
-  
+
   if (folders.length === 0) return;
-  
+
   getIgnorePatterns().then(ignorePatterns => {
     watcher = watch(folders, {
       ignored: (p) => {
@@ -67,7 +67,7 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
-  
+
   mainWindow.setMenuBarVisibility(false);
 }
 
@@ -116,9 +116,10 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  //if (process.platform !== 'darwin') {
+  //  app.quit();
+  //}
+  app.quit();
 });
 
 // Helper to expand ~ to home directory
@@ -134,7 +135,7 @@ ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
   try {
     const resolvedPath = path.resolve(expandHome(dirPath));
     const files = await fs.readdir(resolvedPath, { withFileTypes: true });
-    
+
     let ignorePatterns: string[] = [];
     try {
       ignorePatterns = await getIgnorePatterns();
@@ -149,7 +150,7 @@ ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
         isDirectory: file.isDirectory(),
         path: path.join(resolvedPath, file.name)
       }));
-    
+
     result.sort((a, b) => {
       if (a.isDirectory && !b.isDirectory) return -1;
       if (!a.isDirectory && b.isDirectory) return 1;
@@ -170,7 +171,7 @@ ipcMain.handle('api:command', async (event, { command, cwd }: { command: string,
       if (parsed && typeof parsed === 'object' && parsed.status === 'error') {
         return { error: stdout.trim(), stdout, stderr };
       }
-    } catch (e) {}
+    } catch (e) { }
     return { data: { stdout, stderr } };
   } catch (error: any) {
     return { error: error.message, stdout: error.stdout, stderr: error.stderr };
@@ -188,10 +189,10 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
         console.error('Failed to set chmod on run.sh', e);
       }
     }
-    
-    const env = { 
-      ...process.env, 
-      AYNITE_CURRENT_FILE: currentFile || '' 
+
+    const env = {
+      ...process.env,
+      AYNITE_CURRENT_FILE: currentFile || ''
     };
 
     // Automatically resolve Aynite mentions (e.g., @file[label](path)) to raw paths
@@ -203,7 +204,7 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
     const quotedParams = resolvedParams.map(p => `"${p.replace(/"/g, '\\"')}"`).join(' ');
     const fullCmd = process.platform === 'win32' ? `sh "${runShPath}" ${quotedParams}` : `"${runShPath}" ${quotedParams}`;
 
-    const { stdout, stderr } = await execAsync(fullCmd, { 
+    const { stdout, stderr } = await execAsync(fullCmd, {
       cwd: commandPath,
       env
     });
@@ -212,7 +213,7 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
       if (parsed && typeof parsed === 'object' && parsed.status === 'error') {
         return { error: stdout.trim(), stdout, stderr };
       }
-    } catch (e) {}
+    } catch (e) { }
     return { data: { stdout, stderr } };
   } catch (error: any) {
     return { error: error.message, stdout: error.stdout, stderr: error.stderr };
@@ -233,7 +234,7 @@ async function checkIsTextFile(filePath: string): Promise<boolean> {
     const fd = await fs.open(filePath, 'r');
     const { bytesRead, buffer } = await fd.read(Buffer.alloc(1024), 0, 1024, 0);
     await fd.close();
-    
+
     for (let i = 0; i < bytesRead; i++) {
       if (buffer[i] === 0) return false;
     }
@@ -248,7 +249,7 @@ ipcMain.handle('api:file-info', async (event, filePath: string) => {
     const expandedPath = expandHome(filePath);
     const stats = await fs.stat(expandedPath);
     const isText = stats.isDirectory() ? false : await checkIsTextFile(expandedPath);
-    
+
     return {
       data: {
         size: stats.size,
@@ -346,7 +347,7 @@ ipcMain.handle('api:workspace-add-folder', async () => {
       properties: ['openDirectory']
     });
     if (canceled || filePaths.length === 0) return { data: null };
-    
+
     await addWorkspaceFolder(filePaths[0]);
     const foldersRes = await getWorkspaceFolders();
     setupWatcher(foldersRes.data);

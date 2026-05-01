@@ -872,7 +872,7 @@ export default function App() {
               <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <div className="relative group">
                   <button 
-                    className="flex items-center gap-1.5 text-sm font-bold hover:text-primary transition-colors tracking-tight"
+                    className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors tracking-tight"
                     onClick={() => setShowAgentSwitcher(!showAgentSwitcher)}
                   >
                     {settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Assistant'}

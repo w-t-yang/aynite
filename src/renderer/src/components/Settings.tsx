@@ -993,9 +993,9 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                   <div className="grid grid-cols-1 gap-3">
                     {availableTools.map(tool => (
                       <div key={tool.id} className="flex items-center justify-between p-3.5 rounded-lg border border-border/40 bg-accent/5 hover:bg-accent/10 transition-colors group">
-                        <div className="space-y-0.5">
-                          <h4 className="text-sm font-semibold">{tool.name}</h4>
-                          <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity">{tool.description}</p>
+                        <div className="space-y-0.5 flex-1 min-w-0 pr-4">
+                          <h4 className="text-sm font-semibold truncate">{tool.name}</h4>
+                          <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed">{tool.description}</p>
                         </div>
                         <button
                           onClick={() => {
@@ -1009,7 +1009,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                             });
                           }}
                           className={cn(
-                            "relative inline-flex h-5 w-9 items-center rounded-full transition-all focus:outline-none",
+                            "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-all focus:outline-none",
                             localSettings.aiTools?.[tool.id] !== false ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.3)]" : "bg-muted"
                           )}
                         >
