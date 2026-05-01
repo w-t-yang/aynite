@@ -107,7 +107,7 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-lg bg-sidebar border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative z-10 w-full max-w-3xl bg-sidebar border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
         {/* Search input */}
         <div className="p-3 border-b border-border/50 bg-accent/10 flex items-center gap-3">
           <Search size={16} className="text-muted-foreground ml-1" />
