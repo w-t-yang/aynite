@@ -251,7 +251,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         horizontalRule: false,
       }),
       Placeholder.configure({
-        placeholder: `Message assistant...`,
+        placeholder: `Message assistant... (Ctrl + Enter to send message)`,
       }),
       BaseMention.configure({
         HTMLAttributes: { class: 'mention mention-file' },
