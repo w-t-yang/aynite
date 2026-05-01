@@ -1,7 +1,7 @@
 export const DEFAULT_KEYBINDINGS = {
   global: {
     refresh: 'CTRL+SHIFT+R',
-    quit: 'CTRL+Q'
+    quit: ''
   },
   explorer: {
     toggleLeftPanel: 'CTRL+T'
@@ -28,12 +28,12 @@ export const DEFAULT_KEYBINDINGS = {
       search: '/',
       refresh: 'CTRL+R'
     },
-    generic: { // Previously contentKeys
+    generic: {
       exitEdit: 'ESCAPE',
       endOfLine: 'CTRL+E',
       startOfLine: 'CTRL+A',
       killLine: 'CTRL+K',
-      selectAll: 'CTRL+Z',
+      selectAll: 'CTRL+Q',
       deleteForward: 'CTRL+D',
       cut: 'CTRL+X',
       copy: 'CTRL+C',

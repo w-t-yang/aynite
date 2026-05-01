@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug, AlertCircle } from 'lucide-react';
-import { DEFAULT_KEYBINDINGS } from '../default_configs/keybindings';
-import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS } from '../default_configs/ai';
+import { DEFAULT_KEYBINDINGS } from '../../../main/default_configs/keybindings';
+import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS, DEFAULT_AI_TOOLS } from '../../../main/default_configs/ai';
 import { cn } from '../lib/utils';
 import { SearchableSelect } from './ui/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
@@ -59,6 +59,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [availableSkills, setAvailableSkills] = useState<any[]>([]);
   const [availableCommands, setAvailableCommands] = useState<any[]>([]);
+  const [availableTools, setAvailableTools] = useState<any[]>([]);
   const saveTimerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -121,6 +122,12 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
       // @ts-ignore
       window.api.getAvailableCommands().then(res => {
         if (res?.data) setAvailableCommands(res.data);
+      });
+    }
+    if (activeTab === 'tools') {
+      // @ts-ignore
+      window.api.getTools().then(res => {
+        if (res?.data) setAvailableTools(res.data);
       });
     }
   }, [activeTab, localSettings.prompts?.files, localSettings.agents]);
@@ -425,17 +432,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                 <h2 className="text-xl font-bold capitalize">{activeTab === 'ai' ? 'Providers' : activeTab === 'agents' ? 'Agents' : activeTab === 'tools' ? 'Tools' : activeTab}</h2>
                 {activeTab === 'keybindings' && (
                   <button onClick={() => {
-                    const defaultKb: SettingsState['keybindings'] = {
-                      global: { refresh: 'CTRL+SHIFT+R', quit: '' },
-                      explorer: { toggleLeftPanel: 'CTRL+T' },
-                      agent: { focusChat: 'CTRL+I', focusSkills: 'CTRL+/', focusCommands: 'CTRL+.', toggleRightPanel: 'CTRL+U', submit: 'CTRL+ENTER' },
-                      content: {
-                        navigation: { switchTab: 'CTRL+TAB', closeTab: 'CTRL+W', focusContent: 'CTRL+Y' },
-                        viewer: { enterEdit: 'A', moveDown: 'J', moveUp: 'K', moveLeft: 'H', moveRight: 'L', search: '/', refresh: 'CTRL+R' },
-                        generic: { exitEdit: 'ESCAPE', endOfLine: 'CTRL+E', startOfLine: 'CTRL+A', killLine: 'CTRL+K', selectAll: 'CTRL+Q', deleteForward: 'CTRL+D', cut: 'CTRL+X', copy: 'CTRL+C', paste: 'CTRL+V', prevLine: 'CTRL+P', nextLine: 'CTRL+N', forwardChar: 'CTRL+F', backwardChar: 'CTRL+B' }
-                      }
-                    };
-                    save({ ...localSettings, keybindings: defaultKb });
+                    save({ ...localSettings, keybindings: DEFAULT_KEYBINDINGS });
                   }} className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors" title="Reset Keybindings to Defaults"><RotateCcw size={18} /></button>
                 )}
               </div>
@@ -580,14 +577,14 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-sm text-muted-foreground">Manage multiple AI provider configurations and select the active one.</p>
-                    <button 
+                    <button
                       onClick={handleAddProvider}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"
                     >
                       <Plus size={14} /> Add Provider
                     </button>
                   </div>
-                  
+
                   <div className="space-y-6">
                     {(localSettings.ai?.providers || []).map((provider) => (
                       <div key={provider.id} className={cn(
@@ -596,22 +593,22 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                       )}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <input 
-                              type="radio" 
-                              name="active-ai-provider" 
-                              checked={localSettings.ai?.activeId === provider.id} 
-                              onChange={() => handleSetActiveProvider(provider.id)} 
-                              className="w-4 h-4 text-primary border-gray-300 focus:ring-primary cursor-pointer" 
+                            <input
+                              type="radio"
+                              name="active-ai-provider"
+                              checked={localSettings.ai?.activeId === provider.id}
+                              onChange={() => handleSetActiveProvider(provider.id)}
+                              className="w-4 h-4 text-primary border-gray-300 focus:ring-primary cursor-pointer"
                             />
-                            <input 
-                              type="text" 
-                              value={provider.name} 
+                            <input
+                              type="text"
+                              value={provider.name}
                               onChange={(e) => handleUpdateProvider(provider.id, 'name', e.target.value)}
                               className="font-bold bg-transparent border-none p-0 focus:outline-none focus:ring-0 text-sm w-64"
                               placeholder="Config Name"
                             />
                           </div>
-                          <button 
+                          <button
                             onClick={() => handleDeleteProvider(provider.id)}
                             className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all"
                             title="Delete Configuration"
@@ -639,9 +636,9 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
                           <div className="flex flex-col gap-1.5">
                             <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Model</label>
-                            <input 
-                              type="text" 
-                              value={provider.model} 
+                            <input
+                              type="text"
+                              value={provider.model}
                               onChange={(e) => handleUpdateProvider(provider.id, 'model', e.target.value)}
                               placeholder="e.g. gpt-4o or deepseek-r1"
                               className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
@@ -651,9 +648,9 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                           {provider.provider !== 'ollama' && (
                             <div className="flex flex-col gap-1.5 col-span-2">
                               <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">API Key</label>
-                              <input 
-                                type="password" 
-                                value={provider.apiKey || ''} 
+                              <input
+                                type="password"
+                                value={provider.apiKey || ''}
                                 onChange={(e) => handleUpdateProvider(provider.id, 'apiKey', e.target.value)}
                                 placeholder="sk-..."
                                 className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
@@ -663,9 +660,9 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
 
                           <div className="flex flex-col gap-1.5 col-span-2">
                             <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Base URL</label>
-                            <input 
-                              type="text" 
-                              value={provider.url || ''} 
+                            <input
+                              type="text"
+                              value={provider.url || ''}
                               onChange={(e) => handleUpdateProvider(provider.id, 'url', e.target.value)}
                               placeholder={provider.provider === 'ollama' ? "http://localhost:11434" : "API URL"}
                               className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
@@ -690,9 +687,9 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                           {provider.provider === 'ollama' && (
                             <div className="flex flex-col gap-1.5">
                               <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Context Window</label>
-                              <input 
-                                type="number" 
-                                value={provider.contextWindow || 8192} 
+                              <input
+                                type="number"
+                                value={provider.contextWindow || 8192}
                                 onChange={(e) => handleUpdateProvider(provider.id, 'contextWindow', e.target.value)}
                                 className="w-full bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-colors"
                               />
@@ -722,8 +719,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     // @ts-ignore
                     const res = await window.api.restoreDefaultPrompts();
                     if (res && res.data) {
-                      save({ 
-                        ...localSettings, 
+                      save({
+                        ...localSettings,
                         prompts: res.data.prompts,
                         agents: res.data.agents
                       });
@@ -769,7 +766,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     <h3 className="text-lg font-medium">Agents</h3>
                     <button onClick={handleAddAgent} className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Agent</button>
                   </div>
-                  
+
                   <div className="space-y-6">
                     {(localSettings.agents?.list || []).map((agent) => (
                       <div key={agent.id} className={cn(
@@ -778,16 +775,16 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                       )}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <input 
-                              type="radio" 
-                              name="active-agent" 
-                              checked={localSettings.agents?.activeId === agent.id} 
-                              onChange={() => save({ ...localSettings, agents: { ...localSettings.agents, activeId: agent.id } })} 
-                              className="w-4 h-4 text-primary border-gray-300 focus:ring-primary cursor-pointer" 
+                            <input
+                              type="radio"
+                              name="active-agent"
+                              checked={localSettings.agents?.activeId === agent.id}
+                              onChange={() => save({ ...localSettings, agents: { ...localSettings.agents, activeId: agent.id } })}
+                              className="w-4 h-4 text-primary border-gray-300 focus:ring-primary cursor-pointer"
                             />
-                            <input 
-                              type="text" 
-                              value={agent.name} 
+                            <input
+                              type="text"
+                              value={agent.name}
                               onChange={(e) => handleUpdateAgent(agent.id, 'name', e.target.value)}
                               className="font-bold bg-transparent border-none p-0 focus:outline-none focus:ring-0 text-sm w-64"
                               placeholder="Agent Name"
@@ -808,7 +805,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                               }
                             }} className="text-[10px] font-bold text-primary hover:underline transition-all flex items-center gap-1"><Plus size={10} /> Add File</button>
                           </div>
-                          
+
                           <div className="space-y-2">
                             {(agent.promptFiles || []).map((filePath) => (
                               <div key={filePath} className="flex items-center justify-between p-2 rounded-lg border border-border/50 bg-background/40 group/file">
@@ -977,21 +974,28 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
             {activeTab === "tools" && (
               <div className="space-y-6 max-w-4xl pb-10">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-6">Enable or disable individual capabilities available to the Aynite Assistant.</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-sm text-muted-foreground">Enable or disable individual capabilities available to the Aynite Assistant.</p>
+                    <button
+                      onClick={() => {
+                        save({
+                          ...localSettings,
+                          aiTools: { ...DEFAULT_AI_TOOLS }
+                        });
+                        (window as any).showToast('Tool configurations restored to defaults.', 'success');
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-xs font-medium transition-colors"
+                      title="Restore Tools to Defaults"
+                    >
+                      <RotateCcw size={14} /> Restore Defaults
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 gap-3">
-                    {[
-                      { id: 'read_file', name: 'Read File', desc: 'Allow AI to read file contents' },
-                      { id: 'write_file', name: 'Write File', desc: 'Allow AI to create and modify files' },
-                      { id: 'list_files', name: 'List Files', desc: 'Allow AI to see directory contents' },
-                      { id: 'run_command', name: 'Run Command', desc: 'Allow AI to execute shell commands' },
-                      { id: 'grep_search', name: 'Pattern Search', desc: 'Search for text patterns across the workspace' },
-                      { id: 'read_url', name: 'URL Scraper', desc: 'Fetch and read content from websites' },
-                      { id: 'get_file_tree', name: 'Workspace Tree', desc: 'Get a recursive view of the project structure' }
-                    ].map(tool => (
+                    {availableTools.map(tool => (
                       <div key={tool.id} className="flex items-center justify-between p-3.5 rounded-lg border border-border/40 bg-accent/5 hover:bg-accent/10 transition-colors group">
                         <div className="space-y-0.5">
                           <h4 className="text-sm font-semibold">{tool.name}</h4>
-                          <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity">{tool.desc}</p>
+                          <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity">{tool.description}</p>
                         </div>
                         <button
                           onClick={() => {

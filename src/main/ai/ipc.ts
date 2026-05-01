@@ -10,6 +10,7 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getConfigDir } from '../config';
+import { TOOL_METADATA } from '../default_configs/ai';
 
 const execAsync = promisify(exec);
 
@@ -17,16 +18,16 @@ const execAsync = promisify(exec);
 function logAiEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
 
   if (app.isPackaged) return; // Only log in dev environment
-  
+
   try {
     const logDir = path.join(getConfigDir(), 'logs');
     const logFile = path.join(logDir, 'dev.log');
-    
+
     mkdirSync(logDir, { recursive: true });
-    
+
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] [${type}] ${JSON.stringify(payload, null, 2)}\n${'-'.repeat(80)}\n`;
-    
+
     appendFileSync(logFile, logEntry);
   } catch (err) {
     console.error('Failed to log AI event:', err);
@@ -50,10 +51,20 @@ async function isPathWithinWorkspace(filePath: string, workspaceFolders: string[
 }
 
 export function setupAiIpc(mainWindow: BrowserWindow) {
-  ipcMain.handle('api:ai-chat', async (event, { messages, config, workspaceFolders }: { 
-    messages: any[], 
+  ipcMain.handle('api:get-tools', () => {
+    return {
+      data: Object.entries(TOOL_METADATA).map(([id, meta]) => ({
+        id,
+        ...meta
+      }))
+    };
+  });
+
+  ipcMain.handle('api:ai-chat', async (event, { messages, config, workspaceFolders, activeFile }: {
+    messages: any[],
     config: ProviderConfig & { enabledTools?: { [key: string]: boolean } },
-    workspaceFolders: string[]
+    workspaceFolders: string[],
+    activeFile?: string
   }) => {
     // Always include the config directory in workspace folders for AI tools
     const configDir = getConfigDir();
@@ -67,11 +78,11 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
     try {
       const model = getProviderModel(config);
       const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-      
+
       // Define tools for the AI SDK
       const tools: any = {
         read_file: {
-          description: 'Read the contents of a file.',
+          description: TOOL_METADATA.read_file.description,
           inputSchema: jsonSchema({
             type: 'object',
             properties: {
@@ -91,7 +102,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           },
         },
         write_file: {
-          description: 'Write content to a file.',
+          description: TOOL_METADATA.write_file.description,
           inputSchema: jsonSchema({
             type: 'object',
             properties: {
@@ -114,7 +125,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           },
         },
         list_files: {
-          description: 'List files in a directory.',
+          description: TOOL_METADATA.list_files.description,
           inputSchema: jsonSchema({
             type: 'object',
             properties: {
@@ -136,7 +147,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           },
         },
         run_command: {
-          description: 'Execute a shell command.',
+          description: TOOL_METADATA.run_command.description,
           inputSchema: jsonSchema({
             type: 'object',
             properties: {
@@ -147,26 +158,26 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           }),
           execute: async ({ command, cwd }: { command: string, cwd?: string }) => {
             const runCwd = cwd || workspaceFolders[0] || '.';
-            
+
             const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-              mainWindow.webContents.send('api:ai-approval-request', { id: approvalId, command, cwd: runCwd });
-              
-              const approved = await new Promise<boolean>((resolve) => {
-                const listener = (_: any, response: { id: string; approved: boolean }) => {
-                  if (response.id === approvalId) {
-                    ipcMain.removeListener('api:ai-approval-response', listener);
-                    resolve(response.approved);
-                  }
-                };
-                ipcMain.on('api:ai-approval-response', listener);
-              });
-              
-              if (!approved) return 'Command rejected by user.';
+            mainWindow.webContents.send('api:ai-approval-request', { id: approvalId, command, cwd: runCwd });
+
+            const approved = await new Promise<boolean>((resolve) => {
+              const listener = (_: any, response: { id: string; approved: boolean }) => {
+                if (response.id === approvalId) {
+                  ipcMain.removeListener('api:ai-approval-response', listener);
+                  resolve(response.approved);
+                }
+              };
+              ipcMain.on('api:ai-approval-response', listener);
+            });
+
+            if (!approved) return 'Command rejected by user.';
 
             try {
               const { stdout, stderr } = await execAsync(command, { cwd: runCwd });
               const output = `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
-              
+
               // Check if output is JSON and indicates an error status
               try {
                 const parsed = JSON.parse(stdout.trim());
@@ -176,7 +187,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
               } catch (jsonErr) {
                 // Not JSON or not an error status, continue as normal
               }
-              
+
               return output;
             } catch (e: any) {
               return `Execution Error:\n${e.message}\n\nSTDOUT:\n${e.stdout || ''}\n\nSTDERR:\n${e.stderr || ''}`;
@@ -184,19 +195,24 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           },
         },
         grep_search: {
-          description: 'Search for a regex pattern in the workspace files.',
+          description: TOOL_METADATA.grep_search.description,
           inputSchema: jsonSchema({
             type: 'object',
             properties: {
               pattern: { type: 'string', description: 'Regex pattern to search for' },
+              folderPath: { type: 'string', description: 'The absolute path to the directory to search within' },
               include: { type: 'string', description: 'Optional glob pattern for files to include' }
             },
-            required: ['pattern']
+            required: ['pattern', 'folderPath']
           }),
-          execute: async ({ pattern, include }: { pattern: string, include?: string }) => {
+          execute: async ({ pattern, folderPath, include }: { pattern: string, folderPath: string, include?: string }) => {
+            if (!(await isPathWithinWorkspace(folderPath, workspaceFolders))) {
+              return `Error: Access denied. Path "${folderPath}" is not within the workspace.`;
+            }
+
             const results: string[] = [];
             const regex = new RegExp(pattern, 'i');
-            
+
             const walk = async (dir: string) => {
               const files = await fs.readdir(dir, { withFileTypes: true });
               for (const file of files) {
@@ -214,25 +230,23 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
                         const lines = content.split('\n');
                         lines.forEach((line, i) => {
                           if (regex.test(line)) {
-                            results.push(`${path.relative(workspaceFolders[0], res)}:${i+1}: ${line.trim()}`);
+                            results.push(`${path.relative(folderPath, res)}:${i + 1}: ${line.trim()}`);
                           }
                         });
                       }
-                    } catch (e) {}
+                    } catch (e) { }
                   }
                 }
               }
             };
 
-            for (const folder of workspaceFolders) {
-              await walk(folder);
-            }
-            
+            await walk(folderPath);
+
             return results.slice(0, 50).join('\n') || 'No matches found.';
           }
         },
         read_url: {
-          description: 'Fetch and read the content of a URL.',
+          description: TOOL_METADATA.read_url.description,
           inputSchema: jsonSchema({
             type: 'object',
             properties: {
@@ -249,31 +263,26 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
               const text = await response.text();
               // Strip HTML tags for cleaner AI reading
               return text.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
-                         .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
-                         .replace(/<[^>]*>/g, ' ')
-                         .replace(/\s+/g, ' ')
-                         .trim()
-                         .slice(0, 10000);
+                .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 10000);
             } catch (e: any) {
               return `Error: ${e.message}`;
             }
           }
         },
         get_file_tree: {
-          description: 'Get a recursive file tree of the workspace.',
+          description: TOOL_METADATA.get_file_tree.description,
           inputSchema: jsonSchema({
             type: 'object',
             properties: {
               path: { type: 'string', description: 'Starting directory (optional)' },
-              depth: { type: 'number', description: 'Max depth (default 100)' }
+              depth: { type: 'number', description: 'Max depth (default 10)' }
             }
           }),
-          execute: async ({ path: dirPath, depth = 100 }: { path?: string, depth?: number }) => {
-            const root = dirPath || workspaceFolders[0] || '.';
-            if (!(await isPathWithinWorkspace(root, workspaceFolders))) {
-              return 'Error: Access denied.';
-            }
-
+          execute: async ({ path: dirPath, depth = 10 }: { path?: string, depth?: number }) => {
             const buildTree = async (dir: string, currentDepth: number): Promise<string> => {
               if (currentDepth > depth) return '';
               let output = '';
@@ -287,11 +296,38 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
                     output += await buildTree(path.join(dir, file.name), currentDepth + 1);
                   }
                 }
-              } catch (e) {}
+              } catch (e) { }
               return output;
             };
 
-            return await buildTree(root, 0) || '(empty)';
+            if (dirPath) {
+              if (!(await isPathWithinWorkspace(dirPath, workspaceFolders))) {
+                return 'Error: Access denied.';
+              }
+              return await buildTree(dirPath, 0) || '(empty)';
+            } else {
+              let fullOutput = '';
+              for (const folder of workspaceFolders) {
+                fullOutput += `Workspace Folder: ${folder}\n`;
+                fullOutput += await buildTree(folder, 0);
+                fullOutput += '\n';
+              }
+              return fullOutput || '(empty workspace)';
+            }
+          }
+        },
+        get_workspace_info: {
+          description: TOOL_METADATA.get_workspace_info.description,
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {}
+          }),
+          execute: async () => {
+            return {
+              workspaceFolders,
+              configDir: getConfigDir(),
+              activeFile: activeFile || null
+            };
           }
         }
       };
@@ -299,7 +335,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
       // Filter tools based on user configuration
       const enabledTools: any = {};
       const toolSettings = config.enabledTools || {};
-      
+
       Object.keys(tools).forEach(toolName => {
         if (toolSettings[toolName] !== false) {
           enabledTools[toolName] = tools[toolName];
@@ -317,7 +353,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
             messages,
             tools: enabledTools,
             providerOptions,
-            stopWhen: (stepCountIs as any)(10), 
+            stopWhen: (stepCountIs as any)(10),
           } as any);
 
           let fullResponseText = '';
@@ -364,8 +400,8 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
           }
 
           // Log the full response once finished
-          logAiEvent('RESPONSE', { 
-            text: fullResponseText, 
+          logAiEvent('RESPONSE', {
+            text: fullResponseText,
             reasoning: fullReasoningText,
             toolCalls: fullToolCalls,
             toolResults: fullToolResults

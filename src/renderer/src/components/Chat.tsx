@@ -966,6 +966,7 @@ export default function ChatTab({
               }
             },
             requestApproval,
+            activeTabPath,
             abort.signal
           );
           setMessages(resultHistory);

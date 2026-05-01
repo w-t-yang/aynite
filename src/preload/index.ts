@@ -70,6 +70,7 @@ const api = {
   
   // AI API
   aiChat: (payload: any) => ipcRenderer.invoke('api:ai-chat', payload),
+  getTools: () => ipcRenderer.invoke('api:get-tools'),
   sendAiApprovalResponse: (payload: { id: string, approved: boolean }) => ipcRenderer.send('api:ai-approval-response', payload),
   onAiChatDelta: (requestId: string, callback: (part: any) => void) => {
     const channel = `api:ai-chat-delta:${requestId}`;

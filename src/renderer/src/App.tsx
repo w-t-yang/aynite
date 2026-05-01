@@ -8,8 +8,7 @@ import FileViewer from './components/FileViewer';
 import TabSwitcher from './components/TabSwitcher';
 import { SettingsState } from './lib/types';
 import { cn } from './lib/utils';
-import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
-import { DEFAULT_AI_CONFIG } from './default_configs/ai';
+import { DEFAULT_SETTINGS } from '../../main/default_configs/settings';
 import { SelectionPopover } from './components/ui/SelectionPopover';
 import { ChevronDown } from 'lucide-react';
 import { getFileCategory } from './lib/file-handlers';
@@ -29,27 +28,6 @@ type Tab = {
   size?: number;
 };
 
-const DEFAULT_SETTINGS: SettingsState = {
-  activeTheme: 'light',
-  ai: DEFAULT_AI_CONFIG,
-  keybindings: DEFAULT_KEYBINDINGS,
-  prompts: {
-    files: []
-  },
-  aiTools: {
-    read_file: true,
-    write_file: true,
-    list_files: true,
-    run_command: true,
-    grep_search: true,
-    read_url: true,
-    get_file_tree: true
-  },
-  agents: {
-    list: [],
-    activeId: ''
-  }
-};
 
 export default function App() {
   const [settings, setSettings] = useState<SettingsState | null>(null);

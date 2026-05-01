@@ -36,6 +36,7 @@ export async function runAgentLoop(
   workspaceFolders: string[],
   onEvent: (event: AgentStepEvent) => void,
   requestApproval: (command: string, cwd: string) => Promise<boolean>,
+  activeFile?: string,
   abortSignal?: AbortSignal
 ): Promise<AgentMessage[]> {
 
@@ -175,7 +176,8 @@ export async function runAgentLoop(
       compatibility: config.compatibility,
       enabledTools: config.enabledTools
     },
-    workspaceFolders
+    workspaceFolders,
+    activeFile
   });
 
   if (error) {
