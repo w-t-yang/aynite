@@ -2,6 +2,7 @@ import React from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Button } from '../basic/Button';
+import { Input } from '../basic/Input';
 import { Radio } from '../basic/Radio';
 import { PromptFileRow } from './PromptFileRow';
 

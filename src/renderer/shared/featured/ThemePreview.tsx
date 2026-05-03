@@ -1,6 +1,8 @@
 import React from 'react';
 import { cn } from '../lib/utils';
 
+import { Button } from '../basic/Button';
+
 interface ThemePreviewProps {
   theme: any;
   isActive: boolean;
@@ -9,15 +11,16 @@ interface ThemePreviewProps {
 
 export function ThemePreview({ theme, isActive, onClick }: ThemePreviewProps) {
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-full",
+        "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-full h-auto",
         isActive ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
       )}
     >
-      <div 
-        className="w-20 h-14 rounded-md border flex items-center justify-center shadow-sm overflow-hidden" 
+      <div
+        className="w-20 h-14 rounded-md border flex items-center justify-center shadow-sm overflow-hidden"
         style={{ background: theme.colors?.background, borderColor: theme.colors?.border }}
       >
         <div className="flex gap-1">
@@ -27,6 +30,6 @@ export function ThemePreview({ theme, isActive, onClick }: ThemePreviewProps) {
         </div>
       </div>
       <span className="text-xs font-medium">{theme.name}</span>
-    </button>
+    </Button>
   );
 }

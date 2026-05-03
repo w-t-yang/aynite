@@ -1,4 +1,9 @@
 import React from 'react';
+import { RotateCcw } from 'lucide-react';
+import { Button } from '../../basic/Button';
+import { Switch } from '../../basic/Switch';
+import { SettingsPage } from '../../basic/SettingsPage';
+import { Section } from '../../basic/Section';
 import { SettingsState } from '../../lib/types';
 
 interface ToolsTabProps {
@@ -8,6 +13,7 @@ interface ToolsTabProps {
   };
   actions: {
     setTools: (tools: SettingsState['aiTools']) => void;
+    onRestore?: () => void;
   };
 }
 
@@ -24,24 +30,38 @@ export function ToolsTab({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl pb-10">
-      <div className="grid grid-cols-1 gap-3">
-        {availableTools.map(tool => (
-          <div key={tool.id} className="flex items-center justify-between p-3.5 rounded-lg border border-border/40 bg-accent/5 hover:bg-accent/10 transition-colors group">
-            <div className="space-y-0.5 flex-1 min-w-0 pr-4">
-              <h4 className="text-sm font-semibold truncate">{tool.name}</h4>
-              <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed">{tool.description}</p>
+    <SettingsPage
+      title="Tools"
+      description="Enable or disable built-in tools for the AI to interact with your system. These tools allow the assistant to perform actions like file management, web search, and terminal execution."
+      primaryAction={
+        actions.onRestore && (
+          <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
+            <RotateCcw size={14} /> Restore
+          </Button>
+        )
+      }
+    >
+      <Section title="System Capabilities" description="Toggle individual tools to control what the assistant can do.">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {availableTools.map(tool => (
+            <div key={tool.id} className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group">
+              <div className="space-y-1 flex-1 min-w-0 pr-6">
+                <h4 className="text-sm font-bold uppercase tracking-wider">{tool.name}</h4>
+                <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed line-clamp-2">{tool.description}</p>
+              </div>
+              <Switch
+                checked={!!aiTools?.[tool.id]}
+                onCheckedChange={() => handleToggleTool(tool.id)}
+              />
             </div>
-            <button
-              onClick={() => handleToggleTool(tool.id)}
-              className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none ${aiTools?.[tool.id] ? 'bg-primary' : 'bg-muted'}`}
-            >
-              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${aiTools?.[tool.id] ? 'translate-x-5.5' : 'translate-x-1'}`} />
-            </button>
-          </div>
-        ))}
-        {availableTools.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground italic border border-dashed border-border rounded-xl opacity-50">Loading tools...</div>}
-      </div>
-    </div>
+          ))}
+          {availableTools.length === 0 && (
+            <div className="col-span-full py-12 text-center text-sm text-muted-foreground italic border border-dashed border-border rounded-xl opacity-50">
+              No tools available.
+            </div>
+          )}
+        </div>
+      </Section>
+    </SettingsPage>
   );
 }

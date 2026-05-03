@@ -1,4 +1,4 @@
-import React from 'react';
+import { ColorPicker } from '../basic/ColorPicker';
 import { Input } from '../basic/Input';
 
 interface ColorInputProps {
@@ -15,15 +15,13 @@ export function ColorInput({ label, value, onPickerChange, onTextChange, onChang
     <div className="flex items-center justify-between py-1.5 border-b border-border/20 group">
       <label className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</label>
       <div className="flex items-center gap-2">
-        <input 
-          type="color" 
+        <ColorPicker
           value={value} 
           onChange={(e) => {
             const val = e.target.value;
             if (onPickerChange) onPickerChange(val);
             if (onChange) onChange(val);
           }} 
-          className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent" 
         />
         <Input
           unstyled

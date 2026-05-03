@@ -1,5 +1,8 @@
 import React from 'react';
 import { Bot, CloudDownload, RefreshCw, Github, Bug } from 'lucide-react';
+import { Button } from '../../basic/Button';
+import { SettingsPage } from '../../basic/SettingsPage';
+import { Section } from '../../basic/Section';
 
 interface AboutTabProps {
   state: {
@@ -21,88 +24,129 @@ export function AboutTab({
   const { appVersion, updateStatus, updateInfo } = state;
   const { onCheckUpdates, onInstallUpdate, onOpenExternal } = actions;
 
+  const updateAction = (
+    <div className="flex items-center gap-2">
+      {(updateStatus === 'idle' || updateStatus === 'error') && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onCheckUpdates}
+          className="px-4 py-1.5"
+        >
+          Check for Updates
+        </Button>
+      )}
+      {updateStatus === 'checking' && (
+        <Button 
+          disabled 
+          variant="secondary"
+          size="sm"
+          className="px-4 py-1.5 flex items-center gap-2"
+        >
+          <RefreshCw size={12} className="animate-spin" /> Checking
+        </Button>
+      )}
+      {updateStatus === 'available' && (
+        <Button 
+          disabled 
+          variant="primary"
+          size="sm"
+          className="px-4 py-1.5 bg-primary/20 text-primary"
+        >
+          Downloading...
+        </Button>
+      )}
+      {updateStatus === 'downloaded' && (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onInstallUpdate}
+          className="px-4 py-1.5 shadow-lg shadow-primary/20 transition-all"
+        >
+          Update and Restart
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="space-y-10 max-w-4xl pb-10">
-      <div className="flex flex-col items-center text-center space-y-4 pt-4">
-        <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20">
-          <Bot size={48} className="text-primary-foreground" />
+    <SettingsPage
+      title="About Aynite"
+      description="Information about Aynite, system updates, and developer resources."
+      primaryAction={updateAction}
+    >
+      <div className="flex flex-col items-center text-center space-y-4 pt-4 mb-8">
+        <div className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 border-4 border-background">
+          <Bot size={56} className="text-primary-foreground" />
         </div>
         <div className="space-y-1.5 text-center">
-          <h3 className="text-3xl font-black tracking-tight text-foreground">Aynite</h3>
+          <h3 className="text-4xl font-black tracking-tighter text-foreground">Aynite</h3>
           <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-semibold text-primary tracking-widest uppercase">A.Y.N.I.T.E</p>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">All You Need Is The Editor</p>
+            <p className="text-sm font-bold text-primary tracking-[0.3em] uppercase">A.Y.N.I.T.E</p>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest opacity-60">All You Need Is The Editor</p>
           </div>
         </div>
-        <div className="px-3 py-1 bg-accent/30 rounded-full border border-border/50 text-[11px] font-mono text-muted-foreground">
+        <div className="px-4 py-1.5 bg-accent/30 rounded-full border border-border/50 text-xs font-mono text-muted-foreground shadow-sm">
           Version {appVersion || '0.0.0'}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 pt-4">
-        <div className="p-6 rounded-2xl border border-border bg-accent/5 flex items-center justify-between group">
-          <div className="space-y-1">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              <CloudDownload size={16} className="text-primary" />
-              Software Update
-            </h4>
-            <p className="text-xs text-muted-foreground">
-              {updateStatus === 'idle' && 'Your software is up to date.'}
-              {updateStatus === 'checking' && 'Checking for updates...'}
-              {updateStatus === 'available' && `New version available: v${updateInfo?.version}`}
-              {updateStatus === 'downloading' && 'Downloading update in background...'}
-              {updateStatus === 'downloaded' && `Version v${updateInfo?.version} is ready to install.`}
-              {updateStatus === 'error' && 'Failed to check for updates.'}
-            </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Section title="Software Update" description="Keep your application up to date with the latest features and security fixes.">
+          <div className="p-6 rounded-2xl border border-border bg-accent/5 flex items-center justify-between group">
+            <div className="space-y-1">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <CloudDownload size={16} className="text-primary" />
+                {updateStatus === 'downloaded' ? 'Update Ready' : 'Current Status'}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {updateStatus === 'idle' && 'Your software is up to date.'}
+                {updateStatus === 'checking' && 'Checking for updates...'}
+                {updateStatus === 'available' && `New version available: v${updateInfo?.version}`}
+                {updateStatus === 'downloading' && 'Downloading update in background...'}
+                {updateStatus === 'downloaded' && `Version v${updateInfo?.version} is ready to install.`}
+                {updateStatus === 'error' && 'Failed to check for updates.'}
+              </p>
+            </div>
+            {updateAction}
           </div>
-          <div className="flex items-center gap-2">
-            {(updateStatus === 'idle' || updateStatus === 'error') && (
-              <button
-                onClick={onCheckUpdates}
-                className="px-4 py-1.5 bg-accent hover:bg-accent/80 rounded-lg text-xs font-medium transition-all"
-              >
-                Check for Updates
-              </button>
-            )}
-            {updateStatus === 'checking' && (
-              <button disabled className="px-4 py-1.5 bg-accent/50 rounded-lg text-xs font-medium flex items-center gap-2">
-                <RefreshCw size={12} className="animate-spin" /> Checking
-              </button>
-            )}
-            {updateStatus === 'available' && (
-              <button disabled className="px-4 py-1.5 bg-primary/20 text-primary rounded-lg text-xs font-medium">
-                Downloading...
-              </button>
-            )}
-            {updateStatus === 'downloaded' && (
-              <button
-                onClick={onInstallUpdate}
-                className="px-4 py-1.5 bg-primary text-primary-foreground hover:brightness-110 rounded-lg text-xs font-medium shadow-lg shadow-primary/20 transition-all"
-              >
-                Update and Restart
-              </button>
-            )}
-          </div>
-        </div>
+        </Section>
 
-        <div className="p-6 rounded-2xl border border-border bg-accent/5 space-y-4">
-          <h4 className="text-sm font-semibold">Resources</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => onOpenExternal('https://github.com/w-t-yang/aynite')} className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border">
-              <Github size={14} /> GitHub Project
-            </button>
-            <button onClick={() => onOpenExternal('https://github.com/w-t-yang/aynite/issues')} className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border">
-              <Bug size={14} /> Report an Issue
-            </button>
+        <Section title="Resources" description="Join the community and help us improve the project.">
+          <div className="grid grid-cols-1 gap-3">
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => onOpenExternal('https://github.com/w-t-yang/aynite')} 
+              className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
+            >
+              <Github size={18} className="text-foreground" />
+              <div className="text-left">
+                <div className="font-bold">GitHub Project</div>
+                <div className="text-[10px] text-muted-foreground font-normal">View source code and contributors</div>
+              </div>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => onOpenExternal('https://github.com/w-t-yang/aynite/issues')} 
+              className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
+            >
+              <Bug size={18} className="text-destructive" />
+              <div className="text-left">
+                <div className="font-bold">Report an Issue</div>
+                <div className="text-[10px] text-muted-foreground font-normal">Submit bug reports or feature requests</div>
+              </div>
+            </Button>
           </div>
-        </div>
+        </Section>
       </div>
 
-      <div className="pt-10 text-center">
-        <p className="text-[10px] text-muted-foreground/50 font-mono italic">
-          Built with ❤️ for the AI lifestyle
+      <div className="pt-20 text-center">
+        <p className="text-[10px] text-muted-foreground/30 font-mono italic tracking-widest">
+          BUILT WITH ❤️ FOR THE AI LIFESTYLE
         </p>
       </div>
-    </div>
+    </SettingsPage>
   );
 }

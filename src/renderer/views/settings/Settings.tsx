@@ -144,52 +144,26 @@ export function Settings({ }: SettingsProps) {
 
         {/* Settings Content */}
         <div className="flex-1 flex flex-col overflow-hidden bg-background">
-          <div className="flex-1 overflow-y-auto p-10 custom-scrollbar relative">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-2xl font-semibold capitalize tracking-tight">
-                  {activeTab === 'ai' ? 'Providers' : activeTab === 'agents' ? 'Agents' : activeTab === 'tools' ? 'Tools' : activeTab}
-                </h2>
-                {activeTab !== 'about' && (
-                  <button
-                    onClick={() => setShowRestoreModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all border border-transparent hover:border-border"
-                  >
-                    <RotateCcw size={14} />
-                    Restore Defaults
-                  </button>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {activeTab === 'appearance' && "Customize the look and feel of your workspace with themes and fonts."}
-                {activeTab === 'keybindings' && "Configure keyboard shortcuts for quick actions and navigation."}
-                {activeTab === 'ai' && "Manage AI service providers and models for the assistant."}
-                {activeTab === 'agents' && "Define specialized assistant personas with custom prompts."}
-                {activeTab === 'tools' && "Enable or disable built-in tools for the AI to interact with your system."}
-                {activeTab === 'skills' && "Extend the assistant's capabilities with custom scripts."}
-                {activeTab === 'commands' && "Manage custom shell commands and automation tasks."}
-                {activeTab === 'about' && "Information about Aynite and system updates."}
-              </p>
-            </div>
+          <div className="flex-1 overflow-auto custom-scrollbar relative">
 
             {activeTab === 'appearance' && themes && (
               <AppearanceTab
                 state={{ list: themes.list, activeId: themes.activeId, systemFonts: themes.systemFonts }}
-                actions={{ setThemes: handleSetThemes }}
+                actions={{ setThemes: handleSetThemes, onRestore: () => setShowRestoreModal(true) }}
               />
             )}
 
             {activeTab === 'keybindings' && (
               <KeybindingsTab
                 state={{ keybindings }}
-                actions={{ setKeybindings: handleSetKeybindings }}
+                actions={{ setKeybindings: handleSetKeybindings, onRestore: () => setShowRestoreModal(true) }}
               />
             )}
 
             {activeTab === 'ai' && (
               <AITab
                 state={{ ai }}
-                actions={{ setAI: handleSetAI }}
+                actions={{ setAI: handleSetAI, onRestore: () => setShowRestoreModal(true) }}
               />
             )}
 
@@ -207,7 +181,8 @@ export function Settings({ }: SettingsProps) {
                       await aynite.setPrompts({ list: payload.prompts.files });
                     }
                   },
-                  onPickPromptFile: async () => null // Removed
+                  onPickPromptFile: async () => null, // Removed
+                  onRestore: () => setShowRestoreModal(true)
                 }}
               />
             )}
@@ -224,7 +199,8 @@ export function Settings({ }: SettingsProps) {
                       handleSetSkills({ list: newSkills.folders, items: skills?.items || [] });
                     }
                   },
-                  onPickSkillFolder: async () => null // Removed
+                  onPickSkillFolder: async () => null, // Removed
+                  onRestore: () => setShowRestoreModal(true)
                 }}
               />
             )}
@@ -241,7 +217,8 @@ export function Settings({ }: SettingsProps) {
                       handleSetCommands({ list: newCmds.folders, items: commands?.items || [] });
                     }
                   },
-                  onPickCommandFolder: async () => null // Removed
+                  onPickCommandFolder: async () => null, // Removed
+                  onRestore: () => setShowRestoreModal(true)
                 }}
               />
             )}
@@ -249,7 +226,7 @@ export function Settings({ }: SettingsProps) {
             {activeTab === 'tools' && (
               <ToolsTab
                 state={{ aiTools, availableTools }}
-                actions={{ setTools: handleSetTools }}
+                actions={{ setTools: handleSetTools, onRestore: () => setShowRestoreModal(true) }}
               />
             )}
 

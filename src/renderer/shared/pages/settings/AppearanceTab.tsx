@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Palette, RotateCcw, Trash2, Copy } from 'lucide-react';
+import { Palette, RotateCcw, Trash2, Copy, Plus } from 'lucide-react';
 import { Section } from '../../basic/Section';
+import { SettingsPage } from '../../basic/SettingsPage';
 import { ThemePreview } from '../../featured/ThemePreview';
 import { ColorInput } from '../../featured/ColorInput';
 import { SearchableSelect } from '../../featured/SearchableSelect';
@@ -40,6 +41,7 @@ interface AppearanceTabProps {
   };
   actions: {
     setThemes: (payload: { list: any[], activeId: string }) => void;
+    onRestore?: () => void;
   };
 }
 
@@ -122,9 +124,29 @@ export function AppearanceTab({
   };
 
   return (
-    <div className="space-y-12">
+    <SettingsPage
+      title="Appearance"
+      description="Customize the look and feel of your workspace with themes, custom colors, and typography."
+      primaryAction={
+        <div className="flex gap-2">
+          {actions.onRestore && (
+            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
+              <RotateCcw size={14} /> Restore
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setShowDuplicateModal(true)}>
+            <Copy size={14} /> Duplicate
+          </Button>
+          {editingTheme && !editingTheme.isSystem && (
+            <Button variant="destructive" size="sm" onClick={() => setShowDeleteModal(true)}>
+              <Trash2 size={14} /> Delete
+            </Button>
+          )}
+        </div>
+      }
+    >
       {/* Theme Presets */}
-      <Section title="Theme Preset" icon={<Palette size={16} />}>
+      <Section title="Theme Presets" description="Select a predefined theme to quickly change the aesthetic.">
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
           {localThemes.map((theme) => (
             <ThemePreview
@@ -140,24 +162,12 @@ export function AppearanceTab({
       {/* Theme Customization */}
       {editingTheme && (
         <Section 
-          title="Active Theme Editor" 
-          icon={<Palette size={16} />}
-          action={
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowDuplicateModal(true)}>
-                <Copy size={12} /> Duplicate
-              </Button>
-              {!editingTheme.isSystem && (
-                <Button variant="ghost" size="sm" onClick={() => setShowDeleteModal(true)} className="text-destructive hover:bg-destructive/10">
-                  <Trash2 size={12} /> Delete
-                </Button>
-              )}
-            </div>
-          }
+          title="Active Theme Customization" 
+          description={`Fine-tune the "${editingTheme.name}" theme's colors and fonts.`}
         >
-          <div className="space-y-8">
+          <div className="space-y-12">
             {/* Fonts */}
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+            <div className="grid grid-cols-2 gap-x-12 gap-y-6 max-w-3xl">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Interface Font</label>
                 <SearchableSelect
@@ -170,7 +180,7 @@ export function AppearanceTab({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Mono Font</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Monospace Font</label>
                 <SearchableSelect
                   value={editingTheme.fonts?.mono || 'JetBrains Mono'}
                   options={systemFonts}
@@ -183,7 +193,7 @@ export function AppearanceTab({
             </div>
 
             {/* Colors */}
-            <div className="grid grid-cols-2 gap-x-12 gap-y-2">
+            <div className="grid grid-cols-2 gap-x-16 gap-y-4">
               {Object.entries(editingTheme.colors).map(([key, value]: [string, any]) => (
                 <ColorInput
                   key={key}
@@ -212,7 +222,7 @@ export function AppearanceTab({
           setDuplicateError('');
         }}
         title="Duplicate Theme"
-        size="sm"
+        size="md"
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowDuplicateModal(false)}>Cancel</Button>
@@ -221,20 +231,18 @@ export function AppearanceTab({
         }
       >
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">New Theme Name</label>
-            <Input 
-              autoFocus 
-              placeholder="e.g. My Dark Theme" 
-              value={duplicateName} 
-              onChange={(v) => {
-                setDuplicateName(v);
-                setDuplicateError('');
-              }}
-              className={duplicateError ? "border-destructive focus:ring-destructive" : ""}
-            />
-            {duplicateError && <p className="text-[10px] text-destructive font-medium">{duplicateError}</p>}
-          </div>
+          <Input 
+            autoFocus 
+            label="New Theme Name"
+            placeholder="e.g. My Dark Theme" 
+            value={duplicateName} 
+            onChange={(e) => {
+              setDuplicateName(e.target.value);
+              setDuplicateError('');
+            }}
+            className={duplicateError ? "border-destructive focus:ring-destructive" : ""}
+          />
+          {duplicateError && <p className="text-xs text-destructive font-medium">{duplicateError}</p>}
         </div>
       </Modal>
 
@@ -243,21 +251,25 @@ export function AppearanceTab({
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         title="Delete Theme"
-        size="sm"
+        size="md"
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleDeleteTheme} className="bg-destructive hover:bg-destructive/90 text-white border-none">
+            <Button variant="destructive" onClick={handleDeleteTheme}>
               Delete Forever
             </Button>
           </>
         }
       >
-        <div className="space-y-3">
-          <p className="text-sm text-foreground">Are you sure you want to delete <span className="font-bold">"{editingTheme?.name}"</span>?</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">This action cannot be undone. All custom colors and font settings for this theme will be permanently removed.</p>
+        <div className="space-y-4">
+          <p className="text-sm text-foreground leading-relaxed">
+            Are you sure you want to delete <span className="font-bold">"{editingTheme?.name}"</span>?
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed bg-destructive/5 p-3 rounded-lg border border-destructive/10">
+            This action cannot be undone. All custom colors and font settings for this theme will be permanently removed from your configuration.
+          </p>
         </div>
       </Modal>
-    </div>
+    </SettingsPage>
   );
 }

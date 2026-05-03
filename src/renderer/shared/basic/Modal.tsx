@@ -14,10 +14,10 @@ interface ModalProps {
 }
 
 const sizeClasses = {
-  sm: 'w-80',
-  md: 'w-[450px]',
-  lg: 'w-[600px]',
-  xl: 'w-[800px]'
+  sm: 'w-[400px]',
+  md: 'w-[600px]',
+  lg: 'w-[800px]',
+  xl: 'w-[1000px]'
 };
 
 export function Modal({
@@ -62,12 +62,14 @@ export function Modal({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border/40">
           <h3 className="text-lg font-semibold text-foreground tracking-tight">{title}</h3>
-          <button 
+          <Button 
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="text-muted-foreground hover:text-foreground"
           >
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         {/* Content */}

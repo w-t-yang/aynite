@@ -1,5 +1,8 @@
 import React from 'react';
 import { Plus, RotateCcw, FileText } from 'lucide-react';
+import { Button } from '../../basic/Button';
+import { SettingsPage } from '../../basic/SettingsPage';
+import { Section } from '../../basic/Section';
 import { SettingsState, Agent } from '../../lib/types';
 import { AgentCard } from '../../featured/AgentCard';
 import { PromptFileRow } from '../../featured/PromptFileRow';
@@ -14,6 +17,7 @@ interface AgentsTabProps {
   actions: {
     setAgentsTab: (payload: { agents?: SettingsState['agents'], prompts?: SettingsState['prompts'] }) => void;
     onPickPromptFile: () => Promise<any>;
+    onRestore?: () => void;
   };
 }
 
@@ -47,31 +51,48 @@ export function AgentsTab({
 
 
   return (
-    <div className="space-y-10 max-w-4xl pb-10">
-      <div className="flex items-center justify-between border-b border-border/30 pb-4">
-        <p className="text-sm text-muted-foreground">Manage global prompts and specialized agents.</p>
-      </div>
-
-      {/* Global System Prompts */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium">Global System Prompts</h3>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={async () => {
-                const res = await onPickPromptFile();
-                if (res && res.data) {
-                  const newFiles = [...(prompts.files || []), res.data];
-                  setAgentsTab({ prompts: { files: Array.from(new Set(newFiles)) } });
-                }
-              }} 
-              className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-            >
-              <Plus size={14} /> Add File
-            </button>
-          </div>
+    <SettingsPage
+      title="Agents"
+      description="Define specialized assistant personas with custom prompts. Agents can have their own sets of instruction files that extend the global behavior."
+      primaryAction={
+        <div className="flex gap-2">
+          {actions.onRestore && (
+            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
+              <RotateCcw size={14} /> Restore
+            </Button>
+          )}
+          <Button 
+            variant="primary"
+            size="sm"
+            onClick={handleAddAgent} 
+            className="flex items-center gap-1.5"
+          >
+            <Plus size={14} /> Add Agent
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground mb-4">These prompts are applied to all agents.</p>
+      }
+    >
+      {/* Global System Prompts */}
+      <Section 
+        title="Global System Prompts" 
+        description="These prompt files are prepended to every assistant interaction, regardless of the active agent."
+        action={
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const res = await onPickPromptFile();
+              if (res && res.data) {
+                const newFiles = [...(prompts.files || []), res.data];
+                setAgentsTab({ prompts: { files: Array.from(new Set(newFiles)) } });
+              }
+            }} 
+            className="flex items-center gap-1.5"
+          >
+            <Plus size={14} /> Add File
+          </Button>
+        }
+      >
         <div className="space-y-2">
           {(prompts.files || []).map((filePath) => (
             <PromptFileRow
@@ -83,22 +104,17 @@ export function AgentsTab({
               }}
             />
           ))}
+          {(!prompts.files || prompts.files.length === 0) && (
+            <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
+              No global prompt files configured.
+            </p>
+          )}
         </div>
-      </div>
+      </Section>
 
       {/* Agents List */}
-      <div className="pt-6 border-t border-border">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-medium">Agents</h3>
-          <button 
-            onClick={handleAddAgent} 
-            className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-          >
-            <Plus size={14} /> Add Agent
-          </button>
-        </div>
-
-        <div className="space-y-6">
+      <Section title="Agent Profiles" description="Switch between different personas for specific tasks.">
+        <div className="space-y-8">
           {(agents.list || []).map((agent: Agent) => (
             <div key={agent.id} className="space-y-2">
               <AgentCard
@@ -126,7 +142,7 @@ export function AgentsTab({
             </div>
           ))}
         </div>
-      </div>
-    </div>
+      </Section>
+    </SettingsPage>
   );
 }

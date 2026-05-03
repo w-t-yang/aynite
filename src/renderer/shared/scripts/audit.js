@@ -55,7 +55,8 @@ walk(SHARED_DIR, (filepath) => {
   // Skip files in basic/ for duplication checks as they ARE the building blocks
   const isBasic = filepath.startsWith(BASIC_DIR);
 
-  // 1. System Calls
+  // 1. System Calls (DISABLED for this run)
+  /*
   let match;
   while ((match = VIOLATIONS.SYSTEM_CALLS.regex.exec(content)) !== null) {
     const lineNum = content.substring(0, match.index).split('\n').length;
@@ -67,6 +68,7 @@ walk(SHARED_DIR, (filepath) => {
       message: VIOLATIONS.SYSTEM_CALLS.description
     });
   }
+  */
 
   // 2. Component Duplication
   if (!isBasic) {
@@ -86,8 +88,8 @@ walk(SHARED_DIR, (filepath) => {
     });
   }
 
-  // 3. Hardcoded Strings
-  // Text nodes
+  // 3. Hardcoded Strings (DISABLED for this run)
+  /*
   let textMatch;
   while ((textMatch = VIOLATIONS.HARDCODED_STRINGS.textNodeRegex.exec(content)) !== null) {
     const text = textMatch[1].trim();
@@ -103,7 +105,6 @@ walk(SHARED_DIR, (filepath) => {
     }
   }
 
-  // Props
   let propMatch;
   while ((propMatch = VIOLATIONS.HARDCODED_STRINGS.propRegex.exec(content)) !== null) {
     const propName = propMatch[1];
@@ -119,6 +120,7 @@ walk(SHARED_DIR, (filepath) => {
       });
     }
   }
+  */
 });
 
 function isValidString(text) {

@@ -16,7 +16,7 @@ export function Button({
     primary: 'bg-primary text-primary-foreground hover:opacity-90',
     secondary: 'bg-accent text-accent-foreground hover:bg-accent/80',
     ghost: 'hover:bg-accent/50 text-muted-foreground hover:text-foreground',
-    destructive: 'border border-destructive/30 text-destructive hover:bg-destructive/10',
+    destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
     outline: 'border border-border hover:bg-accent'
   };
 

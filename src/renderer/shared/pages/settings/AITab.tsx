@@ -1,6 +1,9 @@
 import React from 'react';
-import { Bot, Plus } from 'lucide-react';
+import { Bot, Plus, RotateCcw } from 'lucide-react';
 import { SettingsState, AIProviderInstance } from '../../lib/types';
+import { Button } from '../../basic/Button';
+import { SettingsPage } from '../../basic/SettingsPage';
+import { Section } from '../../basic/Section';
 import { AIProviderCard } from '../../featured/AIProviderCard';
 
 interface AITabProps {
@@ -9,6 +12,7 @@ interface AITabProps {
   };
   actions: {
     setAI: (ai: SettingsState['ai']) => void;
+    onRestore?: () => void;
   };
 }
 
@@ -52,18 +56,28 @@ export function AITab({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-sm text-muted-foreground">Manage multiple AI provider configurations and select the active one.</p>
-          <button
+    <SettingsPage
+      title="AI Providers"
+      description="Manage multiple AI provider configurations and select the active one for your assistant."
+      primaryAction={
+        <div className="flex gap-2">
+          {actions.onRestore && (
+            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
+              <RotateCcw size={14} /> Restore
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleAddProvider}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5"
           >
             <Plus size={14} /> Add Provider
-          </button>
+          </Button>
         </div>
-
+      }
+    >
+      <Section title="Configured Providers">
         <div className="space-y-6">
           {(ai.providers || []).map((provider: AIProviderInstance) => (
             <AIProviderCard
@@ -83,7 +97,7 @@ export function AITab({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </Section>
+    </SettingsPage>
   );
 }
