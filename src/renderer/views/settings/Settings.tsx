@@ -15,7 +15,7 @@ import { CommandsTab } from '../../shared/pages/settings/CommandsTab';
 import { ToolsTab } from '../../shared/pages/settings/ToolsTab';
 import { AboutTab } from '../../shared/pages/settings/AboutTab';
 import { TabButton } from '../../shared/basic/TabButton';
-import { Modal } from '../../shared/basic/Modal';
+import { Modal } from '../../shared/featured/Modal';
 import { Button } from '../../shared/basic/Button';
 import { useAynite } from '../../shared/context/MockViewContext';
 

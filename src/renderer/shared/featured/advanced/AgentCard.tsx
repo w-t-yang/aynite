@@ -1,11 +1,35 @@
 import React, { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
-import { cn } from '../lib/utils';
-import { Button } from '../basic/Button';
-import { Input } from '../basic/Input';
-import { Radio } from '../basic/Radio';
-import { Modal } from '../basic/Modal';
-import { PromptFileRow } from './PromptFileRow';
+import { cn } from '../../lib/utils';
+import { Button } from '../../basic/Button';
+import { Input } from '../../basic/Input';
+import { Radio } from '../../basic/Radio';
+import { Modal } from '../Modal';
+import { Agent } from '../../lib/types';
+
+interface PromptFileRowProps {
+  filePath: string;
+  onDelete: () => void;
+}
+
+function PromptFileRow({ filePath, onDelete }: PromptFileRowProps) {
+  return (
+    <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-accent/5 group">
+      <div className="flex flex-col min-w-0">
+        <span className="text-xs font-medium truncate">{filePath.split(/[\/\\]/).pop()}</span>
+        <span className="text-[10px] text-muted-foreground truncate">{filePath}</span>
+      </div>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={onDelete}
+        className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"
+      >
+        <Trash2 size={14} />
+      </Button>
+    </div>
+  );
+}
 
 interface AgentCardProps {
   agent: any;

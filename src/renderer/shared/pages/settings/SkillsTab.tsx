@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '../../basic/Button';
-import { SettingsPage } from '../../basic/SettingsPage';
+import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
-import { Modal } from '../../basic/Modal';
+import { Modal } from '../../featured/Modal';
 import { SettingsState } from '../../lib/types';
 import { cn } from '../../lib/utils';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../lib/utils';
-import { Button } from './Button';
+import { Button } from '../basic/Button';
 import { RotateCcw } from 'lucide-react';
 
 interface SettingsPageProps {

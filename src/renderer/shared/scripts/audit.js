@@ -85,6 +85,7 @@ const auditFile = (filepath) => {
   let category = '';
   if (filepath.includes(path.join(SHARED_DIR, 'lib'))) category = 'lib';
   else if (filepath.includes(path.join(SHARED_DIR, 'basic'))) category = 'basic';
+  else if (filepath.includes(path.join(SHARED_DIR, 'featured', 'advanced'))) category = 'advanced';
   else if (filepath.includes(path.join(SHARED_DIR, 'featured'))) category = 'featured';
   else if (filepath.includes(path.join(SHARED_DIR, 'pages'))) category = 'pages';
   else if (filepath.includes(path.join(SHARED_DIR, 'context'))) category = 'context';
@@ -104,6 +105,7 @@ const auditFile = (filepath) => {
         let targetCategory = '';
         if (resolvedPath.includes(path.join(SHARED_DIR, 'lib'))) targetCategory = 'lib';
         else if (resolvedPath.includes(path.join(SHARED_DIR, 'basic'))) targetCategory = 'basic';
+        else if (resolvedPath.includes(path.join(SHARED_DIR, 'featured', 'advanced'))) targetCategory = 'advanced';
         else if (resolvedPath.includes(path.join(SHARED_DIR, 'featured'))) targetCategory = 'featured';
         else if (resolvedPath.includes(path.join(SHARED_DIR, 'pages'))) targetCategory = 'pages';
         else if (resolvedPath.includes(path.join(SHARED_DIR, 'context'))) targetCategory = 'context';
@@ -124,6 +126,11 @@ const auditFile = (filepath) => {
           if (targetCategory !== 'basic' && targetCategory !== 'lib' && targetCategory !== 'context') {
             violation = true;
             msg = 'featured components should only import from basic, lib, or context.';
+          }
+        } else if (category === 'advanced') {
+          if (targetCategory !== 'featured' && targetCategory !== 'basic' && targetCategory !== 'lib' && targetCategory !== 'context' && targetCategory !== 'advanced') {
+            violation = true;
+            msg = 'advanced featured components should only import from featured, basic, lib, or context.';
           }
         } else if (category === 'pages') {
           if (targetCategory === 'pages') {

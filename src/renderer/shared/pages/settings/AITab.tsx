@@ -2,9 +2,9 @@ import React from 'react';
 import { Bot, Plus, RotateCcw } from 'lucide-react';
 import { SettingsState, AIProviderInstance } from '../../lib/types';
 import { Button } from '../../basic/Button';
-import { SettingsPage } from '../../basic/SettingsPage';
+import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
-import { AIProviderCard } from '../../featured/AIProviderCard';
+import { AIProviderCard } from '../../featured/advanced/AIProviderCard';
 import { DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS } from '../../lib/constants';
 
 interface AITabProps {

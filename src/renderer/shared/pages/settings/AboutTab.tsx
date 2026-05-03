@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bot, CloudDownload, RefreshCw, Github, Bug } from 'lucide-react';
 import { Button } from '../../basic/Button';
-import { SettingsPage } from '../../basic/SettingsPage';
+import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
 
 interface AboutTabProps {

@@ -1,3 +1,22 @@
+export interface AgentMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'tool' | 'system';
+  content: string;
+  tool_calls?: any[];
+  tool_call_id?: string;
+  name?: string;
+  thinking?: string;
+}
+
+export interface AgentStepEvent {
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'text_delta' | 'text_done' | 'error' | 'approval_request';
+  content: string;
+  toolName?: string;
+  toolArgs?: Record<string, any>;
+  toolCallId?: string;
+  approvalId?: string;
+}
+
 export interface AIProviderInstance {
   id: string;
   name: string;

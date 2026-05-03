@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Send, Bot, History, Settings, X, Calendar, Clock, AlertTriangle, Terminal, Folder, Check, Copy } from 'lucide-react';
-import { AgentMessage } from '../../../src/lib/agent';
+import { AgentMessage } from '../../lib/types';
 import { SettingsState } from '../../lib/types';
 import { useChat } from '../../context/ChatMockContext';
 import ChatInput, { ChatInputHandle } from '../../featured/ChatInput';
-import { ChatMessage } from '../../featured/ChatMessage';
+import { ChatMessage } from '../../featured/advanced/ChatMessage';
 import { SelectionPopover } from '../../featured/SelectionPopover';
 import { cn } from '../../lib/utils';
 

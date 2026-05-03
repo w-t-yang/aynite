@@ -2,7 +2,7 @@ import React from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Button } from '../../basic/Button';
 import { Switch } from '../../basic/Switch';
-import { SettingsPage } from '../../basic/SettingsPage';
+import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
 import { SettingsState } from '../../lib/types';
 

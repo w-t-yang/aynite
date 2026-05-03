@@ -1,7 +1,7 @@
 import React from 'react';
 import { SettingsState } from '../../lib/types';
 import { KeybindingRow } from '../../featured/KeybindingRow';
-import { SettingsPage } from '../../basic/SettingsPage';
+import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
 
 interface KeybindingsTabProps {
