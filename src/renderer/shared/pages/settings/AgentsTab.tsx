@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, FileText } from 'lucide-react';
 import { Button } from '../../basic/Button';
-import { Modal } from '../../featured/Modal';
+import { Modal } from '../../basic/Modal';
 import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
 import { SettingsState, Agent } from '../../lib/types';
-import { AgentCard } from '../../featured/advanced/AgentCard';
+import { AgentCard } from '../../featured/AgentCard';
 import { Collapsible } from '../../basic/Collapsible';
 import { Trash2 } from 'lucide-react';
 

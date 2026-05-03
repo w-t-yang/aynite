@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal } from '../Modal';
-import { Button } from '../../basic/Button';
+import { Modal } from '../basic/Modal';
+import { Button } from '../basic/Button';
 
 interface ConfirmModalProps {
   message: string;

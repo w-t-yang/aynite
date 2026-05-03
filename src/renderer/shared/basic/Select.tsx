@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '../lib/utils';
 import { ChevronDown, Search } from 'lucide-react';
-import { SelectionList, SelectionItem } from '../basic/SelectionList';
-import { Input } from '../basic/Input';
+import { SelectionList, SelectionItem } from './SelectionList';
+import { Input } from './Input';
 
 interface SelectOption {
   value: string;

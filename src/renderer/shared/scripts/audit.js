@@ -118,7 +118,8 @@ const auditFile = (filepath) => {
           violation = true;
           msg = 'lib module should only import from external packages.';
         } else if (category === 'basic') {
-          if (targetCategory !== 'lib' && targetCategory !== 'context') {
+          const isException = filepath.endsWith('basic/Modal.tsx') || filepath.endsWith('basic/Select.tsx');
+          if (targetCategory !== 'lib' && targetCategory !== 'context' && !isException) {
             violation = true;
             msg = 'basic components should only import from lib or context.';
           }

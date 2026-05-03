@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus } from 'lucide-react';
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../../lib/utils';
-import { Select } from '../../featured/Select';
+import { Select } from '../../basic/Select';
 import { useSidebar, FileNode } from '../../context/SidebarMockContext';
-import { PromptModal } from '../../featured/advanced/PromptModal';
-import { ConfirmModal } from '../../featured/advanced/ConfirmModal';
+import { PromptModal } from '../../featured/PromptModal';
+import { ConfirmModal } from '../../featured/ConfirmModal';
 
 interface TreeviewPageProps {
   activeTabPath?: string;

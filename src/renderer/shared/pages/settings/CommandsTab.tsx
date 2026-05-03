@@ -3,7 +3,7 @@ import { Plus, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '../../basic/Button';
 import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
-import { Modal } from '../../featured/Modal';
+import { Modal } from '../../basic/Modal';
 import { SettingsState } from '../../lib/types';
 import { cn } from '../../lib/utils';
 

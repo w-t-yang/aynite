@@ -1,7 +1,7 @@
 import React from 'react';
-import { Modal } from '../Modal';
-import { Input } from '../../basic/Input';
-import { Button } from '../../basic/Button';
+import { Modal } from '../basic/Modal';
+import { Input } from '../basic/Input';
+import { Button } from '../basic/Button';
 
 interface PromptModalProps {
   title: string;

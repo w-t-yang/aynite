@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { Input } from '../../basic/Input';
-import { Select } from '../Select';
-import { Button } from '../../basic/Button';
-import { Radio } from '../../basic/Radio';
-import { Modal } from '../Modal';
-import { AIProviderInstance } from '../../lib/types';
+import { cn } from '../lib/utils';
+import { Input } from '../basic/Input';
+import { Select } from '../basic/Select';
+import { Button } from '../basic/Button';
+import { Radio } from '../basic/Radio';
+import { Modal } from '../basic/Modal';
+import { AIProviderInstance } from '../lib/types';
 
 interface AIProviderCardProps {
   provider: AIProviderInstance;

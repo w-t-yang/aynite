@@ -4,8 +4,8 @@ import { Section } from '../../basic/Section';
 import { SettingsPage } from '../../featured/SettingsPage';
 import { ThemePreview } from '../../featured/ThemePreview';
 import { ColorInput } from '../../featured/ColorInput';
-import { Select } from '../../featured/Select';
-import { Modal } from '../../featured/Modal';
+import { Select } from '../../basic/Select';
+import { Modal } from '../../basic/Modal';
 import { Input } from '../../basic/Input';
 
 const COLOR_LABELS: Record<string, string> = {
