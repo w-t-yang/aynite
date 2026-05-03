@@ -17,7 +17,9 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        'views/settings/index': resolve(__dirname, 'src/renderer/views/settings/index.html')
+        'views/settings/index': resolve(__dirname, 'src/renderer/views/settings/index.html'),
+        'views/treeview/index': resolve(__dirname, 'src/renderer/views/treeview/index.html'),
+        'views/aichat/index': resolve(__dirname, 'src/renderer/views/aichat/index.html')
       }
     }
   }
