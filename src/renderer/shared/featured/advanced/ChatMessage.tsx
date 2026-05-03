@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Copy, Bot, ChevronRight, FileText, Save, FolderOpen, Terminal } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AgentMessage, SettingsState } from '../../lib/types';
+import { ChatMessage, SettingsState } from '../../lib/types';
 import { Collapsible } from '../../basic/Collapsible';
 import { Button } from '../../basic/Button';
 import { cn } from '../../lib/utils';
@@ -204,7 +204,7 @@ function ToolCallItem({ call, defaultExpanded = false }: ToolCallItemProps) {
 // --- Message Block Components ---
 
 interface MessageBlockProps {
-  msg: AgentMessage;
+  msg: ChatMessage;
   isLast: boolean;
   onOpenFile: (path: string) => void;
   onCopy: (content: string) => void;
@@ -305,8 +305,8 @@ function ToolMessageBlock({ msg, isLast }: MessageBlockProps) {
 
 // --- Main ChatMessage Component ---
 
-interface ChatMessageProps {
-  msg: AgentMessage;
+interface ChatMessageItemProps {
+  msg: ChatMessage;
   idx: number;
   total: number;
   onOpenFile: (path: string) => void;
@@ -314,14 +314,14 @@ interface ChatMessageProps {
   settings: SettingsState;
 }
 
-export function ChatMessage({
+export function ChatMessageItem({
   msg,
   idx,
   total,
   onOpenFile,
   onCopy,
   settings
-}: ChatMessageProps) {
+}: ChatMessageItemProps) {
   const isLast = idx === total - 1;
   const commonProps: MessageBlockProps = { msg, isLast, onOpenFile, onCopy, settings };
 

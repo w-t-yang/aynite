@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X, Settings, History, Calendar, Clock } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AgentMessage, AgentStepEvent, SettingsState } from '../../shared/lib/types';
+import { ChatMessage, AgentStepEvent, SettingsState } from '../../shared/lib/types';
 import { runAgentLoop, AgentConfig } from '../lib/agent';
+import ChatInput, { ChatInputHandle } from '../../shared/featured/ChatInput';
 import { SelectionPopover } from './ui/SelectionPopover';
 import { cn } from '../../shared/lib/utils';
 import { Collapsible } from '../../shared/basic/Collapsible';
@@ -11,9 +12,9 @@ import { Collapsible } from '../../shared/basic/Collapsible';
 
 // ─── Message Types ───────────────────────────────────────────────────
 
-// AgentMessage is defined in ../lib/agent.ts
+// ChatMessage is defined in ../lib/agent.ts
 
-// AgentMessage is defined in ../lib/agent.ts
+// ChatMessage is defined in ../lib/agent.ts
 
 
 
@@ -185,7 +186,7 @@ function ThinkingProcess({ content, defaultOpen = false }: { content: string; de
 }
 // ─── Chat Message Component ─────────────────────────────────────────
 
-function ChatMessage({
+function ChatMessageItem({
   msg,
   idx,
   total,
@@ -193,7 +194,7 @@ function ChatMessage({
   onCopy,
   settings
 }: {
-  msg: AgentMessage;
+  msg: ChatMessage;
   idx: number;
   total: number;
   onOpenFile: (path: string) => void;
@@ -494,7 +495,7 @@ export default function ChatTab({
   activeTabPath?: string;
   onUpdateSettings: (settings: SettingsState) => void;
 }) {
-  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showProviderSwitcher, setShowProviderSwitcher] = useState(false);
@@ -549,7 +550,7 @@ export default function ChatTab({
 
 
 
-  const normalizeAndHealMessages = (msgs: any[]): AgentMessage[] => {
+  const normalizeAndHealMessages = (msgs: any[]): ChatMessage[] => {
     // 1. Basic normalization (handle legacy logs with 'text' instead of 'content')
     const normalized = msgs.map((m: any) => ({
       ...m,
@@ -557,7 +558,7 @@ export default function ChatTab({
       content: m.content || m.text || ""
     }));
 
-    const healed: AgentMessage[] = [];
+    const healed: ChatMessage[] = [];
     for (let i = 0; i < normalized.length; i++) {
       const m = normalized[i];
       healed.push(m);
@@ -752,8 +753,8 @@ export default function ChatTab({
           });
 
           const content = [res.data?.stdout, res.data?.stderr].filter(Boolean).join('\n').trim();
-          const userMsg: AgentMessage = { id: genId(), role: 'user', content: text };
-          const cmdMsg: AgentMessage = {
+          const userMsg: ChatMessage = { id: genId(), role: 'user', content: text };
+          const cmdMsg: ChatMessage = {
             id: genId(),
             role: 'tool',
             name: name,
@@ -820,14 +821,14 @@ export default function ChatTab({
 
 
       // 2. Add User Message
-      const userMsg: AgentMessage = { id: genId(), role: 'user', content: text };
+      const userMsg: ChatMessage = { id: genId(), role: 'user', content: text };
       let updatedMessages = [...messages, userMsg];
 
       // 3. Add Command Result Messages (if any)
       if (commandResults.length > 0) {
         for (const res of commandResults) {
           const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim();
-          const cmdMsg: AgentMessage = {
+          const cmdMsg: ChatMessage = {
             id: genId(),
             role: 'tool',
             name: res.name,
@@ -840,7 +841,7 @@ export default function ChatTab({
       setMessages(updatedMessages);
       setLoading(true);
 
-      const history: AgentMessage[] = updatedMessages.map((m) => ({
+      const history: ChatMessage[] = updatedMessages.map((m) => ({
         ...m,
         content: m.content,
       }));
@@ -1059,7 +1060,7 @@ export default function ChatTab({
         )}
 
         {messages.map((msg, idx) => (
-          <ChatMessage
+          <ChatMessageItem
             key={msg.id}
             msg={msg}
             idx={idx}
@@ -1159,6 +1160,9 @@ export default function ChatTab({
             workspaceFolders={workspaceFolders}
             focusKeybinding={settings.keybindings.agent.focusChat}
             submitKeybinding={settings.keybindings.agent.submit}
+            getFiles={(window as any).api.getFiles}
+            getAvailableSkills={(window as any).api.getAvailableSkills}
+            getAvailableCommands={(window as any).api.getAvailableCommands}
           />
         </div>
       </div>

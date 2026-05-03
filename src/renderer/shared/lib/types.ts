@@ -1,4 +1,4 @@
-export interface AgentMessage {
+export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'model' | 'tool' | 'system';
   content: string;

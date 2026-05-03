@@ -1,4 +1,4 @@
-import { AgentMessage, AgentStepEvent } from '../../shared/lib/types';
+import { ChatMessage, AgentStepEvent } from '../../shared/lib/types';
 
 export interface AgentConfig {
   provider: string;
@@ -14,16 +14,16 @@ const genId = () => Math.random().toString(36).slice(2, 11);
 
 export async function runAgentLoop(
   userMessage: string,
-  history: AgentMessage[],
+  history: ChatMessage[],
   config: AgentConfig,
   workspaceFolders: string[],
   onEvent: (event: AgentStepEvent) => void,
   requestApproval: (command: string, cwd: string) => Promise<boolean>,
   activeFile?: string,
   abortSignal?: AbortSignal
-): Promise<AgentMessage[]> {
+): Promise<ChatMessage[]> {
 
-  const fullHistory: AgentMessage[] = [...history];
+  const fullHistory: ChatMessage[] = [...history];
 
   const hasSystem = fullHistory.some(m => m.role === 'system');
   if (!hasSystem) {
@@ -32,7 +32,7 @@ export async function runAgentLoop(
     const sysPromptRes = await window.api.getMergedSystemPrompt(undefined, config.agentPromptFiles);
     const sysPrompt = (sysPromptRes && sysPromptRes.data) ? sysPromptRes.data : "";
     console.log("[Agent] Injected system prompt length:", sysPrompt.length);
-    const sysMsg: AgentMessage = {
+    const sysMsg: ChatMessage = {
       id: genId(),
       role: 'system',
       content: sysPrompt
@@ -41,7 +41,7 @@ export async function runAgentLoop(
   }
 
   // Helper to check for reasoning content
-  const hasReasoning = (m: AgentMessage) => m.thinking || m.content.includes('<thought>') || m.content.includes('<think>');
+  const hasReasoning = (m: ChatMessage) => m.thinking || m.content.includes('<thought>') || m.content.includes('<think>');
 
   /**
    * AI SDK v6 turns are very strict:
@@ -82,7 +82,7 @@ export async function runAgentLoop(
       }
 
       // 2. Identify available results that IMMEDIATELY follow this message
-      const availableResults = new Map<string, AgentMessage>();
+      const availableResults = new Map<string, ChatMessage>();
       let j = i + 1;
       while (j < fullHistory.length && fullHistory[j].role === 'tool') {
         const toolMsg = fullHistory[j];
@@ -141,7 +141,7 @@ export async function runAgentLoop(
   }
 
   const apiMessages = cleanMessages;
-  const userMsg: AgentMessage = { id: genId(), role: 'user', content: userMessage };
+  const userMsg: ChatMessage = { id: genId(), role: 'user', content: userMessage };
   apiMessages.push({ role: 'user', content: userMsg.content });
 
 
@@ -164,14 +164,14 @@ export async function runAgentLoop(
   });
 
   if (error) {
-    const errorMsg: AgentMessage = { id: genId(), role: 'assistant', content: `❌ **AI Error**: ${error}` };
+    const errorMsg: ChatMessage = { id: genId(), role: 'assistant', content: `❌ **AI Error**: ${error}` };
     onEvent({ type: 'error', content: `AI Error: ${error}` });
     return [...fullHistory, userMsg, errorMsg];
   }
 
   return new Promise((resolve) => {
-    const loopMessages: AgentMessage[] = [];
-    let currentAssistantMsg: AgentMessage | null = null;
+    const loopMessages: ChatMessage[] = [];
+    let currentAssistantMsg: ChatMessage | null = null;
     const currentToolCalls: any[] = [];
 
     const finalizeAssistantMsg = () => {
@@ -264,7 +264,7 @@ export async function runAgentLoop(
           }
 
           // Tool results are separate messages in the history
-          const resultMsg: AgentMessage = {
+          const resultMsg: ChatMessage = {
             id: genId(),
             role: 'tool',
             content: resultValue,
@@ -294,7 +294,7 @@ export async function runAgentLoop(
           removeApprovalListener();
           onEvent({ type: 'error', content: part.error || part.message || 'Unknown stream error' });
           finalizeAssistantMsg();
-          const errorMsg: AgentMessage = { 
+          const errorMsg: ChatMessage = { 
             id: genId(), 
             role: 'assistant', 
             content: `❌ **AI Stream Error**: ${part.error || part.message || 'Unknown stream error'}` 
