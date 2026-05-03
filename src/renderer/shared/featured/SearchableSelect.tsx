@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { SelectionList, SelectionItem } from './SelectionList';
+import { cn } from '../lib/utils';
+import { SelectionList, SelectionItem } from '../basic/SelectionList';
 
 interface SearchableSelectProps {
   value: string;

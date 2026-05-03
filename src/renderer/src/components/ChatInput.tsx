@@ -4,7 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
-import { SelectionList, SelectionItem } from './ui/SelectionList';
+import { SelectionList, SelectionItem } from '../../shared/basic/SelectionList';
 import { SuggestionList, SuggestionItem, SuggestionListHandle } from './ui/SuggestionList';
 import { FileText, Folder, Zap, Terminal, Send, AlertTriangle } from 'lucide-react';
 import { KeyManager } from '../lib/key-handlers';

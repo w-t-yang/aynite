@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, FileText, Settings as SettingsIcon } from 'lucide-react';
-import { SelectionList, SelectionItem } from './ui/SelectionList';
+import { SelectionList, SelectionItem } from '../../shared/basic/SelectionList';
 import { KeyManager } from '../lib/key-handlers';
 
 interface TabItem {

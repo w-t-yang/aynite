@@ -13,7 +13,7 @@ export default defineConfig({
   },
   plugins: [react(), tailwindcss()],
   build: {
-    outDir: '../../dist-standalones',
+    outDir: '../../dist-standalone',
     emptyOutDir: true,
     rollupOptions: {
       input: {

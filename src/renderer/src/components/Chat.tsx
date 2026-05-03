@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X, Settings, History, Calendar, Clock } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { SettingsState } from '../lib/types';
+import { SettingsState } from '../../shared/lib/types';
 import ChatInput, { ChatInputHandle } from './ChatInput';
 import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig } from '../lib/agent';
 import { SelectionPopover } from './ui/SelectionPopover';
-import { cn } from '../lib/utils';
+import { cn } from '../../shared/lib/utils';
+import { Collapsible } from '../../shared/basic/Collapsible';
 
 
 // ─── Message Types ───────────────────────────────────────────────────
@@ -15,49 +16,6 @@ import { cn } from '../lib/utils';
 
 // AgentMessage is defined in ../lib/agent.ts
 
-export function UnifiedCollapsible({
-  title,
-  icon: Icon,
-  colorClass,
-  children,
-  defaultExpanded = false,
-  borderPosition = 'left'
-}: {
-  title: string;
-  icon: any;
-  colorClass: string;
-  children: React.ReactNode;
-  defaultExpanded?: boolean;
-  borderPosition?: 'left' | 'bottom';
-}) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const textColor = colorClass.replace('border-', 'text-').replace(/\/.*$/, '');
-  const borderStyle = borderPosition === 'left' ? `border-l-2 ${colorClass}` : '';
-
-  return (
-    <div className={`my-1 ${borderStyle} bg-muted/5 rounded-r px-3 py-1.5 overflow-hidden transition-all duration-200`}>
-
-      <div className="flex items-center justify-between group">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex-1 flex items-center justify-between"
-        >
-          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
-            {Icon && <Icon size={12} className={textColor} />}
-            <span>{title}</span>
-          </div>
-          <ChevronRight size={10} className={`text-muted-foreground/40 group-hover:text-primary transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
-        </button>
-      </div>
-      {expanded && (
-        <div className="mt-2 border-t border-border/10 pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
-          {children}
-        </div>
-      )}
-      {borderPosition === 'bottom' && <div className={`border-b ${colorClass} -mx-3 mt-2 opacity-50`} />}
-    </div>
-  );
-}
 
 
 
@@ -84,7 +42,7 @@ function ToolCallItem({ call, defaultExpanded = false }: { call: any; defaultExp
   }
 
   return (
-    <UnifiedCollapsible title={toolName} icon={Icon} colorClass={colorClass} defaultExpanded={defaultExpanded}>
+    <Collapsible title={toolName} icon={Icon} colorClass={colorClass} defaultExpanded={defaultExpanded}>
       <pre className="text-[10px] font-mono text-muted-foreground/70 whitespace-pre-wrap overflow-auto max-h-60">
         {JSON.stringify(toolArgs, null, 2)}
       </pre>
@@ -104,25 +62,25 @@ function ToolCallItem({ call, defaultExpanded = false }: { call: any; defaultExp
           </pre>
         </div>
       )}
-    </UnifiedCollapsible>
+    </Collapsible>
   );
 }
 
 function ThoughtBlock({ content, defaultExpanded = false }: { content: string; defaultExpanded?: boolean }) {
   if (!content?.trim()) return null;
   return (
-    <UnifiedCollapsible title="Thinking Process" icon={Bot} colorClass="border-primary/40" defaultExpanded={defaultExpanded}>
+    <Collapsible title="Thinking Process" icon={Bot} colorClass="border-primary/40" defaultExpanded={defaultExpanded}>
       <div className="text-[11px] leading-relaxed text-muted-foreground/80 italic whitespace-pre-wrap">
         {content}
       </div>
-    </UnifiedCollapsible>
+    </Collapsible>
   );
 }
 
 function ToolResultMessage({ name, content, defaultExpanded = false }: { name?: string; content: string; defaultExpanded?: boolean }) {
   const isError = isErrorMessage(content);
   return (
-    <UnifiedCollapsible
+    <Collapsible
       title={isError ? `Error: ${name}` : `Result: ${name}`}
       icon={isError ? XCircle : Check}
       colorClass={isError ? "border-destructive/40" : "border-green-500/40"}
@@ -134,7 +92,7 @@ function ToolResultMessage({ name, content, defaultExpanded = false }: { name?: 
       )}>
         {content}
       </pre>
-    </UnifiedCollapsible>
+    </Collapsible>
   );
 }
 
@@ -283,7 +241,7 @@ function ChatMessage({
 
                 {/* 2. Content Block Second */}
                 {(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim() && (
-                  <UnifiedCollapsible
+                  <Collapsible
                     title={settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Assistant'}
                     icon={null}
                     colorClass="border-primary/40"
@@ -307,7 +265,7 @@ function ChatMessage({
                         </button>
                       </div>
                     </div>
-                  </UnifiedCollapsible>
+                  </Collapsible>
                 )}
 
                 {/* 3. Tool Calls Block Third */}
@@ -445,11 +403,11 @@ function MessageContent({ content = '', role, onOpenFile }: { content?: string; 
 
 function SystemMessage({ content }: { content: string }) {
   return (
-    <UnifiedCollapsible title="System Prompt" icon={FileText} colorClass="border-muted-foreground/30">
+    <Collapsible title="System Prompt" icon={FileText} colorClass="border-muted-foreground/30">
       <div className="text-[11px] font-mono text-muted-foreground/70 whitespace-pre-wrap leading-relaxed">
         {content}
       </div>
-    </UnifiedCollapsible>
+    </Collapsible>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Pencil, Eye, Save, AlertCircle } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '../../shared/lib/utils';
 import { getFileCategory, FileInfo } from '../lib/file-handlers';
 import { KeyManager } from '../lib/key-handlers';
 import { FileHandlerComponents } from './viewers';

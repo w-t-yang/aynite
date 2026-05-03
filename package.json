@@ -10,7 +10,7 @@
     "preview": "electron-vite preview",
     "test:ai": "tsx scripts/test-ai-providers.ts",
     "dev:standalone": "vite --config vite.standalone.config.ts",
-    "build:standalone": "vite build --config vite.standalone.config.ts",
+    "build:standalone": "node src/renderer/shared/scripts/audit.js && vite build --config vite.standalone.config.ts && mkdir -p ~/.aynite-desktop && cp -rv dist-standalone/* ~/.aynite-desktop/",
     "patch-tag": "npm version patch && git push && git push --tags",
     "patch-beta": "npm version prerelease --preid=beta && git push && git push --tags",
     "build:linux": "electron-vite build && electron-builder --linux",

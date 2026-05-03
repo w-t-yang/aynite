@@ -1,6 +1,6 @@
 import React from 'react';
-import { SelectionList, SelectionItem } from './SelectionList';
-import { cn } from '../../lib/utils';
+import { SelectionList, SelectionItem } from '../../../shared/basic/SelectionList';
+import { cn } from '../../../shared/lib/utils';
 
 interface SelectionPopoverProps {
   title: string;

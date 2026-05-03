@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus } from 'lucide-react';
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
-import { cn } from '../lib/utils';
+import { cn } from '../../shared/lib/utils';
 import { getFileCategory } from '../lib/file-handlers';
-import { SearchableSelect } from './ui/SearchableSelect';
+import { SearchableSelect } from '../../shared/featured/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
 
 interface FileNode {

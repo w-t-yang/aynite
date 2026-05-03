@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug, AlertCircle } from 'lucide-react';
 import { DEFAULT_KEYBINDINGS } from '../../../main/default_configs/keybindings';
 import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS, DEFAULT_AI_TOOLS } from '../../../main/default_configs/ai';
-import { cn } from '../lib/utils';
-import { SearchableSelect } from './ui/SearchableSelect';
+import { cn } from '../../shared/lib/utils';
+import { SearchableSelect } from '../../shared/featured/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';
-import { AIProviderInstance, SettingsState } from '../lib/types';
-import { UnifiedCollapsible } from './Chat';
+import { AIProviderInstance, SettingsState } from '../../shared/lib/types';
+import { Collapsible } from '../../shared/basic/Collapsible';
 
 
 
@@ -823,11 +823,11 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                           </div>
 
                           <div className="pt-2">
-                            <UnifiedCollapsible title="System Prompt Preview" icon={FileText} colorClass="border-primary/20" defaultExpanded={false}>
+                            <Collapsible title="System Prompt Preview" icon={FileText} colorClass="border-primary/20" defaultExpanded={false}>
                               <div className="p-4 rounded-lg bg-background/50 border border-border/40 font-mono text-[10px] whitespace-pre-wrap max-h-60 overflow-y-auto">
                                 {localSettings.agents?.activeId === agent.id ? mergedPrompt : <span className="text-muted-foreground italic">Switch to this agent to see the preview.</span>}
                               </div>
-                            </UnifiedCollapsible>
+                            </Collapsible>
                           </div>
                         </div>
                       </div>

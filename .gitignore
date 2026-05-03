@@ -8,4 +8,4 @@ out
 .DS_Store
 tmp/
 .vscode
-dist-standalones
+dist-standalone
