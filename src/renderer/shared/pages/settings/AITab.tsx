@@ -5,6 +5,7 @@ import { Button } from '../../basic/Button';
 import { SettingsPage } from '../../basic/SettingsPage';
 import { Section } from '../../basic/Section';
 import { AIProviderCard } from '../../featured/AIProviderCard';
+import { DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS } from '../../lib/constants';
 
 interface AITabProps {
   state: {
@@ -24,9 +25,37 @@ export function AITab({
   const { setAI } = actions;
 
   const handleUpdateProvider = (id: string, field: string, value: any) => {
-    const providers = (ai.providers || []).map((p: AIProviderInstance) => 
-      p.id === id ? { ...p, [field]: value } : p
-    );
+    const providers = (ai.providers || []).map((p: AIProviderInstance) => {
+      if (p.id !== id) return p;
+
+      const updated = {
+        ...p,
+        [field]: field === 'contextWindow' ? (parseInt(value, 10) || 8192) : value
+      };
+
+      // Auto-update name if provider or model changes
+      if (field === 'provider' || field === 'model') {
+        // If provider changed, also update the model and URL to its default
+        if (field === 'provider') {
+          updated.model = DEFAULT_PROVIDER_MODELS[value] || updated.model;
+          updated.url = DEFAULT_PROVIDER_URLS[value] !== undefined ? DEFAULT_PROVIDER_URLS[value] : updated.url;
+        }
+
+        const providerLabel: Record<string, string> = {
+          ollama: 'Ollama',
+          openai: 'OpenAI',
+          anthropic: 'Anthropic',
+          gemini: 'Gemini',
+          deepseek: 'DeepSeek',
+          others: 'Compatible'
+        };
+
+        const label = providerLabel[updated.provider] || updated.provider;
+        updated.name = `${label} - ${updated.model || 'Default'}`;
+      }
+
+      return updated;
+    });
     setAI({ ...ai, providers });
   };
 
@@ -67,10 +96,10 @@ export function AITab({
             </Button>
           )}
           <Button
-            variant="primary"
+            variant="ghost"
             size="sm"
             onClick={handleAddProvider}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
           >
             <Plus size={14} /> Add Provider
           </Button>

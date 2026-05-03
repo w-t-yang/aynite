@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '../../basic/Button';
 import { SettingsPage } from '../../basic/SettingsPage';
 import { Section } from '../../basic/Section';
+import { Modal } from '../../basic/Modal';
 import { SettingsState } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
@@ -24,6 +25,8 @@ export function CommandsTab({
 }: CommandsTabProps) {
   const { commands, availableCommands } = state;
   const { setCommands, onPickCommandFolder } = actions;
+  
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
 
   const handleAddFolder = async () => {
     const res = await onPickCommandFolder();
@@ -34,35 +37,35 @@ export function CommandsTab({
     }
   };
 
-  const handleRemoveFolder = (folder: string) => {
-    const folders = commands?.folders || [];
-    const newFolders = folders.filter(f => f !== folder);
-    setCommands({ folders: newFolders });
+  const confirmRemoveFolder = () => {
+    if (folderToDelete) {
+      const folders = commands?.folders || [];
+      const newFolders = folders.filter(f => f !== folderToDelete);
+      setCommands({ folders: newFolders });
+      setFolderToDelete(null);
+    }
   };
 
   return (
     <SettingsPage
       title="Commands"
-      description="Manage custom shell commands and automation tasks. You can add folders containing command definitions that can be triggered via keybindings or the assistant."
-      primaryAction={
-        <div className="flex gap-2">
-          {actions.onRestore && (
-            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
-              <RotateCcw size={14} /> Restore
-            </Button>
-          )}
+      description="Manage custom shell commands and automation tasks. You can add folders containing command definitions."
+      onRestore={actions.onRestore}
+    >
+      <Section 
+        title="Command Source Folders" 
+        description="Directories where Aynite looks for command definitions."
+        action={
           <Button 
-            variant="primary"
+            variant="ghost"
             size="sm"
             onClick={handleAddFolder} 
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
           >
             <Plus size={14} /> Add Folder
           </Button>
-        </div>
-      }
-    >
-      <Section title="Command Source Folders" description="Directories where Aynite looks for command definitions.">
+        }
+      >
         <div className="space-y-2">
           {(commands?.folders || []).map((folder) => (
             <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
@@ -73,10 +76,10 @@ export function CommandsTab({
               <Button 
                 variant="ghost"
                 size="icon"
-                onClick={() => handleRemoveFolder(folder)} 
+                onClick={() => setFolderToDelete(folder)} 
                 className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"
               >
-                <Trash2 size={14} />
+                <Trash2 size={16} />
               </Button>
             </div>
           ))}
@@ -88,15 +91,15 @@ export function CommandsTab({
         </div>
       </Section>
 
-      <Section title="Detected Commands" description="A list of all valid commands found in your configured folders.">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Section title="Detected Commands" description="A list of all valid commands found in your folders.">
+        <div className="grid grid-cols-2 gap-4">
           {availableCommands.map(cmd => (
             <div key={cmd.path} className={cn("p-4 rounded-xl border bg-accent/5 transition-all", cmd.error ? "border-destructive/30" : "border-border hover:border-border/60")}>
               <div className="flex items-center gap-2 mb-2">
                 {cmd.error && <AlertCircle size={14} className="text-destructive" />}
                 <span className={cn("text-xs font-bold uppercase tracking-wider", cmd.error && "text-destructive")}>{cmd.name}</span>
               </div>
-              <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{cmd.description || 'No description available for this command.'}</p>
+              <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{cmd.description || 'No description available.'}</p>
               {cmd.error && (
                 <div className="p-2 rounded bg-destructive/10 text-[9px] text-destructive font-mono leading-tight whitespace-pre-wrap border border-destructive/20">
                   {cmd.error}
@@ -112,6 +115,23 @@ export function CommandsTab({
           )}
         </div>
       </Section>
+
+      <Modal
+        isOpen={!!folderToDelete}
+        onClose={() => setFolderToDelete(null)}
+        title="Remove Command Folder"
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setFolderToDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmRemoveFolder}>Remove Folder</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to remove the folder <span className="font-bold text-foreground">"{folderToDelete?.split(/[\/\\]/).pop()}"</span>? Commands from this directory will no longer be available.
+        </p>
+      </Modal>
     </SettingsPage>
   );
 }

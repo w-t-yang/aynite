@@ -15,11 +15,14 @@ const VIOLATIONS = {
     tags: ['button', 'input', 'select', 'textarea'],
     description: 'Use shared/basic components (Button, Input, Select) instead of raw HTML tags.'
   },
+  ADAPTIVE_STYLES: {
+    name: 'Adaptive/Responsive Styles',
+    regex: /\b(sm|md|lg|xl|2xl):[a-zA-Z]/g,
+    description: 'Avoid using responsive Tailwind prefixes (sm:, md:, etc.) in the shared directory to maintain a stable fixed-width layout.'
+  },
   HARDCODED_STRINGS: {
     name: 'Potential Hardcoded Strings',
-    // Matches text nodes between tags: >Text Content<
     textNodeRegex: />([^<{}]+)</g,
-    // Matches common string props: label="Text", title="Text", placeholder="Text"
     propRegex: /\b(label|title|placeholder|description|text)="([^"]+)"/g,
     description: 'Consider moving hardcoded user-facing strings to a constants file or i18n system.'
   }
@@ -52,14 +55,12 @@ walk(SHARED_DIR, (filepath) => {
   const content = fs.readFileSync(filepath, 'utf8');
   const lines = content.split('\n');
 
-  // Skip files in basic/ for duplication checks as they ARE the building blocks
   const isBasic = filepath.startsWith(BASIC_DIR);
 
-  // 1. System Calls (DISABLED for this run)
-  /*
-  let match;
-  while ((match = VIOLATIONS.SYSTEM_CALLS.regex.exec(content)) !== null) {
-    const lineNum = content.substring(0, match.index).split('\n').length;
+  // 1. System Calls
+  let sysMatch;
+  while ((sysMatch = VIOLATIONS.SYSTEM_CALLS.regex.exec(content)) !== null) {
+    const lineNum = content.substring(0, sysMatch.index).split('\n').length;
     report.push({
       type: VIOLATIONS.SYSTEM_CALLS.name,
       file: relativePath,
@@ -68,7 +69,6 @@ walk(SHARED_DIR, (filepath) => {
       message: VIOLATIONS.SYSTEM_CALLS.description
     });
   }
-  */
 
   // 2. Component Duplication
   if (!isBasic) {
@@ -88,8 +88,20 @@ walk(SHARED_DIR, (filepath) => {
     });
   }
 
-  // 3. Hardcoded Strings (DISABLED for this run)
-  /*
+  // 3. Adaptive Styles
+  let adaptMatch;
+  while ((adaptMatch = VIOLATIONS.ADAPTIVE_STYLES.regex.exec(content)) !== null) {
+    const lineNum = content.substring(0, adaptMatch.index).split('\n').length;
+    report.push({
+      type: VIOLATIONS.ADAPTIVE_STYLES.name,
+      file: relativePath,
+      line: lineNum,
+      snippet: lines[lineNum - 1].trim(),
+      message: VIOLATIONS.ADAPTIVE_STYLES.description
+    });
+  }
+
+  // 4. Hardcoded Strings
   let textMatch;
   while ((textMatch = VIOLATIONS.HARDCODED_STRINGS.textNodeRegex.exec(content)) !== null) {
     const text = textMatch[1].trim();
@@ -120,33 +132,30 @@ walk(SHARED_DIR, (filepath) => {
       });
     }
   }
-  */
 });
 
 function isValidString(text) {
   if (text.length <= 2) return false;
-  if (/^[0-9\s.,!?:;()\-+*/=<>]+$/.test(text)) return false; // Only punctuation/numbers
+  if (/^[0-9\s.,!?:;()\-+*/=<>]+$/.test(text)) return false;
   if (IGNORE_STRINGS.some(s => text.includes(s))) return false;
-  if (text.includes('=>')) return false; // Likely a type or arrow function
+  if (text.includes('=>')) return false;
   if (text.includes('{') || text.includes('}')) return false;
   return true;
 }
 
-// Group items by type
 const grouped = report.reduce((acc, item) => {
   if (!acc[item.type]) acc[item.type] = [];
   acc[item.type].push(item);
   return acc;
 }, {});
 
-// Order types for display (Last in list is most visible at end of terminal)
 const DISPLAY_ORDER = [
   VIOLATIONS.HARDCODED_STRINGS.name,
   VIOLATIONS.COMPONENT_DUPLICATION.name,
+  VIOLATIONS.ADAPTIVE_STYLES.name,
   VIOLATIONS.SYSTEM_CALLS.name
 ];
 
-// Output Report
 console.log('\n=================================================');
 console.log('   Aynite Shared Components Audit Report');
 console.log('=================================================\n');
@@ -159,6 +168,7 @@ if (report.length === 0) {
     if (items.length === 0) return;
 
     const badge = typeName === VIOLATIONS.SYSTEM_CALLS.name ? '🚨 CRITICAL' : 
+                  typeName === VIOLATIONS.ADAPTIVE_STYLES.name ? '⚠️ WARNING' :
                   typeName === VIOLATIONS.COMPONENT_DUPLICATION.name ? '⚠️ WARNING' : '📝 NOTICE';
 
     console.log(`>>> ${badge}: ${typeName} (${items.length} issues) <<<`);

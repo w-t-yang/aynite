@@ -3,8 +3,6 @@ import { SettingsState } from '../../lib/types';
 import { KeybindingRow } from '../../featured/KeybindingRow';
 import { SettingsPage } from '../../basic/SettingsPage';
 import { Section } from '../../basic/Section';
-import { Button } from '../../basic/Button';
-import { RotateCcw } from 'lucide-react';
 
 interface KeybindingsTabProps {
   state: {
@@ -42,15 +40,9 @@ export function KeybindingsTab({
     <SettingsPage
       title="Keybindings"
       description="Configure keyboard shortcuts for navigation, editing, and assistant actions. Press any combination of keys to assign a shortcut."
-      primaryAction={
-        actions.onRestore && (
-          <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
-            <RotateCcw size={14} /> Restore Defaults
-          </Button>
-        )
-      }
+      onRestore={actions.onRestore}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div className="grid grid-cols-2 gap-12">
         <div className="space-y-12">
           <Section title="Global" description="App-wide shortcuts.">
             <div className="space-y-1">
@@ -85,7 +77,7 @@ export function KeybindingsTab({
             </div>
           </Section>
 
-          <Section title="Content Viewer" description="Read-only mode navigation (Vim style).">
+          <Section title="Content Viewer" description="Read-only mode navigation.">
             <div className="space-y-1">
               <KeybindingRow label="Enter Edit Mode" value={keybindings.content.viewer.enterEdit} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'enterEdit', v)} />
               <KeybindingRow label="Vim Move Down" value={keybindings.content.viewer.moveDown} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveDown', v)} />

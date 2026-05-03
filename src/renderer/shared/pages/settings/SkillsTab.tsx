@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '../../basic/Button';
 import { SettingsPage } from '../../basic/SettingsPage';
 import { Section } from '../../basic/Section';
+import { Modal } from '../../basic/Modal';
 import { SettingsState } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
@@ -24,6 +25,8 @@ export function SkillsTab({
 }: SkillsTabProps) {
   const { skills, availableSkills } = state;
   const { setSkills, onPickSkillFolder } = actions;
+  
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
 
   const handleAddFolder = async () => {
     const res = await onPickSkillFolder();
@@ -34,35 +37,35 @@ export function SkillsTab({
     }
   };
 
-  const handleRemoveFolder = (folder: string) => {
-    const folders = skills?.folders || [];
-    const newFolders = folders.filter(f => f !== folder);
-    setSkills({ folders: newFolders });
+  const confirmRemoveFolder = () => {
+    if (folderToDelete) {
+      const folders = skills?.folders || [];
+      const newFolders = folders.filter(f => f !== folderToDelete);
+      setSkills({ folders: newFolders });
+      setFolderToDelete(null);
+    }
   };
 
   return (
     <SettingsPage
       title="Skills"
-      description="Extend the assistant's capabilities with custom scripts. You can add folders containing skill definitions (Python, JS, etc.) that the assistant can execute."
-      primaryAction={
-        <div className="flex gap-2">
-          {actions.onRestore && (
-            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
-              <RotateCcw size={14} /> Restore
-            </Button>
-          )}
+      description="Extend the assistant's capabilities with custom scripts. You can add folders containing skill definitions that the assistant can execute."
+      onRestore={actions.onRestore}
+    >
+      <Section 
+        title="Skill Source Folders" 
+        description="Directories where Aynite looks for skill implementations."
+        action={
           <Button 
-            variant="primary"
+            variant="ghost"
             size="sm"
             onClick={handleAddFolder} 
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
           >
             <Plus size={14} /> Add Folder
           </Button>
-        </div>
-      }
-    >
-      <Section title="Skill Source Folders" description="Directories where Aynite looks for skill implementations.">
+        }
+      >
         <div className="space-y-2">
           {(skills?.folders || []).map((folder) => (
             <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
@@ -73,10 +76,10 @@ export function SkillsTab({
               <Button 
                 variant="ghost"
                 size="icon"
-                onClick={() => handleRemoveFolder(folder)} 
+                onClick={() => setFolderToDelete(folder)} 
                 className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"
               >
-                <Trash2 size={14} />
+                <Trash2 size={16} />
               </Button>
             </div>
           ))}
@@ -89,14 +92,14 @@ export function SkillsTab({
       </Section>
 
       <Section title="Detected Skills" description="A list of all skills found and parsed from your folders.">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {availableSkills.map(skill => (
             <div key={skill.path} className={cn("p-4 rounded-xl border bg-accent/5 transition-all", skill.error ? "border-destructive/30" : "border-border hover:border-border/60")}>
               <div className="flex items-center gap-2 mb-2">
                 {skill.error && <AlertCircle size={14} className="text-destructive" />}
                 <span className={cn("text-xs font-bold uppercase tracking-wider", skill.error && "text-destructive")}>{skill.name}</span>
               </div>
-              <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{skill.description || 'No description available for this skill.'}</p>
+              <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{skill.description || 'No description available.'}</p>
               {skill.error && (
                 <div className="p-2 rounded bg-destructive/10 text-[9px] text-destructive font-mono leading-tight whitespace-pre-wrap border border-destructive/20">
                   {skill.error}
@@ -112,6 +115,23 @@ export function SkillsTab({
           )}
         </div>
       </Section>
+
+      <Modal
+        isOpen={!!folderToDelete}
+        onClose={() => setFolderToDelete(null)}
+        title="Remove Skill Folder"
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setFolderToDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmRemoveFolder}>Remove Folder</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to remove the folder <span className="font-bold text-foreground">"{folderToDelete?.split(/[\/\\]/).pop()}"</span>? The assistant will no longer be able to use skills from this directory.
+        </p>
+      </Modal>
     </SettingsPage>
   );
 }

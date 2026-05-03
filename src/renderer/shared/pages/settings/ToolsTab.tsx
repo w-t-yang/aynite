@@ -33,16 +33,10 @@ export function ToolsTab({
     <SettingsPage
       title="Tools"
       description="Enable or disable built-in tools for the AI to interact with your system. These tools allow the assistant to perform actions like file management, web search, and terminal execution."
-      primaryAction={
-        actions.onRestore && (
-          <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
-            <RotateCcw size={14} /> Restore
-          </Button>
-        )
-      }
+      onRestore={actions.onRestore}
     >
       <Section title="System Capabilities" description="Toggle individual tools to control what the assistant can do.">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {availableTools.map(tool => (
             <div key={tool.id} className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group">
               <div className="space-y-1 flex-1 min-w-0 pr-6">

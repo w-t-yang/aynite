@@ -24,7 +24,7 @@ export function AboutTab({
   const { appVersion, updateStatus, updateInfo } = state;
   const { onCheckUpdates, onInstallUpdate, onOpenExternal } = actions;
 
-  const updateAction = (
+  const updateButton = (
     <div className="flex items-center gap-2">
       {(updateStatus === 'idle' || updateStatus === 'error') && (
         <Button
@@ -73,7 +73,6 @@ export function AboutTab({
     <SettingsPage
       title="About Aynite"
       description="Information about Aynite, system updates, and developer resources."
-      primaryAction={updateAction}
     >
       <div className="flex flex-col items-center text-center space-y-4 pt-4 mb-8">
         <div className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 border-4 border-background">
@@ -91,28 +90,28 @@ export function AboutTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Section title="Software Update" description="Keep your application up to date with the latest features and security fixes.">
+      <div className="grid grid-cols-2 gap-8">
+        <Section title="Software Update" description="Keep your application up to date with the latest features.">
           <div className="p-6 rounded-2xl border border-border bg-accent/5 flex items-center justify-between group">
             <div className="space-y-1">
               <h4 className="text-sm font-semibold flex items-center gap-2">
                 <CloudDownload size={16} className="text-primary" />
-                {updateStatus === 'downloaded' ? 'Update Ready' : 'Current Status'}
+                {updateStatus === 'downloaded' ? 'Update Ready' : 'Status'}
               </h4>
               <p className="text-xs text-muted-foreground">
-                {updateStatus === 'idle' && 'Your software is up to date.'}
-                {updateStatus === 'checking' && 'Checking for updates...'}
-                {updateStatus === 'available' && `New version available: v${updateInfo?.version}`}
-                {updateStatus === 'downloading' && 'Downloading update in background...'}
-                {updateStatus === 'downloaded' && `Version v${updateInfo?.version} is ready to install.`}
-                {updateStatus === 'error' && 'Failed to check for updates.'}
+                {updateStatus === 'idle' && 'Software is up to date.'}
+                {updateStatus === 'checking' && 'Checking...'}
+                {updateStatus === 'available' && `New: v${updateInfo?.version}`}
+                {updateStatus === 'downloading' && 'Downloading...'}
+                {updateStatus === 'downloaded' && `Ready to install.`}
+                {updateStatus === 'error' && 'Check failed.'}
               </p>
             </div>
-            {updateAction}
+            {updateButton}
           </div>
         </Section>
 
-        <Section title="Resources" description="Join the community and help us improve the project.">
+        <Section title="Resources" description="Join the community and help improve the project.">
           <div className="grid grid-cols-1 gap-3">
             <Button 
               variant="outline" 
@@ -123,7 +122,7 @@ export function AboutTab({
               <Github size={18} className="text-foreground" />
               <div className="text-left">
                 <div className="font-bold">GitHub Project</div>
-                <div className="text-[10px] text-muted-foreground font-normal">View source code and contributors</div>
+                <div className="text-[10px] text-muted-foreground font-normal">View source code</div>
               </div>
             </Button>
             <Button 
@@ -135,7 +134,7 @@ export function AboutTab({
               <Bug size={18} className="text-destructive" />
               <div className="text-left">
                 <div className="font-bold">Report an Issue</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Submit bug reports or feature requests</div>
+                <div className="text-[10px] text-muted-foreground font-normal">Submit bug reports</div>
               </div>
             </Button>
           </div>

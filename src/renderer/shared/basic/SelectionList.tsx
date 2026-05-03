@@ -7,6 +7,7 @@ export interface SelectionItem {
   subtitle?: string;
   icon?: React.ReactNode;
   isActive?: boolean;
+  badge?: string;
   [key: string]: any;
 }
 

@@ -1,8 +1,9 @@
-import React from 'react';
-import { Plus, RotateCcw, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, FileText } from 'lucide-react';
 import { Button } from '../../basic/Button';
 import { SettingsPage } from '../../basic/SettingsPage';
 import { Section } from '../../basic/Section';
+import { Modal } from '../../basic/Modal';
 import { SettingsState, Agent } from '../../lib/types';
 import { AgentCard } from '../../featured/AgentCard';
 import { PromptFileRow } from '../../featured/PromptFileRow';
@@ -27,6 +28,8 @@ export function AgentsTab({
 }: AgentsTabProps) {
   const { agents, prompts, mergedPrompt } = state;
   const { setAgentsTab, onPickPromptFile } = actions;
+  
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
   const handleUpdateAgent = (id: string, field: string, value: any) => {
     const list = (agents.list || []).map((a: Agent) => 
@@ -49,36 +52,28 @@ export function AgentsTab({
     setAgentsTab({ agents: { ...agents, list, activeId: id } });
   };
 
+  const confirmDeleteGlobalFile = () => {
+    if (fileToDelete) {
+      const newFiles = (prompts.files || []).filter(f => f !== fileToDelete);
+      setAgentsTab({ prompts: { files: newFiles } });
+      setFileToDelete(null);
+    }
+  };
+
 
   return (
     <SettingsPage
       title="Agents"
       description="Define specialized assistant personas with custom prompts. Agents can have their own sets of instruction files that extend the global behavior."
-      primaryAction={
-        <div className="flex gap-2">
-          {actions.onRestore && (
-            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
-              <RotateCcw size={14} /> Restore
-            </Button>
-          )}
-          <Button 
-            variant="primary"
-            size="sm"
-            onClick={handleAddAgent} 
-            className="flex items-center gap-1.5"
-          >
-            <Plus size={14} /> Add Agent
-          </Button>
-        </div>
-      }
+      onRestore={actions.onRestore}
     >
       {/* Global System Prompts */}
       <Section 
         title="Global System Prompts" 
-        description="These prompt files are prepended to every assistant interaction, regardless of the active agent."
+        description="These prompt files are prepended to every assistant interaction."
         action={
           <Button 
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={async () => {
               const res = await onPickPromptFile();
@@ -87,7 +82,7 @@ export function AgentsTab({
                 setAgentsTab({ prompts: { files: Array.from(new Set(newFiles)) } });
               }
             }} 
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
           >
             <Plus size={14} /> Add File
           </Button>
@@ -98,10 +93,7 @@ export function AgentsTab({
             <PromptFileRow
               key={filePath}
               filePath={filePath}
-              onDelete={() => {
-                const newFiles = (prompts.files || []).filter(f => f !== filePath);
-                setAgentsTab({ prompts: { files: newFiles } });
-              }}
+              onDelete={() => setFileToDelete(filePath)}
             />
           ))}
           {(!prompts.files || prompts.files.length === 0) && (
@@ -113,36 +105,67 @@ export function AgentsTab({
       </Section>
 
       {/* Agents List */}
-      <Section title="Agent Profiles" description="Switch between different personas for specific tasks.">
+      <Section 
+        title="Agent Profiles" 
+        description="Switch between different personas for specific tasks."
+        action={
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={handleAddAgent} 
+            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
+          >
+            <Plus size={14} /> Add Agent
+          </Button>
+        }
+      >
         <div className="space-y-8">
           {(agents.list || []).map((agent: Agent) => (
-            <div key={agent.id} className="space-y-2">
-              <AgentCard
-                agent={agent}
-                isActive={agents.activeId === agent.id}
-                onSetActive={(id) => setAgentsTab({ agents: { ...agents, activeId: id } })}
-                onUpdate={handleUpdateAgent}
-                onDelete={handleDeleteAgent}
-                onPickPromptFile={async (id) => {
-                  const res = await onPickPromptFile();
-                  if (res && res.data) {
-                    const agent = (agents.list || []).find(a => a.id === id);
-                    const newFiles = [...(agent?.promptFiles || []), res.data];
-                    handleUpdateAgent(id, 'promptFiles', Array.from(new Set(newFiles)));
-                  }
-                }}
-              />
-              <div className="ml-7 pt-2">
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              isActive={agents.activeId === agent.id}
+              onSetActive={(id) => setAgentsTab({ agents: { ...agents, activeId: id } })}
+              onUpdate={handleUpdateAgent}
+              onDelete={handleDeleteAgent}
+              onPickPromptFile={async (id) => {
+                const res = await onPickPromptFile();
+                if (res && res.data) {
+                  const agentObj = (agents.list || []).find(a => a.id === id);
+                  const newFiles = [...(agentObj?.promptFiles || []), res.data];
+                  handleUpdateAgent(id, 'promptFiles', Array.from(new Set(newFiles)));
+                }
+              }}
+            >
+              <div className="pt-2">
                 <Collapsible title="System Prompt Preview" icon={FileText} colorClass="border-primary/20" defaultExpanded={false}>
                   <div className="p-4 rounded-lg bg-background/50 border border-border/40 font-mono text-[10px] whitespace-pre-wrap max-h-60 overflow-y-auto">
                     {agents.activeId === agent.id ? mergedPrompt : <span className="text-muted-foreground italic">Switch to this agent to see the preview.</span>}
                   </div>
                 </Collapsible>
               </div>
-            </div>
+            </AgentCard>
           ))}
         </div>
       </Section>
+
+      {/* Global File Delete Confirmation */}
+      <Modal
+        isOpen={!!fileToDelete}
+        onClose={() => setFileToDelete(null)}
+        title="Remove Global Prompt"
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setFileToDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteGlobalFile}>Remove File</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to remove <span className="font-bold text-foreground">"{fileToDelete?.split(/[\/\\]/).pop()}"</span> from the global prompt list?
+        </p>
+      </Modal>
     </SettingsPage>
   );
 }

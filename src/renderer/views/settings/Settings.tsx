@@ -253,7 +253,7 @@ export function Settings({ }: SettingsProps) {
         isOpen={showRestoreModal}
         onClose={() => setShowRestoreModal(false)}
         title={`Restore ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} to Defaults`}
-        size="sm"
+        size="md"
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowRestoreModal(false)}>Cancel</Button>

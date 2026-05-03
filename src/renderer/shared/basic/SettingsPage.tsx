@@ -1,10 +1,12 @@
 import React from 'react';
 import { cn } from '../lib/utils';
+import { Button } from './Button';
+import { RotateCcw } from 'lucide-react';
 
 interface SettingsPageProps {
   title: string;
   description: string;
-  primaryAction?: React.ReactNode;
+  onRestore?: () => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -12,26 +14,31 @@ interface SettingsPageProps {
 export function SettingsPage({ 
   title, 
   description, 
-  primaryAction, 
+  onRestore, 
   children,
   className 
 }: SettingsPageProps) {
   return (
-    <div className="flex-1 flex flex-col min-w-[800px] overflow-x-auto bg-background">
-      <div className={cn("p-10 space-y-12", className)}>
+    <div className="flex-1 overflow-auto bg-background custom-scrollbar">
+      <div className={cn("w-[800px] mx-auto p-10 space-y-12 shrink-0", className)}>
         {/* Header */}
-        <div className="flex items-start justify-between gap-8">
-          <div className="space-y-1.5 flex-1">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">{title}</h2>
-            <p className="text-muted-foreground text-sm max-w-3xl leading-relaxed">
+        <div className="space-y-4">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">{title}</h2>
+          <div className="flex items-start justify-between gap-8">
+            <p className="text-muted-foreground text-sm flex-1 leading-relaxed">
               {description}
             </p>
+            {onRestore && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onRestore} 
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground shrink-0 h-auto py-1"
+              >
+                <RotateCcw size={14} /> Restore Defaults
+              </Button>
+            )}
           </div>
-          {primaryAction && (
-            <div className="shrink-0 pt-1">
-              {primaryAction}
-            </div>
-          )}
         </div>
 
         {/* Content */}

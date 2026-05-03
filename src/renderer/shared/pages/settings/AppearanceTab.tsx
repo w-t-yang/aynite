@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Palette, RotateCcw, Trash2, Copy, Plus } from 'lucide-react';
+import { Palette, RotateCcw, Trash2, Copy } from 'lucide-react';
 import { Section } from '../../basic/Section';
 import { SettingsPage } from '../../basic/SettingsPage';
 import { ThemePreview } from '../../featured/ThemePreview';
 import { ColorInput } from '../../featured/ColorInput';
-import { SearchableSelect } from '../../featured/SearchableSelect';
+import { Select } from '../../basic/Select';
 import { Button } from '../../basic/Button';
 import { Modal } from '../../basic/Modal';
 import { Input } from '../../basic/Input';
@@ -50,7 +50,7 @@ export function AppearanceTab({
   actions
 }: AppearanceTabProps) {
   const { list, activeId, systemFonts } = state;
-  
+
   // Local state for immediate UI feedback
   const [localThemes, setLocalThemes] = useState(list);
   const [localActiveId, setLocalActiveId] = useState(activeId);
@@ -105,13 +105,13 @@ export function AppearanceTab({
         return;
       }
 
-      const newTheme = { 
-        id, 
-        name, 
-        type: editingTheme.type, 
-        isSystem: false, 
-        colors: { ...editingTheme.colors }, 
-        fonts: { ...(editingTheme.fonts || {}) } 
+      const newTheme = {
+        id,
+        name,
+        type: editingTheme.type,
+        isSystem: false,
+        colors: { ...editingTheme.colors },
+        fonts: { ...(editingTheme.fonts || {}) }
       };
       const newThemes = [...localThemes, newTheme];
       setLocalThemes(newThemes);
@@ -127,27 +127,19 @@ export function AppearanceTab({
     <SettingsPage
       title="Appearance"
       description="Customize the look and feel of your workspace with themes, custom colors, and typography."
-      primaryAction={
-        <div className="flex gap-2">
-          {actions.onRestore && (
-            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
-              <RotateCcw size={14} /> Restore
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setShowDuplicateModal(true)}>
-            <Copy size={14} /> Duplicate
-          </Button>
-          {editingTheme && !editingTheme.isSystem && (
-            <Button variant="destructive" size="sm" onClick={() => setShowDeleteModal(true)}>
-              <Trash2 size={14} /> Delete
-            </Button>
-          )}
-        </div>
-      }
+      onRestore={actions.onRestore}
     >
       {/* Theme Presets */}
-      <Section title="Theme Presets" description="Select a predefined theme to quickly change the aesthetic.">
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+      <Section
+        title="Theme Presets"
+        description="Select a predefined theme to quickly change the aesthetic."
+        action={
+          <Button variant="outline" size="sm" onClick={() => setShowDuplicateModal(true)}>
+            <Copy size={14} /> Duplicate Theme
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-6 gap-12">
           {localThemes.map((theme) => (
             <ThemePreview
               key={theme.id}
@@ -161,35 +153,38 @@ export function AppearanceTab({
 
       {/* Theme Customization */}
       {editingTheme && (
-        <Section 
-          title="Active Theme Customization" 
+        <Section
+          title="Active Theme Customization"
           description={`Fine-tune the "${editingTheme.name}" theme's colors and fonts.`}
+          action={!editingTheme.isSystem && (
+            <Button variant="ghost" size="icon" onClick={() => setShowDeleteModal(true)} className="text-destructive hover:bg-destructive/10">
+              <Trash2 size={16} />
+            </Button>
+          )}
         >
           <div className="space-y-12">
             {/* Fonts */}
             <div className="grid grid-cols-2 gap-x-12 gap-y-6 max-w-3xl">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Interface Font</label>
-                <SearchableSelect
-                  value={editingTheme.fonts?.sans || 'Inter'}
-                  options={systemFonts}
-                  onChange={(v) => handleUpdateTheme({
-                    ...editingTheme,
-                    fonts: { ...(editingTheme.fonts || {}), sans: v }
-                  })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Monospace Font</label>
-                <SearchableSelect
-                  value={editingTheme.fonts?.mono || 'JetBrains Mono'}
-                  options={systemFonts}
-                  onChange={(v) => handleUpdateTheme({
-                    ...editingTheme,
-                    fonts: { ...(editingTheme.fonts || {}), mono: v }
-                  })}
-                />
-              </div>
+              <Select
+                label="Interface Font"
+                searchable
+                value={editingTheme.fonts?.sans || 'Inter'}
+                options={systemFonts}
+                onChange={(v) => handleUpdateTheme({
+                  ...editingTheme,
+                  fonts: { ...(editingTheme.fonts || {}), sans: v }
+                })}
+              />
+              <Select
+                label="Monospace Font"
+                searchable
+                value={editingTheme.fonts?.mono || 'JetBrains Mono'}
+                options={systemFonts}
+                onChange={(v) => handleUpdateTheme({
+                  ...editingTheme,
+                  fonts: { ...(editingTheme.fonts || {}), mono: v }
+                })}
+              />
             </div>
 
             {/* Colors */}
@@ -231,11 +226,11 @@ export function AppearanceTab({
         }
       >
         <div className="space-y-4">
-          <Input 
-            autoFocus 
+          <Input
+            autoFocus
             label="New Theme Name"
-            placeholder="e.g. My Dark Theme" 
-            value={duplicateName} 
+            placeholder="e.g. My Dark Theme"
+            value={duplicateName}
             onChange={(e) => {
               setDuplicateName(e.target.value);
               setDuplicateError('');
@@ -266,7 +261,7 @@ export function AppearanceTab({
             Are you sure you want to delete <span className="font-bold">"{editingTheme?.name}"</span>?
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed bg-destructive/5 p-3 rounded-lg border border-destructive/10">
-            This action cannot be undone. All custom colors and font settings for this theme will be permanently removed from your configuration.
+            This action cannot be undone. All custom colors and font settings for this theme will be permanently removed.
           </p>
         </div>
       </Modal>
