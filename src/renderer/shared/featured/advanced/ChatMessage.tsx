@@ -4,6 +4,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { AgentMessage, SettingsState } from '../../lib/types';
 import { Collapsible } from '../../basic/Collapsible';
+import { Button } from '../../basic/Button';
 import { cn } from '../../lib/utils';
 
 // --- Sub-components (Merged for decoupling) ---
@@ -34,14 +35,15 @@ function ThinkingProcess({ content, defaultOpen = false }: ThinkingProcessProps)
 
   return (
     <div className="my-2">
-      <button
+      <Button
+        variant="ghost"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 text-[10px] font-bold tracking-tight uppercase text-muted-foreground/50 hover:text-primary/70 transition-colors py-0.5"
+        className="flex items-center gap-2 text-[10px] font-bold tracking-tight uppercase text-muted-foreground/50 hover:text-primary/70 transition-colors py-0.5 h-auto px-1"
       >
         <Bot size={12} className={isOpen ? 'text-primary/60' : ''} />
         <span>Thought</span>
         <ChevronRight size={10} className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
-      </button>
+      </Button>
 
       <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-1' : 'grid-rows-[0fr] opacity-0'}`}>
         <div className="overflow-hidden">
@@ -83,18 +85,19 @@ function MessageContent({ content = '', role, onOpenFile }: MessageContentProps)
       } else if (match[3]) {
         const path = match[3];
         parts.push(
-          <button
+          <Button
             key={`view-${match.index}`}
+            variant="ghost"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onOpenFile?.(path);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md text-xs font-medium transition-all my-2 group w-fit"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md text-xs font-medium transition-all my-2 group w-fit h-auto"
           >
             <FileText size={14} className="group-hover:scale-110 transition-transform" />
             <span>View Definition</span>
-          </button>
+          </Button>
         );
       }
 
@@ -198,6 +201,108 @@ function ToolCallItem({ call, defaultExpanded = false }: ToolCallItemProps) {
   );
 }
 
+// --- Message Block Components ---
+
+interface MessageBlockProps {
+  msg: AgentMessage;
+  isLast: boolean;
+  onOpenFile: (path: string) => void;
+  onCopy: (content: string) => void;
+  settings: SettingsState;
+}
+
+function SystemMessageBlock({ msg }: MessageBlockProps) {
+  return (
+    <Collapsible title="System Prompt" colorClass="border-muted-foreground/30">
+      <div className="text-[11px] font-mono text-muted-foreground/70 whitespace-pre-wrap leading-relaxed">
+        {msg.content}
+      </div>
+    </Collapsible>
+  );
+}
+
+function UserMessageBlock({ msg, onOpenFile }: MessageBlockProps) {
+  return (
+    <div className="py-0.5">
+      <MessageContent content={msg.content} role="user" onOpenFile={onOpenFile} />
+    </div>
+  );
+}
+
+function AssistantMessageBlock({ msg, isLast, onOpenFile, onCopy, settings }: MessageBlockProps) {
+  const hasToolCalls = msg.tool_calls && msg.tool_calls.length > 0;
+  const hasContent = !!(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim();
+
+  return (
+    <div className="space-y-1.5">
+      {msg.thinking && (
+        <ThoughtBlock
+          content={msg.thinking}
+          defaultExpanded={isLast && !hasContent && !hasToolCalls}
+        />
+      )}
+      {[...(msg.content || '').matchAll(/<(?:thought|think)>([\s\S]*?)<\/(?:thought|think)>/g)].map((m, idx, array) => (
+        <ThoughtBlock
+          key={idx}
+          content={m[1].trim()}
+          defaultExpanded={isLast && !hasContent && !hasToolCalls && idx === array.length - 1}
+        />
+      ))}
+
+      {(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim() && (
+        <Collapsible
+          title={settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Assistant'}
+          icon={null}
+          colorClass="border-primary/40"
+          defaultExpanded={isLast && !hasToolCalls}
+          borderPosition="bottom"
+        >
+          <div className="py-0.5 relative group/content">
+            <MessageContent
+              content={msg.content.replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim()}
+              role="assistant"
+              onOpenFile={onOpenFile}
+            />
+            <div className="flex justify-end mt-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                onClick={() => onCopy(msg.content || '')}
+                className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider h-auto"
+                title="Copy Response"
+              >
+                <Copy size={12} />
+                <span>Copy</span>
+              </Button>
+            </div>
+          </div>
+        </Collapsible>
+      )}
+
+      {msg.tool_calls?.map((call, idx) => (
+        <ToolCallItem
+          key={idx}
+          call={call}
+          defaultExpanded={isLast && idx === msg.tool_calls!.length - 1}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ToolMessageBlock({ msg, isLast }: MessageBlockProps) {
+  return (
+    <Collapsible
+      title={`Result: ${msg.name || 'Tool'}`}
+      colorClass="border-green-500/40"
+      defaultExpanded={isLast}
+    >
+      <pre className="text-[10px] font-mono whitespace-pre-wrap max-h-96 overflow-auto text-muted-foreground/60">
+        {msg.content}
+      </pre>
+    </Collapsible>
+  );
+}
+
 // --- Main ChatMessage Component ---
 
 interface ChatMessageProps {
@@ -218,88 +323,24 @@ export function ChatMessage({
   settings
 }: ChatMessageProps) {
   const isLast = idx === total - 1;
+  const commonProps: MessageBlockProps = { msg, isLast, onOpenFile, onCopy, settings };
 
   return (
     <div
-      className={`group/msg relative transition-all duration-300 max-w-4xl mx-auto py-1 rounded-sm border border-transparent ${msg.role === 'user' ? 'bg-foreground/[0.03] border-border/5 px-4' : ''
-        }`}
+      className={cn(
+        "group/msg relative transition-all duration-300 max-w-4xl mx-auto py-1 rounded-sm border border-transparent",
+        msg.role === 'user' ? 'bg-foreground/[0.03] border-border/5 px-4' : ''
+      )}
     >
       <div className="flex flex-col gap-1">
         <div className="text-foreground text-sm leading-relaxed">
-          {msg.role === 'system' ? (
-            <Collapsible title="System Prompt" colorClass="border-muted-foreground/30">
-              <div className="text-[11px] font-mono text-muted-foreground/70 whitespace-pre-wrap leading-relaxed">
-                {msg.content}
-              </div>
-            </Collapsible>
-          ) : msg.role === 'assistant' ? (() => {
-            const hasToolCalls = msg.tool_calls && msg.tool_calls.length > 0;
-            const hasContent = !!(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim();
-
-            return (
-              <div className="space-y-1.5">
-                {msg.thinking && (
-                  <ThoughtBlock
-                    content={msg.thinking}
-                    defaultExpanded={isLast && !hasContent && !hasToolCalls}
-                  />
-                )}
-                {[...(msg.content || '').matchAll(/<(?:thought|think)>([\s\S]*?)<\/(?:thought|think)>/g)].map((m, idx, array) => (
-                  <ThoughtBlock
-                    key={idx}
-                    content={m[1].trim()}
-                    defaultExpanded={isLast && !hasContent && !hasToolCalls && idx === array.length - 1}
-                  />
-                ))}
-
-                {(msg.content || '').replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim() && (
-                  <Collapsible
-                    title={settings.agents?.list?.find(a => a.id === settings.agents?.activeId)?.name || 'Assistant'}
-                    icon={null}
-                    colorClass="border-primary/40"
-                    defaultExpanded={isLast && !hasToolCalls}
-                    borderPosition="bottom"
-                  >
-                    <div className="py-0.5 relative group/content">
-                      <MessageContent
-                        content={msg.content.replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '').trim()}
-                        role="assistant"
-                        onOpenFile={onOpenFile}
-                      />
-                      <div className="flex justify-end mt-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => onCopy(msg.content || '')}
-                          className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider"
-                          title="Copy Response"
-                        >
-                          <Copy size={12} />
-                          <span>Copy</span>
-                        </button>
-                      </div>
-                    </div>
-                  </Collapsible>
-                )}
-
-                {msg.tool_calls?.map((call, idx) => (
-                  <ToolCallItem
-                    key={idx}
-                    call={call}
-                    defaultExpanded={isLast && idx === msg.tool_calls!.length - 1}
-                  />
-                ))}
-              </div>
-            );
-          })() : msg.role === 'tool' ? (
-            <Collapsible
-              title={`Result: ${msg.name || 'Tool'}`}
-              colorClass="border-green-500/40"
-              defaultExpanded={isLast}
-            >
-              <pre className="text-[10px] font-mono whitespace-pre-wrap max-h-96 overflow-auto text-muted-foreground/60">
-                {msg.content}
-              </pre>
-            </Collapsible>
-          ) : (
+          {msg.role === 'system' && <SystemMessageBlock {...commonProps} />}
+          {msg.role === 'user' && <UserMessageBlock {...commonProps} />}
+          {(msg.role === 'assistant' || msg.role === 'model') && <AssistantMessageBlock {...commonProps} />}
+          {msg.role === 'tool' && <ToolMessageBlock {...commonProps} />}
+          
+          {/* Fallback for unknown roles */}
+          {!['system', 'user', 'assistant', 'model', 'tool'].includes(msg.role) && (
             <div className="py-0.5">
               <MessageContent content={msg.content} role={msg.role} onOpenFile={onOpenFile} />
             </div>

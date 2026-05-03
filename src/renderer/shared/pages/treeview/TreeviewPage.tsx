@@ -3,9 +3,12 @@ import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Se
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../../lib/utils';
 import { Select } from '../../basic/Select';
+import { Button } from '../../basic/Button';
+import { Input } from '../../basic/Input';
 import { useSidebar, FileNode } from '../../context/SidebarMockContext';
 import { PromptModal } from '../../featured/PromptModal';
 import { ConfirmModal } from '../../featured/ConfirmModal';
+import { ContextMenu } from '../../featured/ContextMenu';
 
 interface TreeviewPageProps {
   activeTabPath?: string;
@@ -383,19 +386,20 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
             searchPlaceholder="Search workspaces..."
             className="w-full"
             footer={
-              <button 
+              <Button 
+                variant="ghost"
                 onClick={() => setShowNewWorkspaceModal(true)}
-                className="w-full px-3 py-2 text-[10px] text-left text-primary font-medium hover:bg-accent transition-colors flex items-center gap-2"
+                className="w-full px-3 py-2 text-xs text-left text-primary font-medium hover:bg-accent transition-colors flex items-center gap-2 justify-start rounded-none"
               >
-                <Plus size={12} /> Create New Workspace...
-              </button>
+                <Plus size={14} /> Create New Workspace...
+              </Button>
             }
           />
         </div>
         
         <div className="flex items-center gap-0.5">
-          <button onClick={handleAddFolder} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><FolderPlus size={16} /></button>
-          {onClose && <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><PanelLeftClose size={16} /></button>}
+          <Button variant="ghost" size="icon" onClick={handleAddFolder} className="text-muted-foreground hover:text-foreground"><FolderPlus size={16} /></Button>
+          {onClose && <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground"><PanelLeftClose size={16} /></Button>}
         </div>
       </div>
 
@@ -420,37 +424,41 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           </Tree>
         ) : (
           <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
-            <button 
+            <Button 
+              variant="ghost"
               onClick={handleAddFolder}
-              className="mt-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
+              className="mt-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
             >
               Open Folder
-            </button>
+            </Button>
           </div>
         )}
       </div>
       
       <div className="mt-auto border-t border-border p-2 shrink-0 bg-sidebar">
-        <button onClick={onOpenSettings} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+        <Button 
+          variant="ghost" 
+          onClick={onOpenSettings} 
+          className="w-full flex items-center justify-start gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground h-auto"
+        >
           <Settings size={16} /> Settings
-        </button>
+        </Button>
       </div>
 
       {showNewWorkspaceModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
             <h3 className="text-lg font-medium mb-4 text-foreground">New Workspace</h3>
-            <input 
+            <Input 
               autoFocus
-              type="text" 
-              placeholder="Workspace name"
+              label="Workspace Name"
+              placeholder="e.g. My Project"
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
-              className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
             />
-            <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowNewWorkspaceModal(false); setNewWorkspaceName(''); }} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</button>
-              <button onClick={handleCreateWorkspace} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Create</button>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="ghost" onClick={() => { setShowNewWorkspaceModal(false); setNewWorkspaceName(''); }}>Cancel</Button>
+              <Button variant="primary" onClick={handleCreateWorkspace}>Create Workspace</Button>
             </div>
           </div>
         </div>
@@ -476,37 +484,27 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       )}
 
       {contextMenu && (
-        <div 
-          className="fixed bg-sidebar border border-border shadow-2xl rounded-lg py-1.5 z-[100] text-sm text-foreground flex flex-col w-44 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.file.isDirectory && (
-            <>
-              <button onClick={() => handleCtxAction('new-file')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New File</button>
-              <button onClick={() => handleCtxAction('new-folder')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New Folder</button>
-              <div className="h-px bg-border/50 my-1" />
-            </>
-          )}
-          <button onClick={() => handleCtxAction('rename')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Rename</button>
-          
-          <div className="h-px bg-border/50 my-1" />
-          <button onClick={() => handleCtxAction('copy')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Copy</button>
-          {clipboard && contextMenu.file.isDirectory && (
-             <button onClick={() => handleCtxAction('paste')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Paste</button>
-          )}
-          <div className="h-px bg-border/50 my-1" />
-
-          {rootFilesPaths.includes(contextMenu.file.id) ? (
-            <button onClick={() => handleCtxAction('remove-from-workspace')} className="px-3 py-1.5 text-left text-orange-500 hover:bg-orange-500 hover:text-white transition-colors">
-              Remove from Workspace
-            </button>
-          ) : (
-            <button onClick={() => handleCtxAction('delete')} className="px-3 py-1.5 text-left text-red-500 hover:bg-red-500 hover:text-white transition-colors">
-              Delete
-            </button>
-          )}
-        </div>
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          title={contextMenu.file.name}
+          onClose={() => setContextMenu(null)}
+          onSelect={(id) => handleCtxAction(id as any)}
+          items={[
+            ...(contextMenu.file.isDirectory ? [
+              { id: 'new-file', label: 'New File' },
+              { id: 'new-folder', label: 'New Folder' }
+            ] : []),
+            { id: 'rename', label: 'Rename' },
+            { id: 'copy', label: 'Copy' },
+            ...(clipboard && contextMenu.file.isDirectory ? [
+              { id: 'paste', label: 'Paste' }
+            ] : []),
+            rootFilesPaths.includes(contextMenu.file.id) ? 
+              { id: 'remove-from-workspace', label: 'Remove from Workspace', badge: 'ROOT' } :
+              { id: 'delete', label: 'Delete', badge: 'FILE' }
+          ]}
+        />
       )}
     </div>
   );

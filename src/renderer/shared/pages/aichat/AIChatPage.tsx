@@ -6,6 +6,9 @@ import { useChat } from '../../context/ChatMockContext';
 import ChatInput, { ChatInputHandle } from '../../featured/ChatInput';
 import { ChatMessage } from '../../featured/advanced/ChatMessage';
 import { SelectionPopover } from '../../featured/SelectionPopover';
+import { Button } from '../../basic/Button';
+import { Modal } from '../../basic/Modal';
+import { SelectionList } from '../../basic/SelectionList';
 import { cn } from '../../lib/utils';
 
 interface AIChatPageProps {
@@ -81,13 +84,15 @@ export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }:
         </div>
 
         <div className="flex items-center gap-1">
-          <button 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => { loadSessions(); setShowHistory(true); }}
-            className="p-2 hover:bg-accent rounded-md transition-colors text-muted-foreground hover:text-foreground"
             title="History"
+            className="text-muted-foreground hover:text-foreground"
           >
             <History size={18} />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -100,11 +105,11 @@ export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }:
           </div>
         ) : (
           messages.map((msg, idx) => (
-            <ChatMessage 
-              key={msg.id || idx} 
-              msg={msg} 
-              idx={idx} 
-              total={messages.length} 
+            <ChatMessage
+              key={msg.id || idx}
+              msg={msg}
+              idx={idx}
+              total={messages.length}
               onOpenFile={async (path) => {
                 const content = await aynite.readFile(path);
                 onOpenFile?.({ name: path.split(/[/\\]/).pop() || path, path, isDirectory: false }, content);
@@ -127,7 +132,7 @@ export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }:
       {/* Input */}
       <div className="p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
         <div className="max-w-4xl mx-auto">
-          <ChatInput 
+          <ChatInput
             ref={inputRef}
             onSubmit={handleSendMessage}
             disabled={loading}
@@ -139,51 +144,37 @@ export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }:
         </div>
       </div>
 
-      {/* History Modal */}
-      {showHistory && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-3xl bg-background border border-border/50 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
-                  <History size={18} />
+      <Modal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        title="Chat Sessions"
+        size="lg"
+      >
+        <div className="flex-1 overflow-y-auto">
+          <SelectionList
+            items={sessions.map(s => ({
+              id: s.id,
+              label: `Session ${s.id.slice(-6)}`,
+              subtitle: s.preview || "No content",
+              badge: new Date(s.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              icon: (
+                <div className="w-8 h-8 rounded bg-muted flex flex-col items-center justify-center text-[8px] font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors shrink-0">
+                  <Calendar size={10} className="mb-0.5" />
+                  {s.date.split('-').slice(1).join('/')}
                 </div>
-                <div>
-                  <h2 className="text-sm font-bold uppercase tracking-widest">Chat Sessions</h2>
-                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight opacity-70">Historical sessions</p>
-                </div>
-              </div>
-              <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-accent rounded-full transition-colors"><X size={18} /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {sessions.map(s => (
-                <button 
-                  key={s.id} 
-                  onClick={() => { aynite.loadChatLog(s.id, s.date).then(setMessages); setSessionId(s.id); setShowHistory(false); }}
-                  className="w-full text-left p-3 rounded-lg hover:bg-accent/50 border border-transparent hover:border-border/30 transition-all group flex gap-4 items-start"
-                >
-                  <div className="shrink-0 mt-1">
-                    <div className="w-8 h-8 rounded bg-muted flex flex-col items-center justify-center text-[8px] font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
-                      <Calendar size={10} className="mb-0.5" />
-                      {s.date.split('-').slice(1).join('/')}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-bold text-foreground/80 group-hover:text-primary transition-colors uppercase tracking-tight">Session {s.id.slice(-6)}</span>
-                      <div className="flex items-center gap-2 text-[9px] text-muted-foreground/60 font-medium">
-                        <Clock size={10} />
-                        {new Date(s.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <p className="text-[12px] text-muted-foreground/70 line-clamp-2 leading-relaxed">{s.preview || "No content"}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+              ),
+              date: s.date // Keep for handler
+            }))}
+            selectedIndex={-1}
+            onSelect={(item) => {
+              aynite.loadChatLog(item.id, item.date).then(setMessages);
+              setSessionId(item.id);
+              setShowHistory(false);
+            }}
+            itemClassName="py-4 border-b border-border/10 last:border-0"
+          />
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

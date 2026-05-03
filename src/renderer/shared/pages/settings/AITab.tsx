@@ -88,22 +88,16 @@ export function AITab({
     <SettingsPage
       title="AI Providers"
       description="Manage multiple AI provider configurations and select the active one for your assistant."
+      onRestore={actions.onRestore}
       primaryAction={
-        <div className="flex gap-2">
-          {actions.onRestore && (
-            <Button variant="ghost" size="sm" onClick={actions.onRestore} className="flex items-center gap-1.5 text-muted-foreground">
-              <RotateCcw size={14} /> Restore
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleAddProvider}
-            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
-          >
-            <Plus size={14} /> Add Provider
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleAddProvider}
+          className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
+        >
+          <Plus size={14} /> Add Provider
+        </Button>
       }
     >
       <Section title="Configured Providers">

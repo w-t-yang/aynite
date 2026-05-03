@@ -19,6 +19,7 @@ interface SelectProps {
   searchable?: boolean;
   searchPlaceholder?: string;
   disabled?: boolean;
+  footer?: React.ReactNode;
 }
 
 export function Select({ 
@@ -30,7 +31,8 @@ export function Select({
   className,
   searchable = false,
   searchPlaceholder = "Search...",
-  disabled = false
+  disabled = false,
+  footer
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -52,7 +54,7 @@ export function Select({
 
   const filteredItems: SelectionItem[] = normalizedOptions
     .filter(opt => opt.label.toLowerCase().includes(search.toLowerCase()))
-    .map(opt => ({
+    .map((opt) => ({
       id: opt.value,
       label: opt.label,
       isActive: value === opt.value
@@ -73,12 +75,12 @@ export function Select({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-full flex items-center justify-between bg-transparent border-b border-border/60 py-1 text-sm focus:outline-none focus:border-primary transition-all hover:border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+          "w-full flex items-center justify-between bg-transparent border-b border-border/60 py-1.5 text-xs focus:outline-none focus:border-primary transition-all hover:border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
           isOpen && "border-primary"
         )}
       >
-        <span className={cn("truncate", !activeOption && "text-muted-foreground/50")}>
-          {activeOption ? activeOption.label : placeholder}
+        <span className={cn("truncate font-medium", !activeOption && "text-muted-foreground/50")}>
+          {activeOption && typeof activeOption !== 'string' ? activeOption.label : placeholder}
         </span>
         <ChevronDown size={14} className={cn("transition-transform opacity-50 text-muted-foreground", isOpen && "rotate-180")} />
       </button>
@@ -95,7 +97,7 @@ export function Select({
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full text-[10px] py-1"
+                className="w-full text-xs py-1"
               />
             </div>
           )}
@@ -108,9 +110,14 @@ export function Select({
               setIsOpen(false);
               setSearch('');
             }}
-            size="sm"
             className="max-h-64"
           />
+
+          {footer && (
+            <div className="border-t border-border/50 shrink-0">
+              {footer}
+            </div>
+          )}
         </div>
       )}
     </div>

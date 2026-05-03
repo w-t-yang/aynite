@@ -1,6 +1,6 @@
 export interface AgentMessage {
   id: string;
-  role: 'user' | 'assistant' | 'tool' | 'system';
+  role: 'user' | 'assistant' | 'model' | 'tool' | 'system';
   content: string;
   tool_calls?: any[];
   tool_call_id?: string;

@@ -22,7 +22,7 @@ const VIOLATIONS = {
     key: 'tags',
     name: 'Manual HTML Component Usage',
     tags: ['button', 'input', 'select', 'textarea'],
-    description: 'Use shared/basic components (Button, Input, Select) instead of raw HTML tags.'
+    description: 'Use shared/basic components (Button, Input, Select, SelectionList) instead of raw HTML tags or manual menus.'
   },
   ADAPTIVE_STYLES: {
     key: 'styles',
@@ -191,6 +191,24 @@ const auditFile = (filepath) => {
         });
       }
     });
+
+    // Merge: Detect manual dropdown/menu overlays
+    const isOverlay = /\b(absolute|fixed)\b/.test(content) && /\b(bg-sidebar|bg-background|shadow-2xl)\b/.test(content);
+    const buttonCount = (content.match(/<button/g) || []).length;
+    
+    if (isOverlay && buttonCount > 2) {
+      const overlayMatch = content.match(/<(?:div|section)[^>]*\b(absolute|fixed)\b[^>]*>/);
+      if (overlayMatch) {
+        const lineNum = content.substring(0, overlayMatch.index).split('\n').length;
+        report.push({
+          type: VIOLATIONS.COMPONENT_DUPLICATION.name,
+          file: relativePath,
+          line: lineNum,
+          snippet: lines[lineNum - 1].trim(),
+          message: `Detected manual overlay with ${buttonCount} buttons. ${VIOLATIONS.COMPONENT_DUPLICATION.description}`
+        });
+      }
+    }
   }
 
   // 4. Adaptive Styles
@@ -207,7 +225,7 @@ const auditFile = (filepath) => {
       });
     }
   }
-
+  
   // 5. Hardcoded Strings
   if (activeViolations.some(v => v.key === 'strings')) {
     let textMatch;

@@ -7,6 +7,7 @@ interface SettingsPageProps {
   title: string;
   description: string;
   onRestore?: () => void;
+  primaryAction?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }
@@ -15,6 +16,7 @@ export function SettingsPage({
   title, 
   description, 
   onRestore, 
+  primaryAction,
   children,
   className 
 }: SettingsPageProps) {
@@ -28,16 +30,19 @@ export function SettingsPage({
             <p className="text-muted-foreground text-sm flex-1 leading-relaxed">
               {description}
             </p>
-            {onRestore && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onRestore} 
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground shrink-0 h-auto py-1"
-              >
-                <RotateCcw size={14} /> Restore Defaults
-              </Button>
-            )}
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              {primaryAction}
+              {onRestore && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onRestore} 
+                  className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground h-auto py-1"
+                >
+                  <RotateCcw size={14} /> Restore Defaults
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

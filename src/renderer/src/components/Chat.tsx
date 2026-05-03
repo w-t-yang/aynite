@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X, Settings, History, Calendar, Clock } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { SettingsState } from '../../shared/lib/types';
-import ChatInput, { ChatInputHandle } from './ChatInput';
-import { runAgentLoop, AgentMessage, AgentStepEvent, AgentConfig } from '../lib/agent';
+import { AgentMessage, AgentStepEvent, SettingsState } from '../../shared/lib/types';
+import { runAgentLoop, AgentConfig } from '../lib/agent';
 import { SelectionPopover } from './ui/SelectionPopover';
 import { cn } from '../../shared/lib/utils';
 import { Collapsible } from '../../shared/basic/Collapsible';

@@ -78,6 +78,9 @@ iframe {
     --scrollbar-track: transparent;
 
     --radius: 0.5rem;
+
+    --font-size-xs: 0.75rem;
+    --font-size-xxs: 0.625rem;
   }
 }
 
@@ -186,6 +189,9 @@ iframe {
   /* Set typography defaults */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --font-size-xs: var(--font-size-xs);
+  --font-size-xxs: var(--font-size-xxs);
 }
 
 /* ─── Tiptap Chat Input Styles ────────────────────────────────────── */

@@ -35,14 +35,13 @@ export function SelectionPopover({
       <div className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 bg-muted/20 text-left">
         {title}
       </div>
-      <SelectionList 
+      <SelectionList
         items={items}
         selectedIndex={selectedIndex}
         onSelect={(item) => {
           onSelect(item.id);
           onClose();
         }}
-        size="sm"
         className="max-h-64"
       />
     </div>

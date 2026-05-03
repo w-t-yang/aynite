@@ -7,6 +7,7 @@ import { ColorInput } from '../../featured/ColorInput';
 import { Select } from '../../basic/Select';
 import { Modal } from '../../basic/Modal';
 import { Input } from '../../basic/Input';
+import { Button } from '../../basic/Button';
 
 const COLOR_LABELS: Record<string, string> = {
   background: 'Background',

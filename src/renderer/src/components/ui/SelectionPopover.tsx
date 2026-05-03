@@ -42,7 +42,6 @@ export function SelectionPopover({
           onSelect(item.id);
           onClose();
         }}
-        size="sm"
         className="max-h-64"
       />
     </div>

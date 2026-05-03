@@ -5,6 +5,7 @@ import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { SelectionList, SelectionItem } from '../basic/SelectionList';
+import { Button } from '../basic/Button';
 import { FileText, Folder, Zap, Terminal, Send, AlertTriangle } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -85,7 +86,6 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
           items={selectionItems}
           selectedIndex={selectedIndex}
           onSelect={(item) => command(item as SuggestionItem)}
-          size="sm"
           className="max-h-[40vh]"
         />
       </div>
@@ -418,14 +418,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         <div className="flex-1 min-h-[24px] py-1">
           <EditorContent editor={editor} />
         </div>
-        <button
+        <Button
           onClick={() => handleSubmit()}
           disabled={disabled}
-          className="p-2 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-xl transition-all duration-200 shrink-0"
+          variant="ghost"
+          className="p-2 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-xl transition-all duration-200 shrink-0 h-auto"
           title="Send Message (Ctrl+Enter)"
         >
           <Send size={18} />
-        </button>
+        </Button>
       </div>
     );
   }

@@ -25,14 +25,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('@tiptap') || id.includes('prosemirror')) return 'vendor-editor';
-            if (id.includes('react-markdown') || id.includes('remark') || id.includes('micromark') || id.includes('prismjs')) return 'vendor-markdown';
-            if (id.includes('lucide-react')) return 'vendor-icons';
-            if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) return 'vendor-react';
             return 'vendor';
-          }
-          if (id.includes('src/renderer/shared')) {
-            return 'shared';
           }
         }
       }
