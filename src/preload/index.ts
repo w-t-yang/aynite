@@ -2,51 +2,51 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { joinPaths, getDirname } from '../lib/path';
 
 const api = {
-  getFiles: (path: string) => ipcRenderer.invoke('aynite:files', path),
-  runCommand: (command: string, cwd?: string) => ipcRenderer.invoke('aynite:command', { command, cwd }),
-  readFile: (path: string) => ipcRenderer.invoke('aynite:read-file', path),
+  getFiles: (path: string) => ipcRenderer.invoke('aynite:file-list', path),
+  runCommand: (command: string, cwd?: string) => ipcRenderer.invoke('aynite:spell-command-run', { command, cwd }),
+  readFile: (path: string) => ipcRenderer.invoke('aynite:file-read', path),
   getFileInfo: (path: string) => ipcRenderer.invoke('aynite:file-info', path),
-  loadConfig: () => ipcRenderer.invoke('aynite:load-config'),
-  saveConfig: (config: any) => ipcRenderer.invoke('aynite:save-config', config),
-  saveSession: (sessionId: string, messages: any[]) => ipcRenderer.invoke('aynite:ai-save-session', { sessionId, messages }),
-  loadSession: (sessionId: string, date: string) => ipcRenderer.invoke('aynite:ai-load-session', { sessionId, date }),
+  loadConfig: () => ipcRenderer.invoke('aynite:config-load'),
+  saveConfig: (config: any) => ipcRenderer.invoke('aynite:config-save', config),
+  saveSession: (sessionId: string, messages: any[]) => ipcRenderer.invoke('aynite:ai-session-save', { sessionId, messages }),
+  loadSession: (sessionId: string, date: string) => ipcRenderer.invoke('aynite:ai-session-load', { sessionId, date }),
   listSessions: () => ipcRenderer.invoke('aynite:ai-session-list'),
 
   // Workspace API
-  getWorkspacesList: () => ipcRenderer.invoke('aynite:workspaces-list'),
+  getWorkspacesList: () => ipcRenderer.invoke('aynite:workspace-list'),
   createWorkspace: (name: string) => ipcRenderer.invoke('aynite:workspace-create', name),
   switchWorkspace: (name: string) => ipcRenderer.invoke('aynite:workspace-switch', name),
   addWorkspaceFolder: () => ipcRenderer.invoke('aynite:workspace-add-folder'),
-  removeWorkspaceFolder: (path: string) => ipcRenderer.invoke('aynite:workspace-remove-folder', path),
-  reorderWorkspaceFolders: (folders: string[]) => ipcRenderer.invoke('aynite:workspace-reorder-folders', folders),
-  getWorkspaceFolders: () => ipcRenderer.invoke('aynite:workspace-get-folders'),
-  workspaceAllFiles: () => ipcRenderer.invoke('aynite:workspace-all-files'),
-  getWorkspaceState: () => ipcRenderer.invoke('aynite:workspace-get-state'),
-  saveWorkspaceState: (workspaceName: string, tabs: any[], activeTabId: string) => ipcRenderer.invoke('aynite:workspace-save-state', { workspaceName, tabs, activeTabId }),
+  removeWorkspaceFolder: (path: string) => ipcRenderer.invoke('aynite:workspace-folder-remove', path),
+  reorderWorkspaceFolders: (folders: string[]) => ipcRenderer.invoke('aynite:workspace-folder-reorder', folders),
+  getWorkspaceFolders: () => ipcRenderer.invoke('aynite:workspace-folder-list'),
+  workspaceAllFiles: () => ipcRenderer.invoke('aynite:workspace-file-scan'),
+  getWorkspaceState: () => ipcRenderer.invoke('aynite:workspace-state-load'),
+  saveWorkspaceState: (workspaceName: string, tabs: any[], activeTabId: string) => ipcRenderer.invoke('aynite:workspace-state-save', { workspaceName, tabs, activeTabId }),
 
   // Skills API
-  pickSkillFolder: () => ipcRenderer.invoke('aynite:skill-add-folder'),
-  restoreDefaultSkills: () => ipcRenderer.invoke('aynite:skills-restore-default'),
+  pickSkillFolder: () => ipcRenderer.invoke('aynite:spell-skill-add-folder'),
+  restoreDefaultSkills: () => ipcRenderer.invoke('aynite:spell-skill-restore-default'),
   
   // Commands API
-  pickCommandFolder: () => ipcRenderer.invoke('aynite:command-add-folder'),
-  restoreDefaultCommands: () => ipcRenderer.invoke('aynite:commands-restore-default'),
-  getAvailableSkills: () => ipcRenderer.invoke('aynite:skills-list'),
-  getAvailableCommands: () => ipcRenderer.invoke('aynite:commands-list'),
-  runDirectCommand: (payload: { commandPath: string, params: string[], currentFile?: string }) => ipcRenderer.invoke('aynite:command-run-direct', payload),
+  pickCommandFolder: () => ipcRenderer.invoke('aynite:spell-command-add-folder'),
+  restoreDefaultCommands: () => ipcRenderer.invoke('aynite:spell-command-restore-default'),
+  getAvailableSkills: () => ipcRenderer.invoke('aynite:spell-skill-list'),
+  getAvailableCommands: () => ipcRenderer.invoke('aynite:spell-command-list'),
+  runDirectCommand: (payload: { commandPath: string, params: string[], currentFile?: string }) => ipcRenderer.invoke('aynite:spell-command-run-direct', payload),
   
   // Prompts API
-  pickPromptFile: () => ipcRenderer.invoke("aynite:ai-pick-prompt-file"),
-  restoreDefaultPrompts: () => ipcRenderer.invoke("aynite:ai-restore-prompts"),
-  getMergedSystemPrompt: (globalFiles?: string[], agentFiles?: string[]) => ipcRenderer.invoke("aynite:ai-get-merged-prompts", globalFiles, agentFiles),
+  pickPromptFile: () => ipcRenderer.invoke("aynite:ai-prompt-pick-file"),
+  restoreDefaultPrompts: () => ipcRenderer.invoke("aynite:ai-prompt-restore"),
+  getMergedSystemPrompt: (globalFiles?: string[], agentFiles?: string[]) => ipcRenderer.invoke("aynite:ai-prompt-get-merged", globalFiles, agentFiles),
   
   // Theme API
-  getThemesList: () => ipcRenderer.invoke('aynite:themes-list'),
-  getTheme: (name: string) => ipcRenderer.invoke('aynite:theme-get', name),
+  getThemesList: () => ipcRenderer.invoke('aynite:theme-list'),
+  getTheme: (name: string) => ipcRenderer.invoke('aynite:theme-read', name),
   saveTheme: (name: string, data: any) => ipcRenderer.invoke('aynite:theme-save', { name, data }),
-  restoreDefaultTheme: (name: string) => ipcRenderer.invoke('aynite:theme-restore-default', name),
+  restoreDefaultTheme: (name: string) => ipcRenderer.invoke('aynite:theme-restore', name),
   deleteTheme: (name: string) => ipcRenderer.invoke('aynite:theme-delete', name),
-  getSystemFonts: () => ipcRenderer.invoke('aynite:system-fonts'),
+  getSystemFonts: () => ipcRenderer.invoke('aynite:system-font-list'),
 
   // File Ops API
   createFile: (path: string, isDirectory: boolean) => ipcRenderer.invoke('aynite:file-create', { path, isDirectory }),
@@ -54,9 +54,9 @@ const api = {
   copyFile: (srcPath: string, destPath: string) => ipcRenderer.invoke('aynite:file-copy', { srcPath, destPath }),
   deleteFile: (path: string) => ipcRenderer.invoke('aynite:file-delete', path),
   saveFile: (path: string, content: string) => ipcRenderer.invoke('aynite:file-save', { path, content }),
-  openExternal: (url: string) => ipcRenderer.invoke('aynite:open-external', url),
-  quitApp: () => ipcRenderer.invoke('aynite:app-quit'),
-  getAppVersion: () => ipcRenderer.invoke('aynite:app-version'),
+  openExternal: (url: string) => ipcRenderer.invoke('aynite:system-open-external', url),
+  quitApp: () => ipcRenderer.invoke('aynite:system-app-quit'),
+  getAppVersion: () => ipcRenderer.invoke('aynite:system-app-version'),
   
   // Util
   joinPath: (...paths: string[]) => joinPaths(...paths),

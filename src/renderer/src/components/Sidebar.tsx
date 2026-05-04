@@ -3,7 +3,7 @@ import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Se
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../../shared/lib/utils';
 import { getFileCategory } from '../lib/file-handlers';
-import { SearchableSelect } from '../../shared/featured/SearchableSelect';
+import { Select } from '../../shared/basic/Select';
 import { KeyManager } from '../lib/key-handlers';
 
 interface FileNode {
@@ -475,7 +475,8 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none" tabIndex={-1}>
       <div className="px-3 py-3 flex items-center justify-between border-b border-border/40 shrink-0">
         <div className="relative flex-1 min-w-0 mr-2">
-          <SearchableSelect
+          <Select
+            searchable
             value={activeWorkspace}
             options={workspaces}
             onChange={handleWorkspaceSelect}

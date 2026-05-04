@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug, AlertCircle } from 'lucide-react';
-import { DEFAULT_KEYBINDINGS } from '../../shared/lib/constants/keybindings';
-import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS, DEFAULT_AI_TOOLS } from '../../shared/lib/constants/ai';
+import { DEFAULT_KEYBINDINGS } from '../../../lib/constants/keybindings';
+import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS, DEFAULT_AI_TOOLS } from '../../../lib/constants/ai';
 import { cn } from '../../shared/lib/utils';
-import { SearchableSelect } from '../../shared/featured/SearchableSelect';
+import { Select } from '../../shared/basic/Select';
 import { KeyManager } from '../lib/key-handlers';
 import { AIProviderInstance, SettingsState } from '../../shared/lib/types';
 import { Collapsible } from '../../shared/basic/Collapsible';
@@ -490,14 +490,14 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                         <div className="flex items-center justify-between">
                           <label className="text-xs text-muted-foreground">Font Family</label>
                           <div className="flex items-center gap-2">
-                            <SearchableSelect value="" options={systemFonts} onChange={(v) => handleFontSelect('fontFamily', v + ', ui-sans-serif, system-ui, sans-serif')} placeholder="System fonts..." className="w-[140px]" />
+                            <Select searchable value="" options={systemFonts} onChange={(v) => handleFontSelect('fontFamily', v + ', ui-sans-serif, system-ui, sans-serif')} placeholder="System fonts..." className="w-[140px]" />
                             <input type="text" value={editingTheme?.fonts?.fontFamily || ''} onChange={(e) => handleFontChange('fontFamily', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <label className="text-xs text-muted-foreground">Monospace Font</label>
                           <div className="flex items-center gap-2">
-                            <SearchableSelect value="" options={systemFonts} onChange={(v) => handleFontSelect('fontMono', v + ', ui-monospace, SFMono-Regular, monospace')} placeholder="System fonts..." className="w-[140px]" />
+                            <Select searchable value="" options={systemFonts} onChange={(v) => handleFontSelect('fontMono', v + ', ui-monospace, SFMono-Regular, monospace')} placeholder="System fonts..." className="w-[140px]" />
                             <input type="text" value={editingTheme?.fonts?.fontMono || ''} onChange={(e) => handleFontChange('fontMono', e.target.value)} onBlur={() => persistTheme(editingTheme)} className="w-48 bg-accent/20 rounded border border-transparent px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" />
                           </div>
                         </div>

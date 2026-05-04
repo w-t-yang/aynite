@@ -251,6 +251,32 @@ export async function copy(src: string, dest: string, options?: { recursive?: bo
   return await fs.cp(expandedSrc, expandedDest, options);
 }
 
+export async function rename(oldPath: string, newPath: string) {
+  const expandedOld = expandHome(oldPath);
+  const expandedNew = expandHome(newPath);
+  await ensureDir(path.dirname(expandedNew));
+  await fs.rename(expandedOld, expandedNew);
+}
+
+export async function remove(filePath: string, options?: { recursive?: boolean, force?: boolean }) {
+  await fs.rm(expandHome(filePath), options);
+}
+
+export async function checkIsTextFile(filePath: string): Promise<boolean> {
+  try {
+    const fd = await fs.open(expandHome(filePath), 'r');
+    const { bytesRead, buffer } = await fd.read(Buffer.alloc(1024), 0, 1024, 0);
+    await fd.close();
+
+    for (let i = 0; i < bytesRead; i++) {
+      if (buffer[i] === 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // --- Secure Helpers (with Domain Validation) ---
 
 export async function secureReadText(filePath: string, domainFolders: string[]): Promise<string> {

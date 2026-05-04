@@ -54,7 +54,7 @@ export async function saveWorkspaceState(workspaceName: string, tabs: WorkspaceT
   await writeJson(workspacePath, data);
 }
 
-export async function addWorkspaceFolder(folderPath: string, workspaceName?: string): Promise<void> {
+export async function addWorkspaceFolder(folderPath: string, workspaceName?: string): Promise<boolean> {
   const wsConfig = await getWorkspacesConfig();
   const targetWs = workspaceName || wsConfig.active;
   const workspacePath = getWorkspaceDataPath(targetWs);
@@ -63,24 +63,27 @@ export async function addWorkspaceFolder(folderPath: string, workspaceName?: str
     data.folders.push(folderPath);
     await writeJson(workspacePath, data);
   }
+  return true;
 }
 
-export async function removeWorkspaceFolder(folderPath: string, workspaceName?: string): Promise<void> {
+export async function removeWorkspaceFolder(folderPath: string, workspaceName?: string): Promise<boolean> {
   const wsConfig = await getWorkspacesConfig();
   const targetWs = workspaceName || wsConfig.active;
   const workspacePath = getWorkspaceDataPath(targetWs);
   const data = await readJson<WorkspaceData>(workspacePath, { folders: [], tabs: [], activeTabId: '' });
   data.folders = data.folders.filter((f: string) => f !== folderPath);
   await writeJson(workspacePath, data);
+  return true;
 }
 
-export async function reorderWorkspaceFolders(folders: string[], workspaceName?: string): Promise<void> {
+export async function reorderWorkspaceFolders(folders: string[], workspaceName?: string): Promise<boolean> {
   const wsConfig = await getWorkspacesConfig();
   const targetWs = workspaceName || wsConfig.active;
   const workspacePath = getWorkspaceDataPath(targetWs);
   const data = await readJson<WorkspaceData>(workspacePath, { folders: [], tabs: [], activeTabId: '' });
   data.folders = folders;
   await writeJson(workspacePath, data);
+  return true;
 }
 
 export async function getWorkspaceFolders(workspaceName?: string): Promise<string[]> {

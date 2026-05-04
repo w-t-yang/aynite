@@ -20,6 +20,7 @@ interface SelectionListProps {
   labelClassName?: string;
   subtitleClassName?: string;
   divided?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export function SelectionList({
@@ -30,9 +31,22 @@ export function SelectionList({
   itemClassName,
   labelClassName = "text-xs",
   subtitleClassName = "text-xxs",
-  divided = true
+  divided = true,
+  size = 'md'
 }: SelectionListProps) {
   const listRef = useRef<HTMLDivElement>(null);
+
+  const sizeClasses = {
+    sm: "px-2 py-1 gap-2",
+    md: "px-3 py-1.5 gap-3",
+    lg: "px-4 py-2.5 gap-4"
+  };
+
+  const labelSizeClasses = {
+    sm: "text-[11px]",
+    md: "text-xs",
+    lg: "text-sm"
+  };
 
   useEffect(() => {
     const selectedEl = listRef.current?.children[selectedIndex] as HTMLElement;
@@ -65,7 +79,8 @@ export function SelectionList({
               type="button"
               onClick={() => onSelect(item)}
               className={cn(
-                "w-full text-left px-3 py-1.5 transition-colors flex items-center gap-3 group outline-none",
+                "w-full text-left transition-colors flex items-center group outline-none",
+                sizeClasses[size],
                 isSelected 
                   ? "bg-primary text-primary-foreground" 
                   : "text-foreground hover:bg-primary/10 hover:text-primary",
@@ -82,7 +97,7 @@ export function SelectionList({
               )}
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={cn("truncate font-medium", labelClassName)}>
+                  <span className={cn("truncate font-medium", labelSizeClasses[size], labelClassName)}>
                     {item.label}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">

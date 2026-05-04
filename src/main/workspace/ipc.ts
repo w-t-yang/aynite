@@ -9,25 +9,28 @@ import {
   saveWorkspaceState,
   reorderWorkspaceFolders,
   removeWorkspaceFolder
-} from './workspace';
+} from './logic';
 import { getIgnorePatterns } from '../config';
 import { exists, readdir, getAbsolutePath } from '../../lib/path';
 import { WorkspaceTab } from '../../lib/types/workspace';
+import { setupWatcher } from '../file';
 
-export function setupWorkspaceIpc(mainWindow: BrowserWindow, setupWatcher: (folders: string[]) => void): void {
-  ipcMain.handle('aynite:workspaces-list', async () => {
+export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
+  ipcMain.handle('aynite:workspace-list', async () => {
     return await getWorkspacesList();
   });
 
-  ipcMain.handle('aynite:workspace-create', async (_event, name: string) => {
+  ipcMain.handle('aynite:workspace-create', async (event, name: string) => {
     return await createWorkspace(name);
   });
 
-  ipcMain.handle('aynite:workspace-switch', async (_event, name: string) => {
-    const ws = await switchWorkspace(name);
-    const folders = await getWorkspaceFolders();
-    setupWatcher(folders);
-    return ws;
+  ipcMain.handle('aynite:workspace-switch', async (event, name: string) => {
+    const success = await switchWorkspace(name);
+    if (success) {
+      const folders = await getWorkspaceFolders();
+      setupWatcher(mainWindow, folders);
+    }
+    return success;
   });
 
   ipcMain.handle('aynite:workspace-add-folder', async () => {
@@ -35,47 +38,52 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow, setupWatcher: (fold
       properties: ['openDirectory']
     });
     if (canceled || filePaths.length === 0) return null;
-
-    await addWorkspaceFolder(filePaths[0]);
-    const folders = await getWorkspaceFolders();
-    setupWatcher(folders);
-    return filePaths[0];
+    const folderPath = filePaths[0];
+    const success = await addWorkspaceFolder(folderPath);
+    if (success) {
+      const folders = await getWorkspaceFolders();
+      setupWatcher(mainWindow, folders);
+    }
+    return folderPath;
   });
 
-  ipcMain.handle('aynite:workspace-remove-folder', async (_event, folderPath: string) => {
-    await removeWorkspaceFolder(folderPath);
-    const folders = await getWorkspaceFolders();
-    setupWatcher(folders);
-    return true;
-  });
-
-  ipcMain.handle('aynite:workspace-reorder-folders', async (_event, folders: string[]) => {
-    await reorderWorkspaceFolders(folders);
-    setupWatcher(folders);
-    return true;
-  });
-
-  ipcMain.handle('aynite:workspace-get-folders', async () => {
+  ipcMain.handle('aynite:workspace-folder-list', async () => {
     return await getWorkspaceFolders();
   });
 
-  ipcMain.handle('aynite:workspace-get-state', async () => {
+  ipcMain.handle('aynite:workspace-state-load', async () => {
     return await getWorkspaceState();
   });
 
-  ipcMain.handle('aynite:workspace-save-state', async (_event, payload: { name: string, tabs: WorkspaceTab[], activeTabId: string }) => {
-    await saveWorkspaceState(payload.name, payload.tabs, payload.activeTabId);
-    return true;
+  ipcMain.handle('aynite:workspace-state-save', async (event, { workspaceName, tabs, activeTabId }: { workspaceName: string, tabs: WorkspaceTab[], activeTabId: string }) => {
+    return await saveWorkspaceState(workspaceName, tabs, activeTabId);
   });
 
-  ipcMain.handle('aynite:workspace-all-files', async () => {
+  ipcMain.handle('aynite:workspace-folder-reorder', async (event, folders: string[]) => {
+    const success = await reorderWorkspaceFolders(folders);
+    if (success) {
+      setupWatcher(mainWindow, folders);
+    }
+    return success;
+  });
+
+  ipcMain.handle('aynite:workspace-folder-remove', async (event, folderPath: string) => {
+    const success = await removeWorkspaceFolder(folderPath);
+    if (success) {
+      const folders = await getWorkspaceFolders();
+      setupWatcher(mainWindow, folders);
+    }
+    return success;
+  });
+
+  ipcMain.handle('aynite:workspace-file-scan', async () => {
     const folders = await getWorkspaceFolders();
+    const allFiles: any[] = [];
     const ignorePatterns = await getIgnorePatterns();
-    const allFiles: { name: string, path: string, isDirectory: boolean }[] = [];
 
     async function scan(dir: string) {
-      const list = await readdir(dir);
-      for (const file of list) {
+      const entries = await readdir(dir);
+      for (const file of entries) {
         if (ignorePatterns.includes(file.name)) continue;
         const res = getAbsolutePath(file.name, dir);
         if (file.isDirectory()) {

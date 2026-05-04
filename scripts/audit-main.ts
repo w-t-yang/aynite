@@ -9,7 +9,22 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const SRC_DIR = path.join(ROOT_DIR, 'src');
 const AI_DIR = path.join(SRC_DIR, 'main', 'ai');
 const WORKSPACE_DIR = path.join(SRC_DIR, 'main', 'workspace');
+const CONFIG_DIR = path.join(SRC_DIR, 'main', 'config');
+const THEME_DIR = path.join(SRC_DIR, 'main', 'theme');
+const FILE_DIR = path.join(SRC_DIR, 'main', 'file');
+const SYSTEM_DIR = path.join(SRC_DIR, 'main', 'system');
+const SPELLS_DIR = path.join(SRC_DIR, 'main', 'spells');
 const LIB_DIR = path.join(SRC_DIR, 'lib');
+
+const SUBSYSTEMS = [
+  { dir: AI_DIR, name: 'ai' },
+  { dir: WORKSPACE_DIR, name: 'workspace' },
+  { dir: CONFIG_DIR, name: 'config' },
+  { dir: THEME_DIR, name: 'theme' },
+  { dir: FILE_DIR, name: 'file' },
+  { dir: SYSTEM_DIR, name: 'system' },
+  { dir: SPELLS_DIR, name: 'spells' }
+];
 
 interface AuditIssue {
   type: string;
@@ -131,44 +146,37 @@ const auditFile = (filepath: string) => {
       if (importPath.startsWith('.')) {
         const resolvedPath = path.resolve(path.dirname(filepath), importPath);
         
-        const isInsideAI = filepath.startsWith(AI_DIR);
-        const isInsideWorkspace = filepath.startsWith(WORKSPACE_DIR);
-        const subsystemDir = isInsideAI ? AI_DIR : (isInsideWorkspace ? WORKSPACE_DIR : null);
-
-        const targetIsInsideAI = resolvedPath.startsWith(AI_DIR);
-        const targetIsInsideWorkspace = resolvedPath.startsWith(WORKSPACE_DIR);
+        const currentSubsystem = SUBSYSTEMS.find(s => filepath.startsWith(s.dir));
+        const targetSubsystem = SUBSYSTEMS.find(s => resolvedPath.startsWith(s.dir));
         
-        const targetIsAIIndex = resolvedPath === path.join(AI_DIR, 'index.ts') || resolvedPath === path.join(AI_DIR, 'index');
-        const targetIsWorkspaceIndex = resolvedPath === path.join(WORKSPACE_DIR, 'index.ts') || resolvedPath === path.join(WORKSPACE_DIR, 'index');
-
         let violation = false;
         let msg = '';
 
-        if (!subsystemDir) {
-          // Outside any subsystem
-          if (targetIsInsideAI && !targetIsAIIndex) {
-            violation = true;
-            msg = 'External modules should only import from src/main/ai/index.ts to maintain subsystem isolation.';
-          } else if (targetIsInsideWorkspace && !targetIsWorkspaceIndex) {
-            violation = true;
-            msg = 'External modules should only import from src/main/workspace/index.ts to maintain subsystem isolation.';
+        if (!currentSubsystem) {
+          // Outside any subsystem (e.g. src/main/index.ts)
+          if (targetSubsystem) {
+            const targetIndex = path.join(targetSubsystem.dir, 'index');
+            const targetIsIndex = resolvedPath === targetIndex || resolvedPath === `${targetIndex}.ts` || resolvedPath === targetSubsystem.dir;
+            if (!targetIsIndex) {
+              violation = true;
+              msg = `External modules should only import from src/main/${targetSubsystem.name}/index.ts to maintain subsystem isolation.`;
+            }
           }
         } else {
           // Inside a subsystem
           const targetIsInsideLib = resolvedPath.startsWith(LIB_DIR);
+          const targetIsInsideSameSubsystem = targetSubsystem && targetSubsystem.dir === currentSubsystem.dir;
           const targetIsSibling = path.dirname(resolvedPath) === path.dirname(filepath);
-          const targetIsInsideSameSubsystem = resolvedPath.startsWith(subsystemDir);
 
-          if (!targetIsInsideLib && !targetIsSibling && targetIsInsideSameSubsystem) {
-             // Exception: subfolders within same subsystem
-          } else if (!targetIsInsideLib && !targetIsInsideSameSubsystem) {
-            // Importing from another subsystem or external
-            if (targetIsInsideAI && !targetIsAIIndex) {
-              violation = true;
-              msg = 'Subsystems should only import from src/main/ai/index.ts of other subsystems.';
-            } else if (targetIsInsideWorkspace && !targetIsWorkspaceIndex) {
-              violation = true;
-              msg = 'Subsystems should only import from src/main/workspace/index.ts of other subsystems.';
+          if (!targetIsInsideLib && !targetIsInsideSameSubsystem) {
+            // Importing from another subsystem or elsewhere
+            if (targetSubsystem) {
+              const targetIndex = path.join(targetSubsystem.dir, 'index');
+              const targetIsIndex = resolvedPath === targetIndex || resolvedPath === `${targetIndex}.ts` || resolvedPath === targetSubsystem.dir;
+              if (!targetIsIndex) {
+                violation = true;
+                msg = `Subsystems should only import from src/main/${targetSubsystem.name}/index.ts of other subsystems.`;
+              }
             }
           }
         }
@@ -187,7 +195,7 @@ const auditFile = (filepath: string) => {
   }
 
   // 2. Direct FS Usage
-  if (activeViolations.some(v => (v as any).key === 'fs')) {
+  if (activeViolations.some(v => (v as any).key === 'fs') && !filepath.endsWith('src/lib/path.ts')) {
     let fsMatch;
     while ((fsMatch = VIOLATIONS.DIRECT_FS_USAGE.regex.exec(content)) !== null) {
       const lineNum = content.substring(0, fsMatch.index).split('\n').length;
