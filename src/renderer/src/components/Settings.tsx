@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Moon, Sun, Keyboard, Bot, BrainCircuit, Plus, Trash2, RotateCcw, Terminal, Palette, Copy, ChevronDown, Search, FileText, Wrench, Zap, Info, CloudDownload, RefreshCw, Github, Bug, AlertCircle } from 'lucide-react';
-import { DEFAULT_KEYBINDINGS } from '../../../main/default_configs/keybindings';
-import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS, DEFAULT_AI_TOOLS } from '../../../main/default_configs/ai';
+import { DEFAULT_KEYBINDINGS } from '../../shared/lib/constants/keybindings';
+import { DEFAULT_AI_CONFIG, DEFAULT_PROVIDER_MODELS, DEFAULT_PROVIDER_URLS, DEFAULT_AI_TOOLS } from '../../shared/lib/constants/ai';
 import { cn } from '../../shared/lib/utils';
 import { SearchableSelect } from '../../shared/featured/SearchableSelect';
 import { KeyManager } from '../lib/key-handlers';

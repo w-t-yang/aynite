@@ -8,7 +8,7 @@ import FileViewer from './components/FileViewer';
 import TabSwitcher from './components/TabSwitcher';
 import { SettingsState } from '../shared/lib/types';
 import { cn } from '../shared/lib/utils';
-import { DEFAULT_SETTINGS } from '../../main/default_configs/settings';
+import { DEFAULT_SETTINGS } from '../../lib/constants/settings';
 import { SelectionPopover } from './components/ui/SelectionPopover';
 import { ChevronDown } from 'lucide-react';
 import { getFileCategory } from './lib/file-handlers';

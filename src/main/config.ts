@@ -5,8 +5,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
-import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
-import { DEFAULT_THEMES } from './default_configs/themes';
+import { DEFAULT_KEYBINDINGS } from '../lib/constants/keybindings';
+import { DEFAULT_THEMES } from '../lib/constants/themes';
 import { 
   getAyniteDir, 
   expandHome, 
