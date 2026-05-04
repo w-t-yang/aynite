@@ -1,0 +1,26 @@
+export enum ConfigKey {
+  WORKSPACE = 'workspace',
+  WORKSPACES = 'workspaces',
+  ACTIVE_WORKSPACE = 'activeWorkspace',
+  KEYBINDINGS = 'keybindings',
+  VIEWS = 'views',
+  THEMES = 'themes',
+  THEME = 'theme',
+  ACTIVE_THEME = 'activeTheme',
+  CHAT_LOGS = 'chatLogs',
+  MERGED_SYSTEM_PROMPT = 'merged-system-prompt',
+  LOAD_CHAT_LOG = 'load-chat-log',
+  SAVE_CHAT_LOG = 'save-chat-log',
+  AI = 'ai',
+  AGENTS = 'agents',
+  PROMPTS = 'prompts',
+  SKILLS = 'skills',
+  COMMANDS = 'commands',
+  TOOLS = 'tools',
+  VERSION = 'version'
+}
+
+
+
+
+
