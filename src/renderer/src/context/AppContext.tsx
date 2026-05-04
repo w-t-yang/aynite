@@ -72,12 +72,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addWorkspace = useCallback(
     (name: string) => {
-      ayniteConfig.setActiveWorkspace(name).then(() => {
+      ayniteConfig.createWorkspace(name).then(() => {
         loadData()
       })
     },
     [loadData]
   )
+
 
   const switchLayout = useCallback((id: string) => {
     setWorkspaceConfig((prev) => {

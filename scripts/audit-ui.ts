@@ -79,8 +79,16 @@ const VIOLATIONS: Record<string, ViolationRule> = {
     name: 'Forbidden Path Functions',
     regex: /(?<!\.)\b(?:join|dirname|resolve|extname|basename)\b(?!\s*:)(?=\s*\()|(?<!\.)\bsep\b(?!\s*:)/g,
     description: 'Do not use raw path functions (join, dirname, etc.). Use project-specific path getters or their abstracted wrappers (joinPaths, getDirname, etc.) from lib/path.ts.'
+  },
+  Z_INDEX_HIERARCHY: {
+    key: 'z-index',
+    name: 'Z-Index Hierarchy Violation',
+    regex: /\bz-\[?(\d+)\]?|\bzIndex\s*:\s*(\d+)/g,
+    description: 'Enforce standardized z-index layers: Splitters (100), Menus (2000-3000), Notifications (4000), Modals (5000), Context Menus (6000).'
   }
 };
+
+
 
 // Help display
 if (process.argv.includes('-h') || process.argv.includes('--help')) {
@@ -396,7 +404,29 @@ const auditFile = (filepath: string) => {
       });
     }
   }
+
+  // 9. Z-Index Hierarchy
+  if (activeViolations.some(v => v.key === 'z-index')) {
+    let zMatch;
+    while ((zMatch = VIOLATIONS.Z_INDEX_HIERARCHY.regex!.exec(content)) !== null) {
+      const value = parseInt(zMatch[1] || zMatch[2]);
+      const allowedValues = [0, 1, 10, 50, 100, 1000, 2000, 3000, 4000, 5000, 6000];
+      
+      if (!allowedValues.includes(value)) {
+
+        const lineNum = content.substring(0, zMatch.index).split('\n').length;
+        report.push({
+          type: VIOLATIONS.Z_INDEX_HIERARCHY.name,
+          file: relativePath,
+          line: lineNum,
+          snippet: lines[lineNum - 1].trim(),
+          message: `Detected non-standard z-index value: ${value}. ${VIOLATIONS.Z_INDEX_HIERARCHY.description}`
+        });
+      }
+    }
+  }
 };
+
 
 targetFolders.forEach(folder => walk(folder, auditFile));
 
@@ -414,8 +444,10 @@ const DISPLAY_ORDER = [
   VIOLATIONS.ADAPTIVE_STYLES.name,
   VIOLATIONS.SYSTEM_CALLS.name,
   VIOLATIONS.DIRECT_PATH_IMPORT.name,
-  VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name
+  VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name,
+  VIOLATIONS.Z_INDEX_HIERARCHY.name
 ];
+
 
 console.log('\n=================================================');
 console.log('   Aynite Shared & Views Architecture Audit');

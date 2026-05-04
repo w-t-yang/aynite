@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Input } from '../basic/Input';
-import { Select } from '../basic/Select';
+import { SelectionMenu } from './SelectionMenu';
 import { Button } from '../basic/Button';
 import { Radio } from '../basic/Radio';
+
 import { Modal } from '../basic/Modal';
 import { AIProviderInstance } from '../lib/types';
 
@@ -57,19 +58,20 @@ export function AIProviderCard({
         </div>
 
         <div className="grid grid-cols-2 gap-4 ml-7">
-          <Select
+          <SelectionMenu
             label="Model Provider"
-            value={provider.provider}
-            onChange={(v) => onUpdate(provider.id, 'provider', v)}
-            options={[
-              { value: 'ollama', label: 'Ollama' },
-              { value: 'openai', label: 'OpenAI' },
-              { value: 'anthropic', label: 'Anthropic' },
-              { value: 'gemini', label: 'Gemini/Google' },
-              { value: 'deepseek', label: 'DeepSeek' },
-              { value: 'others', label: 'Other (Compatible)' }
+            activeId={provider.provider}
+            onSelect={(v) => onUpdate(provider.id, 'provider', v)}
+            items={[
+              { id: 'ollama', label: 'Ollama' },
+              { id: 'openai', label: 'OpenAI' },
+              { id: 'anthropic', label: 'Anthropic' },
+              { id: 'gemini', label: 'Gemini/Google' },
+              { id: 'deepseek', label: 'DeepSeek' },
+              { id: 'others', label: 'Other (Compatible)' }
             ]}
           />
+
 
           <Input
             label="Model"
@@ -100,17 +102,18 @@ export function AIProviderCard({
           </div>
 
           {provider.provider === 'others' && (
-            <Select
+            <SelectionMenu
               label="Compatibility"
-              value={provider.compatibility || 'openai'}
-              onChange={(v) => onUpdate(provider.id, 'compatibility', v)}
-              options={[
-                { value: 'openai', label: 'OpenAI' },
-                { value: 'anthropic', label: 'Anthropic' },
-                { value: 'google', label: 'Google' }
+              activeId={provider.compatibility || 'openai'}
+              onSelect={(v) => onUpdate(provider.id, 'compatibility', v)}
+              items={[
+                { id: 'openai', label: 'OpenAI' },
+                { id: 'anthropic', label: 'Anthropic' },
+                { id: 'google', label: 'Google' }
               ]}
             />
           )}
+
 
           {provider.provider === 'ollama' && (
             <Input

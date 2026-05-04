@@ -3,10 +3,12 @@ import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Se
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../../lib/utils';
 import { getFileCategory } from '../../lib/file-handlers';
-import { Select } from '../../basic/Select';
+import { SelectionMenu } from '../../featured/SelectionMenu';
+import { SelectionItem } from '../../basic/SelectionList';
 import { Button } from '../../basic/Button';
 import { Input } from '../../basic/Input';
 import { KeyManager } from '../../lib/key-handlers';
+
 
 interface FileNode {
   id: string; // Absolute path
@@ -54,6 +56,40 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     message: string;
     onConfirm: () => Promise<void>;
   } | null>(null);
+
+  const workspaceOptions = useMemo((): SelectionItem[] => 
+    workspaces.map(ws => ({
+      id: ws,
+      label: ws,
+      isActive: ws === activeWorkspace
+    })), [workspaces, activeWorkspace]);
+
+  const contextMenuItems = useMemo((): SelectionItem[] => {
+    if (!contextMenu) return [];
+    const { file } = contextMenu;
+    const items: SelectionItem[] = [];
+
+    if (file.isDirectory) {
+      items.push({ id: 'new-file', label: 'New File' });
+      items.push({ id: 'new-folder', label: 'New Folder' });
+    }
+
+    items.push({ id: 'rename', label: 'Rename' });
+    items.push({ id: 'copy', label: 'Copy' });
+
+    if (clipboard && file.isDirectory) {
+      items.push({ id: 'paste', label: 'Paste' });
+    }
+
+    if (rootFilesPaths.includes(file.id)) {
+      items.push({ id: 'remove-from-workspace', label: 'Remove from Workspace', badge: 'ROOT' });
+    } else {
+      items.push({ id: 'delete', label: 'Delete' });
+    }
+
+    return items;
+  }, [contextMenu, clipboard, rootFilesPaths]);
+
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -478,11 +514,11 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none" tabIndex={-1}>
       <div className="px-3 py-3 flex items-center justify-between border-b border-border/40 shrink-0">
         <div className="relative flex-1 min-w-0 mr-2">
-          <Select
+          <SelectionMenu
             searchable
-            value={activeWorkspace}
-            options={workspaces}
-            onChange={handleWorkspaceSelect}
+            activeId={activeWorkspace}
+            items={workspaceOptions}
+            onSelect={handleWorkspaceSelect}
             placeholder="Select Workspace"
             searchPlaceholder="Search workspaces..."
             className="w-full"
@@ -498,6 +534,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
             }
           />
         </div>
+
         
         <div className="flex items-center gap-0.5">
           <Button variant="ghost" onClick={handleAddFolder} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><FolderPlus size={16} /></Button>
@@ -582,38 +619,16 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       )}
 
       {contextMenu && (
-        <div 
-          className="fixed bg-sidebar border border-border shadow-2xl rounded-lg py-1.5 z-[100] text-sm text-foreground flex flex-col w-44 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e: React.MouseEvent) => e.stopPropagation()}
-        >
-          {contextMenu.file.isDirectory && (
-            <>
-              <Button variant="ghost" onClick={() => handleCtxAction('new-file')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New File</Button>
-              <Button variant="ghost" onClick={() => handleCtxAction('new-folder')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New Folder</Button>
-              <div className="h-px bg-border/50 my-1" />
-            </>
-          )}
-          <Button variant="ghost" onClick={() => handleCtxAction('rename')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Rename</Button>
-          
-          <div className="h-px bg-border/50 my-1" />
-          <Button variant="ghost" onClick={() => handleCtxAction('copy')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Copy</Button>
-          {clipboard && contextMenu.file.isDirectory && (
-             <Button variant="ghost" onClick={() => handleCtxAction('paste')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Paste</Button>
-          )}
-          <div className="h-px bg-border/50 my-1" />
-
-          {rootFilesPaths.includes(contextMenu.file.id) ? (
-            <Button variant="ghost" onClick={() => handleCtxAction('remove-from-workspace')} className="px-3 py-1.5 text-left text-warning hover:bg-warning hover:text-warning-foreground transition-colors">
-              Remove from Workspace
-            </Button>
-          ) : (
-            <Button variant="ghost" onClick={() => handleCtxAction('delete')} className="px-3 py-1.5 text-left text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors">
-              Delete
-            </Button>
-          )}
-        </div>
+        <SelectionMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenuItems}
+          onSelect={(id: string) => handleCtxAction(id as any)}
+          onClose={() => setContextMenu(null)}
+          divided
+        />
       )}
+
     </div>
   );
 }

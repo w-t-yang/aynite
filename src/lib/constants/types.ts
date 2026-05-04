@@ -32,7 +32,10 @@ export interface WorkspaceConfig {
   folders: string[]
   files: string[]
   activeFile?: string
+  tabs?: any[] // Legacy compatibility
+  activeTabId?: string // Legacy compatibility
 }
+
 
 export interface KeybindingConfig {
   [key: string]: string

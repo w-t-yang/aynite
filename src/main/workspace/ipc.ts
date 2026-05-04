@@ -14,8 +14,9 @@ import { getIgnorePatterns } from '../config';
 import { exists, readdir, getAbsolutePath } from '../../lib/path';
 import { WorkspaceTab } from '../../lib/types/workspace';
 import { setupWatcher } from '../file';
-
+import { WorkspaceConfig } from '../../lib/constants/types';
 import { WorkspaceChannels } from '../../lib/constants/ipc-channels';
+
 
 
 
@@ -68,8 +69,10 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
   });
 
   ipcMain.handle(WorkspaceChannels.STATE_SAVE, async (_event, { workspaceName, tabs, activeTabId }: WorkspaceStatePayload) => {
-    return await saveWorkspaceState(workspaceName, tabs, activeTabId);
+    const state: Partial<WorkspaceConfig> = { tabs, activeTabId };
+    return await saveWorkspaceState(workspaceName, state);
   });
+
 
   ipcMain.handle(WorkspaceChannels.FOLDER_REORDER, async (_event, folders: string[]) => {
     const success = await reorderWorkspaceFolders(folders);

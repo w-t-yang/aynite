@@ -15,6 +15,11 @@ class AyniteConfig {
     return window.aynite.setConfig(ConfigKey.ACTIVE_WORKSPACE, id)
   }
 
+  async createWorkspace(name: string): Promise<any> {
+    return window.aynite.createWorkspace(name)
+  }
+
+
   async saveWorkspace(config: WorkspaceConfig): Promise<boolean> {
     return window.aynite.setConfig(ConfigKey.WORKSPACE, { id: config.id, config })
   }

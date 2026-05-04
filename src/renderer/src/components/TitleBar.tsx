@@ -1,21 +1,37 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Button } from '../../shared/basic/Button'
-import Dropdown from './shared/Dropdown'
-import FormModal from './shared/compound/FormModal'
+import { SelectionMenu } from '../../shared/featured/SelectionMenu'
+import { FormModal } from '../../shared/featured/FormModal'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 
 const TitleBar: React.FC = () => {
   const { workspaceConfig, workspaces, switchWorkspace, addWorkspace, switchLayout } = useApp()
-
   const { themes, activeTheme, setTheme } = useTheme()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
+
+  const workspaceOptions = useMemo(() => 
+    workspaces.map(id => ({
+      id,
+      label: id
+    })), [workspaces])
+
+  const themeOptions = useMemo(() => 
+    themes.map(t => ({
+      id: t.id,
+      label: t.name,
+      icon: <div
+        className="w-3 h-3 rounded-full border border-border"
+        style={{ background: t.colors.primary }}
+      />
+    })), [themes])
 
   if (!workspaceConfig) return null
 
   return (
     <>
-      <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2">
+      <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2 relative z-[100]">
+
         {/* Left: Layout switcher (dynamic from workspace config) */}
         <div className="flex items-center gap-1 no-drag">
           {workspaceConfig.layouts.map((layout) => (
@@ -33,8 +49,14 @@ const TitleBar: React.FC = () => {
 
         {/* Center: Workspace switcher */}
         <div className="flex-1 flex justify-center items-center no-drag">
-          <Dropdown
+          <SelectionMenu
+            activeId={workspaceConfig.id}
+            items={workspaceOptions}
+            onSelect={switchWorkspace}
+            divided={false}
+            align="center"
             trigger={
+
               <Button variant="ghost" size="sm" className="flex items-center gap-1.5">
                 <span>{workspaceConfig.id}</span>
                 <svg
@@ -51,28 +73,12 @@ const TitleBar: React.FC = () => {
                 </svg>
               </Button>
             }
-          >
-            <div className="p-1.5 flex flex-col gap-0.5 min-w-[180px]">
-              <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">
-                Workspaces
-              </div>
-              {workspaces.map((id) => (
-                <button
-                  key={id}
-                  onClick={() => switchWorkspace(id)}
-                  className={`w-full px-3 py-2 text-left text-[13px] rounded-md transition-colors ${
-                    id === workspaceConfig.id
-                      ? 'bg-accent/10 text-accent font-medium'
-                      : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {id}
-                </button>
-              ))}
-              <div className="h-px bg-border my-1" />
-              <button
+            title="Workspaces"
+            footer={
+              <Button
+                variant="ghost"
                 onClick={() => setShowAddWorkspaceModal(true)}
-                className="w-full px-3 py-2 text-left text-[13px] text-accent hover:bg-accent/10 rounded-md transition-colors flex items-center gap-2"
+                className="w-full justify-start px-3 py-2 text-xs text-primary hover:bg-primary/10 rounded-md transition-colors gap-2"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -87,15 +93,21 @@ const TitleBar: React.FC = () => {
                   />
                 </svg>
                 New Workspace
-              </button>
-            </div>
-          </Dropdown>
+              </Button>
+            }
+          />
         </div>
 
         {/* Right: Theme switcher + branding */}
         <div className="flex items-center gap-1 no-drag">
-          <Dropdown
+          <SelectionMenu
+            activeId={activeTheme?.id}
+            items={themeOptions}
+            onSelect={setTheme}
+            divided={false}
+            align="right"
             trigger={
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -134,31 +146,8 @@ const TitleBar: React.FC = () => {
                 )}
               </Button>
             }
-            align="right"
-          >
-            <div className="p-1.5 flex flex-col gap-0.5 min-w-[140px]">
-              <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">
-                Themes
-              </div>
-              {themes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTheme(t.id)}
-                  className={`w-full px-3 py-2 text-left text-[13px] rounded-md transition-colors flex items-center justify-between ${
-                    t.id === activeTheme?.id
-                      ? 'bg-accent/10 text-accent font-medium'
-                      : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t.name}
-                  <div
-                    className="w-3 h-3 rounded-full border border-border"
-                    style={{ background: t.colors.primary }}
-                  />
-                </button>
-              ))}
-            </div>
-          </Dropdown>
+            title="Themes"
+          />
 
           <div className="flex items-center gap-2 px-3 py-1 border-l border-border ml-1">
             <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">
@@ -176,7 +165,6 @@ const TitleBar: React.FC = () => {
           placeholder="e.g. My Project"
           onSubmit={(name) => {
             addWorkspace(name)
-            setShowAddWorkspaceModal(false)
           }}
         />
       )}
@@ -184,4 +172,6 @@ const TitleBar: React.FC = () => {
   )
 }
 
+
 export default TitleBar
+

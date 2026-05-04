@@ -9,15 +9,17 @@ const AppContent: React.FC = () => {
 
   if (!workspaceConfig)
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#11111b] text-tile-text">
+      <div className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
         <div className="animate-pulse font-semibold">Loading Aynite...</div>
       </div>
+
     )
 
   const activeLayout = workspaceConfig.layouts.find((l: any) => l.id === workspaceConfig.activeLayoutId)
 
   return (
-    <div className="h-screen w-screen flex flex-col relative bg-[#11111b]">
+    <div className="h-screen w-screen flex flex-col relative bg-background">
+
       <TitleBar />
       <div id="layout-container" className="flex-1 flex overflow-hidden p-0.5">
         {activeLayout && <TileNode isRoot node={activeLayout.layout} />}

@@ -4,10 +4,11 @@ import { Section } from '../../basic/Section';
 import { SettingsPage } from '../../featured/SettingsPage';
 import { ThemePreview } from '../../featured/ThemePreview';
 import { ColorInput } from '../../featured/ColorInput';
-import { Select } from '../../basic/Select';
+import { SelectionMenu } from '../../featured/SelectionMenu';
 import { Modal } from '../../basic/Modal';
 import { Input } from '../../basic/Input';
 import { Button } from '../../basic/Button';
+
 
 const COLOR_LABELS: Record<string, string> = {
   background: 'Background',
@@ -165,27 +166,28 @@ export function AppearanceTab({
           <div className="space-y-12">
             {/* Fonts */}
             <div className="grid grid-cols-2 gap-x-12 gap-y-6 max-w-3xl">
-              <Select
+              <SelectionMenu
                 label="Interface Font"
                 searchable
-                value={editingTheme.fonts?.sans || 'Inter'}
-                options={systemFonts}
-                onChange={(v) => handleUpdateTheme({
+                activeId={editingTheme.fonts?.sans || 'Inter'}
+                items={systemFonts.map(f => ({ id: f, label: f }))}
+                onSelect={(v) => handleUpdateTheme({
                   ...editingTheme,
                   fonts: { ...(editingTheme.fonts || {}), sans: v }
                 })}
               />
-              <Select
+              <SelectionMenu
                 label="Monospace Font"
                 searchable
-                value={editingTheme.fonts?.mono || 'JetBrains Mono'}
-                options={systemFonts}
-                onChange={(v) => handleUpdateTheme({
+                activeId={editingTheme.fonts?.mono || 'JetBrains Mono'}
+                items={systemFonts.map(f => ({ id: f, label: f }))}
+                onSelect={(v) => handleUpdateTheme({
                   ...editingTheme,
                   fonts: { ...(editingTheme.fonts || {}), mono: v }
                 })}
               />
             </div>
+
 
             {/* Colors */}
             <div className="grid grid-cols-2 gap-x-16 gap-y-4">

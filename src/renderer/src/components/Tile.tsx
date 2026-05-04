@@ -46,7 +46,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
         </Button>
       </div>
 
-      <div className="tile-content h-full p-0 relative overflow-hidden bg-black/20">
+      <div className="tile-content h-full p-0 relative overflow-hidden bg-tile-bg/50">
         {url ? (
           <ViewParentProvider id={id} iframeRef={iframeRef}>
             <iframe
@@ -59,10 +59,10 @@ const Tile: React.FC<TileProps> = ({ node }) => {
             />
           </ViewParentProvider>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[#313244]">
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 mb-2 opacity-20"
+              className="h-12 w-12 mb-2 opacity-10"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -74,10 +74,11 @@ const Tile: React.FC<TileProps> = ({ node }) => {
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            <div className="text-[13px] font-medium opacity-20">Empty Tile</div>
+            <div className="text-[13px] font-medium opacity-10">Empty Tile</div>
           </div>
         )}
       </div>
+
     </div>
   )
 }

@@ -5,7 +5,8 @@ import remarkGfm from 'remark-gfm';
 import { ChatMessage, AgentStepEvent, SettingsState } from '../../lib/types';
 import { runAgentLoop, AgentConfig } from '../../lib/agent';
 import ChatInput, { ChatInputHandle } from '../../featured/ChatInput';
-import { SelectionPopover } from '../../featured/SelectionPopover';
+import { SelectionMenu } from '../../featured/SelectionMenu';
+
 import { cn } from '../../lib/utils';
 import { ChatMessageItem } from '../../featured/advanced/ChatMessage';
 import { Collapsible } from '../../basic/Collapsible';
@@ -246,7 +247,7 @@ export function AIChatPage({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showProviderSwitcher, setShowProviderSwitcher] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<ChatInputHandle>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -848,40 +849,37 @@ export function AIChatPage({
           {/* Floating Status Pill */}
           <div className="absolute -top-10 left-0 right-0 flex items-center justify-between px-2 pointer-events-none">
             <div className="flex items-center gap-2 pointer-events-auto">
-              <div className="relative">
-                <button
-                  onClick={() => setShowProviderSwitcher(!showProviderSwitcher)}
-                  className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/50 transition-all shadow-sm group"
-                >
-                  {showProviderSwitcher && (
-                    <SelectionPopover
-                      title="Switch AI Provider"
-                      position="top"
-                      items={(settings.ai?.providers || []).map(p => ({ id: p.id, label: `${p.provider} - ${p.model}` }))}
-                      activeId={settings.ai?.activeId || ''}
-                      onSelect={(id) => {
-                        onUpdateSettings({
-                          ...settings,
-                          ai: { ...settings.ai, activeId: id }
-                        });
-                      }}
-                      onClose={() => setShowProviderSwitcher(false)}
-                    />
-                  )}
-                  {(() => {
-                    const active = settings.ai?.providers?.find(p => p.id === settings.ai?.activeId) || settings.ai?.providers?.[0];
-                    return (
-                      <>
-                        <span className="opacity-70">{active?.provider || 'ollama'}</span>
-                        <span className="normal-case font-bold text-muted-foreground border-l border-border/20 pl-2">
-                          {active?.model || ''}
-                        </span>
-                      </>
-                    );
-                  })()}
-                  <ChevronDown size={10} className="opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                </button>
-              </div>
+              <SelectionMenu
+                title="Switch AI Provider"
+                items={(settings.ai?.providers || []).map(p => ({ id: p.id, label: `${p.provider} - ${p.model}` }))}
+                activeId={settings.ai?.activeId || ''}
+                onSelect={(id: string) => {
+                  onUpdateSettings({
+                    ...settings,
+                    ai: { ...settings.ai, activeId: id }
+                  });
+                }}
+                trigger={
+                  <button
+                    className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/50 transition-all shadow-sm group"
+                  >
+                    {(() => {
+                      const active = settings.ai?.providers?.find(p => p.id === settings.ai?.activeId) || settings.ai?.providers?.[0];
+                      return (
+                        <>
+                          <span className="opacity-70">{active?.provider || 'ollama'}</span>
+                          <span className="normal-case font-bold text-muted-foreground border-l border-border/20 pl-2">
+                            {active?.model || ''}
+                          </span>
+                        </>
+                      );
+                    })()}
+                    <ChevronDown size={10} className="ml-1 opacity-50" />
+                  </button>
+                }
+              />
+            </div>
+
 
               {currentFileInfo && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/40 text-[10px] font-bold tracking-wider text-muted-foreground shadow-sm animate-in fade-in slide-in-from-left-2 duration-300">
