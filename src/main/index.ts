@@ -6,8 +6,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, restoreDefaultPrompts, getMergedSystemPrompt, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, saveChatLog, loadChatLog, listChatLogs, setConfigNotificationCallback } from './config';
-import { setupAiIpc } from './ai/ipc';
+import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, setConfigNotificationCallback } from './config';
+import { setupAiIpc, saveChatLog, loadChatLog, listChatLogs, restoreDefaultPrompts, getMergedSystemPrompt } from './ai';
 import { setupUpdater } from './updater';
 
 

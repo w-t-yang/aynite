@@ -1,15 +1,35 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const SHARED_DIR = path.join(__dirname, '..');
-const VIEWS_DIR = path.join(SHARED_DIR, '..', 'views');
-const BASIC_DIR = path.join(SHARED_DIR, 'basic');
+// Handling __dirname for ES modules/tsx
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const ROOT_DIR = path.resolve(__dirname, '../../..');
+const SHARED_DIR = path.join(ROOT_DIR, 'src/renderer/shared');
+const VIEWS_DIR = path.join(ROOT_DIR, 'src/renderer/views');
+
+interface AuditIssue {
+  type: string;
+  file: string;
+  line: number;
+  snippet: string;
+  message: string;
+}
 
 const VIOLATIONS = {
   IMPORT_HIERARCHY: {
     key: 'import',
     name: 'Import Hierarchy Violation',
     description: 'Enforce strict import layering (lib -> basic -> featured -> pages -> views).'
+  },
+  STRICT_TYPING: {
+    key: 'types',
+    name: 'Strict Typing Violation',
+    anyRegex: /\b(?!as\b)\bany\b/g,
+    untypedParamRegex: /(?:async\s+)?(?:\(([^:)]+)\)|(\b[a-zA-Z0-9_]+\b))\s*=>/g,
+    description: 'Avoid use of "any" and ensure all function parameters are explicitly typed.'
   },
   HARDCODED_STRINGS: {
     key: 'strings',
@@ -38,24 +58,50 @@ const VIOLATIONS = {
   }
 };
 
-// Parse command line arguments
+// Help display
+if (process.argv.includes('-h') || process.argv.includes('--help')) {
+  console.log('\nAynite UI Architecture Auditor');
+  console.log('Usage: npm run audit:ui -- [options]\n');
+  console.log('Options:');
+  console.log('  --focus=[type]    Only run specific checks (import, types, strings, tags, styles, system)');
+  console.log('  --folder=[path]   Audit a specific folder or file');
+  console.log('  -h, --help        Show this help message\n');
+  console.log('Examples:');
+  console.log('  npm run audit:ui -- --focus=import');
+  console.log('  npm run audit:ui -- --folder=src/renderer/shared/basic\n');
+  process.exit(0);
+}
+
 const focusArg = process.argv.find(arg => arg.startsWith('--focus='))?.split('=')[1];
+const folderArg = process.argv.find(arg => arg.startsWith('--folder='))?.split('=')[1];
+
 const activeViolations = focusArg 
-  ? Object.values(VIOLATIONS).filter(v => v.key === focusArg || v.name.toLowerCase().includes(focusArg))
+  ? Object.values(VIOLATIONS).filter(v => (v as any).key === focusArg || (v as any).name.toLowerCase().includes(focusArg))
   : Object.values(VIOLATIONS);
+
+const targetFolders = folderArg 
+  ? [path.resolve(ROOT_DIR, folderArg)] 
+  : [SHARED_DIR, VIEWS_DIR];
 
 const IGNORE_STRINGS = [
   'void', 'any', 'string', 'number', 'boolean', 'Promise', 'React', 'null', 'undefined',
   'px', 'rem', 'em', '%', 'vh', 'vw', 'grid', 'flex', 'hidden', 'block'
 ];
 
-function walk(dir, callback) {
+function walk(dir: string, callback: (f: string) => void) {
   if (!fs.existsSync(dir)) return;
+
+  const stats = fs.statSync(dir);
+  if (!stats.isDirectory()) {
+    if (dir.endsWith('.tsx') || dir.endsWith('.ts')) callback(dir);
+    return;
+  }
+
   const files = fs.readdirSync(dir);
   files.forEach(file => {
     const filepath = path.join(dir, file);
-    const stats = fs.statSync(filepath);
-    if (stats.isDirectory()) {
+    const fStats = fs.statSync(filepath);
+    if (fStats.isDirectory()) {
       if (file !== 'scripts' && file !== 'styles' && file !== 'node_modules') {
         walk(filepath, callback);
       }
@@ -65,7 +111,7 @@ function walk(dir, callback) {
   });
 }
 
-function isValidString(text) {
+function isValidString(text: string) {
   if (text.length <= 2) return false;
   if (/^[0-9\s.,!?:;()\-+*/=<>]+$/.test(text)) return false;
   if (IGNORE_STRINGS.some(s => text.includes(s))) return false;
@@ -74,10 +120,10 @@ function isValidString(text) {
   return true;
 }
 
-const report = [];
+const report: AuditIssue[] = [];
 
-const auditFile = (filepath) => {
-  const relativePath = path.relative(path.join(SHARED_DIR, '..'), filepath);
+const auditFile = (filepath: string) => {
+  const relativePath = path.relative(ROOT_DIR, filepath);
   const content = fs.readFileSync(filepath, 'utf8');
   const lines = content.split('\n');
 
@@ -92,7 +138,7 @@ const auditFile = (filepath) => {
   else if (filepath.includes(VIEWS_DIR)) category = 'views';
 
   // 1. Import Hierarchy Audit
-  if (activeViolations.some(v => v.key === 'import')) {
+  if (activeViolations.some(v => (v as any).key === 'import')) {
     const importRegex = /import\s+.*\s+from\s+['"](.*)['"]/g;
     let match;
     while ((match = importRegex.exec(content)) !== null) {
@@ -160,8 +206,45 @@ const auditFile = (filepath) => {
     }
   }
 
-  // 2. System Calls
-  if (activeViolations.some(v => v.key === 'system')) {
+  // 2. Strict Typing
+  if (activeViolations.some(v => (v as any).key === 'types')) {
+    // Audit for 'any'
+    let anyMatch;
+    while ((anyMatch = VIOLATIONS.STRICT_TYPING.anyRegex.exec(content)) !== null) {
+      const lineNum = content.substring(0, anyMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.STRICT_TYPING.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: 'Detected usage of "any". Use more specific types.'
+      });
+    }
+
+    // Audit for untyped parameters in arrow functions
+    let paramMatch;
+    while ((paramMatch = VIOLATIONS.STRICT_TYPING.untypedParamRegex.exec(content)) !== null) {
+      const group1 = paramMatch[1]; // (arg, arg2)
+      const group2 = paramMatch[2]; // arg
+      
+      const params = (group1 || group2).split(',').map(p => p.trim());
+      const hasUntyped = params.some(p => p && !p.includes(':'));
+
+      if (hasUntyped) {
+        const lineNum = content.substring(0, paramMatch.index).split('\n').length;
+        report.push({
+          type: VIOLATIONS.STRICT_TYPING.name,
+          file: relativePath,
+          line: lineNum,
+          snippet: lines[lineNum - 1].trim(),
+          message: 'Detected untyped parameters in arrow function.'
+        });
+      }
+    }
+  }
+
+  // 3. System Calls
+  if (activeViolations.some(v => (v as any).key === 'system')) {
     let sysMatch;
     while ((sysMatch = VIOLATIONS.SYSTEM_CALLS.regex.exec(content)) !== null) {
       const lineNum = content.substring(0, sysMatch.index).split('\n').length;
@@ -175,8 +258,8 @@ const auditFile = (filepath) => {
     }
   }
 
-  // 3. Component Duplication
-  if (activeViolations.some(v => v.key === 'tags') && category !== 'basic' && category !== 'lib') {
+  // 4. Component Duplication
+  if (activeViolations.some(v => (v as any).key === 'tags') && category !== 'basic' && category !== 'lib') {
     VIOLATIONS.COMPONENT_DUPLICATION.tags.forEach(tag => {
       const tagRegex = new RegExp(`<${tag}[\\s>]`, 'g');
       let tagMatch;
@@ -211,8 +294,8 @@ const auditFile = (filepath) => {
     }
   }
 
-  // 4. Adaptive Styles
-  if (activeViolations.some(v => v.key === 'styles')) {
+  // 5. Adaptive Styles
+  if (activeViolations.some(v => (v as any).key === 'styles')) {
     let adaptMatch;
     while ((adaptMatch = VIOLATIONS.ADAPTIVE_STYLES.regex.exec(content)) !== null) {
       const lineNum = content.substring(0, adaptMatch.index).split('\n').length;
@@ -226,10 +309,10 @@ const auditFile = (filepath) => {
     }
   }
   
-  // 5. Hardcoded Strings
-  if (activeViolations.some(v => v.key === 'strings')) {
+  // 6. Hardcoded Strings
+  if (activeViolations.some(v => (v as any).key === 'strings')) {
     let textMatch;
-    while ((textMatch = VIOLATIONS.HARDCODED_STRINGS.textNodeRegex.exec(content)) !== null) {
+    while ((textMatch = (VIOLATIONS.HARDCODED_STRINGS as any).textNodeRegex.exec(content)) !== null) {
       const text = textMatch[1].trim();
       if (isValidString(text)) {
         const lineNum = content.substring(0, textMatch.index).split('\n').length;
@@ -244,13 +327,13 @@ const auditFile = (filepath) => {
     }
 
     let propMatch;
-    while ((propMatch = VIOLATIONS.HARDCODED_STRINGS.propRegex.exec(content)) !== null) {
+    while ((propMatch = (VIOLATIONS.HARDCODED_STRINGS as any).propRegex.exec(content)) !== null) {
       const propName = propMatch[1];
       const text = propMatch[2].trim();
       if (isValidString(text)) {
         const lineNum = content.substring(0, propMatch.index).split('\n').length;
         report.push({
-          type: VIOLATIONS.HARDCODED_STRINGS.name,
+          type: (VIOLATIONS.HARDCODED_STRINGS as any).name,
           file: relativePath,
           line: lineNum,
           snippet: lines[lineNum - 1].trim(),
@@ -261,10 +344,9 @@ const auditFile = (filepath) => {
   }
 };
 
-walk(SHARED_DIR, (f) => auditFile(f));
-walk(VIEWS_DIR, (f) => auditFile(f));
+targetFolders.forEach(folder => walk(folder, auditFile));
 
-const grouped = report.reduce((acc, item) => {
+const grouped: Record<string, AuditIssue[]> = report.reduce((acc: Record<string, AuditIssue[]>, item) => {
   if (!acc[item.type]) acc[item.type] = [];
   acc[item.type].push(item);
   return acc;
@@ -272,6 +354,7 @@ const grouped = report.reduce((acc, item) => {
 
 const DISPLAY_ORDER = [
   VIOLATIONS.IMPORT_HIERARCHY.name,
+  VIOLATIONS.STRICT_TYPING.name,
   VIOLATIONS.HARDCODED_STRINGS.name,
   VIOLATIONS.COMPONENT_DUPLICATION.name,
   VIOLATIONS.ADAPTIVE_STYLES.name,
@@ -281,7 +364,10 @@ const DISPLAY_ORDER = [
 console.log('\n=================================================');
 console.log('   Aynite Shared & Views Architecture Audit');
 if (focusArg) {
-  console.log(`   FOCUS: ${activeViolations.map(v => v.name).join(', ')}`);
+  console.log(`   FOCUS: ${activeViolations.map(v => (v as any).name).join(', ')}`);
+}
+if (folderArg) {
+  console.log(`   FOLDER: ${folderArg}`);
 }
 console.log('=================================================\n');
 
@@ -293,6 +379,7 @@ if (report.length === 0) {
     if (items.length === 0) return;
 
     const badge = typeName === VIOLATIONS.IMPORT_HIERARCHY.name ? '🚨 ARCHITECTURE' : 
+                  typeName === VIOLATIONS.STRICT_TYPING.name ? '🚨 TYPING' :
                   typeName === VIOLATIONS.SYSTEM_CALLS.name ? '🚨 CRITICAL' : 
                   typeName === VIOLATIONS.ADAPTIVE_STYLES.name ? '⚠️ WARNING' :
                   typeName === VIOLATIONS.COMPONENT_DUPLICATION.name ? '⚠️ WARNING' : '📝 NOTICE';
@@ -309,17 +396,11 @@ if (report.length === 0) {
   console.log('=================================================');
   console.log(`TOTAL POTENTIAL ISSUES: ${report.length}`);
   DISPLAY_ORDER.forEach(typeName => {
-    // Only show summary for violations that were actually checked
-    if (focusArg && !activeViolations.some(v => v.name === typeName)) return;
+    if (focusArg && !activeViolations.some(v => (v as any).name === typeName)) return;
 
     const count = grouped[typeName]?.length || 0;
-    const status = count > 0 ? (typeName === VIOLATIONS.IMPORT_HIERARCHY.name || typeName === VIOLATIONS.SYSTEM_CALLS.name ? '🔴 FIX REQUIRED' : '🟡 REFAC OR REVIEW') : '🟢 CLEAN';
+    const status = count > 0 ? (typeName === VIOLATIONS.IMPORT_HIERARCHY.name || typeName === VIOLATIONS.STRICT_TYPING.name || typeName === VIOLATIONS.SYSTEM_CALLS.name ? '🔴 FIX REQUIRED' : '🟡 REFAC OR REVIEW') : '🟢 CLEAN';
     console.log(` - ${typeName}: ${count} [${status}]`);
   });
 }
 console.log('\n=== End of Report ===\n');
-if (report.length > 0 && activeViolations.some(v => v.key === 'import' || v.key === 'system')) {
-  // Exit with error if critical violations are found
-  // (Optional: depends on if the user wants build failure)
-  // process.exit(1); 
-}

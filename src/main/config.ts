@@ -1,8 +1,5 @@
 import { app } from 'electron';
-import fs from 'fs/promises';
-import { existsSync, readdirSync } from 'fs';
 import path from 'path';
-import os from 'os';
 import yaml from 'js-yaml';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -10,8 +7,31 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 import { DEFAULT_KEYBINDINGS } from './default_configs/keybindings';
 import { DEFAULT_THEMES } from './default_configs/themes';
-import { DEFAULT_PROMPTS } from './default_configs/prompts';
-import { DEFAULT_AI_CONFIG } from './default_configs/ai';
+import { 
+  getAyniteDir, 
+  expandHome, 
+  getAynitePath, 
+  getAyniteConfigDir, 
+  getAynitePromptPath,
+  ensureDir, 
+  readJson, 
+  writeJson, 
+  readText, 
+  writeText,
+  exists,
+  readdir,
+  unlink,
+  copy,
+  AYNITE_SUBDIRS
+} from '../lib/path';
+import { 
+  getDefaultGlobalPrompts, restoreDefaultPrompts 
+} from './ai';
+import { 
+  DEFAULT_AI_CONFIG, 
+  AGENT_PROMPTS, 
+  DEFAULT_AGENTS
+} from '../lib/constants/ai';
 
 let notificationCallback: ((data: { type: 'skill' | 'command', path: string, error: string }) => void) | null = null;
 let reportedErrors = new Map<string, string>();
@@ -26,67 +46,39 @@ function notifyError(type: 'skill' | 'command', path: string, error: string) {
   if (notificationCallback) notificationCallback({ type, path, error });
 }
 
-// Helper to expand ~ to home directory
-function expandHome(filepath: string): string {
-  if (filepath.startsWith('~')) {
-    return path.join(os.homedir(), filepath.slice(1));
-  }
-  return filepath;
-}
+export { getAyniteDir, expandHome };
 
 function getBundledResourcesPath(): string {
   if (app.isPackaged) {
     return process.resourcesPath;
   } else {
-    // In dev mode, resources are in the project root
-    // Using process.cwd() is more reliable than app.getAppPath() in some electron-vite setups
     return path.join(process.cwd(), 'resources');
   }
 }
 
-/**
- * Checks if 'child' is a subpath of 'parent' (or the same path)
- */
-function isSubpath(parent: string, child: string): boolean {
-  const relative = path.relative(parent, child);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
-export function getConfigDir() {
-  if (process.platform === 'win32') {
-    return path.join(app.getPath('appData'), 'aynite');
-  } else {
-    return path.join(os.homedir(), '.aynite');
-  }
-}
-
-// Constants imported from default_configs
-
 export async function initThemes() {
-  const themesDir = path.join(getConfigDir(), 'themes');
-  if (!existsSync(themesDir)) {
-    await fs.mkdir(themesDir, { recursive: true });
-  }
+  const themesDir = getAynitePath('themes');
+  await ensureDir(themesDir);
+  
   for (const [key, theme] of Object.entries(DEFAULT_THEMES)) {
     const themePath = path.join(themesDir, `${key}.json`);
-    if (!existsSync(themePath)) {
-      await fs.writeFile(themePath, JSON.stringify(theme, null, 2), 'utf-8');
+    if (!(await exists(themePath))) {
+      await writeJson(themePath, theme);
     }
   }
 }
 
 export async function getThemesList(): Promise<any[]> {
-  const themesDir = path.join(getConfigDir(), 'themes');
+  const themesDir = getAynitePath('themes');
   const themes: any[] = [];
   try {
-    const files = readdirSync(themesDir).filter(f => f.endsWith('.json'));
+    const files = (await readdir(themesDir)).filter(f => f.name.endsWith('.json'));
     for (const file of files) {
       try {
-        const data = await fs.readFile(path.join(themesDir, file), 'utf-8');
-        const theme = JSON.parse(data);
-        themes.push({ ...theme, id: file.replace('.json', '') });
+        const theme = await readJson(path.join(themesDir, file.name));
+        themes.push({ ...theme, id: file.name.replace('.json', '') });
       } catch (e) {
-        console.error(`Error reading theme ${file}`, e);
+        console.error(`Error reading theme ${file.name}`, e);
       }
     }
   } catch (e) {
@@ -96,33 +88,32 @@ export async function getThemesList(): Promise<any[]> {
 }
 
 export async function getTheme(name: string): Promise<any> {
-  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
+  const themePath = getAynitePath('themes', `${name}.json`);
   try {
-    const data = await fs.readFile(themePath, 'utf-8');
-    return JSON.parse(data);
+    return await readJson(themePath);
   } catch {
     return DEFAULT_THEMES['light'];
   }
 }
 
 export async function saveTheme(name: string, data: any): Promise<boolean> {
-  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
-  await fs.writeFile(themePath, JSON.stringify(data, null, 2), 'utf-8');
+  const themePath = getAynitePath('themes', `${name}.json`);
+  await writeJson(themePath, data);
   return true;
 }
 
 export async function restoreDefaultTheme(name: string): Promise<boolean> {
   if (!DEFAULT_THEMES[name]) return false;
-  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
-  await fs.writeFile(themePath, JSON.stringify(DEFAULT_THEMES[name], null, 2), 'utf-8');
+  const themePath = getAynitePath('themes', `${name}.json`);
+  await writeJson(themePath, DEFAULT_THEMES[name]);
   return true;
 }
 
 export async function deleteTheme(name: string): Promise<boolean> {
-  if (DEFAULT_THEMES[name]) return false; // Cannot delete system themes
-  const themePath = path.join(getConfigDir(), 'themes', `${name}.json`);
-  if (existsSync(themePath)) {
-    await fs.unlink(themePath);
+  if (DEFAULT_THEMES[name]) return false; 
+  const themePath = getAynitePath('themes', `${name}.json`);
+  if (await exists(themePath)) {
+    await unlink(themePath);
     return true;
   }
   return false;
@@ -131,56 +122,40 @@ export async function deleteTheme(name: string): Promise<boolean> {
 export async function getSystemFonts(): Promise<string[]> {
   try {
     const { stdout } = await execAsync('fc-list :lang=en --format="%{family}\n"');
-    const fonts = [...new Set(stdout.split('\n').map(f => f.trim()).filter(Boolean))].sort();
-    return fonts;
+    return [...new Set(stdout.split('\n').map(f => f.trim()).filter(Boolean))].sort();
   } catch {
     return ['Inter', 'Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana'];
   }
 }
 
-export function isSystemTheme(name: string): boolean {
-  return !!DEFAULT_THEMES[name];
-}
-
 export async function initAppFolders() {
-  const baseDir = getConfigDir();
-
-  const folders = ['config', 'skills', 'commands', 'workspaces', 'themes', 'logs', 'prompts'];
+  const baseDir = getAyniteDir();
+  const folders = Object.values(AYNITE_SUBDIRS);
   for (const folder of folders) {
-    const dir = path.join(baseDir, folder);
-    if (!existsSync(dir)) {
-      await fs.mkdir(dir, { recursive: true });
-    }
+    await ensureDir(path.join(baseDir, folder));
   }
 
+  const configDir = getAyniteConfigDir();
+  const workspacesDir = getAynitePath('workspaces');
 
-
-  const configDir = path.join(baseDir, 'config');
-  const workspacesDir = path.join(baseDir, 'workspaces');
-
-  // Default values
   const aiDefault = DEFAULT_AI_CONFIG;
-
   const keybindingsDefault = DEFAULT_KEYBINDINGS;
-  const skillsDir = path.join(baseDir, 'skills');
-  const commandsDir = path.join(baseDir, 'commands');
+  const skillsDir = getAynitePath('skills');
+  const commandsDir = getAynitePath('commands');
 
   const configDefault = {
     lastUsed: new Date().toISOString(),
     activeTheme: 'light',
     skills: { folders: [skillsDir] },
     commands: { folders: [commandsDir] },
-    prompts: { files: Object.keys(DEFAULT_PROMPTS).filter(f => !f.startsWith('agent-')).map(f => path.join(baseDir, "prompts", f)) },
+    prompts: { files: getDefaultGlobalPrompts() },
     agents: {
       activeId: 'aynite',
-      list: [
-        { id: 'aynite', name: 'Agent Aynite', promptFiles: [path.join(baseDir, "prompts", "agent-aynite.md")] },
-        { id: 'void', name: 'Void (Coder)', promptFiles: [path.join(baseDir, "prompts", "agent-void.md")] },
-        { id: 'alpha', name: 'Alpha (Trader)', promptFiles: [path.join(baseDir, "prompts", "agent-alpha.md")] },
-        { id: 'sonic', name: 'Sonic (Producer)', promptFiles: [path.join(baseDir, "prompts", "agent-sonic.md")] },
-        { id: 'ghost', name: 'Ghost (Writer)', promptFiles: [path.join(baseDir, "prompts", "agent-ghost.md")] },
-        { id: 'prism', name: 'Prism (Photographer)', promptFiles: [path.join(baseDir, "prompts", "agent-prism.md")] }
-      ]
+      list: DEFAULT_AGENTS.map(agent => ({
+        id: agent.id,
+        name: agent.name,
+        promptFiles: [getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename)]
+      }))
     }
   };
   const ignoreDefault = ['node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
@@ -188,8 +163,8 @@ export async function initAppFolders() {
 
   const checkAndWrite = async (filename: string, content: any) => {
     const p = path.join(configDir, filename);
-    if (!existsSync(p)) {
-      await fs.writeFile(p, JSON.stringify(content, null, 2), 'utf-8');
+    if (!(await exists(p))) {
+      await writeJson(p, content);
     }
   };
 
@@ -199,29 +174,24 @@ export async function initAppFolders() {
   await checkAndWrite('workspaces.json', workspacesDefault);
 
   const ignorePath = path.join(configDir, 'ignore');
-  if (!existsSync(ignorePath)) {
-    await fs.writeFile(ignorePath, ignoreDefault, 'utf-8');
+  if (!(await exists(ignorePath))) {
+    await writeText(ignorePath, ignoreDefault);
   }
 
-  // 1. Restore aynite-playbook FIRST
   await restoreAynitePlaybook();
-
-  // 2. Initialize themes
   await initThemes();
 
-  // 3. Migrate/Initialize workspaces.json
+  // Migrate/Initialize workspaces.json
   const workspacesJsonPath = path.join(configDir, 'workspaces.json');
   let workspacesConfig: any = null;
-  if (existsSync(workspacesJsonPath)) {
+  if (await exists(workspacesJsonPath)) {
     try {
-      const data = await fs.readFile(workspacesJsonPath, 'utf-8');
-      workspacesConfig = JSON.parse(data);
-      // Migrate if old name exists
+      workspacesConfig = await readJson(workspacesJsonPath);
       if (workspacesConfig.active === 'default workspace') {
         workspacesConfig.active = 'aynite-workspace';
         workspacesConfig.list = (workspacesConfig.list || []).map((ws: string) => ws === 'default workspace' ? 'aynite-workspace' : ws);
         if (!workspacesConfig.list.includes('aynite-workspace')) workspacesConfig.list.push('aynite-workspace');
-        await fs.writeFile(workspacesJsonPath, JSON.stringify(workspacesConfig, null, 2), 'utf-8');
+        await writeJson(workspacesJsonPath, workspacesConfig);
       }
     } catch (e) {
       console.error('Error migrating workspaces.json:', e);
@@ -232,17 +202,15 @@ export async function initAppFolders() {
     await checkAndWrite('workspaces.json', workspacesDefault);
   }
 
-  // 4. Ensure aynite-workspace.json exists and is populated
+  // Ensure aynite-workspace.json exists
   const defaultWorkspacePath = path.join(workspacesDir, 'aynite-workspace.json');
-  const playbookPath = path.join(baseDir, 'aynite-playbook');
+  const playbookPath = getAynitePath('aynite-playbook');
   const welcomeMdPath = path.join(playbookPath, 'Welcome.md');
 
-  let shouldInitWorkspaceFile = !existsSync(defaultWorkspacePath);
+  let shouldInitWorkspaceFile = !(await exists(defaultWorkspacePath));
   if (!shouldInitWorkspaceFile) {
     try {
-      const data = await fs.readFile(defaultWorkspacePath, 'utf-8');
-      const wsData = JSON.parse(data);
-      // If workspace exists but has no folders or tabs, we force the playbook
+      const wsData = await readJson(defaultWorkspacePath);
       if ((!wsData.folders || wsData.folders.length === 0) && (!wsData.tabs || wsData.tabs.length === 0)) {
         shouldInitWorkspaceFile = true;
       }
@@ -252,7 +220,7 @@ export async function initAppFolders() {
   }
 
   if (shouldInitWorkspaceFile) {
-    await fs.writeFile(defaultWorkspacePath, JSON.stringify({
+    await writeJson(defaultWorkspacePath, {
       folders: [playbookPath],
       tabs: [{
         id: `file-${welcomeMdPath}`,
@@ -261,72 +229,31 @@ export async function initAppFolders() {
         filepath: welcomeMdPath
       }],
       activeTabId: `file-${welcomeMdPath}`
-    }, null, 2), 'utf-8');
+    });
   }
 
-  // Ensure skills folder exists
-  if (!existsSync(skillsDir)) {
-    await fs.mkdir(skillsDir, { recursive: true });
+  // Ensure default skills/commands
+  for (const skillName of ['skill-creator', 'command-creator', 'hello-skill', 'theme-creator']) {
+    if (!(await exists(path.join(skillsDir, skillName)))) {
+      await restoreSkill(skillName);
+    }
   }
-
-  // Ensure commands folder exists
-  if (!existsSync(commandsDir)) {
-    await fs.mkdir(commandsDir, { recursive: true });
-  }
-
-  // Ensure default skills exist
-  const skillsToInstall = ['skill-creator', 'command-creator', 'hello-skill', 'theme-creator'];
-  for (const skillName of skillsToInstall) {
-    const skillPath = path.join(skillsDir, skillName);
-    if (!existsSync(skillPath)) {
-      console.log(`[Config] Skill "${skillName}" missing, attempting restoration...`);
-      const success = await restoreSkill(skillName);
-      if (success) console.log(`[Config] Successfully restored skill: ${skillName}`);
-      else console.error(`[Config] Failed to restore skill: ${skillName}`);
+  for (const cmdName of ['hello-command']) {
+    if (!(await exists(path.join(commandsDir, cmdName)))) {
+      await restoreCommand(cmdName);
     }
   }
 
-  // Ensure default commands exist
-  const commandsToInstall = ['hello-command'];
-  for (const cmdName of commandsToInstall) {
-    const cmdPath = path.join(commandsDir, cmdName);
-    if (!existsSync(cmdPath)) {
-      console.log(`[Config] Command "${cmdName}" missing, attempting restoration...`);
-      const success = await restoreCommand(cmdName);
-      if (success) console.log(`[Config] Successfully restored command: ${cmdName}`);
-      else console.error(`[Config] Failed to restore command: ${cmdName}`);
-    }
-  }
-
-  // Ensure default prompts exist
-  const promptsDir = path.join(baseDir, 'prompts');
-  const defaultPrompts = DEFAULT_PROMPTS;
-
-  for (const [filename, content] of Object.entries(defaultPrompts)) {
-    const p = path.join(promptsDir, filename);
-    if (!existsSync(p)) {
-      await fs.writeFile(p, content, 'utf-8');
-    }
-  }
+  await restoreDefaultPrompts();
 }
 
 export async function loadConfig() {
-  const configDir = path.join(getConfigDir(), 'config');
+  const configDir = getAyniteConfigDir();
 
-  const readJson = async (file: string, fallback: any) => {
-    try {
-      const data = await fs.readFile(path.join(configDir, file), 'utf-8');
-      return JSON.parse(data);
-    } catch {
-      return fallback;
-    }
-  };
+  const ai = await readJson(path.join(configDir, 'ai.json'), { provider: 'gemini', configs: {} });
+  let keybindings = await readJson(path.join(configDir, 'keybindings.json'), DEFAULT_KEYBINDINGS);
+  const mainConfig: any = await readJson(path.join(configDir, 'config.json'), {});
 
-  const ai = await readJson('ai.json', { provider: 'gemini', configs: {} });
-  let keybindings = await readJson('keybindings.json', DEFAULT_KEYBINDINGS);
-  const mainConfig = await readJson('config.json', {});
-
-  // Recursive merge/repair for keybindings
   let modified = false;
   const ensureKeys = (target: any, defaults: any) => {
     for (const key in defaults) {
@@ -345,52 +272,36 @@ export async function loadConfig() {
   };
 
   ensureKeys(keybindings, DEFAULT_KEYBINDINGS);
-
   if (modified) {
-    await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
+    await writeJson(path.join(configDir, 'keybindings.json'), keybindings);
   }
 
-  // Migrate skills/commands if missing in config.json
-  if (!mainConfig.skills) {
-    mainConfig.skills = await getSkillsConfig();
-  }
-  if (!mainConfig.commands) {
-    mainConfig.commands = await getCommandsConfig();
-  }
+  if (!mainConfig.skills) mainConfig.skills = await getSkillsConfig();
+  if (!mainConfig.commands) mainConfig.commands = await getCommandsConfig();
   if (mainConfig.prompts && mainConfig.prompts.files) {
     mainConfig.prompts.files = mainConfig.prompts.files.filter((f: string) => !path.basename(f).startsWith('agent-'));
   }
   if (!mainConfig.agents) {
-    const baseDir = getConfigDir();
     mainConfig.agents = {
       activeId: 'aynite',
-      list: [
-        { id: 'aynite', name: 'Agent Aynite', promptFiles: [path.join(baseDir, "prompts", "agent-aynite.md")] },
-        { id: 'void', name: 'Void (Coder)', promptFiles: [path.join(baseDir, "prompts", "agent-void.md")] },
-        { id: 'alpha', name: 'Alpha (Trader)', promptFiles: [path.join(baseDir, "prompts", "agent-alpha.md")] },
-        { id: 'sonic', name: 'Sonic (Producer)', promptFiles: [path.join(baseDir, "prompts", "agent-sonic.md")] },
-        { id: 'ghost', name: 'Ghost (Writer)', promptFiles: [path.join(baseDir, "prompts", "agent-ghost.md")] },
-        { id: 'prism', name: 'Prism (Photographer)', promptFiles: [path.join(baseDir, "prompts", "agent-prism.md")] }
-      ]
+      list: DEFAULT_AGENTS.map(agent => ({
+        id: agent.id,
+        name: agent.name,
+        promptFiles: [getAynitePath(AYNITE_SUBDIRS.PROMPTS, AGENT_PROMPTS[agent.promptKey].filename)]
+      }))
     };
   }
 
-  // Migrate: if old appearance.json exists, move theme to config.json activeTheme then delete it
   const appearancePath = path.join(configDir, 'appearance.json');
-  if (existsSync(appearancePath)) {
+  if (await exists(appearancePath)) {
     try {
-      const appearance = JSON.parse(await fs.readFile(appearancePath, 'utf-8'));
-      if (appearance.theme && !mainConfig.activeTheme) {
-        mainConfig.activeTheme = appearance.theme;
-      }
-      // Remove the deprecated file
-      await fs.unlink(appearancePath);
+      const appearance = await readJson(appearancePath);
+      if (appearance.theme && !mainConfig.activeTheme) mainConfig.activeTheme = appearance.theme;
+      await unlink(appearancePath);
     } catch { }
   }
 
-  // Remove ignore and other fields from mainConfig to avoid duplication/stale data in the return object
   const { ignore: _, ...restConfig } = mainConfig;
-
   return {
     activeTheme: mainConfig.activeTheme || 'light',
     ignore: await getIgnorePatterns(),
@@ -401,10 +312,10 @@ export async function loadConfig() {
 }
 
 export async function getIgnorePatterns(): Promise<string[]> {
-  const ignorePath = path.join(getConfigDir(), 'config', 'ignore');
+  const ignorePath = path.join(getAyniteConfigDir(), 'ignore');
   try {
-    if (!existsSync(ignorePath)) return ['.git', 'node_modules'];
-    const data = await fs.readFile(ignorePath, 'utf-8');
+    if (!(await exists(ignorePath))) return ['.git', 'node_modules'];
+    const data = await readText(ignorePath);
     return data.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
   } catch {
     return ['.git', 'node_modules'];
@@ -412,130 +323,75 @@ export async function getIgnorePatterns(): Promise<string[]> {
 }
 
 export async function saveConfig(settings: any) {
-  const configDir = path.join(getConfigDir(), 'config');
-
-  const ai = settings.ai || DEFAULT_AI_CONFIG;
-  const keybindings = settings.keybindings || DEFAULT_KEYBINDINGS;
-
-  // Extract fields, specifically removing 'ignore' from config.json
-  const { ai: _ai, keybindings: _, ignore, ...rest } = settings;
+  const configDir = getAyniteConfigDir();
+  const { ai = DEFAULT_AI_CONFIG, keybindings = DEFAULT_KEYBINDINGS, ignore, ...rest } = settings;
   const mainConfig = { ...rest, updatedAt: new Date().toISOString() };
 
-  await fs.writeFile(path.join(configDir, 'ai.json'), JSON.stringify(ai, null, 2), 'utf-8');
-  await fs.writeFile(path.join(configDir, 'keybindings.json'), JSON.stringify(keybindings, null, 2), 'utf-8');
-  await fs.writeFile(path.join(configDir, 'config.json'), JSON.stringify(mainConfig, null, 2), 'utf-8');
+  await writeJson(path.join(configDir, 'ai.json'), ai);
+  await writeJson(path.join(configDir, 'keybindings.json'), keybindings);
+  await writeJson(path.join(configDir, 'config.json'), mainConfig);
 
-  // Save ignore patterns to the dedicated file
   if (ignore !== undefined) {
-    const ignorePath = path.join(configDir, 'ignore');
-    const ignoreContent = Array.isArray(ignore) ? ignore.join('\n') : ignore;
-    await fs.writeFile(ignorePath, ignoreContent, 'utf-8');
+    await writeText(path.join(configDir, 'ignore'), Array.isArray(ignore) ? ignore.join('\n') : ignore);
   }
-
   return true;
 }
 
-// Skills Logic
-
 export async function getSkillsConfig() {
-  const configDir = path.join(getConfigDir(), 'config');
-  const mainConfigPath = path.join(configDir, 'config.json');
-
-  if (existsSync(mainConfigPath)) {
-    try {
-      const data = await fs.readFile(mainConfigPath, 'utf-8');
-      const mainConfig = JSON.parse(data);
-      if (mainConfig.skills) return mainConfig.skills;
-    } catch { }
-  }
-
-  // Legacy fallback
-  const skillsDir = path.join(getConfigDir(), 'skills');
-  const legacyPath = path.join(skillsDir, 'skills.json');
+  const mainConfigPath = path.join(getAyniteConfigDir(), 'config.json');
   try {
-    const data = await fs.readFile(legacyPath, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return { folders: [skillsDir] };
-  }
+    const mainConfig: any = await readJson(mainConfigPath);
+    if (mainConfig.skills) return mainConfig.skills;
+  } catch { }
+
+  const skillsDir = getAynitePath('skills');
+  return await readJson(path.join(skillsDir, 'skills.json'), { folders: [skillsDir] });
 }
 
 export async function saveSkillsConfig(config: any) {
-  const configDir = path.join(getConfigDir(), 'config');
-  const mainConfigPath = path.join(configDir, 'config.json');
-
-  let mainConfig: any = {};
-  if (existsSync(mainConfigPath)) {
-    try {
-      const data = await fs.readFile(mainConfigPath, 'utf-8');
-      mainConfig = JSON.parse(data);
-    } catch { }
-  }
-
+  const mainConfigPath = path.join(getAyniteConfigDir(), 'config.json');
+  const mainConfig: any = await readJson(mainConfigPath, {});
   mainConfig.skills = config;
-  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
+  await writeJson(mainConfigPath, mainConfig);
 }
 
 export async function restoreSkill(skillName: string) {
-  const skillsDir = path.join(getConfigDir(), 'skills');
-
-  // Robust bundled path detection
-  const bundledResourcesPath = getBundledResourcesPath();
-  const srcDir = path.join(bundledResourcesPath, 'skills', skillName);
-  const destDir = path.join(skillsDir, skillName);
-
-  console.log(`[Restore] Source: ${srcDir}`);
-  console.log(`[Restore] Destination: ${destDir}`);
-
-  if (existsSync(srcDir)) {
+  const srcDir = path.join(getBundledResourcesPath(), 'skills', skillName);
+  const destDir = getAynitePath('skills', skillName);
+  if (await exists(srcDir)) {
     try {
-      await fs.mkdir(path.dirname(destDir), { recursive: true });
-      await fs.cp(srcDir, destDir, { recursive: true });
+      await copy(srcDir, destDir, { recursive: true });
       return true;
     } catch (e) {
       console.error(`[Restore] Error copying skill ${skillName}:`, e);
       return false;
     }
-  } else {
-    console.warn(`[Restore] Source skill directory not found: ${srcDir}`);
-    return false;
   }
+  return false;
 }
 
 export async function restoreAynitePlaybook() {
-  const baseDir = getConfigDir();
-  const destDir = path.join(baseDir, 'aynite-playbook');
-  const welcomeMdPath = path.join(destDir, 'Welcome.md');
+  const destDir = getAynitePath('aynite-playbook');
+  if (await exists(path.join(destDir, 'Welcome.md'))) return true;
 
-  if (existsSync(welcomeMdPath)) {
-    // If it exists, we don't do anything as per user request
-    return true;
-  }
-
-  const bundledResourcesPath = getBundledResourcesPath();
-  const bundledPlaybookPath = path.join(bundledResourcesPath, 'aynite-playbook');
-
-  if (existsSync(bundledPlaybookPath)) {
+  const srcDir = path.join(getBundledResourcesPath(), 'aynite-playbook');
+  if (await exists(srcDir)) {
     try {
-      await fs.mkdir(destDir, { recursive: true });
-      await fs.cp(bundledPlaybookPath, destDir, { recursive: true });
+      await copy(srcDir, destDir, { recursive: true });
       return true;
     } catch (e) {
       console.error(`[Restore] Error copying aynite-playbook:`, e);
       return false;
     }
-  } else {
-    console.warn(`[Restore] Source aynite-playbook directory not found: ${bundledPlaybookPath}`);
-    return false;
   }
+  return false;
 }
 
 export async function restoreDefaultSkills() {
   const skillsToRestore = ['skill-creator', 'command-creator', 'hello-skill'];
   let allSuccess = true;
   for (const skill of skillsToRestore) {
-    const success = await restoreSkill(skill);
-    if (!success) allSuccess = false;
+    if (!(await restoreSkill(skill))) allSuccess = false;
   }
   return allSuccess;
 }
@@ -543,180 +399,104 @@ export async function restoreDefaultSkills() {
 async function findFilesRecursively(dir: string, filenames: string[], ignoreDirs: string[] = ['node_modules', '.git']): Promise<string[]> {
   let results: string[] = [];
   try {
-    const list = await fs.readdir(dir, { withFileTypes: true });
+    const list = await readdir(dir);
     for (const file of list) {
       const res = path.resolve(dir, file.name);
       if (file.isDirectory()) {
         if (ignoreDirs.includes(file.name)) continue;
         results = results.concat(await findFilesRecursively(res, filenames, ignoreDirs));
-      } else {
-        if (filenames.includes(file.name)) {
-          results.push(res);
-        }
+      } else if (filenames.includes(file.name)) {
+        results.push(res);
       }
     }
-  } catch (e) {
-    // console.error(`Error searching directory ${dir}`, e);
-  }
+  } catch (e) { }
   return results;
 }
 
 export async function listAvailableSkills() {
   const config = await getSkillsConfig();
   const skills: any[] = [];
-  const seenNames = new Map<string, string>(); // name -> path
+  const seenNames = new Map<string, string>();
 
   for (const folder of config.folders) {
-    if (!existsSync(folder)) continue;
-    try {
-      const skillMdFiles = await findFilesRecursively(folder, ['SKILL.md']);
-      for (const skillMdPath of skillMdFiles) {
-        const itemPath = path.dirname(skillMdPath);
-        const item = path.basename(itemPath);
-
-        try {
-          const content = await fs.readFile(skillMdPath, 'utf-8');
-          // Optional YAML frontmatter
-          const match = content.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/);
-          let meta: any = {};
-          let yamlError: string | null = null;
-          if (match) {
-            try {
-              meta = yaml.load(match[1]) || {};
-            } catch (e: any) {
-              console.error(`Error parsing YAML in ${skillMdPath}`, e);
-              yamlError = e.message;
-              notifyError('skill', skillMdPath, e.message);
-            }
+    if (!(await exists(folder))) continue;
+    const skillMdFiles = await findFilesRecursively(folder, ['SKILL.md']);
+    for (const skillMdPath of skillMdFiles) {
+      const itemPath = path.dirname(skillMdPath);
+      try {
+        const content = await readText(skillMdPath);
+        const match = content.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/);
+        let meta: any = {};
+        let yamlError: string | null = null;
+        if (match) {
+          try {
+            meta = yaml.load(match[1]) || {};
+          } catch (e: any) {
+            yamlError = e.message;
+            notifyError('skill', skillMdPath, e.message);
           }
-
-          const name = meta.name || item;
-
-          if (seenNames.has(name) && !yamlError) {
-            if (seenNames.get(name) === itemPath) {
-              // Already registered from same path, ignore
-              continue;
-            } else {
-              // Same name, different path - ignore (don't override)
-              console.warn(`Skill name collision: "${name}" at ${itemPath} ignored. Already registered from ${seenNames.get(name)}`);
-              continue;
-            }
-          }
-
-          skills.push({
-            name: name,
-            description: meta.description || '',
-            path: itemPath,
-            error: yamlError
-          });
-          if (!yamlError) seenNames.set(name, itemPath);
-        } catch (e) {
-          console.error(`Error reading skill at ${skillMdPath}`, e);
         }
-      }
-    } catch (e) {
-      console.error(`Error scanning folder ${folder}`, e);
+        const name = meta.name || path.basename(itemPath);
+        if (seenNames.has(name)) continue;
+
+        skills.push({ name, description: meta.description || '', path: itemPath, error: yamlError });
+        if (!yamlError) seenNames.set(name, itemPath);
+      } catch (e) { }
     }
   }
   return skills;
 }
 
-// Commands Logic
-
 export async function getCommandsConfig() {
-  const configDir = path.join(getConfigDir(), 'config');
-  const mainConfigPath = path.join(configDir, 'config.json');
-
-  if (existsSync(mainConfigPath)) {
-    try {
-      const data = await fs.readFile(mainConfigPath, 'utf-8');
-      const mainConfig = JSON.parse(data);
-      if (mainConfig.commands) return mainConfig.commands;
-    } catch { }
-  }
-
-  // Legacy fallback
-  const commandsDir = path.join(getConfigDir(), 'commands');
-  const legacyPath = path.join(commandsDir, 'commands.json');
+  const mainConfigPath = path.join(getAyniteConfigDir(), 'config.json');
   try {
-    const data = await fs.readFile(legacyPath, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return { folders: [commandsDir] };
-  }
+    const mainConfig: any = await readJson(mainConfigPath);
+    if (mainConfig.commands) return mainConfig.commands;
+  } catch { }
+
+  const commandsDir = getAynitePath('commands');
+  return await readJson(path.join(commandsDir, 'commands.json'), { folders: [commandsDir] });
 }
 
 export async function saveCommandsConfig(config: any) {
-  const configDir = path.join(getConfigDir(), 'config');
-  const mainConfigPath = path.join(configDir, 'config.json');
-
-  let mainConfig: any = {};
-  if (existsSync(mainConfigPath)) {
-    try {
-      const data = await fs.readFile(mainConfigPath, 'utf-8');
-      mainConfig = JSON.parse(data);
-    } catch { }
-  }
-
+  const mainConfigPath = path.join(getAyniteConfigDir(), 'config.json');
+  const mainConfig: any = await readJson(mainConfigPath, {});
   mainConfig.commands = config;
-  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
+  await writeJson(mainConfigPath, mainConfig);
 }
 
 export async function listAvailableCommands() {
   const config = await getCommandsConfig();
   const commands: any[] = [];
-  const seenNames = new Map<string, string>(); // name -> path
+  const seenNames = new Map<string, string>();
 
   for (const folder of config.folders) {
-    if (!existsSync(folder)) continue;
-    try {
-      const cmdMdFiles = await findFilesRecursively(folder, ['COMMAND.md']);
-      for (const cmdMdPath of cmdMdFiles) {
-        const itemPath = path.dirname(cmdMdPath);
-        const item = path.basename(itemPath);
-
-        try {
-          const content = await fs.readFile(cmdMdPath, 'utf-8');
-          const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
-          let meta: any = {};
-          let yamlError: string | null = null;
-
-          if (match) {
-            try {
-              meta = yaml.load(match[1]) || {};
-            } catch (e: any) {
-              console.error(`Error parsing YAML in ${cmdMdPath}`, e);
-              yamlError = e.message;
-              notifyError('command', cmdMdPath, e.message);
-            }
+    if (!(await exists(folder))) continue;
+    const cmdMdFiles = await findFilesRecursively(folder, ['COMMAND.md']);
+    for (const cmdMdPath of cmdMdFiles) {
+      const itemPath = path.dirname(cmdMdPath);
+      try {
+        const content = await readText(cmdMdPath);
+        const match = content.match(/^---\r?\n([\s\S]*?)\n---/);
+        let meta: any = {};
+        let yamlError: string | null = null;
+        if (match) {
+          try {
+            meta = yaml.load(match[1]) || {};
+          } catch (e: any) {
+            yamlError = e.message;
+            notifyError('command', cmdMdPath, e.message);
           }
-
-          const name = meta.name || item;
-
-          if (seenNames.has(name) && !yamlError) {
-            if (seenNames.get(name) === itemPath) {
-              continue;
-            } else {
-              console.warn(`Command name collision: "${name}" at ${itemPath} ignored. Already registered from ${seenNames.get(name)}`);
-              continue;
-            }
-          }
-
-          commands.push({
-            name: name,
-            description: meta.description || '',
-            parameters: meta.parameters || [],
-            example: meta.example || '',
-            path: itemPath,
-            error: yamlError
-          });
-          if (!yamlError) seenNames.set(name, itemPath);
-        } catch (e) {
-          console.error(`Error reading command at ${cmdMdPath}`, e);
         }
-      }
-    } catch (e) {
-      console.error(`Error scanning folder ${folder}`, e);
+        const name = meta.name || path.basename(itemPath);
+        if (seenNames.has(name)) continue;
+
+        commands.push({
+          name, description: meta.description || '', parameters: meta.parameters || [],
+          example: meta.example || '', path: itemPath, error: yamlError
+        });
+        if (!yamlError) seenNames.set(name, itemPath);
+      } catch (e) { }
     }
   }
   return commands;
@@ -726,228 +506,34 @@ export async function restoreDefaultCommands() {
   const commandsToRestore = ['hello-command'];
   let allSuccess = true;
   for (const cmd of commandsToRestore) {
-    const success = await restoreCommand(cmd);
-    if (!success) allSuccess = false;
+    if (!(await restoreCommand(cmd))) allSuccess = false;
   }
   return allSuccess;
 }
 
 export async function restoreCommand(commandName: string) {
-  const commandsDir = path.join(getConfigDir(), 'commands');
-
-  const bundledResourcesPath = getBundledResourcesPath();
-  const srcDir = path.join(bundledResourcesPath, 'commands', commandName);
-  const destDir = path.join(commandsDir, commandName);
-
-  console.log(`[Restore] Source: ${srcDir}`);
-  console.log(`[Restore] Destination: ${destDir}`);
-
-  if (existsSync(srcDir)) {
+  const srcDir = path.join(getBundledResourcesPath(), 'commands', commandName);
+  const destDir = getAynitePath('commands', commandName);
+  if (await exists(srcDir)) {
     try {
-      await fs.mkdir(path.dirname(destDir), { recursive: true });
-      await fs.cp(srcDir, destDir, { recursive: true });
+      await copy(srcDir, destDir, { recursive: true });
       return true;
     } catch (e) {
       console.error(`[Restore] Error copying command ${commandName}:`, e);
       return false;
     }
-  } else {
-    console.warn(`[Restore] Source command directory not found: ${srcDir}`);
-    return false;
   }
-}
-
-// Workspace Logic
-
-export async function saveChatLog(sessionId: string, messages: any[]) {
-  const baseDir = getConfigDir();
-  const dateStr = new Date().toISOString().split('T')[0];
-  const logsDir = path.join(baseDir, 'logs', dateStr);
-
-  if (!existsSync(logsDir)) {
-    await fs.mkdir(logsDir, { recursive: true });
-  }
-
-  const logPath = path.join(logsDir, `${sessionId}.json`);
-  await fs.writeFile(logPath, JSON.stringify(messages, null, 2), 'utf-8');
-}
-
-export async function loadChatLog(sessionId: string, date: string) {
-  const logPath = path.join(getConfigDir(), 'logs', date, `${sessionId}.json`);
-  try {
-    const data = await fs.readFile(logPath, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return null;
-  }
-}
-
-export async function listChatLogs() {
-  const baseDir = getConfigDir();
-  const logsBaseDir = path.join(baseDir, 'logs');
-  const allLogs: any[] = [];
-
-  if (!existsSync(logsBaseDir)) return [];
-
-  try {
-    const dates = await fs.readdir(logsBaseDir);
-    for (const date of dates) {
-      const dateDir = path.join(logsBaseDir, date);
-      const stats = await fs.stat(dateDir);
-      if (!stats.isDirectory()) continue;
-
-      const sessions = await fs.readdir(dateDir);
-      for (const session of sessions) {
-        if (!session.endsWith('.json')) continue;
-        const sessionPath = path.join(dateDir, session);
-        try {
-          const sessionStats = await fs.stat(sessionPath);
-          const data = await fs.readFile(sessionPath, 'utf-8');
-          const messages = JSON.parse(data);
-          // Get a preview from the first user message or first message
-          const firstMsg = messages.find((m: any) => m.role === 'user')?.content || messages[0]?.content || '';
-          const preview = firstMsg.slice(0, 60) + (firstMsg.length > 60 ? '...' : '');
-
-          allLogs.push({
-            id: session.replace('.json', ''),
-            date: date,
-            lastModified: sessionStats.mtime,
-            size: sessionStats.size,
-            preview: preview
-          });
-        } catch (e) {
-          console.error(`Error reading session ${session}`, e);
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Error listing chat logs', e);
-  }
-
-  // Sort by last modified descending
-  return allLogs.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
-}
-
-// Prompts Logic
-
-export async function getPromptsConfig() {
-  const configDir = path.join(getConfigDir(), 'config');
-  const mainConfigPath = path.join(configDir, 'config.json');
-
-  if (existsSync(mainConfigPath)) {
-    try {
-      const data = await fs.readFile(mainConfigPath, 'utf-8');
-      const mainConfig = JSON.parse(data);
-      if (mainConfig.prompts) return mainConfig.prompts;
-    } catch { }
-  }
-
-  const baseDir = getConfigDir();
-  return {
-    files: [
-      path.join(baseDir, 'prompts', 'about-me.md'),
-      path.join(baseDir, 'prompts', 'about-skills.md'),
-      path.join(baseDir, 'prompts', 'about-commands.md'),
-      path.join(baseDir, 'prompts', 'about-files.md')
-    ]
-  };
-}
-
-export async function savePromptsConfig(config: any) {
-  const configDir = path.join(getConfigDir(), 'config');
-  const mainConfigPath = path.join(configDir, 'config.json');
-
-  let mainConfig: any = {};
-  if (existsSync(mainConfigPath)) {
-    try {
-      const data = await fs.readFile(mainConfigPath, 'utf-8');
-      mainConfig = JSON.parse(data);
-    } catch { }
-  }
-
-  mainConfig.prompts = config;
-  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
-}
-
-export async function restoreDefaultPrompts() {
-  const baseDir = getConfigDir();
-  const promptsDir = path.join(baseDir, 'prompts');
-
-  if (!existsSync(promptsDir)) {
-    await fs.mkdir(promptsDir, { recursive: true });
-  }
-
-  const defaultPrompts = DEFAULT_PROMPTS;
-
-  for (const [filename, content] of Object.entries(defaultPrompts)) {
-    const p = path.join(promptsDir, filename);
-    await fs.writeFile(p, content, 'utf-8');
-  }
-
-  const prompts = {
-    files: Object.keys(defaultPrompts)
-      .filter(f => !f.startsWith('agent-'))
-      .map(f => path.join(promptsDir, f))
-  };
-
-  const agents = {
-    activeId: 'aynite',
-    list: [
-      { id: 'aynite', name: 'Agent Aynite', promptFiles: [path.join(promptsDir, "agent-aynite.md")] },
-      { id: 'void', name: 'Void Coder', promptFiles: [path.join(promptsDir, "agent-void.md")] },
-      { id: 'alpha', name: 'Alpha Trader', promptFiles: [path.join(promptsDir, "agent-alpha.md")] },
-      { id: 'sonic', name: 'Sonic Producer', promptFiles: [path.join(promptsDir, "agent-sonic.md")] },
-      { id: 'ghost', name: 'Ghost Writer', promptFiles: [path.join(promptsDir, "agent-ghost.md")] },
-      { id: 'prism', name: 'Prism Photographer', promptFiles: [path.join(promptsDir, "agent-prism.md")] }
-    ]
-  };
-
-  // Save to config.json
-  const mainConfigPath = path.join(baseDir, 'config', 'config.json');
-  let mainConfig: any = {};
-  if (existsSync(mainConfigPath)) {
-    try {
-      const data = await fs.readFile(mainConfigPath, 'utf-8');
-      mainConfig = JSON.parse(data);
-    } catch { }
-  }
-  mainConfig.prompts = prompts;
-  mainConfig.agents = agents;
-  await fs.writeFile(mainConfigPath, JSON.stringify(mainConfig, null, 2), 'utf-8');
-
-  return { prompts, agents };
-}
-
-export async function getMergedSystemPrompt(globalFiles?: string[], agentFiles?: string[]) {
-  const globalPromptFiles = globalFiles || (await getPromptsConfig()).files || [];
-  const promptFiles = [...globalPromptFiles, ...(agentFiles || [])];
-  let merged = '';
-
-  for (const filePath of promptFiles) {
-    try {
-      const content = await fs.readFile(expandHome(filePath), 'utf-8');
-      merged += content + '\n\n';
-    } catch (e) {
-      console.error(`Error reading prompt file ${filePath}`, e);
-    }
-  }
-
-  return merged.trim();
+  return false;
 }
 
 async function getWorkspacesConfig() {
-  const configPath = path.join(getConfigDir(), 'config', 'workspaces.json');
-  try {
-    const data = await fs.readFile(configPath, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return { active: 'aynite-workspace', list: ['aynite-workspace'] };
-  }
+  const configPath = path.join(getAyniteConfigDir(), 'workspaces.json');
+  return await readJson<any>(configPath, { active: 'aynite-workspace', list: ['aynite-workspace'] });
 }
 
 async function saveWorkspacesConfig(config: any) {
-  const configPath = path.join(getConfigDir(), 'config', 'workspaces.json');
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  const configPath = path.join(getAyniteConfigDir(), 'workspaces.json');
+  await writeJson(configPath, config);
 }
 
 export async function getWorkspacesList() {
@@ -956,155 +542,63 @@ export async function getWorkspacesList() {
 
 export async function createWorkspace(name: string) {
   const wsConfig = await getWorkspacesConfig();
-  if (wsConfig.list.includes(name)) {
-    throw new Error('Workspace already exists');
-  }
+  if (wsConfig.list.includes(name)) throw new Error('Workspace already exists');
 
   wsConfig.list.push(name);
   wsConfig.active = name;
 
-  const newWorkspacePath = path.join(getConfigDir(), 'workspaces', `${name}.json`);
-  await fs.writeFile(newWorkspacePath, JSON.stringify({ folders: [], tabs: [], activeTabId: '' }, null, 2), 'utf-8');
+  const newWorkspacePath = getAynitePath('workspaces', `${name}.json`);
+  await writeJson(newWorkspacePath, { folders: [], tabs: [], activeTabId: '' });
   await saveWorkspacesConfig(wsConfig);
-
   return wsConfig;
 }
 
 export async function switchWorkspace(name: string) {
   const wsConfig = await getWorkspacesConfig();
-  if (!wsConfig.list.includes(name)) {
-    throw new Error('Workspace not found');
-  }
+  if (!wsConfig.list.includes(name)) throw new Error('Workspace not found');
   wsConfig.active = name;
   await saveWorkspacesConfig(wsConfig);
   return wsConfig;
 }
 
-async function safeReadWorkspaceData(workspacePath: string): Promise<any | null> {
-  try {
-    if (!existsSync(workspacePath)) return { folders: [], tabs: [], activeTabId: '' };
-    const content = await fs.readFile(workspacePath, 'utf-8');
-    if (!content.trim()) return null;
-    return JSON.parse(content);
-  } catch (e) {
-    console.error(`Failed to read/parse workspace file at ${workspacePath}:`, e);
-    return null;
-  }
-}
-
-export async function addWorkspaceFolder(folderPath: string) {
-  const wsConfig = await getWorkspacesConfig();
-  const activeWs = wsConfig.active;
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
-
-  const wsData = await safeReadWorkspaceData(workspacePath);
-  if (!wsData) return; // Prevent overwriting if read failed
-
-  const normalizedNew = path.normalize(folderPath);
-
-  // 1. Check if new folder is already covered by an existing one
-  const isAlreadyCovered = wsData.folders.some((existing: string) => isSubpath(existing, normalizedNew));
-  if (isAlreadyCovered) {
-    console.log(`[Workspace] Folder ${normalizedNew} is already covered by an existing workspace root.`);
-    return;
-  }
-
-  // 2. Remove any existing folders that are now covered by the new folder (subfolders)
-  const remainingFolders = wsData.folders.filter((existing: string) => !isSubpath(normalizedNew, existing));
-
-  // 3. Add the new folder
-  remainingFolders.push(normalizedNew);
-  wsData.folders = remainingFolders;
-
-  await fs.writeFile(workspacePath, JSON.stringify(wsData, null, 2), 'utf-8');
-}
-
-export async function removeWorkspaceFolder(folderPath: string) {
-  const wsConfig = await getWorkspacesConfig();
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
-  const data = await safeReadWorkspaceData(workspacePath);
-  if (!data) return;
-
-  if (data.folders.includes(folderPath)) {
-    data.folders = data.folders.filter((f: string) => f !== folderPath);
-    await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
-  }
-}
-
-export async function renameWorkspaceFolder(oldPath: string, newPath: string) {
-  const wsConfig = await getWorkspacesConfig();
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
-  const data = await safeReadWorkspaceData(workspacePath);
-  if (!data) return;
-
-  if (data.folders.includes(oldPath)) {
-    data.folders = data.folders.map((f: string) => f === oldPath ? newPath : f);
-    await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
-  }
-}
-
-export async function reorderWorkspaceFolders(newFolders: string[]) {
-  const wsConfig = await getWorkspacesConfig();
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${wsConfig.active}.json`);
-  const data = await safeReadWorkspaceData(workspacePath);
-  if (!data) return;
-
-  data.folders = newFolders;
-  await fs.writeFile(workspacePath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-export async function getWorkspaceFolders() {
-  try {
-    const wsConfig = await getWorkspacesConfig();
-    const activeWs = wsConfig.active;
-    const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
-
-    if (!existsSync(workspacePath)) {
-      console.warn(`Workspace file not found: ${workspacePath}`);
-      return { data: [], debugPath: workspacePath };
-    }
-
-    const data = await fs.readFile(workspacePath, 'utf-8');
-    const parsed = JSON.parse(data);
-    let folders = parsed.folders || [];
-
-    // Deduplicate and flatten just in case the file was manually edited or has legacy data
-    folders = folders.map((f: string) => path.normalize(f));
-    const uniqueFolders = folders.filter((f: string, index: number) => {
-      return !folders.some((other: string, otherIndex: number) =>
-        otherIndex !== index && isSubpath(other, f)
-      );
-    });
-
-    return { data: uniqueFolders.map((f: string) => expandHome(f)), debugPath: workspacePath };
-  } catch (e) {
-    console.error('getWorkspaceFolders failed:', e);
-    return { data: [], error: String(e) };
-  }
-}
-
-export async function getWorkspaceState() {
-  const wsConfig = await getWorkspacesConfig();
-  const activeWs = wsConfig.active;
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${activeWs}.json`);
-
-  const parsed = await safeReadWorkspaceData(workspacePath);
-  if (!parsed) return { name: activeWs, tabs: [], activeTabId: '' };
-
-  return {
-    name: activeWs,
-    tabs: parsed.tabs || [],
-    activeTabId: parsed.activeTabId || ''
-  };
-}
-
 export async function saveWorkspaceState(workspaceName: string, tabs: any[], activeTabId: string) {
-  const workspacePath = path.join(getConfigDir(), 'workspaces', `${workspaceName}.json`);
+  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+  const data: any = await readJson(workspacePath, { folders: [] });
+  data.tabs = tabs;
+  data.activeTabId = activeTabId;
+  await writeJson(workspacePath, data);
+}
 
-  const wsData = await safeReadWorkspaceData(workspacePath);
-  if (!wsData) return; // Prevent overwriting if read failed
+export async function addWorkspaceFolder(workspaceName: string, folderPath: string) {
+  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+  const data: any = await readJson(workspacePath, { folders: [], tabs: [], activeTabId: '' });
+  if (!data.folders.includes(folderPath)) {
+    data.folders.push(folderPath);
+    await writeJson(workspacePath, data);
+  }
+}
 
-  wsData.tabs = tabs;
-  wsData.activeTabId = activeTabId;
-  await fs.writeFile(workspacePath, JSON.stringify(wsData, null, 2), 'utf-8');
+export async function removeWorkspaceFolder(workspaceName: string, folderPath: string) {
+  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+  const data: any = await readJson(workspacePath, { folders: [], tabs: [], activeTabId: '' });
+  data.folders = data.folders.filter((f: string) => f !== folderPath);
+  await writeJson(workspacePath, data);
+}
+
+export async function reorderWorkspaceFolders(workspaceName: string, folders: string[]) {
+  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+  const data: any = await readJson(workspacePath, { folders: [], tabs: [], activeTabId: '' });
+  data.folders = folders;
+  await writeJson(workspacePath, data);
+}
+
+export async function getWorkspaceFolders(workspaceName: string) {
+  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+  const data: any = await readJson(workspacePath, { folders: [] });
+  return data.folders;
+}
+
+export async function getWorkspaceData(workspaceName: string) {
+  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+  return await readJson<any>(workspacePath, { folders: [], tabs: [], activeTabId: '' });
 }

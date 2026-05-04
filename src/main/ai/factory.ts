@@ -4,7 +4,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 import { LanguageModel } from 'ai';
 
-export interface ProviderConfig {
+export interface AIProvider {
   provider: string;
   apiKey?: string;
   baseUrl?: string;
@@ -12,7 +12,7 @@ export interface ProviderConfig {
   compatibility?: 'openai' | 'anthropic' | 'google';
 }
 
-export function getProviderModel(config: ProviderConfig): LanguageModel {
+export function getAIModel(config: AIProvider): LanguageModel {
   const { provider, apiKey, baseUrl, model, compatibility } = config;
 
   switch (provider.toLowerCase()) {

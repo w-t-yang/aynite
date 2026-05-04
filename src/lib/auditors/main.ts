@@ -1,0 +1,282 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const ROOT_DIR = path.resolve(__dirname, '../../..');
+const SRC_DIR = path.join(ROOT_DIR, 'src');
+const AI_DIR = path.join(SRC_DIR, 'main', 'ai');
+const LIB_DIR = path.join(SRC_DIR, 'lib');
+
+interface AuditIssue {
+  type: string;
+  file: string;
+  line: number;
+  snippet: string;
+  message: string;
+}
+
+const VIOLATIONS = {
+  IMPORT_BOUNDARY: {
+    key: 'import',
+    name: 'Import Boundary Violation',
+    description: 'Enforce module isolation (External -> AI/index only; AI -> Lib or sibling only).'
+  },
+  DIRECT_FS_USAGE: {
+    key: 'fs',
+    name: 'Direct FS Usage',
+    regex: /\bfs\.(?:readFile|writeFile|mkdir|readdir|stat|appendFile|unlink)(?:Sync)?\b/g,
+    description: 'Use standardized I/O helpers from src/lib/path.ts (readJson, writeJson, ensureDir, etc.) instead of raw fs calls.'
+  },
+  MANUAL_PATH_JOIN: {
+    key: 'path',
+    name: 'Manual Aynite Path Joining',
+    regex: /\bpath\.join\s*\(\s*(?:getAyniteDir\(\)|AYNITE_DIR)\b/g,
+    description: 'Use getAynitePath() or specialized helpers (getAyniteConfigDir, getMainConfigPath) from lib/path.ts.'
+  },
+  STRICT_TYPING: {
+    key: 'types',
+    name: 'Strict Typing Violation',
+    anyRegex: /\b(?!as\b)\bany\b/g, // Detect 'any' but try to avoid 'as any' casting if possible, though 'as any' is also a violation
+    untypedParamRegex: /(?:async\s+)?(?:\(([^:)]+)\)|(\b[a-zA-Z0-9_]+\b))\s*=>/g, // Simplified detection for (arg) => or arg =>
+    description: 'Avoid use of "any" and ensure all function parameters are explicitly typed.'
+  },
+  HARDCODED_STRINGS: {
+    key: 'strings',
+    name: 'Hardcoded AI Logic Strings',
+    regex: /(?:content|prompt|message|description|name):\s*['"`]([^'"`]{50,})['"`]/g,
+    description: 'Move large prompt strings, tool metadata, or system messages to lib/constants/ai.ts.'
+  }
+};
+
+// Help display
+if (process.argv.includes('-h') || process.argv.includes('--help')) {
+  console.log('\nAynite Main Architecture Auditor');
+  console.log('Usage: npm run audit:main -- [options]\n');
+  console.log('Options:');
+  console.log('  --focus=[type]    Only run specific checks (import, fs, path, types, strings)');
+  console.log('  --folder=[path]   Audit a specific folder or file');
+  console.log('  -h, --help        Show this help message\n');
+  console.log('Examples:');
+  console.log('  npm run audit:main -- --focus=fs');
+  console.log('  npm run audit:main -- --folder=src/main/ai\n');
+  process.exit(0);
+}
+
+// Arguments
+const focusArg = process.argv.find(arg => arg.startsWith('--focus='))?.split('=')[1];
+const folderArg = process.argv.find(arg => arg.startsWith('--folder='))?.split('=')[1];
+
+const activeViolations = focusArg 
+  ? Object.values(VIOLATIONS).filter(v => (v as any).key === focusArg || (v as any).name.toLowerCase().includes(focusArg))
+  : Object.values(VIOLATIONS);
+
+const targetFolders = folderArg 
+  ? [path.resolve(ROOT_DIR, folderArg)] 
+  : [AI_DIR, path.join(SRC_DIR, 'main', 'config.ts')];
+
+function walk(dir: string, callback: (f: string) => void) {
+  if (!fs.existsSync(dir)) return;
+  
+  const stats = fs.statSync(dir);
+  if (!stats.isDirectory()) {
+    if (dir.endsWith('.ts')) callback(dir);
+    return;
+  }
+
+  const files = fs.readdirSync(dir);
+  files.forEach(file => {
+    const filepath = path.join(dir, file);
+    const fStats = fs.statSync(filepath);
+    if (fStats.isDirectory()) {
+      if (file !== 'node_modules' && file !== 'dist') {
+        walk(filepath, callback);
+      }
+    } else if (file.endsWith('.ts')) {
+      callback(filepath);
+    }
+  });
+}
+
+const report: AuditIssue[] = [];
+
+const auditFile = (filepath: string) => {
+  const relativePath = path.relative(ROOT_DIR, filepath);
+  const content = fs.readFileSync(filepath, 'utf8');
+  const lines = content.split('\n');
+
+  const isInsideAI = filepath.startsWith(AI_DIR);
+
+  // 1. Import Boundary Audit
+  if (activeViolations.some(v => (v as any).key === 'import')) {
+    const importRegex = /import\s+.*\s+from\s+['"](.*)['"]/g;
+    let match;
+    while ((match = importRegex.exec(content)) !== null) {
+      const importPath = match[1];
+      const lineNum = content.substring(0, match.index).split('\n').length;
+
+      if (importPath.startsWith('.')) {
+        const resolvedPath = path.resolve(path.dirname(filepath), importPath);
+        const targetIsInsideAI = resolvedPath.startsWith(AI_DIR);
+        const targetIsAIIndex = resolvedPath === path.join(AI_DIR, 'index.ts') || resolvedPath === path.join(AI_DIR, 'index');
+
+        let violation = false;
+        let msg = '';
+
+        if (!isInsideAI && targetIsInsideAI && !targetIsAIIndex) {
+          violation = true;
+          msg = 'External modules should only import from src/main/ai/index.ts to maintain subsystem isolation.';
+        } else if (isInsideAI) {
+          const targetIsInsideLib = resolvedPath.startsWith(LIB_DIR);
+          const targetIsSibling = path.dirname(resolvedPath) === path.dirname(filepath);
+          
+          if (!targetIsInsideLib && !targetIsSibling && targetIsInsideAI) {
+             // Exception: importing from subfolders or parent within AI is allowed if it's siblings/children
+          }
+        }
+
+        if (violation) {
+          report.push({
+            type: VIOLATIONS.IMPORT_BOUNDARY.name,
+            file: relativePath,
+            line: lineNum,
+            snippet: lines[lineNum - 1].trim(),
+            message: msg
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Direct FS Usage
+  if (activeViolations.some(v => (v as any).key === 'fs')) {
+    let fsMatch;
+    while ((fsMatch = VIOLATIONS.DIRECT_FS_USAGE.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, fsMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.DIRECT_FS_USAGE.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.DIRECT_FS_USAGE.description
+      });
+    }
+  }
+
+  // 3. Manual Path Join
+  if (activeViolations.some(v => (v as any).key === 'path')) {
+    let pathMatch;
+    while ((pathMatch = VIOLATIONS.MANUAL_PATH_JOIN.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, pathMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.MANUAL_PATH_JOIN.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.MANUAL_PATH_JOIN.description
+      });
+    }
+  }
+
+  // 4. Strict Typing
+  if (activeViolations.some(v => (v as any).key === 'types')) {
+    // Audit for 'any'
+    let anyMatch;
+    while ((anyMatch = VIOLATIONS.STRICT_TYPING.anyRegex.exec(content)) !== null) {
+      const lineNum = content.substring(0, anyMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.STRICT_TYPING.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: 'Detected usage of "any". Use more specific types.'
+      });
+    }
+
+    // Audit for untyped parameters in arrow functions
+    let paramMatch;
+    while ((paramMatch = VIOLATIONS.STRICT_TYPING.untypedParamRegex.exec(content)) !== null) {
+      const group1 = paramMatch[1]; // (arg, arg2)
+      const group2 = paramMatch[2]; // arg
+      
+      const params = (group1 || group2).split(',').map(p => p.trim());
+      const hasUntyped = params.some(p => p && !p.includes(':'));
+
+      if (hasUntyped) {
+        const lineNum = content.substring(0, paramMatch.index).split('\n').length;
+        report.push({
+          type: VIOLATIONS.STRICT_TYPING.name,
+          file: relativePath,
+          line: lineNum,
+          snippet: lines[lineNum - 1].trim(),
+          message: 'Detected untyped parameters in arrow function.'
+        });
+      }
+    }
+  }
+
+  // 5. Hardcoded Strings
+  if (activeViolations.some(v => (v as any).key === 'strings')) {
+    let strMatch;
+    while ((strMatch = VIOLATIONS.HARDCODED_STRINGS.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, strMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.HARDCODED_STRINGS.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.HARDCODED_STRINGS.description
+      });
+    }
+  }
+};
+
+targetFolders.forEach(folder => walk(folder, auditFile));
+
+const grouped: Record<string, AuditIssue[]> = report.reduce((acc: Record<string, AuditIssue[]>, item) => {
+  if (!acc[item.type]) acc[item.type] = [];
+  acc[item.type].push(item);
+  return acc;
+}, {});
+
+const DISPLAY_ORDER = Object.values(VIOLATIONS).map(v => v.name);
+
+console.log('\n=================================================');
+console.log('      Aynite Main Architecture Audit');
+if (focusArg) console.log(`      FOCUS: ${focusArg}`);
+if (folderArg) console.log(`      FOLDER: ${folderArg}`);
+console.log('=================================================\n');
+
+if (report.length === 0) {
+  console.log('✅ EXCELLENT: No architectural violations found!\n');
+} else {
+  DISPLAY_ORDER.forEach(typeName => {
+    const items = grouped[typeName] || [];
+    if (items.length === 0) return;
+
+    const badge = typeName === VIOLATIONS.IMPORT_BOUNDARY.name ? '🚨 ARCHITECTURE' : 
+                  typeName === VIOLATIONS.STRICT_TYPING.name ? '🚨 TYPING' :
+                  typeName === VIOLATIONS.DIRECT_FS_USAGE.name ? '⚠️ WARNING' :
+                  typeName === VIOLATIONS.MANUAL_PATH_JOIN.name ? '⚠️ WARNING' : '📝 NOTICE';
+
+    console.log(`>>> ${badge}: ${typeName} (${items.length} issues) <<<`);
+    console.log('-'.repeat(typeName.length + 25));
+    
+    items.forEach(item => {
+      console.log(`[${item.file}:${item.line}] ${item.snippet}`);
+      console.log(`   └─ ${item.message}\n`);
+    });
+  });
+
+  console.log('=================================================');
+  console.log(`TOTAL POTENTIAL ISSUES: ${report.length}`);
+  DISPLAY_ORDER.forEach(typeName => {
+    if (focusArg && !activeViolations.some(v => (v as any).name === typeName)) return;
+    const count = grouped[typeName]?.length || 0;
+    const status = count > 0 ? (typeName === VIOLATIONS.IMPORT_BOUNDARY.name || typeName === VIOLATIONS.STRICT_TYPING.name ? '🔴 FIX REQUIRED' : '🟡 REFAC OR REVIEW') : '🟢 CLEAN';
+    console.log(` - ${typeName}: ${count} [${status}]`);
+  });
+}
+console.log('\n=== End of Report ===\n');
