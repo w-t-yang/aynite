@@ -1,4 +1,4 @@
-import { ChatMessage, AgentStepEvent } from '../../shared/lib/types';
+import { ChatMessage, AgentStepEvent } from './types';
 
 export interface AgentConfig {
   provider: string;
@@ -47,7 +47,7 @@ export async function runAgentLoop(
    * We must ensure no other messages (user/assistant) interleave between calls and results.
    */
   const cleanMessages: any[] = [];
-  
+
   for (let i = 0; i < fullHistory.length; i++) {
     const m = fullHistory[i];
 
@@ -60,13 +60,13 @@ export async function runAgentLoop(
     if (m.role === 'tool') {
       // Orphaned tool results (not immediately following an assistant call) are generally invalid for the SDK
       // We'll skip them to keep the history clean, or map to user if they have important content
-      continue; 
+      continue;
     }
 
     // --- CASE B: ASSISTANT ---
     if (m.role === 'assistant') {
       const parts: any[] = [];
-      
+
       // 1. Thinking / Text
       if (hasReasoning(m)) {
         parts.push({
@@ -112,7 +112,7 @@ export async function runAgentLoop(
           role: 'assistant',
           content: parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts
         });
-        
+
         // 5. Append the matching tool results immediately after
         for (const c of validCalls) {
           const res = availableResults.get(c.toolCallId)!;
@@ -185,12 +185,12 @@ export async function runAgentLoop(
 
     const ensureAssistantMsg = () => {
       if (!currentAssistantMsg) {
-        currentAssistantMsg = { 
-          id: genId(), 
-          role: 'assistant', 
-          content: '', 
+        currentAssistantMsg = {
+          id: genId(),
+          role: 'assistant',
+          content: '',
           thinking: '',
-          tool_calls: [] 
+          tool_calls: []
         };
       }
     };
@@ -271,11 +271,11 @@ export async function runAgentLoop(
             tool_call_id: part.toolCallId,
             name: part.toolName
           };
-          
+
           // Before adding a tool result, we should finalize the preceding assistant message
           finalizeAssistantMsg();
           loopMessages.push(resultMsg);
-          
+
           onEvent({
             type: 'tool_result',
             content: resultValue,
@@ -294,10 +294,10 @@ export async function runAgentLoop(
           removeApprovalListener();
           onEvent({ type: 'error', content: part.error || part.message || 'Unknown stream error' });
           finalizeAssistantMsg();
-          const errorMsg: ChatMessage = { 
-            id: genId(), 
-            role: 'assistant', 
-            content: `❌ **AI Stream Error**: ${part.error || part.message || 'Unknown stream error'}` 
+          const errorMsg: ChatMessage = {
+            id: genId(),
+            role: 'assistant',
+            content: `❌ **AI Stream Error**: ${part.error || part.message || 'Unknown stream error'}`
           };
           resolve([...fullHistory, userMsg, ...loopMessages, errorMsg]);
           break;

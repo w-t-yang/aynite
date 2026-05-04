@@ -2,15 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus } from 'lucide-react';
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../../lib/utils';
+import { getFileCategory } from '../../lib/file-handlers';
 import { Select } from '../../basic/Select';
 import { Button } from '../../basic/Button';
 import { Input } from '../../basic/Input';
-import { useSidebar, FileNode } from '../../context/SidebarMockContext';
-import { PromptModal } from '../../featured/PromptModal';
-import { ConfirmModal } from '../../featured/ConfirmModal';
-import { ContextMenu } from '../../featured/ContextMenu';
+import { KeyManager } from '../../lib/key-handlers';
 
-interface TreeviewPageProps {
+interface FileNode {
+  id: string; // Absolute path
+  name: string;
+  isDirectory: boolean;
+  isLoaded?: boolean;
+  children?: FileNode[];
+}
+
+interface SidebarProps {
   activeTabPath?: string;
   dirtyFiles?: string[];
   onWorkspaceChange?: () => void;
@@ -19,11 +25,10 @@ interface TreeviewPageProps {
   onClose?: () => void;
 }
 
-export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange, onSelectFile, onOpenSettings, onClose }: TreeviewPageProps) {
-  const aynite = useSidebar();
+export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange, onSelectFile, onOpenSettings, onClose }: SidebarProps) {
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [workspaces, setWorkspaces] = useState<string[]>([]);
-  const [activeWorkspace, setActiveWorkspace] = useState('');
+  const [activeWorkspace, setActiveWorkspace] = useState('aynite-workspace');
   const [showNewWorkspaceModal, setShowNewWorkspaceModal] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileNode } | null>(null);
@@ -33,7 +38,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const containerRef = useRef<HTMLDivElement>(null);
   const [treeHeight, setTreeHeight] = useState(800);
   
-  const rootFilesPaths = treeData.map(node => node.id);
+  const rootFilesPaths = treeData.map((node: string) => node.id);
 
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean;
@@ -61,12 +66,14 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   }, []);
 
   useEffect(() => {
-    const unsubscribe = aynite.onFileSystemChange(async ({ event, path }) => {
-      const dirname = await aynite.dirname(path);
-      handleReloadFolder(dirname);
+    // @ts-ignore
+    const unsubscribe = window.api.onFileSystemChange(async ({ event, path }) => {
+      // @ts-ignore
+      const dirname = await window.api.dirname(path);
+      window.dispatchEvent(new CustomEvent('reload-folder', { detail: dirname }));
       
       if (event === 'addDir' || event === 'unlinkDir') {
-         handleReloadFolder(path);
+         window.dispatchEvent(new CustomEvent('reload-folder', { detail: path }));
       }
       
       if (workspaces.length > 0) {
@@ -85,11 +92,6 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     };
   }, [workspaces, treeData]);
 
-  const handleReloadFolder = async (folderPath: string) => {
-    const children = await aynite.getFiles(folderPath);
-    setTreeData(prev => updateNodeChildren(prev, folderPath, children));
-  };
-
   const findNodeData = (nodes: FileNode[], targetId: string): FileNode | null => {
     for (const node of nodes) {
       if (node.id === targetId) return node;
@@ -104,7 +106,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   useEffect(() => {
     const expandPathIteratively = async (targetPath: string) => {
       if (!treeData.length) return;
-      const root = treeData.map(n => n.id).find(r => targetPath.startsWith(r));
+      const root = treeData.map((n: string) => n.id).find(r => targetPath.startsWith(r));
       if (!root) return;
 
       const separator = targetPath.includes('\\') ? '\\' : '/';
@@ -124,7 +126,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       for (const p of pathsToOpen) {
         const nodeData = findNodeData(newData, p);
         if (nodeData && !nodeData.isLoaded) {
-          const children = await aynite.getFiles(p);
+          const children = await fetchFiles(p);
           newData = updateNodeChildren(newData, p, children);
           changed = true;
         }
@@ -139,6 +141,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
         for (const p of pathsToOpen) {
           treeRef.current.open(p);
         }
+        // Use scrollTo and select with focus:false to highlight without stealing focus
         treeRef.current.scrollTo(targetPath);
         treeRef.current.select(targetPath, { focus: false });
       }, changed ? 100 : 0);
@@ -149,8 +152,18 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     }
   }, [activeTabPath, treeData.length]);
 
+  useEffect(() => {
+    const handleReload = async (e: unknown) => {
+      const folderPath = e.detail;
+      const children = await fetchFiles(folderPath);
+      setTreeData((prev: FileNode[]) => updateNodeChildren(prev, folderPath, children));
+    };
+    window.addEventListener('reload-folder', handleReload);
+    return () => window.removeEventListener('reload-folder', handleReload);
+  }, []);
+
   const updateNodeChildren = (nodes: FileNode[], targetId: string, children: FileNode[]): FileNode[] => {
-    return nodes.map(node => {
+    return nodes.map((node: string) => {
       if (node.id === targetId) {
         return { ...node, children, isLoaded: true };
       }
@@ -161,16 +174,39 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     });
   };
 
+  const fetchFiles = async (dirPath: string): Promise<FileNode[]> => {
+    try {
+      // @ts-ignore
+      const res = await window.api.getFiles(dirPath);
+      return res.map((f: unknown) => ({
+        id: f.path,
+        name: f.name,
+        isDirectory: f.isDirectory,
+        isLoaded: !f.isDirectory,
+        children: f.isDirectory ? [] : undefined
+      }));
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  };
+
   const loadWorkspaceData = async () => {
     try {
-      const wsConfig = await aynite.getWorkspacesList();
+      // @ts-ignore
+      const wsConfig = await window.api.getWorkspacesList();
       if (wsConfig) {
         setWorkspaces(wsConfig.list);
         setActiveWorkspace(wsConfig.active);
       }
 
-      const folders = await aynite.getWorkspaceFolders();
+      // @ts-ignore
+      const folders = await window.api.getWorkspaceFolders();
+      console.log('Sidebar: loaded folders from backend', folders);
       if (folders && Array.isArray(folders)) {
+        if (folders.length === 0) {
+          console.warn('Sidebar: Workspace has NO folders.');
+        }
         const rootNodes = folders.map((f: string) => ({
           id: f,
           name: f.split(/[\/\\]/).pop() || f,
@@ -178,7 +214,10 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           isLoaded: false,
           children: []
         }));
+        console.log('Sidebar: setting tree data', rootNodes);
         setTreeData(rootNodes);
+      } else {
+        console.error('Sidebar: failed to load folders', folders);
       }
     } catch (e) {
       console.error(e);
@@ -192,8 +231,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const handleToggle = async (id: string) => {
     const node = treeRef.current?.get(id);
     if (node && node.isOpen && !node.data.isLoaded && node.data.isDirectory) {
-       const children = await aynite.getFiles(id);
-       setTreeData(prev => updateNodeChildren(prev, id, children));
+       const children = await fetchFiles(id);
+       setTreeData((prev: FileNode[]) => updateNodeChildren(prev, id, children));
     }
   };
 
@@ -202,7 +241,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       setShowNewWorkspaceModal(true);
       return;
     }
-    await aynite.switchWorkspace(ws);
+    // @ts-ignore
+    await window.api.switchWorkspace(ws);
     await loadWorkspaceData();
     onWorkspaceChange?.();
   };
@@ -210,7 +250,12 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const handleCreateWorkspace = async () => {
     const name = newWorkspaceName.trim();
     if (!name) return;
-    await aynite.createWorkspace(name);
+    if (workspaces.includes(name)) {
+      (window as unknown).showToast('Workspace already exists', 'error');
+      return;
+    }
+    // @ts-ignore
+    await window.api.createWorkspace(name);
     await loadWorkspaceData();
     onWorkspaceChange?.();
     setShowNewWorkspaceModal(false);
@@ -218,7 +263,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   };
 
   const handleAddFolder = async () => {
-    const res = await aynite.addWorkspaceFolder();
+    // @ts-ignore
+    const res = await window.api.addWorkspaceFolder();
     if (res) {
       await loadWorkspaceData();
     }
@@ -227,26 +273,36 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const onMove: MoveHandler<FileNode> = async ({ dragIds, parentId, index }) => {
     if (parentId === null) {
       const isAllRoots = dragIds.every(id => rootFilesPaths.includes(id));
-      if (!isAllRoots) return;
+      if (!isAllRoots) {
+        (window as unknown).showToast("Cannot move subfolders to the workspace root.", 'error');
+        return;
+      }
       const newOrder = rootFilesPaths.filter(id => !dragIds.includes(id));
       newOrder.splice(index, 0, ...dragIds);
-      await aynite.reorderWorkspaceFolders(newOrder);
+      // @ts-ignore
+      await window.api.reorderWorkspaceFolders(newOrder);
       await loadWorkspaceData();
     } else {
       const hasRoot = dragIds.some(id => rootFilesPaths.includes(id));
-      if (hasRoot) return;
+      if (hasRoot) {
+        (window as unknown).showToast("Cannot move a workspace folder into a subfolder.", 'error');
+        return;
+      }
       
       const parentNode = treeRef.current?.get(parentId);
       if (!parentNode?.data.isDirectory) return;
 
       for (const id of dragIds) {
         const name = id.split(/[\/\\]/).pop();
-        const newPath = await aynite.joinPath(parentId, name!);
+        // @ts-ignore
+        const newPath = await window.api.joinPath(parentId, name);
         if (id !== newPath) {
-          await aynite.renameFile(id, newPath);
+          // @ts-ignore
+          await window.api.renameFile(id, newPath);
+          window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath: id, newPath } }));
         }
       }
-      handleReloadFolder(parentId);
+      window.dispatchEvent(new CustomEvent('reload-folder', { detail: parentId }));
     }
   };
 
@@ -261,7 +317,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       return;
     }
 
-    const dirname = await aynite.dirname(file.id);
+    // @ts-ignore
+    const dirname = await window.api.dirname(file.id);
     const reloadPath = (action === 'new-file' || action === 'new-folder' || action === 'paste') && file.isDirectory ? file.id : dirname;
     const parentDirForPaste = file.isDirectory ? file.id : dirname;
 
@@ -270,28 +327,39 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
         if (action === 'paste' && clipboard) {
           for (const src of clipboard.paths) {
             const name = src.split(/[\/\\]/).pop();
-            const dest = await aynite.joinPath(parentDirForPaste, name!);
-            await aynite.copyFile(src, dest);
+            // @ts-ignore
+            const dest = await window.api.joinPath(parentDirForPaste, name);
+            // @ts-ignore
+            await window.api.copyFile(src, dest);
           }
         } else if ((action === 'new-file' || action === 'new-folder') && payloadVal) {
-          const newPath = await aynite.joinPath(file.id, payloadVal);
-          await aynite.createFile(newPath, action === 'new-folder');
+          // @ts-ignore
+          const newPath = await window.api.joinPath(file.id, payloadVal);
+          // @ts-ignore
+          await window.api.createFile(newPath, action === 'new-folder');
           if (action === 'new-file' && onSelectFile) {
             onSelectFile({ name: payloadVal, isDirectory: false, path: newPath });
           }
         } else if (action === 'rename' && payloadVal && payloadVal !== file.name) {
-          const newPath = await aynite.joinPath(dirname, payloadVal);
-          await aynite.renameFile(file.id, newPath);
+          // @ts-ignore
+          const newPath = await window.api.joinPath(dirname, payloadVal);
+          // @ts-ignore
+          await window.api.renameFile(file.id, newPath);
+          window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath: file.id, newPath } }));
         } else if (action === 'delete') {
-          await aynite.deleteFile(file.id);
+          // @ts-ignore
+          await window.api.deleteFile(file.id);
+          window.dispatchEvent(new CustomEvent('file-deleted', { detail: file.id }));
         } else if (action === 'remove-from-workspace') {
-          await aynite.removeWorkspaceFolder(file.id);
+          // @ts-ignore
+          await window.api.removeWorkspaceFolder(file.id);
         }
         
-        handleReloadFolder(reloadPath);
+        window.dispatchEvent(new CustomEvent('reload-folder', { detail: reloadPath }));
         if (action === 'remove-from-workspace') loadWorkspaceData();
       } catch (e) {
         console.error(e);
+        (window as unknown).showToast(String(e), 'error');
       }
     };
 
@@ -328,6 +396,38 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     }
   };
 
+  useEffect(() => {
+    const api = {
+      copy: () => {
+        const selected = Array.from(treeRef.current?.selectedIds || []);
+        if (selected.length > 0) {
+          setClipboard({ paths: selected, action: 'copy' });
+        }
+      },
+      paste: () => {
+        const selected = Array.from(treeRef.current?.selectedIds || []);
+        if (selected.length > 0 && clipboard) {
+          const node = treeRef.current?.get(selected[0]);
+          if (node) {
+            setContextMenu({ x: 0, y: 0, file: node.data });
+            setTimeout(() => handleCtxAction('paste'), 0);
+          }
+        }
+      },
+      confirm: () => {
+        if (showNewWorkspaceModal) {
+          handleCreateWorkspace();
+        } else if (promptModal?.isOpen && promptValue.trim()) {
+          promptModal.onConfirm(promptValue.trim());
+        } else if (confirmModal?.isOpen) {
+          confirmModal.onConfirm();
+        }
+      }
+    };
+    KeyManager.registerSidebar(api);
+    return () => KeyManager.unregisterSidebar();
+  }, [clipboard, showNewWorkspaceModal, newWorkspaceName, promptModal, promptValue, confirmModal]);
+
   function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
     const { name, isDirectory, id } = node.data;
     const isSelected = node.isSelected;
@@ -341,7 +441,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           "flex items-center cursor-pointer hover:bg-accent text-sm select-none",
           isSelected ? "bg-primary/10 text-primary font-medium hover:bg-primary/20" : "text-muted-foreground"
         )}
-        onClick={(e) => {
+        onClick={(e: React.MouseEvent) => {
           node.handleClick(e);
           if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
             if (isDirectory) {
@@ -351,7 +451,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
             }
           }
         }}
-        onContextMenu={(e) => {
+        onContextMenu={(e: React.MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
           node.select();
@@ -386,20 +486,21 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
             searchPlaceholder="Search workspaces..."
             className="w-full"
             footer={
-              <Button 
-                variant="ghost"
-                onClick={() => setShowNewWorkspaceModal(true)}
-                className="w-full px-3 py-2 text-xs text-left text-primary font-medium hover:bg-accent transition-colors flex items-center gap-2 justify-start rounded-none"
+              <Button variant="ghost" 
+                onClick={() => {
+                  setShowNewWorkspaceModal(true);
+                }}
+                className="w-full px-3 py-2 text-[10px] text-left text-primary font-medium hover:bg-accent transition-colors flex items-center gap-2"
               >
-                <Plus size={14} /> Create New Workspace...
+                <Plus size={12} /> Create New Workspace...
               </Button>
             }
           />
         </div>
         
         <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="icon" onClick={handleAddFolder} className="text-muted-foreground hover:text-foreground"><FolderPlus size={16} /></Button>
-          {onClose && <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground"><PanelLeftClose size={16} /></Button>}
+          <Button variant="ghost" onClick={handleAddFolder} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><FolderPlus size={16} /></Button>
+          {onClose && <Button variant="ghost" onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><PanelLeftClose size={16} /></Button>}
         </div>
       </div>
 
@@ -424,10 +525,9 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           </Tree>
         ) : (
           <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
-            <Button 
-              variant="ghost"
+            <Button variant="ghost" 
               onClick={handleAddFolder}
-              className="mt-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
+              className="mt-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
             >
               Open Folder
             </Button>
@@ -436,11 +536,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       </div>
       
       <div className="mt-auto border-t border-border p-2 shrink-0 bg-sidebar">
-        <Button 
-          variant="ghost" 
-          onClick={onOpenSettings} 
-          className="w-full flex items-center justify-start gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground h-auto"
-        >
+        <Button variant="ghost" onClick={onOpenSettings} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
           <Settings size={16} /> Settings
         </Button>
       </div>
@@ -451,14 +547,15 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
             <h3 className="text-lg font-medium mb-4 text-foreground">New Workspace</h3>
             <Input 
               autoFocus
-              label="Workspace Name"
-              placeholder="e.g. My Project"
+              type="text" 
+              placeholder="Workspace name"
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
+              className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
             />
-            <div className="flex justify-end gap-2 mt-6">
-              <Button variant="ghost" onClick={() => { setShowNewWorkspaceModal(false); setNewWorkspaceName(''); }}>Cancel</Button>
-              <Button variant="primary" onClick={handleCreateWorkspace}>Create Workspace</Button>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => { setShowNewWorkspaceModal(false); setNewWorkspaceName(''); }} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</Button>
+              <Button variant="ghost" onClick={handleCreateWorkspace} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Create</Button>
             </div>
           </div>
         </div>
@@ -484,28 +581,75 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       )}
 
       {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          title={contextMenu.file.name}
-          onClose={() => setContextMenu(null)}
-          onSelect={(id) => handleCtxAction(id as any)}
-          items={[
-            ...(contextMenu.file.isDirectory ? [
-              { id: 'new-file', label: 'New File' },
-              { id: 'new-folder', label: 'New Folder' }
-            ] : []),
-            { id: 'rename', label: 'Rename' },
-            { id: 'copy', label: 'Copy' },
-            ...(clipboard && contextMenu.file.isDirectory ? [
-              { id: 'paste', label: 'Paste' }
-            ] : []),
-            rootFilesPaths.includes(contextMenu.file.id) ? 
-              { id: 'remove-from-workspace', label: 'Remove from Workspace', badge: 'ROOT' } :
-              { id: 'delete', label: 'Delete', badge: 'FILE' }
-          ]}
-        />
+        <div 
+          className="fixed bg-sidebar border border-border shadow-2xl rounded-lg py-1.5 z-[100] text-sm text-foreground flex flex-col w-44 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        >
+          {contextMenu.file.isDirectory && (
+            <>
+              <Button variant="ghost" onClick={() => handleCtxAction('new-file')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New File</Button>
+              <Button variant="ghost" onClick={() => handleCtxAction('new-folder')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">New Folder</Button>
+              <div className="h-px bg-border/50 my-1" />
+            </>
+          )}
+          <Button variant="ghost" onClick={() => handleCtxAction('rename')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Rename</Button>
+          
+          <div className="h-px bg-border/50 my-1" />
+          <Button variant="ghost" onClick={() => handleCtxAction('copy')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Copy</Button>
+          {clipboard && contextMenu.file.isDirectory && (
+             <Button variant="ghost" onClick={() => handleCtxAction('paste')} className="px-3 py-1.5 text-left hover:bg-primary hover:text-primary-foreground transition-colors">Paste</Button>
+          )}
+          <div className="h-px bg-border/50 my-1" />
+
+          {rootFilesPaths.includes(contextMenu.file.id) ? (
+            <Button variant="ghost" onClick={() => handleCtxAction('remove-from-workspace')} className="px-3 py-1.5 text-left text-warning hover:bg-warning hover:text-warning-foreground transition-colors">
+              Remove from Workspace
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={() => handleCtxAction('delete')} className="px-3 py-1.5 text-left text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors">
+              Delete
+            </Button>
+          )}
+        </div>
       )}
+    </div>
+  );
+}
+
+function PromptModal({ title, placeholder, value, onChange, onConfirm, onCancel }: { title: string, placeholder: string, value: string, onChange: (v: string) => void, onConfirm: (v: string) => void, onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+      <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
+        <h3 className="text-lg font-medium mb-4 text-foreground">{title}</h3>
+        <Input 
+          autoFocus
+          type="text" 
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onCancel} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancel</Button>
+          <Button variant="ghost" onClick={() => value.trim() && onConfirm(value.trim())} className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium">Confirm</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmModal({ message, onConfirm, onCancel }: { message: string, onConfirm: () => void, onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+      <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
+        <h3 className="text-lg font-medium mb-4 text-foreground">Confirm Deletion</h3>
+        <p className="text-sm text-muted-foreground mb-6 break-words">{message}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onCancel} className="px-4 py-2 text-sm text-foreground hover:bg-accent rounded-md transition-colors">Cancel</Button>
+          <Button variant="ghost" onClick={onConfirm} className="px-4 py-2 text-sm bg-destructive text-destructive-foreground hover:opacity-90 rounded-md transition-colors font-medium">Delete</Button>
+        </div>
+      </div>
     </div>
   );
 }

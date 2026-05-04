@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Settings as SettingsIcon, Command, MessageSquare, FileText, X, PanelRightClose, PanelRightOpen, Terminal, PanelLeftClose, PanelLeftOpen, Bot, MoreHorizontal, Eraser, History, Copy as LucideCopy, PlusCircle, AlertCircle } from 'lucide-react';
-import Sidebar from './components/Sidebar';
-import UpdateNotification from './components/UpdateNotification';
-import ChatTab from './components/Chat';
+import { TreeviewPage as Sidebar } from '../shared/pages/treeview/TreeviewPage';
+import UpdateNotification from '../shared/featured/UpdateNotification';
+import { AIChatPage as ChatTab } from '../shared/pages/aichat/AIChatPage';
 import SettingsView from './components/Settings';
-import FileViewer from './components/FileViewer';
-import TabSwitcher from './components/TabSwitcher';
+import FileViewer from '../shared/featured/fileviewers/FileViewer';
+import TabSwitcher from '../shared/featured/TabSwitcher';
 import { SettingsState } from '../shared/lib/types';
 import { cn } from '../shared/lib/utils';
 import { DEFAULT_SETTINGS } from '../../lib/constants/settings';
 import { SelectionPopover } from './components/ui/SelectionPopover';
 import { ChevronDown } from 'lucide-react';
-import { getFileCategory } from './lib/file-handlers';
+import { getFileCategory } from '../shared/lib/file-handlers';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { KeyManager } from './lib/key-handlers';
+import { KeyManager } from '../shared/lib/key-handlers';
 
 type Tab = {
   id: string;

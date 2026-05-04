@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { ChatMessage } from '../../src/lib/agent';
+import { ChatMessage } from '../lib/agent';
 import { SettingsState } from '../lib/types';
 
 export interface ChatApi {

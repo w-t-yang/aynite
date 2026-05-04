@@ -1,6 +1,6 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { FileText, AlertTriangle, Zap, Terminal, Folder } from 'lucide-react';
-import { SelectionList, SelectionItem } from '../../../shared/basic/SelectionList';
+import { SelectionList, SelectionItem } from '../basic/SelectionList';
 
 export interface SuggestionItem extends SelectionItem {
   name?: string;

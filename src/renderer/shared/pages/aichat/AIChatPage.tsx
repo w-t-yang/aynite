@@ -1,242 +1,294 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Send, Bot, History, Settings, X, Calendar, Clock, AlertTriangle, Terminal, Folder, Check, Copy } from 'lucide-react';
-import { ChatMessage } from '../../lib/types';
-import { SettingsState } from '../../lib/types';
-import { useChat } from '../../context/ChatMockContext';
+import { Send, Bot, User, RefreshCw, Trash2, ChevronDown, ChevronRight, Terminal, FileText, FolderOpen, AlertTriangle, CheckCircle, XCircle, Copy, Save, Check, Folder, X, Settings, History, Calendar, Clock } from 'lucide-react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { ChatMessage, AgentStepEvent, SettingsState } from '../../lib/types';
+import { runAgentLoop, AgentConfig } from '../../lib/agent';
 import ChatInput, { ChatInputHandle } from '../../featured/ChatInput';
-import { ChatMessageItem } from '../../featured/advanced/ChatMessage';
 import { SelectionPopover } from '../../featured/SelectionPopover';
-import { Button } from '../../basic/Button';
-import { Modal } from '../../basic/Modal';
-import { SelectionList } from '../../basic/SelectionList';
 import { cn } from '../../lib/utils';
+import { ChatMessageItem } from '../../featured/advanced/ChatMessage';
+import { Collapsible } from '../../basic/Collapsible';
 
-interface AIChatPageProps {
-  activeTabPath?: string;
-  workspaceFolders?: string[];
-  onOpenFile?: (file: { name: string; path: string, isDirectory: boolean }, content: string) => void;
+
+// ─── Message Types ───────────────────────────────────────────────────
+
+// ChatMessage is defined in ../lib/agent.ts
+
+// ChatMessage is defined in ../lib/agent.ts
+
+
+
+
+
+// ─── Tool Call & Result Components ───────────────────────────────────
+const isErrorMessage = (content: any) => {
+  if (!content) return false;
+  const c = typeof content === 'string' ? content.trim() : JSON.stringify(content);
+  return c.startsWith('Error:') || c.startsWith('Execution Error:') || c.startsWith('❌') || c.includes('"status": "error"');
+};
+
+function ToolCallItem({ call, defaultExpanded = false }: { call: any; defaultExpanded?: boolean }) {
+  const toolName = call.toolName || call.function?.name;
+  const toolArgs = call.args || (typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments);
+
+  let Icon = Bot;
+  let colorClass = 'border-primary/40';
+
+  switch (toolName) {
+    case 'read_file': Icon = FileText; colorClass = 'border-cyan-500/40'; break;
+    case 'write_file': Icon = Save; colorClass = 'border-green-500/40'; break;
+    case 'list_files': Icon = FolderOpen; colorClass = 'border-orange-500/40'; break;
+    case 'run_command': Icon = Terminal; colorClass = 'border-red-500/40'; break;
+  }
+
+  return (
+    <Collapsible title={toolName} icon={Icon} colorClass={colorClass} defaultExpanded={defaultExpanded}>
+      <pre className="text-[10px] font-mono text-muted-foreground/70 whitespace-pre-wrap overflow-auto max-h-60">
+        {JSON.stringify(toolArgs, null, 2)}
+      </pre>
+      {call.result && (
+        <div className="mt-2 border-t border-border/5 pt-2">
+          <div className={cn(
+            "text-[9px] font-bold mb-1 uppercase tracking-wider",
+            isErrorMessage(call.result) ? "text-destructive/60" : "text-green-500/60"
+          )}>
+            {isErrorMessage(call.result) ? 'Error' : 'Result'}
+          </div>
+          <pre className={cn(
+            "text-[10px] font-mono whitespace-pre-wrap max-h-96 overflow-auto opacity-90",
+            isErrorMessage(call.result) ? "text-destructive/80" : "text-muted-foreground/60"
+          )}>
+            {typeof call.result === 'string' ? call.result : JSON.stringify(call.result, null, 2)}
+          </pre>
+        </div>
+      )}
+    </Collapsible>
+  );
 }
 
-export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }: AIChatPageProps) {
-  const aynite = useChat();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'msg-0',
-      role: 'system',
-      content: '# About Me\nYou are Aynite, an AI assistant.\n\n## Behavioral Guidelines\n\n### 1. Think Before Coding\n**Don\'t assume. Don\'t hide confusion. Surface tradeoffs.**\nBefore implementing:\n- State your assumptions explicitly. If uncertain, ask.\n- If multiple interpretations exist, present them - don\'t pick silently.\n- If a simpler approach exists, say so. Push back when warranted.\n- If something is unclear, stop. Name what\'s confusing. Ask.\n\n### 2. Simplicity First\n**Minimum code that solves the problem. Nothing speculative.**\n- No features beyond what was asked.\n- No abstractions for single-use code.\n- No "flexibility" or "configurability" that wasn\'t requested.\n- No error handling for impossible scenarios.\n- If you write 200 lines and it could be 50, rewrite it.\nAsk yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.\n\n### 3. Surgical Changes\n**Touch only what you must. Clean up only your own mess.**\nWhen editing existing code:\n- Don\'t "improve" adjacent code, comments, or formatting.\n- Don\'t refactor things that aren\'t broken.\n- Match existing style, even if you\'d do it differently.\n- If you notice unrelated dead code, mention it - don\'t delete it.\nWhen your changes create orphans:\n- Remove imports/variables/functions that YOUR changes made unused.\n- Don\'t remove pre-existing dead code unless asked.\n\n### 4. Goal-Driven Execution\n**Define success criteria. Loop until verified.**\nTransform tasks into verifiable goals:\n- "Add validation" → "Write tests for invalid inputs, then make them pass"\n- "Fix the bug" → "Write a test that reproduces it, then make it pass"\n- "Refactor X" → "Ensure tests pass before and after"\nFor multi-step tasks, state a brief plan:\n```\n1. [Step] → verify: [check]\n2. [Step] → verify: [check]\n3. [Step] → verify: [check]\n```\n\nStrong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.'
-    },
-    {
-      id: 'msg-1',
-      role: 'user',
-      content: 'read file @file[Welcome.md](/home/wentao/.aynite/aynite-playbook/Welcome.md)'
-    },
-    {
-      id: 'msg-2',
-      role: 'assistant',
-      thinking: 'The user wants to see the welcome document. I should read the file to provide its content.',
-      content: 'I will read the `Welcome.md` file for you.',
-      tool_calls: [
-        {
-          id: 'call_1',
-          toolName: 'read_file',
-          args: { path: '/home/wentao/.aynite/aynite-playbook/Welcome.md' }
-        }
-      ]
-    },
-    {
-      id: 'msg-3',
-      role: 'tool',
-      name: 'read_file',
-      tool_call_id: 'call_1',
-      content: '# Welcome to Aynite! 👋\n\n**A.Y.N.I.T.E — All You Need Is The Editor.**\n\nSeriously. That\'s the whole idea.\n\nAynite is not just another AI coding tool bolted onto a chat window. It\'s a belief: the editor itself should be the interface to everything — AI, scripts, APIs, automations, your entire digital toolchain.\n\n## ✨ Showcase\n\n### 🔮 [Trading Showcase](./showcase/trading/README.md)\n\n| Command | What It Does |\n| :--- | :--- |\n| `> stock-fetch --symbol AAPL` | Fetches 1 year of daily stock data |\n| `> stock-view --file AAPL.json` | Generates an interactive HTML chart |'
-    },
-    {
-      id: 'msg-4',
-      role: 'assistant',
-      content: 'Here is the content of the `Welcome.md` file. It explains the Aynite philosophy and showcases some built-in capabilities like the Trading Showcase.'
-    },
-    {
-      id: 'msg-5',
-      role: 'user',
-      content: '>cmd[stock-fetch](/home/wentao/repos/aynite-spells/commands/stock/stock-fetch)'
-    },
-    {
-      id: 'msg-6',
-      role: 'tool',
-      name: 'stock-fetch',
-      content: '{\n  "status": "error",\n  "error": "Missing required parameter: --symbol",\n  "usage": {\n    "description": "Fetch stock market data from Yahoo Finance and save as JSON.",\n    "syntax": "> stock-fetch --symbol <TICKER> [options]",\n    "required": [\n      {\n        "name": "--symbol",\n        "description": "Stock ticker symbol (e.g., AAPL, GOOGL, TSLA)"\n      }\n    ]\n  }\n}'
-    },
-    {
-      id: 'msg-7',
-      role: 'assistant',
-      content: 'It seems you missed the `--symbol` parameter. You can run it like this:\n\n```bash\n> stock-fetch --symbol AAPL\n```'
-    },
-    {
-      id: 'msg-8',
-      role: 'user',
-      content: 'I want to automate Instagram media extraction. I want to be able to fetch pictures from a list of accounts and view them in a gallery. No login.'
-    },
-    {
-      id: 'msg-9',
-      role: 'assistant',
-      thinking: 'Automating Instagram media extraction without login is tricky because Instagram blocks most scrapers. I should look for tools or APIs that still work. instaloader is a popular library, but it often hits 403 errors. I should also check if there is a public web API endpoint.',
-      content: '<think>Searching for Instagram scraping methods that do not require login.</think>I will research the best way to fetch Instagram media without requiring a login.',
-      tool_calls: [
-        {
-          id: 'call_2',
-          toolName: 'search_web',
-          args: { query: 'instagram media extraction without login python instaloader' }
-        }
-      ]
-    },
-    {
-      id: 'msg-10',
-      role: 'tool',
-      name: 'search_web',
-      tool_call_id: 'call_2',
-      content: 'Results suggest using `instaloader` with specific flags or using the `web_profile_info` endpoint with proper headers (User-Agent, X-IG-App-ID).'
-    },
-    {
-      id: 'msg-11',
-      role: 'assistant',
-      thinking: 'I will try to install instaloader first. If that fails or gets blocked, I will fall back to manual curl requests using the web API endpoint.',
-      content: '<think>Trying to install instaloader to test its capability.</think>I will try to install `instaloader` to see if it works for public profiles.',
-      tool_calls: [
-        {
-          id: 'call_3',
-          toolName: 'run_command',
-          args: { command: 'pip install instaloader' }
-        }
-      ]
-    },
-    {
-      id: 'msg-12',
-      role: 'tool',
-      name: 'run_command',
-      tool_call_id: 'call_3',
-      content: 'error: externally-managed-environment\n\n× This environment is externally managed\n╰─> To install Python packages system-wide, try apt install python3-xyz...'
-    },
-    {
-      id: 'msg-13',
-      role: 'assistant',
-      thinking: 'The environment is managed, so I should use pipx to install instaloader in an isolated environment.',
-      content: 'I will use `pipx` to install `instaloader` in an isolated environment.',
-      tool_calls: [
-        {
-          id: 'call_4',
-          toolName: 'run_command',
-          args: { command: 'pipx install instaloader' }
-        }
-      ]
-    },
-    {
-      id: 'msg-14',
-      role: 'tool',
-      name: 'run_command',
-      tool_call_id: 'call_4',
-      content: '  installed package instaloader 4.10.1, installed executable instaloader\nDone! ✨'
-    },
-    {
-      id: 'msg-15',
-      role: 'assistant',
-      content: 'Now that `instaloader` is installed, I will try to fetch some posts from @natgeo.',
-      tool_calls: [
-        {
-          id: 'call_5',
-          toolName: 'run_command',
-          args: { command: 'instaloader --count 3 natgeo' }
-        }
-      ]
-    },
-    {
-      id: 'msg-16',
-      role: 'tool',
-      name: 'run_command',
-      tool_call_id: 'call_5',
-      content: 'Retrieving profile natgeo...\nErrors occurred:\n403 Forbidden'
-    },
-    {
-      id: 'msg-17',
-      role: 'assistant',
-      thinking: 'Instaloader is being blocked with a 403 error. This is common. I will try the manual approach using `curl` and the `web_profile_info` API endpoint with headers that mimic a browser.',
-      content: 'It seems `instaloader` is being blocked. I will try a more surgical approach using the Instagram web API directly.',
-      tool_calls: [
-        {
-          id: 'call_6',
-          toolName: 'run_command',
-          args: { command: 'curl -s "https://www.instagram.com/api/v1/users/web_profile_info/?username=natgeo" -H "User-Agent: Mozilla/5.0" -H "X-IG-App-ID: 936619743392459"' }
-        }
-      ]
-    },
-    {
-      id: 'msg-18',
-      role: 'tool',
-      name: 'run_command',
-      tool_call_id: 'call_6',
-      content: '{"data":{"user":{"id":"12345","username":"natgeo","edge_owner_to_timeline_media":{"edges":[{"node":{"display_url":"https://scontent...","shortcode":"ABCDE"}}]}}}}'
-    },
-    {
-      id: 'msg-19',
-      role: 'assistant',
-      thinking: 'The API response works! I have the post data. Now I can build the full command that fetches a list of accounts and generates an HTML gallery.',
-      content: '<think>Success! I can now implement the full command logic.</think>The API works! I am now creating the `instagram-view` command.',
-      tool_calls: [
-        {
-          id: 'call_7',
-          toolName: 'write_file',
-          args: { 
-            path: '/home/wentao/repos/aynite-spells/commands/social/instagram-view/scripts/generate.py',
-            content: '#!/usr/bin/env python3\n# Instagram generator script...' 
-          }
-        }
-      ]
-    },
-    {
-      id: 'msg-20',
-      role: 'tool',
-      name: 'write_file',
-      tool_call_id: 'call_7',
-      content: 'Successfully wrote to /home/wentao/repos/aynite-spells/commands/social/instagram-view/scripts/generate.py'
-    },
-    {
-      id: 'msg-21',
-      role: 'user',
-      content: '>cmd[instagram-view](/home/wentao/repos/aynite-spells/commands/social/instagram-view) --file @file[accounts.txt](accounts.txt)'
-    },
-    {
-      id: 'msg-22',
-      role: 'tool',
-      name: 'instagram-view',
-      content: 'Fetching @natgeo...\n  Error: HTTP Error 401: Unauthorized\nFetching @nasa...\n  Error: HTTP Error 401: Unauthorized\n\n{\n  "status": "ok",\n  "accounts_fetched": 0,\n  "accounts_failed": 2,\n  "errors": [\n    {"username": "natgeo", "error": "Instagram rate limit hit. Try again in a few minutes."}\n  ]\n}'
-    },
-    {
-      id: 'msg-23',
-      role: 'assistant',
-      thinking: 'We\'ve been rate-limited. Instagram detected the rapid requests and is returning 401 Unauthorized with a "Please wait" message.',
-      content: 'It seems we have hit Instagram\'s rate limit. We should wait a few minutes before trying again.'
-    },
-    {
-      id: 'msg-24',
-      role: 'user',
-      content: 'the command has a problem, it should fetch all profiles in the file, not only 5'
-    },
-    {
-      id: 'msg-25',
-      role: 'agent' as any,
-      content: 'This is a message from an unknown role type to demonstrate fallback rendering logic in the chat interface.'
-    }
-  ]);
-  const [settings, setSettings] = useState<SettingsState | null>(null);
+function ThoughtBlock({ content, defaultExpanded = false }: { content: string; defaultExpanded?: boolean }) {
+  if (!content?.trim()) return null;
+  return (
+    <Collapsible title="Thinking Process" icon={Bot} colorClass="border-primary/40" defaultExpanded={defaultExpanded}>
+      <div className="text-[11px] leading-relaxed text-muted-foreground/80 italic whitespace-pre-wrap">
+        {content}
+      </div>
+    </Collapsible>
+  );
+}
+
+function ToolResultMessage({ name, content, defaultExpanded = false }: { name?: string; content: string; defaultExpanded?: boolean }) {
+  const isError = isErrorMessage(content);
+  return (
+    <Collapsible
+      title={isError ? `Error: ${name}` : `Result: ${name}`}
+      icon={isError ? XCircle : Check}
+      colorClass={isError ? "border-destructive/40" : "border-green-500/40"}
+      defaultExpanded={defaultExpanded}
+    >
+      <pre className={cn(
+        "text-[10px] font-mono whitespace-pre-wrap max-h-96 overflow-auto",
+        isError ? "text-destructive/80" : "text-muted-foreground/60"
+      )}>
+        {content}
+      </pre>
+    </Collapsible>
+  );
+}
+
+
+
+// ─── Command Approval Modal ─────────────────────────────────────────
+
+function ApprovalModal({
+  command,
+  cwd,
+  onApprove,
+  onReject,
+}: {
+  command: string;
+  cwd: string;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div className="relative group/approval my-2 overflow-hidden rounded-md border border-warning/30 bg-warning/5 backdrop-blur-md shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-transparent opacity-30" />
+
+      <div className="relative p-3 space-y-3">
+        <div className="flex items-center gap-2 text-warning">
+          <div className="w-6 h-6 rounded bg-warning/20 flex items-center justify-center shrink-0">
+            <AlertTriangle size={12} />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Command Approval</span>
+        </div>
+
+        <div className="bg-background/40 border border-border/30 rounded px-2 py-1.5 shadow-inner">
+          <div className="flex items-start gap-2">
+            <Terminal size={12} className="text-muted-foreground mt-0.5 shrink-0" />
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              <code className="text-xs text-foreground font-mono break-all leading-normal bg-accent/5 px-1.5 py-0.5 rounded border border-border/10 whitespace-pre-wrap">{command}</code>
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 font-medium">
+                <Folder size={8} />
+                <span className="truncate">{cwd}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onApprove}
+            className="flex-1 h-8 rounded bg-warning text-warning-foreground hover:bg-warning/90 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest shadow shadow-warning/10 flex items-center justify-center gap-1.5 group/btn"
+          >
+            <Check size={12} className="group-hover/btn:scale-110 transition-transform" />
+            Approve
+          </button>
+          <button
+            onClick={onReject}
+            className="flex-1 h-8 rounded bg-muted/30 border border-border/20 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 group/btn"
+          >
+            <X size={12} className="group-hover/btn:scale-110 transition-transform" />
+            Reject
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function SessionsModal({
+  sessions,
+  onSelect,
+  onClose
+}: {
+  sessions: any[];
+  onSelect: (id: string, date: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="w-full max-w-3xl bg-background border border-border/50 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+              <History size={18} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-widest">Chat Sessions</h2>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight opacity-70">Historical sessions</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {sessions.length === 0 ? (
+            <div className="py-20 text-center text-muted-foreground opacity-50 flex flex-col items-center gap-4">
+              <History size={40} strokeWidth={1} />
+              <p className="text-xs uppercase tracking-widest font-bold">No sessions found</p>
+            </div>
+          ) : (
+            sessions.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => { onSelect(s.id, s.date); onClose(); }}
+                className="w-full text-left p-3 rounded-lg hover:bg-accent/50 border border-transparent hover:border-border/30 transition-all group flex gap-4 items-start"
+              >
+                <div className="shrink-0 mt-1">
+                  <div className="w-8 h-8 rounded bg-muted flex flex-col items-center justify-center text-[8px] font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                    <Calendar size={10} className="mb-0.5" />
+                    {s.date.split('-').slice(1).join('/')}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-foreground/80 group-hover:text-primary transition-colors uppercase tracking-tight">Session {s.id.slice(-6)}</span>
+                    <div className="flex items-center gap-2 text-[9px] text-muted-foreground/60 font-medium">
+                      <Clock size={10} />
+                      {new Date(s.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <p className="text-[12px] text-muted-foreground/70 line-clamp-2 leading-relaxed">
+                    {s.preview || "No content"}
+                  </p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+export function AIChatPage({
+  settings,
+  workspaceFolders = [],
+  onOpenFile,
+  activeTabPath,
+  onUpdateSettings,
+}: {
+  settings: SettingsState;
+  workspaceFolders?: string[];
+  onOpenFile?: (file: { name: string; path: string, isDirectory: boolean }, content: string) => void;
+  activeTabPath?: string;
+  onUpdateSettings: (settings: SettingsState) => void;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [showProviderSwitcher, setShowProviderSwitcher] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<ChatInputHandle>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    aynite.getSettings().then(setSettings);
-  }, []);
+  // Approval flow state
+  const approvalResolveRef = useRef<((approved: boolean) => void) | null>(null);
+  const [pendingApproval, setPendingApproval] = useState<{ command: string; cwd: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const loadSessions = async () => {
+    // @ts-ignore
+    const res = await window.api.listSessions();
+    if (res) {
+      setSessions(res);
+    }
+  };
+
+  const currentFileInfo = useMemo(() => {
+    if (!activeTabPath || activeTabPath === 'Settings') return null;
+
+    const parts = activeTabPath.split(/[/\\]/);
+    const fileName = parts.pop() || '';
+    const wsFolder = workspaceFolders.find(f => activeTabPath.startsWith(f));
+    let folderDisplay = '';
+    let hasSubfolders = false;
+
+    if (wsFolder) {
+      folderDisplay = wsFolder.split(/[/\\]/).filter(Boolean).pop() || 'workspace';
+      const relPath = activeTabPath.slice(wsFolder.length).replace(/^[/\\]/, '');
+      const relParts = relPath.split(/[/\\]/);
+      relParts.pop(); // remove filename
+      if (relParts.length > 0) {
+        hasSubfolders = true;
+      }
+    } else {
+      folderDisplay = parts.pop() || 'external';
+    }
+
+    return { fileName, folderDisplay, hasSubfolders };
+  }, [activeTabPath, workspaceFolders]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -244,143 +296,630 @@ export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }:
     }
   }, [messages, loading]);
 
-  const loadSessions = async () => {
-    const res = await aynite.listSessions();
-    setSessions(res);
+
+
+  const normalizeAndHealMessages = (msgs: any[]): ChatMessage[] => {
+    // 1. Basic normalization (handle legacy logs with 'text' instead of 'content')
+    const normalized = msgs.map((m: any) => ({
+      ...m,
+      id: m.id || Math.random().toString(36).slice(2, 11),
+      content: m.content || m.text || ""
+    }));
+
+    const healed: ChatMessage[] = [];
+    for (let i = 0; i < normalized.length; i++) {
+      const m = normalized[i];
+      healed.push(m);
+
+      // If it's an assistant message with tool calls, ensure they have results
+      if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
+        const existingResultIds = new Set<string>();
+        let j = i + 1;
+        // Scan forward for following tool results
+        while (j < normalized.length && normalized[j].role === 'tool') {
+          if (normalized[j].tool_call_id) {
+            existingResultIds.add(normalized[j].tool_call_id);
+          }
+          j++;
+        }
+
+        // Add placeholder results for any missing tool call IDs
+        for (const call of m.tool_calls) {
+          const callId = call.toolCallId || call.id;
+          if (callId && !existingResultIds.has(callId)) {
+            healed.push({
+              id: Math.random().toString(36).slice(2, 11),
+              role: 'tool',
+              content: "Task interrupted before completion.",
+              tool_call_id: callId,
+              name: call.toolName || call.function?.name
+            });
+          }
+        }
+      }
+    }
+    return healed;
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim() || loading) return;
+  useEffect(() => {
+    const lastSession = localStorage.getItem('lastSession');
+    if (lastSession) {
+      try {
+        const { id, date } = JSON.parse(lastSession);
+        // @ts-ignore
+        window.api.loadSession(id, date).then((res: any) => {
+          if (res) {
+            setMessages(normalizeAndHealMessages(res));
+            setSessionId(id || null);
+          }
+        });
+      } catch (e) {
+        console.error('Failed to load last session from localStorage', e);
+      }
+    }
+  }, []);
 
-    const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
-    setLoading(true);
 
-    try {
-      // Mock response for now, real implementation would call aynite.sendMessage or similar
-      // but the user wants mock data.
-      setTimeout(() => {
-        const assistantMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "I've received your message. This is a mock response in the standalone Chat view."
-        };
-        setMessages(prev => [...prev, assistantMsg]);
-        setLoading(false);
+
+  useEffect(() => {
+    if (messages.length > 0 && !sessionId) {
+      const newId = new Date().getTime().toString();
+      const dateStr = new Date().toISOString().split('T')[0];
+      setSessionId(newId);
+      localStorage.setItem('lastSession', JSON.stringify({ id: newId, date: dateStr }));
+    }
+  }, [messages, sessionId]);
+
+  useEffect(() => {
+    if (sessionId && messages.length > 0) {
+      const timer = setTimeout(() => {
+        // @ts-ignore
+        window.api.saveSession(sessionId, messages);
       }, 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [messages, sessionId]);
+
+  useEffect(() => {
+    (window as any).focusChatInput = (prefix?: string) => {
+      if (prefix) {
+        inputRef.current?.trigger(prefix);
+      } else {
+        inputRef.current?.focus();
+      }
+    };
+    (window as any).setChatSession = (id: string, date?: string) => {
+      const dateStr = date || new Date().toISOString().split('T')[0];
+      // @ts-ignore
+      window.api.loadSession(id, dateStr).then((res: any) => {
+        if (res) {
+          setMessages(normalizeAndHealMessages(res));
+          setSessionId(id);
+          localStorage.setItem('lastSession', JSON.stringify({ id, date: dateStr }));
+          console.log(`[Chat] Switched and healed session: ${id} (${dateStr})`);
+        } else {
+          setSessionId(id);
+          setMessages([]);
+          localStorage.setItem('lastSession', JSON.stringify({ id, date: dateStr }));
+          console.log(`[Chat] Started new session with ID: ${id}`);
+        }
+        setTimeout(() => inputRef.current?.focus(), 100);
+      });
+    };
+    (window as any).showChatHistory = () => {
+      loadSessions();
+      setShowHistory(true);
+    };
+
+    return () => {
+      delete (window as any).focusChatInput;
+      delete (window as any).setChatSession;
+      delete (window as any).showChatHistory;
+      delete (window as any).clearChat;
+      delete (window as any).copyChat;
+    };
+
+  }, []);
+
+
+
+
+  const handleOpenFile = async (filepath: string) => {
+    if (!onOpenFile) return;
+    try {
+      // @ts-ignore
+      const res = await window.api.readFile(filepath);
+      if (res) {
+        const name = filepath.split(/[/\\]/).pop() || filepath;
+        // Ensure we pass the exactly same structure as Sidebar
+        onOpenFile({ name, path: filepath, isDirectory: false }, res);
+      }
     } catch (e) {
-      setLoading(false);
+      console.error('Failed to open file', e);
     }
   };
 
-  if (!settings) return <div className="p-8 text-muted-foreground">Loading settings...</div>;
+  const genId = () => `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  const requestApproval = useCallback(
+    (command: string, cwd: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        approvalResolveRef.current = resolve;
+        setPendingApproval({ command, cwd });
+      });
+    },
+    []
+  );
+
+  const handleApprove = useCallback(() => {
+    approvalResolveRef.current?.(true);
+    approvalResolveRef.current = null;
+    setPendingApproval(null);
+  }, []);
+
+  const handleReject = useCallback(() => {
+    approvalResolveRef.current?.(false);
+    approvalResolveRef.current = null;
+    setPendingApproval(null);
+  }, []);
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || loading) return;
+
+      const commandMentionRegex = />cmd\[(.*?)\]\((.*?)\)/g;
+      const skillMentionRegex = /\/skill\[(.*?)\]\((.*?)\)/g;
+      const fileMentionRegex = /@(?:file|dir)\[(.*?)\]\((.*?)\)/g;
+
+      // Check if it's a Command-Only Mode (starts with a command)
+      const trimmedText = text.trim();
+      const firstCmdMatch = trimmedText.match(/^>cmd\[(.*?)\]\((.*?)\)/);
+
+      if (firstCmdMatch) {
+        const [fullMatch, name, path] = firstCmdMatch;
+        const remainingText = trimmedText.slice(fullMatch.length).trim();
+
+        // Resolve all mentions in the parameters to absolute paths
+        // Format: @file[name](path) -> path, /skill[name](path) -> path
+        const resolvedParamsText = remainingText
+          .replace(fileMentionRegex, '$2')
+          .replace(skillMentionRegex, '$2')
+          .replace(commandMentionRegex, '$2');
+
+        // Split by spaces but preserve quoted strings if needed? 
+        // For now, simple split is likely enough for basic usage.
+        const params = resolvedParamsText.split(/\s+/).filter(Boolean);
+
+        setLoading(true);
+        try {
+          // @ts-ignore
+          const res = await window.api.runDirectCommand({
+            commandPath: path,
+            params: params,
+            currentFile: activeTabPath
+          });
+
+          const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim();
+          const userMsg: ChatMessage = { id: genId(), role: 'user', content: text };
+          const cmdMsg: ChatMessage = {
+            id: genId(),
+            role: 'tool',
+            name: name,
+            content: content || '(No output)'
+          };
+
+          setMessages([...messages, userMsg, cmdMsg]);
+        } catch (e: Error | unknown) {
+          setMessages([...messages, { id: genId(), role: 'user', content: text }, { id: genId(), role: 'assistant', content: `❌ **Execution Error**: ${e.message}` }]);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Normal Mode (AI involved)
+      const currentMatches = [...text.matchAll(skillMentionRegex)];
+      const commandMatches = [...text.matchAll(commandMentionRegex)];
+      const commandResults: { name: string; stdout: string; stderr: string; error?: string }[] = [];
+
+
+      if (commandMatches.length > 0) {
+        setLoading(true);
+        for (const match of commandMatches) {
+          const [full, name, path] = match;
+          try {
+            // @ts-ignore
+            const res = await window.api.runDirectCommand({
+              commandPath: path,
+              params: [],
+              currentFile: activeTabPath
+            });
+            commandResults.push({
+              name,
+              stdout: res.stdout || '',
+              stderr: res.stderr || '',
+            });
+          } catch (e: Error | unknown) {
+            commandResults.push({ name, stdout: '', stderr: e.message, error: e.message });
+          }
+        }
+      }
+
+      const activeId = settings.ai?.activeId;
+      const activeProvider = settings.ai?.providers?.find(p => p.id === activeId) || settings.ai?.providers?.[0];
+
+      const activeAgent = settings.agents?.list?.find(a => a.id === settings.agents?.activeId);
+      const agentPromptFiles = activeAgent?.promptFiles || [];
+
+      const agentConfig: AgentConfig = {
+        provider: activeProvider?.provider || 'ollama',
+        apiKey: activeProvider?.apiKey || '',
+        baseUrl: activeProvider?.url || '',
+        model: activeProvider?.model || '',
+        compatibility: activeProvider?.compatibility,
+        enabledTools: settings.aiTools,
+        agentPromptFiles // Add this to AgentConfig interface if needed, or pass separately
+      };
+
+
+
+
+
+
+      // 2. Add User Message
+      const userMsg: ChatMessage = { id: genId(), role: 'user', content: text };
+      let updatedMessages = [...messages, userMsg];
+
+      // 3. Add Command Result Messages (if any)
+      if (commandResults.length > 0) {
+        for (const res of commandResults) {
+          const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim();
+          const cmdMsg: ChatMessage = {
+            id: genId(),
+            role: 'tool',
+            name: res.name,
+            content: content || (res.error ? `Error: ${res.error}` : '(No output)')
+          };
+          updatedMessages.push(cmdMsg);
+        }
+      }
+
+      setMessages(updatedMessages);
+      setLoading(true);
+
+      const history: ChatMessage[] = updatedMessages.map((m) => ({
+        ...m,
+        content: m.content,
+      }));
+
+      const cleanText = text
+        .replace(skillMentionRegex, '')
+        .replace(commandMentionRegex, '')
+        .trim();
+
+      // If message only contained commands and no actual text/skills, don't trigger AI
+      if (!cleanText && commandMatches.length > 0 && currentMatches.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      const abort = new AbortController();
+      abortRef.current = abort;
+
+      try {
+        const promptText = text;
+        const resultHistory = await runAgentLoop(
+          promptText,
+          history.slice(0, -1),
+          agentConfig,
+          workspaceFolders,
+          (event: AgentStepEvent) => {
+            if (event.type === 'text_delta') {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last && last.role === 'assistant') {
+                  const newLast = { ...last, content: last.content + event.content };
+                  return [...prev.slice(0, -1), newLast];
+                }
+                return [...prev, { id: genId(), role: 'assistant', content: event.content }];
+              });
+            } else if (event.type === 'thinking') {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last && last.role === 'assistant') {
+                  const newLast = { ...last, thinking: (last.thinking || '') + event.content };
+                  return [...prev.slice(0, -1), newLast];
+                }
+                return [...prev, { id: genId(), role: 'assistant', content: '', thinking: event.content }];
+              });
+            } else if (event.type === 'tool_call') {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                const call = { toolName: event.toolName, args: event.toolArgs, toolCallId: event.toolCallId };
+                if (last && last.role === 'assistant') {
+                  const newLast = { ...last, tool_calls: [...(last.tool_calls || []), call] };
+                  return [...prev.slice(0, -1), newLast];
+                }
+                return [...prev, { id: genId(), role: 'assistant', content: '', tool_calls: [call] }];
+              });
+            } else if (event.type === 'tool_result') {
+              setMessages((prev) => {
+                // 1. Update the tool call result in the preceding assistant message for UI consistency
+                const newMessages = [...prev];
+                for (let i = newMessages.length - 1; i >= 0; i--) {
+                  if (newMessages[i].role === 'assistant' && newMessages[i].tool_calls) {
+                    const callIdx = newMessages[i].tool_calls?.findIndex(c => c.toolCallId === event.toolCallId);
+                    if (callIdx !== -1) {
+                      newMessages[i] = {
+                        ...newMessages[i],
+                        tool_calls: newMessages[i].tool_calls?.map((c, idx) =>
+                          idx === callIdx ? { ...c, result: event.content } : c
+                        )
+                      };
+                      break;
+                    }
+                  }
+                }
+
+                // 2. Append the tool result as a separate message for the history
+                return [...newMessages, {
+                  id: genId(),
+                  role: 'tool',
+                  content: event.content,
+                  tool_call_id: event.toolCallId,
+                  name: event.toolName
+                }];
+              });
+            } else if (event.type === 'approval_request') {
+
+              setPendingApproval({
+                command: event.toolArgs?.command || '',
+                cwd: event.toolArgs?.cwd || '',
+              });
+            } else if (event.type === 'error') {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last && last.role === 'assistant' && last.content.includes('❌')) {
+                  // Avoid duplicate error messages if already handled
+                  return prev;
+                }
+                return [...prev, {
+                  id: genId(),
+                  role: 'assistant',
+                  content: `❌ **Error**: ${event.content}`
+                }];
+              });
+            }
+          },
+          requestApproval,
+          activeTabPath,
+          abort.signal
+        );
+        setMessages(resultHistory);
+
+      } catch (e: Error | unknown) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: genId(),
+            role: 'assistant',
+            content: `❌ **System Error**: ${e.message}`,
+          },
+        ]);
+      } finally {
+        setLoading(false);
+        abortRef.current = null;
+        const active = document.activeElement;
+        const isPanelFocused = active && (active.closest('.chat-panel') || active === document.body);
+        if (isPanelFocused) {
+          setTimeout(() => inputRef.current?.focus(), 10);
+        }
+      }
+    },
+    [settings, messages, workspaceFolders, requestApproval, activeTabPath]
+  );
+
+  const clearHistory = useCallback(() => {
+    if (!showClearConfirm) {
+      setShowClearConfirm(true);
+      setTimeout(() => setShowClearConfirm(false), 3000); // Reset after 3 seconds
+      return;
+    }
+
+    setMessages([]);
+    setSessionId(null);
+    localStorage.removeItem('lastSession');
+    abortRef.current?.abort();
+    setShowClearConfirm(false);
+
+  }, [showClearConfirm]);
+  const copyHistoryAsJson = useCallback(() => {
+    const jsonStr = JSON.stringify(messages, null, 2);
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => console.error('Failed to copy', err));
+  }, [messages]);
+
+  useEffect(() => {
+    (window as any).clearChat = () => {
+      setMessages([]);
+      setSessionId(null);
+      localStorage.removeItem('lastSession');
+      abortRef.current?.abort();
+    };
+    (window as any).copyChat = copyHistoryAsJson;
+  }, [copyHistoryAsJson]);
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => console.error('Failed to copy', err));
+  }, []);
+
+  const saveMessageToFile = useCallback(async (text: string) => {
+    const filename = `ai-message-${Date.now()}.md`;
+
+    // Use first workspace folder as base if available
+    const baseDir = workspaceFolders.length > 0 ? workspaceFolders[0] : '';
+    // @ts-ignore
+    const fullPath = baseDir ? await window.api.joinPath(baseDir, filename) : filename;
+
+    try {
+      // @ts-ignore
+      await window.api.saveFile(fullPath, text);
+    } catch (err) {
+      console.error('Failed to save file', err);
+    }
+  }, [workspaceFolders]);
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden relative">
-      {/* Header */}
-      <div className="h-12 border-b border-border/40 flex items-center justify-between px-4 shrink-0 bg-background/50 backdrop-blur-md z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <Bot size={18} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold uppercase tracking-widest text-foreground/80">Aynite AI</span>
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight opacity-60">Assistant</span>
-          </div>
-        </div>
+    <div className="chat-panel flex flex-col h-full bg-background relative overflow-hidden">
+      {/* Atmosphere Layer */}
+      <div className="absolute inset-0 bg-ambient-gradient z-0 opacity-40" />
 
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => { loadSessions(); setShowHistory(true); }}
-            title="History"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <History size={18} />
-          </Button>
-        </div>
-      </div>
 
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-30 gap-4">
-            <Bot size={64} strokeWidth={1} />
-            <p className="text-sm font-medium uppercase tracking-widest">Start a conversation</p>
-          </div>
-        ) : (
-          messages.map((msg, idx) => (
-            <ChatMessageItem
-              key={msg.id || idx}
-              msg={msg}
-              idx={idx}
-              total={messages.length}
-              onOpenFile={async (path: string) => {
-                const content = await aynite.readFile(path);
-                onOpenFile?.({ name: path.split(/[/\\]/).pop() || path, path, isDirectory: false }, content);
-              }}
-              onCopy={(content: string) => navigator.clipboard.writeText(content)}
-              settings={settings}
-            />
-          ))
-        )}
-        {loading && (
-          <div className="max-w-4xl mx-auto flex items-center gap-3 text-muted-foreground animate-pulse">
-            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-              <Bot size={14} />
+      {/* Message Area */}
+      <div className="flex-1 overflow-y-auto px-6 pt-4 pb-32 space-y-1.5 mask-fade-vertical z-10" ref={scrollRef}>
+
+        {messages.length === 0 && (
+          <div className="text-muted-foreground flex flex-col items-center justify-center h-full space-y-6">
+            <div className="space-y-3 text-sm opacity-80">
+              <p className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">Aa</span>
+                Type any text to talk to AI
+              </p>
+              <p className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">@</span>
+                Tag any file to the content
+              </p>
+              <p className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">/</span>
+                Call any registered AI skill
+              </p>
+              <p className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">&gt;</span>
+                Call any registered command
+              </p>
             </div>
-            <span className="text-xs font-medium uppercase tracking-widest">Thinking...</span>
+          </div>
+        )}
+
+        {messages.map((msg, idx) => (
+          <ChatMessageItem
+            key={msg.id}
+            msg={msg}
+            idx={idx}
+            total={messages.length}
+            onOpenFile={handleOpenFile}
+            onCopy={copyToClipboard}
+            settings={settings}
+          />
+        ))}
+
+
+
+
+        {/* Inline Approval Modal */}
+        {pendingApproval && (
+          <div className="max-w-xl mx-auto">
+            <ApprovalModal
+              command={pendingApproval.command}
+              cwd={pendingApproval.cwd}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
+          </div>
+        )}
+
+        {loading && !pendingApproval && (
+          <div className="max-w-4xl mx-auto mb-8 px-2">
+            <div className="loading-bar-container">
+              <div className="loading-bar-progress" />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Input */}
-      <div className="p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
-        <div className="max-w-4xl mx-auto">
+      {/* Input Area & Status Overlay */}
+      <div className="p-6 pt-2 z-10 relative">
+        <div className="max-w-4xl mx-auto relative">
+          {/* Floating Status Pill */}
+          <div className="absolute -top-10 left-0 right-0 flex items-center justify-between px-2 pointer-events-none">
+            <div className="flex items-center gap-2 pointer-events-auto">
+              <div className="relative">
+                <button
+                  onClick={() => setShowProviderSwitcher(!showProviderSwitcher)}
+                  className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/50 transition-all shadow-sm group"
+                >
+                  {showProviderSwitcher && (
+                    <SelectionPopover
+                      title="Switch AI Provider"
+                      position="top"
+                      items={(settings.ai?.providers || []).map(p => ({ id: p.id, label: `${p.provider} - ${p.model}` }))}
+                      activeId={settings.ai?.activeId || ''}
+                      onSelect={(id) => {
+                        onUpdateSettings({
+                          ...settings,
+                          ai: { ...settings.ai, activeId: id }
+                        });
+                      }}
+                      onClose={() => setShowProviderSwitcher(false)}
+                    />
+                  )}
+                  {(() => {
+                    const active = settings.ai?.providers?.find(p => p.id === settings.ai?.activeId) || settings.ai?.providers?.[0];
+                    return (
+                      <>
+                        <span className="opacity-70">{active?.provider || 'ollama'}</span>
+                        <span className="normal-case font-bold text-muted-foreground border-l border-border/20 pl-2">
+                          {active?.model || ''}
+                        </span>
+                      </>
+                    );
+                  })()}
+                  <ChevronDown size={10} className="opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                </button>
+              </div>
+
+              {currentFileInfo && (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/40 text-[10px] font-bold tracking-wider text-muted-foreground shadow-sm animate-in fade-in slide-in-from-left-2 duration-300">
+                  <div className="flex items-center gap-1.5">
+                    <Folder size={11} className="text-primary/60" />
+                    <span className="max-w-[120px] truncate opacity-70">{currentFileInfo.folderDisplay}</span>
+                  </div>
+                  <span className="opacity-30 px-0.5">{currentFileInfo.hasSubfolders ? '/.../' : '/'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <FileText size={11} className="text-primary/80" />
+                    <span className="text-muted-foreground">{currentFileInfo.fileName}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+
           <ChatInput
             ref={inputRef}
-            onSubmit={handleSendMessage}
+            onSubmit={sendMessage}
             disabled={loading}
             workspaceFolders={workspaceFolders}
-            getFiles={aynite.getFiles}
-            getAvailableSkills={aynite.getAvailableSkills}
-            getAvailableCommands={aynite.getAvailableCommands}
+            focusKeybinding={settings.keybindings.agent.focusChat}
+            submitKeybinding={settings.keybindings.agent.submit}
+            getFiles={async (...args) => (await (window as any).api.getFiles(...args))}
+            getAvailableSkills={async (...args) => (await (window as any).api.getAvailableSkills(...args))}
+            getAvailableCommands={async (...args) => (await (window as any).api.getAvailableCommands(...args))}
           />
         </div>
       </div>
-
-      <Modal
-        isOpen={showHistory}
-        onClose={() => setShowHistory(false)}
-        title="Chat Sessions"
-        size="lg"
-      >
-        <div className="flex-1 overflow-y-auto">
-          <SelectionList
-            items={sessions.map(s => ({
-              id: s.id,
-              label: `Session ${s.id.slice(-6)}`,
-              subtitle: s.preview || "No content",
-              badge: new Date(s.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              icon: (
-                <div className="w-8 h-8 rounded bg-muted flex flex-col items-center justify-center text-[8px] font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors shrink-0">
-                  <Calendar size={10} className="mb-0.5" />
-                  {s.date.split('-').slice(1).join('/')}
-                </div>
-              ),
-              date: s.date // Keep for handler
-            }))}
-            selectedIndex={-1}
-            onSelect={(item) => {
-              aynite.loadSession(item.id, item.date).then(setMessages);
-              setSessionId(item.id);
-              setShowHistory(false);
-            }}
-            itemClassName="py-4 border-b border-border/10 last:border-0"
-          />
-        </div>
-      </Modal>
+      {showHistory && (
+        <SessionsModal
+          sessions={sessions}
+          onSelect={(id, date) => (window as any).setChatSession(id, date)}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }
