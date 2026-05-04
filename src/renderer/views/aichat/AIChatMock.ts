@@ -19,15 +19,15 @@ export const AIChatMockData: ChatApi = {
     } as any;
   },
   updateSettings: async (settings) => { console.log('Mock: updateSettings', settings); },
-  listChatLogs: async () => [
+  listSessions: async () => [
     { id: '1', date: '2024-05-01', preview: 'How do I center a div?', lastModified: Date.now() - 3600000 },
     { id: '2', date: '2024-05-02', preview: 'Explain quantum computing.', lastModified: Date.now() - 86400000 }
   ],
-  loadChatLog: async (id, date) => [
+  loadSession: async (id, date) => [
     { id: 'm1', role: 'user', content: 'Hello!' },
     { id: 'm2', role: 'assistant', content: 'Hello! How can I help you today?' }
   ],
-  saveChatLog: async (id, messages) => { console.log('Mock: saveChatLog', id, messages.length); },
+  saveSession: async (id, messages) => { console.log('Mock: saveSession', id, messages.length); },
   readFile: async (path) => `Content of ${path}`,
   getAvailableSkills: async () => [
     { name: 'Web Search', path: '/skills/web-search' },

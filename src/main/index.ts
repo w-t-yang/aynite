@@ -7,7 +7,7 @@ import path from 'path';
 import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
 import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, setConfigNotificationCallback } from './config';
-import { setupAiIpc, saveChatLog, loadChatLog, listChatLogs, restoreDefaultPrompts, getMergedSystemPrompt } from './ai';
+import { setupAiIpc } from './ai';
 import { setupUpdater } from './updater';
 
 
@@ -41,7 +41,7 @@ function setupWatcher(folders: string[]) {
 
     watcher.on('all', (event, path) => {
       if (mainWindow) {
-        mainWindow.webContents.send('api:fs-change', { event, path });
+        mainWindow.webContents.send('aynite:fs-change', { event, path });
       }
     });
   }).catch(e => {
@@ -98,7 +98,7 @@ app.whenReady().then(async () => {
     // Set up configuration error notifications
     setConfigNotificationCallback((data) => {
       if (mainWindow) {
-        mainWindow.webContents.send('api:config-error', data);
+        mainWindow.webContents.send('aynite:config-error', data);
       }
     });
   }
@@ -131,7 +131,7 @@ function expandHome(filepath: string): string {
 }
 
 // IPC handlers ported from express server.ts
-ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
+ipcMain.handle('aynite:files', async (event, dirPath: string = '.') => {
   try {
     const resolvedPath = path.resolve(expandHome(dirPath));
     const files = await fs.readdir(resolvedPath, { withFileTypes: true });
@@ -158,12 +158,12 @@ ipcMain.handle('api:files', async (event, dirPath: string = '.') => {
     });
     return { data: result };
   } catch (error: any) {
-    console.error('api:files error:', error);
+    console.error('aynite:files error:', error);
     return { error: error.message, debug: { dirPath } };
   }
 });
 
-ipcMain.handle('api:command', async (event, { command, cwd }: { command: string, cwd?: string }) => {
+ipcMain.handle('aynite:command', async (event, { command, cwd }: { command: string, cwd?: string }) => {
   try {
     const { stdout, stderr } = await execAsync(command, { cwd: cwd || process.cwd() });
     try {
@@ -178,7 +178,7 @@ ipcMain.handle('api:command', async (event, { command, cwd }: { command: string,
   }
 });
 
-ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, currentFile }: { commandPath: string, params: string[], currentFile?: string }) => {
+ipcMain.handle('aynite:command-run-direct', async (event, { commandPath, params, currentFile }: { commandPath: string, params: string[], currentFile?: string }) => {
   try {
     const runShPath = path.join(commandPath, 'run.sh');
     // Ensure execute permission
@@ -220,7 +220,7 @@ ipcMain.handle('api:command-run-direct', async (event, { commandPath, params, cu
   }
 });
 
-ipcMain.handle('api:read-file', async (event, filePath: string) => {
+ipcMain.handle('aynite:read-file', async (event, filePath: string) => {
   try {
     const content = await fs.readFile(expandHome(filePath), 'utf-8');
     return { data: content };
@@ -244,7 +244,7 @@ async function checkIsTextFile(filePath: string): Promise<boolean> {
   }
 }
 
-ipcMain.handle('api:file-info', async (event, filePath: string) => {
+ipcMain.handle('aynite:file-info', async (event, filePath: string) => {
   try {
     const expandedPath = expandHome(filePath);
     const stats = await fs.stat(expandedPath);
@@ -266,7 +266,7 @@ ipcMain.handle('api:file-info', async (event, filePath: string) => {
   }
 });
 
-ipcMain.handle('api:load-config', async () => {
+ipcMain.handle('aynite:load-config', async () => {
   try {
     const config = await loadConfig();
     return { data: config };
@@ -275,7 +275,7 @@ ipcMain.handle('api:load-config', async () => {
   }
 });
 
-ipcMain.handle('api:save-config', async (event, config) => {
+ipcMain.handle('aynite:save-config', async (event, config) => {
   try {
     await saveConfig(config);
     return { data: true };
@@ -284,35 +284,10 @@ ipcMain.handle('api:save-config', async (event, config) => {
   }
 });
 
-ipcMain.handle('api:save-chat-log', async (event, { sessionId, messages }) => {
-  try {
-    await saveChatLog(sessionId, messages);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('api:load-chat-log', async (event, { sessionId, date }) => {
-  try {
-    const data = await loadChatLog(sessionId, date);
-    return { data };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('api:chat-logs-list', async () => {
-  try {
-    const logs = await listChatLogs();
-    return { data: logs };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
+// AI IPC handlers moved to src/main/ai/ipc.ts
 
 // Workspace IPC handlers
-ipcMain.handle('api:workspaces-list', async () => {
+ipcMain.handle('aynite:workspaces-list', async () => {
   try {
     const list = await getWorkspacesList();
     return { data: list };
@@ -321,7 +296,7 @@ ipcMain.handle('api:workspaces-list', async () => {
   }
 });
 
-ipcMain.handle('api:workspace-create', async (event, name: string) => {
+ipcMain.handle('aynite:workspace-create', async (event, name: string) => {
   try {
     const ws = await createWorkspace(name);
     return { data: ws };
@@ -330,7 +305,7 @@ ipcMain.handle('api:workspace-create', async (event, name: string) => {
   }
 });
 
-ipcMain.handle('api:workspace-switch', async (event, name: string) => {
+ipcMain.handle('aynite:workspace-switch', async (event, name: string) => {
   try {
     const ws = await switchWorkspace(name);
     const foldersRes = await getWorkspaceFolders();
@@ -341,7 +316,7 @@ ipcMain.handle('api:workspace-switch', async (event, name: string) => {
   }
 });
 
-ipcMain.handle('api:workspace-add-folder', async () => {
+ipcMain.handle('aynite:workspace-add-folder', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
       properties: ['openDirectory']
@@ -357,7 +332,7 @@ ipcMain.handle('api:workspace-add-folder', async () => {
   }
 });
 
-ipcMain.handle('api:workspace-get-folders', async () => {
+ipcMain.handle('aynite:workspace-get-folders', async () => {
   try {
     return await getWorkspaceFolders();
   } catch (error: any) {
@@ -365,7 +340,7 @@ ipcMain.handle('api:workspace-get-folders', async () => {
   }
 });
 
-ipcMain.handle('api:workspace-all-files', async () => {
+ipcMain.handle('aynite:workspace-all-files', async () => {
   try {
     const foldersRes = await getWorkspaceFolders();
     const folders = foldersRes.data;
@@ -401,7 +376,7 @@ ipcMain.handle('api:workspace-all-files', async () => {
   }
 });
 
-ipcMain.handle('api:workspace-remove-folder', async (event, folderPath: string) => {
+ipcMain.handle('aynite:workspace-remove-folder', async (event, folderPath: string) => {
   try {
     await removeWorkspaceFolder(folderPath);
     const foldersRes = await getWorkspaceFolders();
@@ -412,7 +387,7 @@ ipcMain.handle('api:workspace-remove-folder', async (event, folderPath: string) 
   }
 });
 
-ipcMain.handle('api:workspace-reorder-folders', async (event, folders: string[]) => {
+ipcMain.handle('aynite:workspace-reorder-folders', async (event, folders: string[]) => {
   try {
     await reorderWorkspaceFolders(folders);
     const updatedFoldersRes = await getWorkspaceFolders();
@@ -423,7 +398,7 @@ ipcMain.handle('api:workspace-reorder-folders', async (event, folders: string[])
   }
 });
 
-ipcMain.handle('api:workspace-get-state', async () => {
+ipcMain.handle('aynite:workspace-get-state', async () => {
   try {
     const state = await getWorkspaceState();
     return { data: state };
@@ -432,7 +407,7 @@ ipcMain.handle('api:workspace-get-state', async () => {
   }
 });
 
-ipcMain.handle('api:workspace-save-state', async (event, { workspaceName, tabs, activeTabId }: { workspaceName: string, tabs: any[], activeTabId: string }) => {
+ipcMain.handle('aynite:workspace-save-state', async (event, { workspaceName, tabs, activeTabId }: { workspaceName: string, tabs: any[], activeTabId: string }) => {
   try {
     await saveWorkspaceState(workspaceName, tabs, activeTabId);
     return { data: true };
@@ -441,7 +416,7 @@ ipcMain.handle('api:workspace-save-state', async (event, { workspaceName, tabs, 
   }
 });
 
-ipcMain.handle('api:skill-add-folder', async () => {
+ipcMain.handle('aynite:skill-add-folder', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
       properties: ['openDirectory']
@@ -453,7 +428,7 @@ ipcMain.handle('api:skill-add-folder', async () => {
   }
 });
 
-ipcMain.handle('api:skills-restore-default', async () => {
+ipcMain.handle('aynite:skills-restore-default', async () => {
   try {
     const success = await restoreDefaultSkills();
     return { data: success };
@@ -462,7 +437,7 @@ ipcMain.handle('api:skills-restore-default', async () => {
   }
 });
 
-ipcMain.handle('api:command-add-folder', async () => {
+ipcMain.handle('aynite:command-add-folder', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
       properties: ['openDirectory']
@@ -474,7 +449,7 @@ ipcMain.handle('api:command-add-folder', async () => {
   }
 });
 
-ipcMain.handle('api:commands-restore-default', async () => {
+ipcMain.handle('aynite:commands-restore-default', async () => {
   try {
     const success = await restoreDefaultCommands();
     return { data: success };
@@ -483,7 +458,7 @@ ipcMain.handle('api:commands-restore-default', async () => {
   }
 });
 
-ipcMain.handle('api:skills-list', async () => {
+ipcMain.handle('aynite:skills-list', async () => {
   try {
     const skills = await listAvailableSkills();
     return { data: skills };
@@ -492,7 +467,7 @@ ipcMain.handle('api:skills-list', async () => {
   }
 });
 
-ipcMain.handle('api:commands-list', async () => {
+ipcMain.handle('aynite:commands-list', async () => {
   try {
     const commands = await listAvailableCommands();
     return { data: commands };
@@ -502,7 +477,7 @@ ipcMain.handle('api:commands-list', async () => {
 });
 
 
-ipcMain.handle('api:prompts-pick-file', async () => {
+ipcMain.handle('aynite:ai-pick-prompt-file', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
       properties: ['openFile'],
@@ -515,26 +490,10 @@ ipcMain.handle('api:prompts-pick-file', async () => {
   }
 });
 
-ipcMain.handle('api:prompts-restore-default', async () => {
-  try {
-    const config = await restoreDefaultPrompts();
-    return { data: config };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('api:prompts-get-merged', async (_, globalFiles?: string[], agentFiles?: string[]) => {
-  try {
-    const merged = await getMergedSystemPrompt(globalFiles, agentFiles);
-    return { data: merged };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
+// Prompt IPC handlers moved to src/main/ai/ipc.ts
 
 // Theme IPC handlers
-ipcMain.handle('api:themes-list', async () => {
+ipcMain.handle('aynite:themes-list', async () => {
   try {
     const themes = await getThemesList();
     return { data: themes };
@@ -543,7 +502,7 @@ ipcMain.handle('api:themes-list', async () => {
   }
 });
 
-ipcMain.handle('api:theme-get', async (event, name: string) => {
+ipcMain.handle('aynite:theme-get', async (event, name: string) => {
   try {
     const theme = await getTheme(name);
     return { data: theme };
@@ -552,7 +511,7 @@ ipcMain.handle('api:theme-get', async (event, name: string) => {
   }
 });
 
-ipcMain.handle('api:theme-save', async (event, { name, data }) => {
+ipcMain.handle('aynite:theme-save', async (event, { name, data }) => {
   try {
     await saveTheme(name, data);
     return { data: true };
@@ -561,7 +520,7 @@ ipcMain.handle('api:theme-save', async (event, { name, data }) => {
   }
 });
 
-ipcMain.handle('api:theme-restore-default', async (event, name: string) => {
+ipcMain.handle('aynite:theme-restore-default', async (event, name: string) => {
   try {
     const result = await restoreDefaultTheme(name);
     return { data: result };
@@ -570,7 +529,7 @@ ipcMain.handle('api:theme-restore-default', async (event, name: string) => {
   }
 });
 
-ipcMain.handle('api:theme-delete', async (event, name: string) => {
+ipcMain.handle('aynite:theme-delete', async (event, name: string) => {
   try {
     const result = await deleteTheme(name);
     return { data: result };
@@ -579,7 +538,7 @@ ipcMain.handle('api:theme-delete', async (event, name: string) => {
   }
 });
 
-ipcMain.handle('api:system-fonts', async () => {
+ipcMain.handle('aynite:system-fonts', async () => {
   try {
     const fonts = await getSystemFonts();
     return { data: fonts };
@@ -589,7 +548,7 @@ ipcMain.handle('api:system-fonts', async () => {
 });
 
 // File manipulation IPC handlers
-ipcMain.handle('api:file-create', async (event, { path: filePath, isDirectory }) => {
+ipcMain.handle('aynite:file-create', async (event, { path: filePath, isDirectory }) => {
   try {
     if (isDirectory) {
       await fs.mkdir(filePath, { recursive: true });
@@ -602,7 +561,7 @@ ipcMain.handle('api:file-create', async (event, { path: filePath, isDirectory })
   }
 });
 
-ipcMain.handle('api:file-rename', async (event, { oldPath, newPath }) => {
+ipcMain.handle('aynite:file-rename', async (event, { oldPath, newPath }) => {
   try {
     await fs.rename(oldPath, newPath);
     await renameWorkspaceFolder(oldPath, newPath);
@@ -612,7 +571,7 @@ ipcMain.handle('api:file-rename', async (event, { oldPath, newPath }) => {
   }
 });
 
-ipcMain.handle('api:file-copy', async (event, { srcPath, destPath }) => {
+ipcMain.handle('aynite:file-copy', async (event, { srcPath, destPath }) => {
   try {
     await fs.cp(srcPath, destPath, { recursive: true });
     return { data: true };
@@ -621,7 +580,7 @@ ipcMain.handle('api:file-copy', async (event, { srcPath, destPath }) => {
   }
 });
 
-ipcMain.handle('api:file-delete', async (event, filePath: string) => {
+ipcMain.handle('aynite:file-delete', async (event, filePath: string) => {
   try {
     await fs.rm(filePath, { recursive: true, force: true });
     await removeWorkspaceFolder(filePath);
@@ -631,7 +590,7 @@ ipcMain.handle('api:file-delete', async (event, filePath: string) => {
   }
 });
 
-ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
+ipcMain.handle('aynite:file-save', async (event, { path: filePath, content }) => {
   try {
     const expandedPath = expandHome(filePath);
     await fs.mkdir(path.dirname(expandedPath), { recursive: true });
@@ -642,7 +601,7 @@ ipcMain.handle('api:file-save', async (event, { path: filePath, content }) => {
   }
 });
 
-ipcMain.handle('api:open-external', async (event, url: string) => {
+ipcMain.handle('aynite:open-external', async (event, url: string) => {
   try {
     await shell.openExternal(url);
     return { data: true };
@@ -651,10 +610,10 @@ ipcMain.handle('api:open-external', async (event, url: string) => {
   }
 });
 
-ipcMain.handle('api:app-version', () => {
+ipcMain.handle('aynite:app-version', () => {
   return app.getVersion();
 });
 
-ipcMain.handle('api:app-quit', () => {
+ipcMain.handle('aynite:app-quit', () => {
   app.quit();
 });

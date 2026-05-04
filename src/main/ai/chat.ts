@@ -1,9 +1,12 @@
-import path from 'path';
 import { app, BrowserWindow } from 'electron';
 import { streamText, stepCountIs } from 'ai';
 import { 
   getAyniteDir, 
   getAyniteLogsDir,
+  getAyniteSessionsDir,
+  getSessionPath,
+  getSessionsDateDir,
+  getLogPath,
   readJson,
   writeJson,
   appendText,
@@ -17,25 +20,25 @@ import { ERROR_MESSAGES } from '../../lib/constants/messages';
 /**
  * Saves a chat session history as a JSON file.
  */
-export async function saveChatLog(sessionId: string, messages: any[]) {
+export async function saveSession(sessionId: string, messages: any[]) {
   const dateStr = new Date().toISOString().split('T')[0];
-  const logPath = path.join(getAyniteLogsDir(), dateStr, `${sessionId}.json`);
+  const logPath = getSessionPath(sessionId, dateStr);
   await writeJson(logPath, messages);
 }
 
 /**
  * Loads a specific chat session history.
  */
-export async function loadChatLog(sessionId: string, date: string) {
-  const logPath = path.join(getAyniteLogsDir(), date, `${sessionId}.json`);
+export async function loadSession(sessionId: string, date: string) {
+  const logPath = getSessionPath(sessionId, date);
   return await readJson(logPath);
 }
 
 /**
  * Lists all saved chat sessions.
  */
-export async function listChatLogs() {
-  const logsBaseDir = getAyniteLogsDir();
+export async function listSessions() {
+  const logsBaseDir = getAyniteSessionsDir();
   const allLogs: any[] = [];
 
   try {
@@ -43,13 +46,13 @@ export async function listChatLogs() {
     for (const dateEntry of dates) {
       if (!dateEntry.isDirectory()) continue;
       const date = dateEntry.name;
-      const dateDir = path.join(logsBaseDir, date);
+      const dateDir = getSessionsDateDir(date);
 
       const sessions = await readdir(dateDir);
       for (const sessionEntry of sessions) {
         if (!sessionEntry.name.endsWith('.json')) continue;
         const session = sessionEntry.name;
-        const sessionPath = path.join(dateDir, session);
+        const sessionPath = getSessionPath(session.replace('.json', ''), date);
         try {
           const sessionStats = await stat(sessionPath);
           const messages = await readJson(sessionPath);
@@ -80,11 +83,11 @@ export async function listChatLogs() {
 /**
  * Helper for logging raw AI events to dev.log (Dev environment only)
  */
-async function logAiEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
+async function logEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
   if (app.isPackaged) return;
 
   try {
-    const logFile = path.join(getAyniteLogsDir(), 'dev.log');
+    const logFile = getLogPath('dev.log');
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] [${type}] ${JSON.stringify(payload, null, 2)}\n${'-'.repeat(80)}\n`;
 
@@ -104,11 +107,12 @@ export async function handleAiChat(mainWindow: BrowserWindow, { messages, config
   activeFile?: string
 }) {
   const ayniteDir = getAyniteDir();
-  if (!workspaceFolders.some(f => path.resolve(f) === path.resolve(ayniteDir))) {
+  // We'll keep this simple check as it doesn't involve complex path assembly
+  if (!workspaceFolders.some(f => f === ayniteDir)) {
     workspaceFolders = [...workspaceFolders, ayniteDir];
   }
 
-  logAiEvent('REQUEST', { config, messages });
+  logEvent('REQUEST', { config, messages });
 
   try {
     const model = getAIModel(config);
@@ -162,10 +166,10 @@ export async function handleAiChat(mainWindow: BrowserWindow, { messages, config
             });
           }
 
-          mainWindow.webContents.send(`api:ai-chat-delta:${requestId}`, part);
+          mainWindow.webContents.send(`aynite:ai-chat-delta:${requestId}`, part);
         }
 
-        logAiEvent('RESPONSE', {
+        logEvent('RESPONSE', {
           text: fullResponseText,
           reasoning: fullReasoningText,
           toolCalls: fullToolCalls,
@@ -173,14 +177,14 @@ export async function handleAiChat(mainWindow: BrowserWindow, { messages, config
         });
 
       } catch (e: any) {
-        logAiEvent('ERROR', { error: e.message });
-        mainWindow.webContents.send(`api:ai-chat-delta:${requestId}`, { type: 'error', error: e.message });
+        logEvent('ERROR', { error: e.message });
+        mainWindow.webContents.send(`aynite:ai-chat-delta:${requestId}`, { type: 'error', error: e.message });
       }
     })();
 
     return { requestId };
   } catch (e: any) {
-    logAiEvent('ERROR', { error: e.message });
+    logEvent('ERROR', { error: e.message });
     return { error: e.message };
   }
 }

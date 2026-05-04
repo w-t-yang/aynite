@@ -245,7 +245,7 @@ export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }:
   }, [messages, loading]);
 
   const loadSessions = async () => {
-    const res = await aynite.listChatLogs();
+    const res = await aynite.listSessions();
     setSessions(res);
   };
 
@@ -373,7 +373,7 @@ export function AIChatPage({ activeTabPath, workspaceFolders = [], onOpenFile }:
             }))}
             selectedIndex={-1}
             onSelect={(item) => {
-              aynite.loadChatLog(item.id, item.date).then(setMessages);
+              aynite.loadSession(item.id, item.date).then(setMessages);
               setSessionId(item.id);
               setShowHistory(false);
             }}

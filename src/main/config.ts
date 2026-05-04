@@ -24,9 +24,7 @@ import {
   copy,
   AYNITE_SUBDIRS
 } from '../lib/path';
-import { 
-  getDefaultGlobalPrompts, restoreDefaultPrompts 
-} from './ai';
+import { getDefaultGlobalPrompts, restoreDefaultPrompts } from './ai/prompts';
 import { 
   DEFAULT_AI_CONFIG, 
   AGENT_PROMPTS, 
@@ -569,8 +567,10 @@ export async function saveWorkspaceState(workspaceName: string, tabs: any[], act
   await writeJson(workspacePath, data);
 }
 
-export async function addWorkspaceFolder(workspaceName: string, folderPath: string) {
-  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+export async function addWorkspaceFolder(folderPath: string, workspaceName?: string) {
+  const wsConfig = await getWorkspacesConfig();
+  const targetWs = workspaceName || wsConfig.active;
+  const workspacePath = getAynitePath('workspaces', `${targetWs}.json`);
   const data: any = await readJson(workspacePath, { folders: [], tabs: [], activeTabId: '' });
   if (!data.folders.includes(folderPath)) {
     data.folders.push(folderPath);
@@ -578,27 +578,35 @@ export async function addWorkspaceFolder(workspaceName: string, folderPath: stri
   }
 }
 
-export async function removeWorkspaceFolder(workspaceName: string, folderPath: string) {
-  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+export async function removeWorkspaceFolder(folderPath: string, workspaceName?: string) {
+  const wsConfig = await getWorkspacesConfig();
+  const targetWs = workspaceName || wsConfig.active;
+  const workspacePath = getAynitePath('workspaces', `${targetWs}.json`);
   const data: any = await readJson(workspacePath, { folders: [], tabs: [], activeTabId: '' });
   data.folders = data.folders.filter((f: string) => f !== folderPath);
   await writeJson(workspacePath, data);
 }
 
-export async function reorderWorkspaceFolders(workspaceName: string, folders: string[]) {
-  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+export async function reorderWorkspaceFolders(folders: string[], workspaceName?: string) {
+  const wsConfig = await getWorkspacesConfig();
+  const targetWs = workspaceName || wsConfig.active;
+  const workspacePath = getAynitePath('workspaces', `${targetWs}.json`);
   const data: any = await readJson(workspacePath, { folders: [], tabs: [], activeTabId: '' });
   data.folders = folders;
   await writeJson(workspacePath, data);
 }
 
-export async function getWorkspaceFolders(workspaceName: string) {
-  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+export async function getWorkspaceFolders(workspaceName?: string) {
+  const wsConfig = await getWorkspacesConfig();
+  const targetWs = workspaceName || wsConfig.active;
+  const workspacePath = getAynitePath('workspaces', `${targetWs}.json`);
   const data: any = await readJson(workspacePath, { folders: [] });
-  return data.folders;
+  return { data: data.folders }; // Index.ts expects { data: folders }
 }
 
-export async function getWorkspaceData(workspaceName: string) {
-  const workspacePath = getAynitePath('workspaces', `${workspaceName}.json`);
+export async function getWorkspaceState(workspaceName?: string) {
+  const wsConfig = await getWorkspacesConfig();
+  const targetWs = workspaceName || wsConfig.active;
+  const workspacePath = getAynitePath('workspaces', `${targetWs}.json`);
   return await readJson<any>(workspacePath, { folders: [], tabs: [], activeTabId: '' });
 }

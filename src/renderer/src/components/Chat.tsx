@@ -512,7 +512,7 @@ export default function ChatTab({
   const [sessions, setSessions] = useState<any[]>([]);
   const loadSessions = async () => {
     // @ts-ignore
-    const res = await window.api.listChatLogs();
+    const res = await window.api.listSessions();
     if (res && res.data) {
       setSessions(res.data);
     }
@@ -599,7 +599,7 @@ export default function ChatTab({
       try {
         const { id, date } = JSON.parse(lastSession);
         // @ts-ignore
-        window.api.loadChatLog(id, date).then((res: any) => {
+        window.api.loadSession(id, date).then((res: any) => {
           if (res && res.data) {
             setMessages(normalizeAndHealMessages(res.data));
             setSessionId(id || null);
@@ -626,7 +626,7 @@ export default function ChatTab({
     if (sessionId && messages.length > 0) {
       const timer = setTimeout(() => {
         // @ts-ignore
-        window.api.saveChatLog(sessionId, messages);
+        window.api.saveSession(sessionId, messages);
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -644,7 +644,7 @@ export default function ChatTab({
     (window as any).setChatSession = (id: string, date?: string) => {
       const dateStr = date || new Date().toISOString().split('T')[0];
       // @ts-ignore
-      window.api.loadChatLog(id, dateStr).then((res: any) => {
+      window.api.loadSession(id, dateStr).then((res: any) => {
         if (res && res.data) {
           setMessages(normalizeAndHealMessages(res.data));
           setSessionId(id);

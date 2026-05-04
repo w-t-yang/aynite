@@ -1,4 +1,4 @@
-import { DEFAULT_AI_CONFIG, DEFAULT_AI_TOOLS } from './ai';
+import { DEFAULT_AI_CONFIG, DEFAULT_AI_TOOLS } from '../../../lib/constants/ai';
 import { DEFAULT_KEYBINDINGS } from './keybindings';
 
 export const DEFAULT_SETTINGS = {

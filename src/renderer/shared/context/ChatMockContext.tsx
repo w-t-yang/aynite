@@ -5,9 +5,9 @@ import { SettingsState } from '../lib/types';
 export interface ChatApi {
   getSettings: () => Promise<SettingsState>;
   updateSettings: (settings: SettingsState) => Promise<void>;
-  listChatLogs: () => Promise<{ id: string, date: string, preview: string, lastModified: number }[]>;
-  loadChatLog: (id: string, date: string) => Promise<ChatMessage[]>;
-  saveChatLog: (id: string, messages: ChatMessage[]) => Promise<void>;
+  listSessions: () => Promise<{ id: string, date: string, preview: string, lastModified: number }[]>;
+  loadSession: (id: string, date: string) => Promise<ChatMessage[]>;
+  saveSession: (id: string, messages: ChatMessage[]) => Promise<void>;
   readFile: (path: string) => Promise<string>;
   getAvailableSkills: () => Promise<{ name: string, path: string, error?: string }[]>;
   getAvailableCommands: () => Promise<{ name: string, path: string, error?: string }[]>;

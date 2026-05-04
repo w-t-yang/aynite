@@ -60,16 +60,16 @@ export function createTools(context: ToolContext) {
         const runCwd = cwd || workspaceFolders[0] || '.';
 
         const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-        mainWindow.webContents.send('api:ai-approval-request', { id: approvalId, command, cwd: runCwd });
+        mainWindow.webContents.send('aynite:ai-approval-request', { id: approvalId, command, cwd: runCwd });
 
         const approved = await new Promise<boolean>((resolve) => {
           const listener = (_: any, response: { id: string; approved: boolean }) => {
             if (response.id === approvalId) {
-              ipcMain.removeListener('api:ai-approval-response', listener);
+              ipcMain.removeListener('aynite:ai-approval-response', listener);
               resolve(response.approved);
             }
           };
-          ipcMain.on('api:ai-approval-response', listener);
+          ipcMain.on('aynite:ai-approval-response', listener);
         });
 
         if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED;
