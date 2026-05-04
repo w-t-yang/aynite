@@ -13,7 +13,9 @@ import {
   switchWorkspace,
   createWorkspace,
   getWorkspaceFolders,
+  getWorkspaceState,
 } from '../workspace';
+
 import {
   getThemesList,
   getTheme,
@@ -35,42 +37,9 @@ import {
   getAIConfigPath,
 } from '../../lib/path';
 
-const DEFAULT_LAYOUTS: LayoutConfig[] = [
-  {
-    id: 'layout-1',
-    name: 'Single',
-    layout: { type: 'leaf', id: 'tile-1', content: 'Main', size: 100 }
-  },
-  {
-    id: 'layout-2',
-    name: 'Sidebar',
-    layout: {
-      type: 'split',
-      direction: 'horizontal',
-      id: 'split-sidebar',
-      size: 100,
-      children: [
-        { type: 'leaf', id: 'tile-sidebar-left', content: 'Sidebar', size: 25 },
-        { type: 'leaf', id: 'tile-sidebar-main', content: 'Main', size: 75 }
-      ]
-    }
-  },
-  {
-    id: 'layout-3',
-    name: 'Three Columns',
-    layout: {
-      type: 'split',
-      direction: 'horizontal',
-      id: 'split-3col',
-      size: 100,
-      children: [
-        { type: 'leaf', id: 'tile-3col-1', content: 'Left', size: 20 },
-        { type: 'leaf', id: 'tile-3col-2', content: 'Center', size: 60 },
-        { type: 'leaf', id: 'tile-3col-3', content: 'Right', size: 20 }
-      ]
-    }
-  }
-];
+import { DEFAULT_WORKSPACE_CONFIG } from '../../lib/constants/workspace';
+
+
 
 /**
  * getConfig — route a ConfigKey to the appropriate data source.
@@ -81,19 +50,12 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
       const wsConfig = await getWorkspacesList();
       const configs: WorkspaceConfig[] = [];
       for (const wsName of wsConfig.list) {
-        const dataPath = getWorkspaceDataPath(wsName);
-        const data = await readJson<any>(dataPath, {});
-        configs.push({
-          id: wsName,
-          layouts: data.layouts || DEFAULT_LAYOUTS,
-          activeLayoutId: data.activeLayoutId || 'layout-1',
-          folders: data.folders || [],
-          files: data.files || [],
-          activeFile: data.activeFile,
-        });
+        const state = await getWorkspaceState(wsName);
+        configs.push(state);
       }
       return configs;
     }
+
 
     case ConfigKey.ACTIVE_WORKSPACE: {
       const wsConfig = await getWorkspacesList();
@@ -192,17 +154,8 @@ export async function routeSetConfig(key: string, payload: any): Promise<boolean
     case ConfigKey.WORKSPACE: {
       const { id, config } = payload as { id: string; config: WorkspaceConfig };
       const dataPath = getWorkspaceDataPath(id);
-      // Merge with existing data to preserve tabs/activeTabId
-      const existing = await readJson<any>(dataPath, {});
-      const merged = {
-        ...existing,
-        folders: config.folders,
-        files: config.files,
-        activeFile: config.activeFile,
-        layouts: config.layouts,
-        activeLayoutId: config.activeLayoutId,
-      };
-      await writeJson(dataPath, merged);
+      await writeJson(dataPath, { ...config, id });
+
       return true;
     }
 

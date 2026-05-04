@@ -206,6 +206,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     viewManager.registerListener(ViewRequest.OPEN_FILE, (path: string) => openFile(path))
   }, [openFile])
 
+  // Expose context to window for debugging in development
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      ;(window as any).__aynite_context = {
+        workspaceConfig,
+        workspaces,
+        activeTileId,
+        isResizing,
+        setActiveTileId,
+        loadData,
+        switchWorkspace,
+        addWorkspace,
+        switchLayout,
+        updateLayout,
+        updateTileView,
+        executeAppOperation,
+        handleResizeStart,
+        handleResizeEnd
+      }
+    }
+  }, [
+    workspaceConfig,
+    workspaces,
+    activeTileId,
+    isResizing,
+    setActiveTileId,
+    loadData,
+    switchWorkspace,
+    addWorkspace,
+    switchLayout,
+    updateLayout,
+    updateTileView,
+    executeAppOperation,
+    handleResizeStart,
+    handleResizeEnd
+  ])
+
+
+
   return (
     <AppContext.Provider
       value={{

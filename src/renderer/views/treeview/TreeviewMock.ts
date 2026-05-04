@@ -2,8 +2,9 @@ import { SidebarApi, FileNode } from '../../shared/context/SidebarMockContext';
 
 export const TreeviewMockData: SidebarApi = {
   getWorkspacesList: async () => ({
-    list: ['aynite-workspace', 'personal-project', 'experimental'],
-    active: 'aynite-workspace'
+    list: ['Aynite Playbook', 'personal-project', 'experimental'],
+    active: 'Aynite Playbook'
+
   }),
   getWorkspaceFolders: async () => ['/home/user/repos/aynite'],
   getFiles: async (dirPath: string) => {

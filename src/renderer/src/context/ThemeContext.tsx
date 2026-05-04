@@ -86,6 +86,19 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     })
   }, [loadThemes, applyThemeColors])
 
+  // Expose theme context to window for debugging in development
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      ;(window as any).__aynite_theme = {
+        activeTheme,
+        themes,
+        setTheme,
+        loadThemes
+      }
+    }
+  }, [activeTheme, themes, setTheme, loadThemes])
+
+
   return (
     <ThemeContext.Provider value={{ activeTheme, themes, setTheme, loadThemes }}>
       {children}

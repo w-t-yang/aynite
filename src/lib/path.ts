@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { ERROR_MESSAGES } from './constants/messages';
 
-const AYNITE_DIR = path.join(homedir(), '.aynite-desktop');
+const AYNITE_DIR = path.join(homedir(), '.aynite');
 
 export const AYNITE_SUBDIRS = {
   CONFIG: 'config',
@@ -77,8 +77,9 @@ export function getWorkspacesDir() {
 }
 
 export function getWorkspaceDataPath(name: string) {
-  return path.join(getWorkspacesDir(), `${name}.json`);
+  return path.join(getWorkspacesDir(), name, 'config.json');
 }
+
 
 export function getAIConfigPath() {
   return path.join(getAyniteConfigDir(), 'ai.json');
@@ -347,7 +348,7 @@ async function getFileTree(dirPath: string, depth: number = 10, currentDepth: nu
         output += await getFileTree(path.join(expanded, file.name), depth, currentDepth + 1);
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return output;
 }
 
@@ -376,7 +377,7 @@ async function grepSearch(folderPath: string, pattern: string): Promise<string[]
                 }
               });
             }
-          } catch (e) {}
+          } catch (e) { }
         }
       }
     }

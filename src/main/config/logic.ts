@@ -34,6 +34,11 @@ import {
 import { initThemes } from '../theme';
 import { restoreSkill, restoreCommand, getSkillsConfig, getCommandsConfig, setSpellsNotificationCallback } from '../spells';
 
+import { 
+  DEFAULT_WORKSPACE_ID,
+  DEFAULT_WORKSPACE_CONFIG 
+} from '../../lib/constants/workspace';
+
 let notificationCallback: ((data: { type: 'skill' | 'command', path: string, error: string }) => void) | null = null;
 
 export function setConfigNotificationCallback(cb: typeof notificationCallback) {
@@ -50,6 +55,7 @@ export function getBundledResourcesPath(): string {
     return joinPaths(process.cwd(), 'resources');
   }
 }
+
 
 export async function initAppFolders() {
   const baseDir = getAyniteDir();
@@ -77,7 +83,7 @@ export async function initAppFolders() {
     }
   };
   const ignoreDefault = ['node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
-  const workspacesDefault = { active: 'aynite-workspace', list: ['aynite-workspace'] };
+  const workspacesDefault = { active: DEFAULT_WORKSPACE_ID, list: [DEFAULT_WORKSPACE_ID] };
 
   await writeJson(getAIConfigPath(), aiDefault);
   await writeJson(getKeybindingsConfigPath(), keybindingsDefault);
@@ -92,56 +98,27 @@ export async function initAppFolders() {
   await restoreAynitePlaybook();
   await initThemes();
 
-  // Migrate/Initialize workspaces.json
+  // Initialize workspaces.json if missing
   const workspacesJsonPath = getWorkspacesConfigPath();
-  let workspacesConfig: any = null;
-  if (await exists(workspacesJsonPath)) {
-    try {
-      workspacesConfig = await readJson(workspacesJsonPath);
-      if (workspacesConfig.active === 'default workspace') {
-        workspacesConfig.active = 'aynite-workspace';
-        workspacesConfig.list = (workspacesConfig.list || []).map((ws: string) => ws === 'default workspace' ? 'aynite-workspace' : ws);
-        if (!workspacesConfig.list.includes('aynite-workspace')) workspacesConfig.list.push('aynite-workspace');
-        await writeJson(workspacesJsonPath, workspacesConfig);
-      }
-    } catch (e) {
-      console.error('Error migrating workspaces.json:', e);
-    }
+  if (!(await exists(workspacesJsonPath))) {
+    await writeJson(workspacesJsonPath, workspacesDefault);
   }
 
-  if (!workspacesConfig) {
-    await writeJson(getWorkspacesConfigPath(), workspacesDefault);
+  // Ensure default workspace config exists
+  const defaultWorkspacePath = getWorkspaceDataPath(DEFAULT_WORKSPACE_ID);
+  if (!(await exists(defaultWorkspacePath))) {
+    const playbookPath = getPlaybookPath();
+    // Add playbook to default folders if it's the first time
+    const initialConfig = { 
+      ...DEFAULT_WORKSPACE_CONFIG, 
+      id: DEFAULT_WORKSPACE_ID,
+      folders: [playbookPath] 
+    };
+    await writeJson(defaultWorkspacePath, initialConfig);
   }
 
-  // Ensure aynite-workspace.json exists
-  const defaultWorkspacePath = getWorkspaceDataPath('aynite-workspace');
-  const playbookPath = getPlaybookPath();
-  const welcomeMdPath = getWelcomeMdPath();
+  // Ensure default skills/commands
 
-  let shouldInitWorkspaceFile = !(await exists(defaultWorkspacePath));
-  if (!shouldInitWorkspaceFile) {
-    try {
-      const wsData = await readJson(defaultWorkspacePath);
-      if ((!wsData.folders || wsData.folders.length === 0) && (!wsData.tabs || wsData.tabs.length === 0)) {
-        shouldInitWorkspaceFile = true;
-      }
-    } catch {
-      shouldInitWorkspaceFile = true;
-    }
-  }
-
-  if (shouldInitWorkspaceFile) {
-    await writeJson(defaultWorkspacePath, {
-      folders: [playbookPath],
-      tabs: [{
-        id: `file-${welcomeMdPath}`,
-        type: 'file',
-        title: 'Welcome.md',
-        filepath: welcomeMdPath
-      }],
-      activeTabId: `file-${welcomeMdPath}`
-    });
-  }
 
   // Ensure default skills/commands
   for (const skillName of ['skill-creator', 'command-creator', 'hello-skill', 'theme-creator']) {
