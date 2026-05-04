@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Button } from '../../shared/basic/Button'
 import Dropdown from './shared/Dropdown'
 import FormModal from './shared/compound/FormModal'
 import { useApp } from '../context/AppContext'
@@ -9,107 +10,36 @@ const TitleBar: React.FC = () => {
 
   const { themes, activeTheme, setTheme } = useTheme()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
-  const platform = (window as any).aynite.platform
-  const isMac = platform === 'darwin'
 
   if (!workspaceConfig) return null
 
-  const WindowButtons = () => (
-    <div
-      className={`flex items-center gap-1.5 px-3 no-drag ${isMac ? 'order-first' : 'order-last'}`}
-    >
-      {isMac ? (
-        <div className="flex items-center gap-2 pr-2">
-          <button
-            onClick={() => (window as any).aynite.close()}
-            className="w-3 h-3 rounded-full bg-[#ff5f56] hover:brightness-90 transition-all border border-black/10"
-          />
-          <button
-            onClick={() => (window as any).aynite.minimize()}
-            className="w-3 h-3 rounded-full bg-[#ffbd2e] hover:brightness-90 transition-all border border-black/10"
-          />
-          <button
-            onClick={() => (window as any).aynite.maximize()}
-            className="w-3 h-3 rounded-full bg-[#27c93f] hover:brightness-90 transition-all border border-black/10"
-          />
-        </div>
-      ) : (
-        <>
-          <button
-            onClick={() => (window as any).aynite.minimize()}
-            className="p-2 hover:bg-white/10 rounded-md transition-colors text-muted-foreground"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12">
-              <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </button>
-          <button
-            onClick={() => (window as any).aynite.maximize()}
-            className="p-2 hover:bg-white/10 rounded-md transition-colors text-muted-foreground"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12">
-              <rect
-                x="1.5"
-                y="1.5"
-                width="9"
-                height="9"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-            </svg>
-          </button>
-          <button
-            onClick={() => (window as any).aynite.close()}
-            className="p-2 hover:bg-red-500 hover:text-white rounded-md transition-colors text-muted-foreground"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12">
-              <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </button>
-        </>
-      )}
-    </div>
-  )
-
   return (
     <>
-      <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-1">
-        <div className="flex items-center no-drag">
-          {isMac && <WindowButtons />}
-          <div className="flex items-center gap-1 ml-2">
-            {[
-              { id: 'layout-1', label: '1', title: 'Single Tile' },
-              { id: 'layout-2', label: '2', title: 'Split View' },
-              { id: 'layout-3', label: '3', title: 'Triple Column' }
-            ].map((layout) => (
-              <button
-                key={layout.id}
-                onClick={() => switchLayout(layout.id)}
-                title={layout.title}
-                className={`w-6 h-6 flex items-center justify-center rounded text-[11px] font-bold transition-all ${
-                  workspaceConfig.activeLayoutId === layout.id
-                    ? 'bg-accent text-accent-foreground shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)]'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                {layout.label}
-              </button>
-            ))}
-          </div>
+      <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2">
+        {/* Left: Layout switcher (dynamic from workspace config) */}
+        <div className="flex items-center gap-1 no-drag">
+          {workspaceConfig.layouts.map((layout) => (
+            <Button
+              key={layout.id}
+              variant={workspaceConfig.activeLayoutId === layout.id ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => switchLayout(layout.id)}
+              title={layout.name}
+            >
+              {layout.name}
+            </Button>
+          ))}
         </div>
 
-        <div className="flex-1 flex justify-center items-center gap-2">
+        {/* Center: Workspace switcher */}
+        <div className="flex-1 flex justify-center items-center no-drag">
           <Dropdown
             trigger={
-              <button className="no-drag px-3 py-1 rounded-md hover:bg-muted transition-colors flex items-center gap-2 group">
-                <span className="text-[13px] font-medium text-foreground group-hover:text-accent transition-colors">
-                  {workspaceConfig.id}
-                </span>
+              <Button variant="ghost" size="sm" className="flex items-center gap-1.5">
+                <span>{workspaceConfig.id}</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-3.5 w-3.5 text-muted-foreground group-hover:text-accent transition-colors"
+                  className="h-3.5 w-3.5 text-muted-foreground"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -119,7 +49,7 @@ const TitleBar: React.FC = () => {
                     clipRule="evenodd"
                   />
                 </svg>
-              </button>
+              </Button>
             }
           >
             <div className="p-1.5 flex flex-col gap-0.5 min-w-[180px]">
@@ -162,12 +92,13 @@ const TitleBar: React.FC = () => {
           </Dropdown>
         </div>
 
-        <div className="flex items-center no-drag pr-1 gap-2">
-          {/* Theme Switcher */}
+        {/* Right: Theme switcher + branding */}
+        <div className="flex items-center gap-1 no-drag">
           <Dropdown
             trigger={
-              <button
-                className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-accent transition-colors"
+              <Button
+                variant="ghost"
+                size="icon"
                 title="Change Theme"
               >
                 {activeTheme?.type === 'light' ? (
@@ -201,7 +132,7 @@ const TitleBar: React.FC = () => {
                     />
                   </svg>
                 )}
-              </button>
+              </Button>
             }
             align="right"
           >
@@ -234,7 +165,6 @@ const TitleBar: React.FC = () => {
               Aynite
             </span>
           </div>
-          {!isMac && <WindowButtons />}
         </div>
       </div>
 
