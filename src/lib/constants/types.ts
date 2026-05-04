@@ -132,6 +132,10 @@ export interface AyniteWindow {
   onUpdateProgress: (callback: (progress: any) => void) => () => void
   onUpdateDownloaded: (callback: (info: any) => void) => () => void
 
+  // Skills & Commands
+  getAvailableSkills: () => Promise<any[]>
+  getAvailableCommands: () => Promise<any[]>
+
   // Utilities
   joinPath: (...paths: string[]) => string
   dirname: (p: string) => string
@@ -141,6 +145,5 @@ export interface AyniteWindow {
 declare global {
   interface Window {
     aynite: AyniteWindow
-    api: AyniteWindow
   }
 }

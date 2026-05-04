@@ -28,7 +28,7 @@ export async function runAgentLoop(
   const hasSystem = fullHistory.some(m => m.role === 'system');
   if (!hasSystem) {
     console.log("[Agent] No system prompt found in history, fetching merged prompt for agent files:", config.agentPromptFiles);
-    const sysPrompt = await window.api.getMergedSystemPrompt(undefined, config.agentPromptFiles);
+    const sysPrompt = await window.aynite.getMergedSystemPrompt(undefined, config.agentPromptFiles);
     console.log("[Agent] Injected system prompt length:", (sysPrompt || "").length);
     const sysMsg: ChatMessage = {
       id: genId(),
@@ -149,7 +149,7 @@ export async function runAgentLoop(
   let requestId;
   try {
     // @ts-ignore
-    const res = await window.api.aiChat({
+    const res = await window.aynite.aiChat({
       messages: apiMessages,
       config: {
         provider: config.provider,
@@ -197,7 +197,7 @@ export async function runAgentLoop(
 
     // Listen for approval requests
     // @ts-ignore
-    const removeApprovalListener = window.api.onAiApprovalRequest(async (data: { id: string, command: string, cwd: string }) => {
+    const removeApprovalListener = window.aynite.onAiApprovalRequest(async (data: { id: string, command: string, cwd: string }) => {
       onEvent({
         type: 'approval_request',
         content: `Run command: ${data.command}`,
@@ -207,11 +207,11 @@ export async function runAgentLoop(
       });
       const approved = await requestApproval(data.command, data.cwd);
       // @ts-ignore
-      window.api.sendAiApprovalResponse({ id: data.id, approved });
+      window.aynite.respondToAiApproval(data.id, approved);
     });
 
     // @ts-ignore
-    const removeDeltaListener = window.api.onAiChatDelta(requestId, (part: any) => {
+    const removeDeltaListener = window.aynite.onAiChatDelta(requestId, (part: any) => {
       if (abortSignal?.aborted) {
         removeDeltaListener();
         removeApprovalListener();

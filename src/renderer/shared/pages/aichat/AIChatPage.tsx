@@ -260,7 +260,7 @@ export function AIChatPage({
   const [sessions, setSessions] = useState<any[]>([]);
   const loadSessions = async () => {
     // @ts-ignore
-    const res = await window.api.listSessions();
+    const res = await window.aynite.listChatLogs();
     if (res) {
       setSessions(res);
     }
@@ -347,7 +347,7 @@ export function AIChatPage({
       try {
         const { id, date } = JSON.parse(lastSession);
         // @ts-ignore
-        window.api.loadSession(id, date).then((res: any) => {
+        window.aynite.loadChatLog(id, date).then((res: any) => {
           if (res) {
             setMessages(normalizeAndHealMessages(res));
             setSessionId(id || null);
@@ -374,7 +374,7 @@ export function AIChatPage({
     if (sessionId && messages.length > 0) {
       const timer = setTimeout(() => {
         // @ts-ignore
-        window.api.saveSession(sessionId, messages);
+        window.aynite.saveChatLog(sessionId, messages);
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -392,7 +392,7 @@ export function AIChatPage({
     (window as any).setChatSession = (id: string, date?: string) => {
       const dateStr = date || new Date().toISOString().split('T')[0];
       // @ts-ignore
-      window.api.loadSession(id, dateStr).then((res: any) => {
+      window.aynite.loadChatLog(id, dateStr).then((res: any) => {
         if (res) {
           setMessages(normalizeAndHealMessages(res));
           setSessionId(id);
@@ -429,7 +429,7 @@ export function AIChatPage({
     if (!onOpenFile) return;
     try {
       // @ts-ignore
-      const res = await window.api.readFile(filepath);
+      const res = await window.aynite.readFile(filepath);
       if (res) {
         const name = filepath.split(/[/\\]/).pop() || filepath;
         // Ensure we pass the exactly same structure as Sidebar
@@ -494,7 +494,7 @@ export function AIChatPage({
         setLoading(true);
         try {
           // @ts-ignore
-          const res = await window.api.runDirectCommand({
+          const res = await window.aynite.runDirectCommand({
             commandPath: path,
             params: params,
             currentFile: activeTabPath
@@ -530,7 +530,7 @@ export function AIChatPage({
           const [full, name, path] = match;
           try {
             // @ts-ignore
-            const res = await window.api.runDirectCommand({
+            const res = await window.aynite.runDirectCommand({
               commandPath: path,
               params: [],
               currentFile: activeTabPath
@@ -764,11 +764,11 @@ export function AIChatPage({
     // Use first workspace folder as base if available
     const baseDir = workspaceFolders.length > 0 ? workspaceFolders[0] : '';
     // @ts-ignore
-    const fullPath = baseDir ? await window.api.joinPath(baseDir, filename) : filename;
+    const fullPath = baseDir ? await window.aynite.joinPath(baseDir, filename) : filename;
 
     try {
       // @ts-ignore
-      await window.api.saveFile(fullPath, text);
+      await window.aynite.writeFile(fullPath, text);
     } catch (err) {
       console.error('Failed to save file', err);
     }
@@ -907,9 +907,9 @@ export function AIChatPage({
             workspaceFolders={workspaceFolders}
             focusKeybinding={settings.keybindings.agent.focusChat}
             submitKeybinding={settings.keybindings.agent.submit}
-            getFiles={async (...args) => (await (window as any).api.getFiles(...args))}
-            getAvailableSkills={async (...args) => (await (window as any).api.getAvailableSkills(...args))}
-            getAvailableCommands={async (...args) => (await (window as any).api.getAvailableCommands(...args))}
+            getFiles={async (...args) => (await window.aynite.getFiles(...args))}
+            getAvailableSkills={async (...args) => (await window.aynite.getAvailableSkills(...args))}
+            getAvailableCommands={async (...args) => (await window.aynite.getAvailableCommands(...args))}
           />
         </div>
       </div>

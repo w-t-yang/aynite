@@ -150,17 +150,6 @@ const aynite = {
   dirname: (p: string) => getDirname(p),
   platform: process.platform,
 
-  // ── Legacy aliases (for window.api backward compat) ─────────────────────
-  saveFile: (path: string, content: string) =>
-    ipcRenderer.invoke(FileChannels.SAVE, { path, content }),
-  listSessions: () =>
-    ipcRenderer.invoke(AiChannels.SESSION_LIST),
-  loadSession: (sessionId: string, date: string) =>
-    ipcRenderer.invoke(AiChannels.SESSION_LOAD, { sessionId, date }),
-  saveSession: (sessionId: string, messages: any[]) =>
-    ipcRenderer.invoke(AiChannels.SESSION_SAVE, { sessionId, messages }),
-  sendAiApprovalResponse: (payload: { id: string; approved: boolean }) =>
-    ipcRenderer.send(AiEventChannels.APPROVAL_RESPONSE, payload),
   getAvailableSkills: () =>
     ipcRenderer.invoke(SpellChannels.SKILL_LIST),
   getAvailableCommands: () =>
@@ -183,13 +172,10 @@ const aynite = {
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('aynite', aynite);
-    contextBridge.exposeInMainWorld('api', aynite); // Legacy alias
   } catch (error) {
     console.error(error);
   }
 } else {
   // @ts-ignore
   window.aynite = aynite;
-  // @ts-ignore
-  window.api = aynite;
 }

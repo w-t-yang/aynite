@@ -98,7 +98,7 @@ function FileViewer({
       try {
         const path = id.startsWith('file-') ? id.replace('file-', '') : id;
         // @ts-ignore
-        const res = await window.api.getFileInfo(path);
+        const res = await window.aynite.getFileInfo(path);
         setFileInfo(res);
       } catch (e: any) {
         console.error('Failed to fetch file info:', e);
@@ -133,7 +133,7 @@ function FileViewer({
   useEffect(() => {
     // Listen for file system changes
     // @ts-ignore
-    const cleanup = window.api.onFileSystemChange((data) => {
+    const cleanup = window.aynite.onFileSystemChange((data) => {
       const currentPath = id.startsWith('file-') ? id.replace('file-', '') : id;
       // We normalize paths to be safe (Chokidar might use different slashes)
       const normalizedChangedPath = data.path.replace(/\\/g, '/');
@@ -171,7 +171,7 @@ function FileViewer({
     try {
       const path = id.startsWith('file-') ? id.replace('file-', '') : id;
       // @ts-ignore
-      const res = await window.api.readFile(path);
+      const res = await window.aynite.readFile(path);
       
       setLocalContent(res);
       if (onRefresh) {
@@ -182,7 +182,7 @@ function FileViewer({
       setExternalChangeDetected(false);
       // Also update file info to get latest metadata
       // @ts-ignore
-      const infoRes = await window.api.getFileInfo(path);
+      const infoRes = await window.aynite.getFileInfo(path);
       setFileInfo(infoRes);
     } catch (e: any) {
       console.error('Failed to refresh file:', e);

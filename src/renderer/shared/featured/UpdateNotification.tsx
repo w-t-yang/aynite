@@ -9,17 +9,17 @@ export default function UpdateNotification() {
   const [updateError, setUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!window.api) return;
+    if (!window.aynite) return;
 
-    const unsubChecking = window.api.onUpdateChecking(() => setUpdateStatus('checking'));
+    const unsubChecking = window.aynite.onUpdateChecking(() => setUpdateStatus('checking'));
     const unsubAvailable = (info: any) => {
       setUpdateStatus('available');
       setUpdateInfo(info);
     };
-    const offAvailable = window.api.onUpdateAvailable(unsubAvailable);
+    const offAvailable = window.aynite.onUpdateAvailable(unsubAvailable);
     
-    const unsubNotAvailable = window.api.onUpdateNotAvailable(() => setUpdateStatus('idle'));
-    const unsubError = window.api.onUpdateError((err: string) => {
+    const unsubNotAvailable = window.aynite.onUpdateNotAvailable(() => setUpdateStatus('idle'));
+    const unsubError = window.aynite.onUpdateError((err: string) => {
       setUpdateStatus('error');
       setUpdateError(err);
     });
@@ -27,13 +27,13 @@ export default function UpdateNotification() {
       setUpdateStatus('downloading');
       setUpdateProgress(progress.percent);
     };
-    const offProgress = window.api.onUpdateProgress(unsubProgress);
+    const offProgress = window.aynite.onUpdateProgress(unsubProgress);
     
     const unsubDownloaded = (info: any) => {
       setUpdateStatus('downloaded');
       setUpdateInfo(info);
     };
-    const offDownloaded = window.api.onUpdateDownloaded(unsubDownloaded);
+    const offDownloaded = window.aynite.onUpdateDownloaded(unsubDownloaded);
 
     return () => {
       unsubChecking?.();
@@ -125,7 +125,7 @@ export default function UpdateNotification() {
         
         {updateStatus === 'downloaded' && (
           <button
-            onClick={() => window.api.installUpdate()}
+            onClick={() => window.aynite.installUpdate()}
             className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 mt-1"
           >
             <RefreshCw size={14} /> Restart and Update
