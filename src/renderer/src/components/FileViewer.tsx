@@ -99,8 +99,7 @@ function FileViewer({
         const path = id.startsWith('file-') ? id.replace('file-', '') : id;
         // @ts-ignore
         const res = await window.api.getFileInfo(path);
-        if (res.error) throw new Error(res.error);
-        setFileInfo(res.data);
+        setFileInfo(res);
       } catch (e: any) {
         console.error('Failed to fetch file info:', e);
         setError(e.message);
@@ -173,19 +172,18 @@ function FileViewer({
       const path = id.startsWith('file-') ? id.replace('file-', '') : id;
       // @ts-ignore
       const res = await window.api.readFile(path);
-      if (res.error) throw new Error(res.error);
       
-      setLocalContent(res.data);
+      setLocalContent(res);
       if (onRefresh) {
-        onRefresh(res.data);
+        onRefresh(res);
       } else if (onChange) {
-        onChange(res.data);
+        onChange(res);
       }
       setExternalChangeDetected(false);
       // Also update file info to get latest metadata
       // @ts-ignore
       const infoRes = await window.api.getFileInfo(path);
-      if (!infoRes.error) setFileInfo(infoRes.data);
+      setFileInfo(infoRes);
     } catch (e: any) {
       console.error('Failed to refresh file:', e);
       setError(`Failed to refresh: ${e.message}`);

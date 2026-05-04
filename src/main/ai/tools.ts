@@ -62,11 +62,11 @@ export function createTools(context: ToolContext) {
         const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         mainWindow.webContents.send('aynite:ai-approval-request', { id: approvalId, command, cwd: runCwd });
 
-        const approved = await new Promise<boolean>((resolve) => {
+        const approved = await new Promise<boolean>((done) => {
           const listener = (_: any, response: { id: string; approved: boolean }) => {
             if (response.id === approvalId) {
               ipcMain.removeListener('aynite:ai-approval-response', listener);
-              resolve(response.approved);
+              done(response.approved);
             }
           };
           ipcMain.on('aynite:ai-approval-response', listener);

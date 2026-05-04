@@ -176,8 +176,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     try {
       // @ts-ignore
       const res = await window.api.getFiles(dirPath);
-      if (res.error) throw new Error(res.error);
-      return res.data.map((f: any) => ({
+      return res.map((f: any) => ({
         id: f.path,
         name: f.name,
         isDirectory: f.isDirectory,
@@ -194,19 +193,19 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
     try {
       // @ts-ignore
       const wsConfig = await window.api.getWorkspacesList();
-      if (wsConfig && !wsConfig.error) {
-        setWorkspaces(wsConfig.data.list);
-        setActiveWorkspace(wsConfig.data.active);
+      if (wsConfig) {
+        setWorkspaces(wsConfig.list);
+        setActiveWorkspace(wsConfig.active);
       }
 
       // @ts-ignore
       const folders = await window.api.getWorkspaceFolders();
       console.log('Sidebar: loaded folders from backend', folders);
-      if (folders && Array.isArray(folders.data)) {
-        if (folders.data.length === 0) {
-          console.warn('Sidebar: Workspace has NO folders. Checked path:', folders.debugPath);
+      if (folders && Array.isArray(folders)) {
+        if (folders.length === 0) {
+          console.warn('Sidebar: Workspace has NO folders.');
         }
-        const rootNodes = folders.data.map((f: string) => ({
+        const rootNodes = folders.map((f: string) => ({
           id: f,
           name: f.split(/[\/\\]/).pop() || f,
           isDirectory: true,
@@ -264,7 +263,7 @@ export default function Sidebar({ activeTabPath, dirtyFiles = [], onWorkspaceCha
   const handleAddFolder = async () => {
     // @ts-ignore
     const res = await window.api.addWorkspaceFolder();
-    if (res && res.data) {
+    if (res) {
       await loadWorkspaceData();
     }
   };

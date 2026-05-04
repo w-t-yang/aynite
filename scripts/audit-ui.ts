@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ROOT_DIR = path.resolve(__dirname, '../../..');
+const ROOT_DIR = path.resolve(__dirname, '..');
 const SHARED_DIR = path.join(ROOT_DIR, 'src/renderer/shared');
 const VIEWS_DIR = path.join(ROOT_DIR, 'src/renderer/views');
 
@@ -55,6 +55,18 @@ const VIOLATIONS = {
     name: 'System Alert/Confirm Usage',
     regex: /\b(alert|confirm)\s*\(/g,
     description: 'Use shared/basic components or modals instead of native browser popups.'
+  },
+  DIRECT_PATH_IMPORT: {
+    key: 'path-import',
+    name: 'Direct Path Module Import',
+    regex: /import\s+.*\s+from\s+['"]path['"]/g,
+    description: 'Avoid direct "path" module imports. Use standardized path helpers from src/lib/path.ts instead.'
+  },
+  FORBIDDEN_PATH_FUNCTIONS: {
+    key: 'path-func',
+    name: 'Forbidden Path Functions',
+    regex: /(?<!\.)\b(?:join|dirname|resolve|extname|basename)\b(?!\s*:)(?=\s*\()|(?<!\.)\bsep\b(?!\s*:)/g,
+    description: 'Do not use raw path functions (join, dirname, etc.). Use project-specific path getters or their abstracted wrappers (joinPaths, getDirname, etc.) from lib/path.ts.'
   }
 };
 
@@ -342,6 +354,36 @@ const auditFile = (filepath: string) => {
       }
     }
   }
+
+  // 7. Direct Path Module Import
+  if (activeViolations.some(v => (v as any).key === 'path-import') && !filepath.endsWith('src/lib/path.ts')) {
+    let pathMatch;
+    while ((pathMatch = VIOLATIONS.DIRECT_PATH_IMPORT.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, pathMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.DIRECT_PATH_IMPORT.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.DIRECT_PATH_IMPORT.description
+      });
+    }
+  }
+
+  // 8. Forbidden Path Functions
+  if (activeViolations.some(v => (v as any).key === 'path-func') && !filepath.endsWith('src/lib/path.ts')) {
+    let pathMatch;
+    while ((pathMatch = VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, pathMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.description
+      });
+    }
+  }
 };
 
 targetFolders.forEach(folder => walk(folder, auditFile));
@@ -358,7 +400,9 @@ const DISPLAY_ORDER = [
   VIOLATIONS.HARDCODED_STRINGS.name,
   VIOLATIONS.COMPONENT_DUPLICATION.name,
   VIOLATIONS.ADAPTIVE_STYLES.name,
-  VIOLATIONS.SYSTEM_CALLS.name
+  VIOLATIONS.SYSTEM_CALLS.name,
+  VIOLATIONS.DIRECT_PATH_IMPORT.name,
+  VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name
 ];
 
 console.log('\n=================================================');

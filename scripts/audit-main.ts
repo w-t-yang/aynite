@@ -5,9 +5,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ROOT_DIR = path.resolve(__dirname, '../../..');
+const ROOT_DIR = path.resolve(__dirname, '..');
 const SRC_DIR = path.join(ROOT_DIR, 'src');
 const AI_DIR = path.join(SRC_DIR, 'main', 'ai');
+const WORKSPACE_DIR = path.join(SRC_DIR, 'main', 'workspace');
 const LIB_DIR = path.join(SRC_DIR, 'lib');
 
 interface AuditIssue {
@@ -32,9 +33,9 @@ const VIOLATIONS = {
   },
   MANUAL_PATH_JOIN: {
     key: 'path',
-    name: 'Manual Aynite Path Joining',
-    regex: /\bpath\.join\s*\(\s*(?:getAyniteDir\(\)|AYNITE_DIR)\b/g,
-    description: 'Use getAynitePath() or specialized helpers (getAyniteConfigDir, getMainConfigPath) from lib/path.ts.'
+    name: 'Manual Path Construction',
+    regex: /\b(?:join|joinPaths|resolve|getAbsolutePath)\s*\(\s*(?:getAyniteDir\(\)|AYNITE_DIR|getAyniteConfigDir\(\)|getAynitePath\(\)|__dirname)\b/g,
+    description: 'Use specialized path helpers from lib/path.ts (e.g., getWorkspacesConfigPath, getAIConfigPath) instead of manual joining with base directories.'
   },
   STRICT_TYPING: {
     key: 'types',
@@ -48,6 +49,18 @@ const VIOLATIONS = {
     name: 'Hardcoded AI Logic Strings',
     regex: /(?:content|prompt|message|description|name):\s*['"`]([^'"`]{50,})['"`]/g,
     description: 'Move large prompt strings, tool metadata, or system messages to lib/constants/ai.ts.'
+  },
+  DIRECT_PATH_IMPORT: {
+    key: 'path-import',
+    name: 'Direct Path Module Import',
+    regex: /import\s+.*\s+from\s+['"]path['"]/g,
+    description: 'Avoid direct "path" module imports. Use standardized path helpers from src/lib/path.ts instead.'
+  },
+  FORBIDDEN_PATH_FUNCTIONS: {
+    key: 'path-func',
+    name: 'Forbidden Path Functions',
+    regex: /(?<!\.)\b(?:join|dirname|resolve|extname|basename)\b(?!\s*:)(?=\s*\()|(?<!\.)\bsep\b(?!\s*:)/g,
+    description: 'Do not use raw path functions (join, dirname, etc.). Use project-specific path getters or their abstracted wrappers (joinPaths, getDirname, etc.) from lib/path.ts.'
   }
 };
 
@@ -75,7 +88,7 @@ const activeViolations = focusArg
 
 const targetFolders = folderArg 
   ? [path.resolve(ROOT_DIR, folderArg)] 
-  : [AI_DIR, path.join(SRC_DIR, 'main', 'config.ts')];
+  : [path.join(SRC_DIR, 'main'), path.join(SRC_DIR, 'lib')];
 
 function walk(dir: string, callback: (f: string) => void) {
   if (!fs.existsSync(dir)) return;
@@ -107,8 +120,6 @@ const auditFile = (filepath: string) => {
   const content = fs.readFileSync(filepath, 'utf8');
   const lines = content.split('\n');
 
-  const isInsideAI = filepath.startsWith(AI_DIR);
-
   // 1. Import Boundary Audit
   if (activeViolations.some(v => (v as any).key === 'import')) {
     const importRegex = /import\s+.*\s+from\s+['"](.*)['"]/g;
@@ -119,21 +130,46 @@ const auditFile = (filepath: string) => {
 
       if (importPath.startsWith('.')) {
         const resolvedPath = path.resolve(path.dirname(filepath), importPath);
+        
+        const isInsideAI = filepath.startsWith(AI_DIR);
+        const isInsideWorkspace = filepath.startsWith(WORKSPACE_DIR);
+        const subsystemDir = isInsideAI ? AI_DIR : (isInsideWorkspace ? WORKSPACE_DIR : null);
+
         const targetIsInsideAI = resolvedPath.startsWith(AI_DIR);
+        const targetIsInsideWorkspace = resolvedPath.startsWith(WORKSPACE_DIR);
+        
         const targetIsAIIndex = resolvedPath === path.join(AI_DIR, 'index.ts') || resolvedPath === path.join(AI_DIR, 'index');
+        const targetIsWorkspaceIndex = resolvedPath === path.join(WORKSPACE_DIR, 'index.ts') || resolvedPath === path.join(WORKSPACE_DIR, 'index');
 
         let violation = false;
         let msg = '';
 
-        if (!isInsideAI && targetIsInsideAI && !targetIsAIIndex) {
-          violation = true;
-          msg = 'External modules should only import from src/main/ai/index.ts to maintain subsystem isolation.';
-        } else if (isInsideAI) {
+        if (!subsystemDir) {
+          // Outside any subsystem
+          if (targetIsInsideAI && !targetIsAIIndex) {
+            violation = true;
+            msg = 'External modules should only import from src/main/ai/index.ts to maintain subsystem isolation.';
+          } else if (targetIsInsideWorkspace && !targetIsWorkspaceIndex) {
+            violation = true;
+            msg = 'External modules should only import from src/main/workspace/index.ts to maintain subsystem isolation.';
+          }
+        } else {
+          // Inside a subsystem
           const targetIsInsideLib = resolvedPath.startsWith(LIB_DIR);
           const targetIsSibling = path.dirname(resolvedPath) === path.dirname(filepath);
-          
-          if (!targetIsInsideLib && !targetIsSibling && targetIsInsideAI) {
-             // Exception: importing from subfolders or parent within AI is allowed if it's siblings/children
+          const targetIsInsideSameSubsystem = resolvedPath.startsWith(subsystemDir);
+
+          if (!targetIsInsideLib && !targetIsSibling && targetIsInsideSameSubsystem) {
+             // Exception: subfolders within same subsystem
+          } else if (!targetIsInsideLib && !targetIsInsideSameSubsystem) {
+            // Importing from another subsystem or external
+            if (targetIsInsideAI && !targetIsAIIndex) {
+              violation = true;
+              msg = 'Subsystems should only import from src/main/ai/index.ts of other subsystems.';
+            } else if (targetIsInsideWorkspace && !targetIsWorkspaceIndex) {
+              violation = true;
+              msg = 'Subsystems should only import from src/main/workspace/index.ts of other subsystems.';
+            }
           }
         }
 
@@ -166,7 +202,7 @@ const auditFile = (filepath: string) => {
   }
 
   // 3. Manual Path Join
-  if (activeViolations.some(v => (v as any).key === 'path')) {
+  if (activeViolations.some(v => (v as any).key === 'path') && !filepath.endsWith('src/lib/path.ts')) {
     let pathMatch;
     while ((pathMatch = VIOLATIONS.MANUAL_PATH_JOIN.regex.exec(content)) !== null) {
       const lineNum = content.substring(0, pathMatch.index).split('\n').length;
@@ -228,6 +264,35 @@ const auditFile = (filepath: string) => {
         line: lineNum,
         snippet: lines[lineNum - 1].trim(),
         message: VIOLATIONS.HARDCODED_STRINGS.description
+      });
+    }
+  }
+
+  // 6. Direct Path Module Import
+  if (activeViolations.some(v => (v as any).key === 'path-import') && !filepath.endsWith('src/lib/path.ts')) {
+    let pathMatch;
+    while ((pathMatch = VIOLATIONS.DIRECT_PATH_IMPORT.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, pathMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.DIRECT_PATH_IMPORT.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.DIRECT_PATH_IMPORT.description
+      });
+    }
+  }
+  // 7. Forbidden Path Functions
+  if (activeViolations.some(v => (v as any).key === 'path-func') && !filepath.endsWith('src/lib/path.ts')) {
+    let pathMatch;
+    while ((pathMatch = VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, pathMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.description
       });
     }
   }

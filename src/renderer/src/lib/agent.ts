@@ -28,10 +28,8 @@ export async function runAgentLoop(
   const hasSystem = fullHistory.some(m => m.role === 'system');
   if (!hasSystem) {
     console.log("[Agent] No system prompt found in history, fetching merged prompt for agent files:", config.agentPromptFiles);
-    // @ts-ignore
-    const sysPromptRes = await window.api.getMergedSystemPrompt(undefined, config.agentPromptFiles);
-    const sysPrompt = (sysPromptRes && sysPromptRes.data) ? sysPromptRes.data : "";
-    console.log("[Agent] Injected system prompt length:", sysPrompt.length);
+    const sysPrompt = await window.api.getMergedSystemPrompt(undefined, config.agentPromptFiles);
+    console.log("[Agent] Injected system prompt length:", (sysPrompt || "").length);
     const sysMsg: ChatMessage = {
       id: genId(),
       role: 'system',
@@ -148,24 +146,26 @@ export async function runAgentLoop(
 
   console.log("[Agent] Sending messages to backend:", apiMessages.length);
 
-  // @ts-ignore
-  const { requestId, error } = await window.api.aiChat({
-    messages: apiMessages,
-    config: {
-      provider: config.provider,
-      apiKey: config.apiKey,
-      baseUrl: config.baseUrl,
-      model: config.model,
-      compatibility: config.compatibility,
-      enabledTools: config.enabledTools
-    },
-    workspaceFolders,
-    activeFile
-  });
-
-  if (error) {
-    const errorMsg: ChatMessage = { id: genId(), role: 'assistant', content: `❌ **AI Error**: ${error}` };
-    onEvent({ type: 'error', content: `AI Error: ${error}` });
+  let requestId;
+  try {
+    // @ts-ignore
+    const res = await window.api.aiChat({
+      messages: apiMessages,
+      config: {
+        provider: config.provider,
+        apiKey: config.apiKey,
+        baseUrl: config.baseUrl,
+        model: config.model,
+        compatibility: config.compatibility,
+        enabledTools: config.enabledTools
+      },
+      workspaceFolders,
+      activeFile
+    });
+    requestId = res.requestId;
+  } catch (error: any) {
+    const errorMsg: ChatMessage = { id: genId(), role: 'assistant', content: `❌ **AI Error**: ${error.message}` };
+    onEvent({ type: 'error', content: `AI Error: ${error.message}` });
     return [...fullHistory, userMsg, errorMsg];
   }
 

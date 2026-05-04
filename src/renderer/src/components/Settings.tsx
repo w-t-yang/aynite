@@ -109,25 +109,25 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
       const activeAgent = localSettings.agents?.list?.find(a => a.id === localSettings.agents?.activeId);
       // @ts-ignore
       window.api.getMergedSystemPrompt(localSettings.prompts?.files, activeAgent?.promptFiles).then(res => {
-        if (res?.data) setMergedPrompt(res.data);
+        if (res) setMergedPrompt(res);
       });
     }
     if (activeTab === 'skills') {
       // @ts-ignore
       window.api.getAvailableSkills().then(res => {
-        if (res?.data) setAvailableSkills(res.data);
+        if (res) setAvailableSkills(res);
       });
     }
     if (activeTab === 'commands') {
       // @ts-ignore
       window.api.getAvailableCommands().then(res => {
-        if (res?.data) setAvailableCommands(res.data);
+        if (res) setAvailableCommands(res);
       });
     }
     if (activeTab === 'tools') {
       // @ts-ignore
       window.api.getTools().then(res => {
-        if (res?.data) setAvailableTools(res.data);
+        if (res) setAvailableTools(res);
       });
     }
   }, [activeTab, localSettings.prompts?.files, localSettings.agents]);
@@ -304,19 +304,19 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
   const loadThemes = async () => {
     // @ts-ignore
     const res = await window.api.getThemesList();
-    if (res?.data) setThemes(res.data);
+    if (res) setThemes(res);
   };
 
   const loadEditingTheme = useCallback(async (id: string) => {
     // @ts-ignore
     const res = await window.api.getTheme(id);
-    if (res?.data) setEditingTheme({ ...res.data, id });
+    if (res) setEditingTheme({ ...res, id });
   }, []);
 
   useEffect(() => {
     loadThemes();
     // @ts-ignore
-    window.api.getSystemFonts().then((res: any) => { if (res?.data) setSystemFonts(res.data); });
+    window.api.getSystemFonts().then((res: any) => { if (res) setSystemFonts(res); });
   }, []);
 
   useEffect(() => {
@@ -718,11 +718,11 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                   <button onClick={async () => {
                     // @ts-ignore
                     const res = await window.api.restoreDefaultPrompts();
-                    if (res && res.data) {
+                    if (res) {
                       save({
                         ...localSettings,
-                        prompts: res.data.prompts,
-                        agents: res.data.agents
+                        prompts: res.prompts,
+                        agents: res.agents
                       });
                       (window as any).showToast('Agents and Prompts restored successfully!', 'success');
                     }
@@ -736,8 +736,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                       <button onClick={async () => {
                         // @ts-ignore
                         const res = await window.api.pickPromptFile();
-                        if (res && res.data) {
-                          const newFiles = [...(localSettings.prompts?.files || []), res.data];
+                        if (res) {
+                          const newFiles = [...(localSettings.prompts?.files || []), res];
                           save({ ...localSettings, prompts: { files: Array.from(new Set(newFiles)) } });
                         }
                       }} className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add File</button>
@@ -799,8 +799,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                             <button onClick={async () => {
                               // @ts-ignore
                               const res = await window.api.pickPromptFile();
-                              if (res && res.data) {
-                                const newFiles = [...(agent.promptFiles || []), res.data];
+                              if (res) {
+                                const newFiles = [...(agent.promptFiles || []), res];
                                 handleUpdateAgent(agent.id, 'promptFiles', Array.from(new Set(newFiles)));
                               }
                             }} className="text-[10px] font-bold text-primary hover:underline transition-all flex items-center gap-1"><Plus size={10} /> Add File</button>
@@ -846,8 +846,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     <button onClick={async () => {
                       // @ts-ignore
                       const res = await window.api.pickSkillFolder();
-                      if (res && res.data) {
-                        const newFolders = [...(localSettings.skills?.folders || []), res.data];
+                      if (res) {
+                        const newFolders = [...(localSettings.skills?.folders || []), res];
                         save({ ...localSettings, skills: { folders: Array.from(new Set(newFolders)) } });
                       }
                     }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Folder</button>
@@ -864,7 +864,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                             <button onClick={async () => {
                               // @ts-ignore
                               const res = await window.api.restoreDefaultSkills();
-                              if (res && res.data) (window as any).showToast('Default skills restored successfully!', 'success');
+                              if (res) (window as any).showToast('Default skills restored successfully!', 'success');
                               else (window as any).showToast('Failed to restore default skills.', 'error');
                             }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
                           )}
@@ -913,8 +913,8 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                     <button onClick={async () => {
                       // @ts-ignore
                       const res = await window.api.pickCommandFolder();
-                      if (res && res.data) {
-                        const newFolders = [...(localSettings.commands?.folders || []), res.data];
+                      if (res) {
+                        const newFolders = [...(localSettings.commands?.folders || []), res];
                         save({ ...localSettings, commands: { folders: Array.from(new Set(newFolders)) } });
                       }
                     }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground rounded-md text-xs font-medium transition-colors"><Plus size={14} /> Add Folder</button>
@@ -931,7 +931,7 @@ export default function Settings({ settings, onSave, onClose }: SettingsProps) {
                             <button onClick={async () => {
                               // @ts-ignore
                               const res = await window.api.restoreDefaultCommands();
-                              if (res && res.data) (window as any).showToast('Default commands restored successfully!', 'success');
+                              if (res) (window as any).showToast('Default commands restored successfully!', 'success');
                               else (window as any).showToast('Failed to restore default commands.', 'error');
                             }} className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:bg-accent rounded-md text-[10px] font-medium transition-colors"><RotateCcw size={12} /> Restore Defaults</button>
                           )}

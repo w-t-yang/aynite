@@ -3,11 +3,12 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
-import path from 'path';
 import os from 'os';
 import { FSWatcher, watch } from 'chokidar';
-import { initAppFolders, loadConfig, saveConfig, getWorkspacesList, createWorkspace, switchWorkspace, addWorkspaceFolder, getWorkspaceFolders, getWorkspaceState, saveWorkspaceState, removeWorkspaceFolder, renameWorkspaceFolder, reorderWorkspaceFolders, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, setConfigNotificationCallback } from './config';
+import { initAppFolders, loadConfig, saveConfig, restoreDefaultSkills, restoreDefaultCommands, listAvailableSkills, listAvailableCommands, getThemesList, getTheme, saveTheme, restoreDefaultTheme, deleteTheme, getSystemFonts, getIgnorePatterns, setConfigNotificationCallback } from './config';
+import { joinPaths, getDirname, getAbsolutePath, getExtname, getBasename, expandHome, getPreloadPath, getRendererHtmlPath } from '../lib/path';
 import { setupAiIpc } from './ai';
+import { setupWorkspaceIpc, getWorkspaceFolders, renameWorkspaceFolder } from './workspace';
 import { setupUpdater } from './updater';
 
 
@@ -30,7 +31,7 @@ function setupWatcher(folders: string[]) {
   getIgnorePatterns().then(ignorePatterns => {
     watcher = watch(folders, {
       ignored: (p) => {
-        const basename = path.basename(p);
+        const basename = getBasename(p);
         if (folders.includes(p)) return false;
         return Array.isArray(ignorePatterns) && ignorePatterns.includes(basename);
       },
@@ -56,7 +57,7 @@ function createWindow(): void {
     title: 'Aynite',
     autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: getPreloadPath(__dirname),
       sandbox: false,
       contextIsolation: true
     }
@@ -65,7 +66,7 @@ function createWindow(): void {
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(getRendererHtmlPath(__dirname));
   }
 
   mainWindow.setMenuBarVisibility(false);
@@ -93,6 +94,7 @@ app.whenReady().then(async () => {
   createWindow();
   if (mainWindow) {
     setupAiIpc(mainWindow);
+    setupWorkspaceIpc(mainWindow, setupWatcher);
     setupUpdater(mainWindow);
 
     // Set up configuration error notifications
@@ -105,8 +107,8 @@ app.whenReady().then(async () => {
 
 
   // Initial watcher setup
-  const foldersRes = await getWorkspaceFolders();
-  setupWatcher(foldersRes.data);
+  const folders = await getWorkspaceFolders();
+  setupWatcher(folders);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -122,18 +124,11 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
-// Helper to expand ~ to home directory
-function expandHome(filepath: string): string {
-  if (filepath.startsWith('~')) {
-    return path.join(os.homedir(), filepath.slice(1));
-  }
-  return filepath;
-}
 
 // IPC handlers ported from express server.ts
 ipcMain.handle('aynite:files', async (event, dirPath: string = '.') => {
   try {
-    const resolvedPath = path.resolve(expandHome(dirPath));
+    const resolvedPath = getAbsolutePath(expandHome(dirPath));
     const files = await fs.readdir(resolvedPath, { withFileTypes: true });
 
     let ignorePatterns: string[] = [];
@@ -148,7 +143,7 @@ ipcMain.handle('aynite:files', async (event, dirPath: string = '.') => {
       .map(file => ({
         name: file.name,
         isDirectory: file.isDirectory(),
-        path: path.join(resolvedPath, file.name)
+        path: joinPaths(resolvedPath, file.name)
       }));
 
     result.sort((a, b) => {
@@ -156,76 +151,52 @@ ipcMain.handle('aynite:files', async (event, dirPath: string = '.') => {
       if (!a.isDirectory && b.isDirectory) return 1;
       return a.name.localeCompare(b.name);
     });
-    return { data: result };
+    return result;
   } catch (error: any) {
     console.error('aynite:files error:', error);
-    return { error: error.message, debug: { dirPath } };
+    throw error;
   }
 });
 
 ipcMain.handle('aynite:command', async (event, { command, cwd }: { command: string, cwd?: string }) => {
-  try {
-    const { stdout, stderr } = await execAsync(command, { cwd: cwd || process.cwd() });
-    try {
-      const parsed = JSON.parse(stdout.trim());
-      if (parsed && typeof parsed === 'object' && parsed.status === 'error') {
-        return { error: stdout.trim(), stdout, stderr };
-      }
-    } catch (e) { }
-    return { data: { stdout, stderr } };
-  } catch (error: any) {
-    return { error: error.message, stdout: error.stdout, stderr: error.stderr };
-  }
+  const { stdout, stderr } = await execAsync(command, { cwd: cwd || process.cwd() });
+  return { stdout, stderr };
 });
 
 ipcMain.handle('aynite:command-run-direct', async (event, { commandPath, params, currentFile }: { commandPath: string, params: string[], currentFile?: string }) => {
-  try {
-    const runShPath = path.join(commandPath, 'run.sh');
-    // Ensure execute permission
-    if (process.platform !== 'win32') {
-      try {
-        await fs.chmod(runShPath, 0o755);
-      } catch (e) {
-        console.error('Failed to set chmod on run.sh', e);
-      }
-    }
-
-    const env = {
-      ...process.env,
-      AYNITE_CURRENT_FILE: currentFile || ''
-    };
-
-    // Automatically resolve Aynite mentions (e.g., @file[label](path)) to raw paths
-    const resolvedParams = params.map(p => {
-      return p.replace(/@(?:file|skill|cmd)\[.*?\]\((.*?)\)/g, '$1');
-    });
-
-    // Construct the command. We wrap params in quotes to handle spaces.
-    const quotedParams = resolvedParams.map(p => `"${p.replace(/"/g, '\\"')}"`).join(' ');
-    const fullCmd = process.platform === 'win32' ? `sh "${runShPath}" ${quotedParams}` : `"${runShPath}" ${quotedParams}`;
-
-    const { stdout, stderr } = await execAsync(fullCmd, {
-      cwd: commandPath,
-      env
-    });
+  const runShPath = joinPaths(commandPath, 'run.sh');
+  if (process.platform !== 'win32') {
     try {
-      const parsed = JSON.parse(stdout.trim());
-      if (parsed && typeof parsed === 'object' && parsed.status === 'error') {
-        return { error: stdout.trim(), stdout, stderr };
-      }
-    } catch (e) { }
-    return { data: { stdout, stderr } };
-  } catch (error: any) {
-    return { error: error.message, stdout: error.stdout, stderr: error.stderr };
+      await fs.chmod(runShPath, 0o755);
+    } catch (e) {
+      console.error('Failed to set chmod on run.sh', e);
+    }
   }
+
+  const env = {
+    ...process.env,
+    AYNITE_CURRENT_FILE: currentFile || ''
+  };
+
+  const resolvedParams = params.map(p => {
+    return p.replace(/@(?:file|skill|cmd)\[.*?\]\((.*?)\)/g, '$1');
+  });
+
+  const quotedParams = resolvedParams.map(p => `"${p.replace(/"/g, '\\"')}"`).join(' ');
+  const fullCmd = process.platform === 'win32' ? `sh "${runShPath}" ${quotedParams}` : `"${runShPath}" ${quotedParams}`;
+
+  const { stdout, stderr } = await execAsync(fullCmd, {
+    cwd: commandPath,
+    env
+  });
+  return { stdout, stderr };
 });
 
 ipcMain.handle('aynite:read-file', async (event, filePath: string) => {
   try {
-    const content = await fs.readFile(expandHome(filePath), 'utf-8');
-    return { data: content };
+    return await fs.readFile(expandHome(filePath), 'utf-8');
   } catch (error: any) {
-    return { error: error.message };
+    throw error;
   }
 });
 
@@ -251,363 +222,135 @@ ipcMain.handle('aynite:file-info', async (event, filePath: string) => {
     const isText = stats.isDirectory() ? false : await checkIsTextFile(expandedPath);
 
     return {
-      data: {
-        size: stats.size,
-        createdAt: stats.birthtime,
-        modifiedAt: stats.mtime,
-        isDirectory: stats.isDirectory(),
-        path: expandedPath,
-        extension: path.extname(expandedPath).toLowerCase().slice(1),
-        isText
-      }
+      size: stats.size,
+      createdAt: stats.birthtime,
+      modifiedAt: stats.mtime,
+      isDirectory: stats.isDirectory(),
+      path: expandedPath,
+      extension: getExtname(expandedPath).toLowerCase().slice(1),
+      isText
     };
   } catch (error: any) {
-    return { error: error.message };
+    throw error;
   }
 });
 
 ipcMain.handle('aynite:load-config', async () => {
-  try {
-    const config = await loadConfig();
-    return { data: config };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await loadConfig();
 });
 
 ipcMain.handle('aynite:save-config', async (event, config) => {
-  try {
-    await saveConfig(config);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-// AI IPC handlers moved to src/main/ai/ipc.ts
-
-// Workspace IPC handlers
-ipcMain.handle('aynite:workspaces-list', async () => {
-  try {
-    const list = await getWorkspacesList();
-    return { data: list };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-create', async (event, name: string) => {
-  try {
-    const ws = await createWorkspace(name);
-    return { data: ws };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-switch', async (event, name: string) => {
-  try {
-    const ws = await switchWorkspace(name);
-    const foldersRes = await getWorkspaceFolders();
-    setupWatcher(foldersRes.data);
-    return { data: ws };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-add-folder', async () => {
-  try {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-      properties: ['openDirectory']
-    });
-    if (canceled || filePaths.length === 0) return { data: null };
-
-    await addWorkspaceFolder(filePaths[0]);
-    const foldersRes = await getWorkspaceFolders();
-    setupWatcher(foldersRes.data);
-    return { data: filePaths[0] };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-get-folders', async () => {
-  try {
-    return await getWorkspaceFolders();
-  } catch (error: any) {
-    return { data: [], error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-all-files', async () => {
-  try {
-    const foldersRes = await getWorkspaceFolders();
-    const folders = foldersRes.data;
-    const ignorePatterns = await getIgnorePatterns();
-    let allFiles: any[] = [];
-
-    async function scan(dir: string) {
-      const list = await fs.readdir(dir, { withFileTypes: true });
-      for (const file of list) {
-        if (ignorePatterns.includes(file.name)) continue;
-        const res = path.resolve(dir, file.name);
-        if (file.isDirectory()) {
-          await scan(res);
-        } else {
-          allFiles.push({
-            name: file.name,
-            path: res,
-            isDirectory: false
-          });
-        }
-      }
-    }
-
-    for (const folder of folders) {
-      if (existsSync(folder)) {
-        await scan(folder);
-      }
-    }
-
-    return { data: allFiles };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-remove-folder', async (event, folderPath: string) => {
-  try {
-    await removeWorkspaceFolder(folderPath);
-    const foldersRes = await getWorkspaceFolders();
-    setupWatcher(foldersRes.data);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-reorder-folders', async (event, folders: string[]) => {
-  try {
-    await reorderWorkspaceFolders(folders);
-    const updatedFoldersRes = await getWorkspaceFolders();
-    setupWatcher(updatedFoldersRes.data);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-get-state', async () => {
-  try {
-    const state = await getWorkspaceState();
-    return { data: state };
-  } catch (error: any) {
-    return { error: error.message };
-  }
-});
-
-ipcMain.handle('aynite:workspace-save-state', async (event, { workspaceName, tabs, activeTabId }: { workspaceName: string, tabs: any[], activeTabId: string }) => {
-  try {
-    await saveWorkspaceState(workspaceName, tabs, activeTabId);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  await saveConfig(config);
+  return true;
 });
 
 ipcMain.handle('aynite:skill-add-folder', async () => {
-  try {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-      properties: ['openDirectory']
-    });
-    if (canceled || filePaths.length === 0) return { data: null };
-    return { data: filePaths[0] };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+    properties: ['openDirectory']
+  });
+  if (canceled || filePaths.length === 0) return null;
+  return filePaths[0];
 });
 
 ipcMain.handle('aynite:skills-restore-default', async () => {
-  try {
-    const success = await restoreDefaultSkills();
-    return { data: success };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await restoreDefaultSkills();
 });
 
 ipcMain.handle('aynite:command-add-folder', async () => {
-  try {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-      properties: ['openDirectory']
-    });
-    if (canceled || filePaths.length === 0) return { data: null };
-    return { data: filePaths[0] };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+    properties: ['openDirectory']
+  });
+  if (canceled || filePaths.length === 0) return null;
+  return filePaths[0];
 });
 
 ipcMain.handle('aynite:commands-restore-default', async () => {
-  try {
-    const success = await restoreDefaultCommands();
-    return { data: success };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await restoreDefaultCommands();
 });
 
 ipcMain.handle('aynite:skills-list', async () => {
-  try {
-    const skills = await listAvailableSkills();
-    return { data: skills };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await listAvailableSkills();
 });
 
 ipcMain.handle('aynite:commands-list', async () => {
-  try {
-    const commands = await listAvailableCommands();
-    return { data: commands };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await listAvailableCommands();
 });
 
 
 ipcMain.handle('aynite:ai-pick-prompt-file', async () => {
-  try {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-      properties: ['openFile'],
-      filters: [{ name: 'Markdown', extensions: ['md'] }]
-    });
-    if (canceled || filePaths.length === 0) return { data: null };
-    return { data: filePaths[0] };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+    properties: ['openFile'],
+    filters: [{ name: 'Markdown', extensions: ['md'] }]
+  });
+  if (canceled || filePaths.length === 0) return null;
+  return filePaths[0];
 });
 
 // Prompt IPC handlers moved to src/main/ai/ipc.ts
 
 // Theme IPC handlers
 ipcMain.handle('aynite:themes-list', async () => {
-  try {
-    const themes = await getThemesList();
-    return { data: themes };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await getThemesList();
 });
 
 ipcMain.handle('aynite:theme-get', async (event, name: string) => {
-  try {
-    const theme = await getTheme(name);
-    return { data: theme };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await getTheme(name);
 });
 
 ipcMain.handle('aynite:theme-save', async (event, { name, data }) => {
-  try {
-    await saveTheme(name, data);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  await saveTheme(name, data);
+  return true;
 });
 
 ipcMain.handle('aynite:theme-restore-default', async (event, name: string) => {
-  try {
-    const result = await restoreDefaultTheme(name);
-    return { data: result };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await restoreDefaultTheme(name);
 });
 
 ipcMain.handle('aynite:theme-delete', async (event, name: string) => {
-  try {
-    const result = await deleteTheme(name);
-    return { data: result };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await deleteTheme(name);
 });
 
 ipcMain.handle('aynite:system-fonts', async () => {
-  try {
-    const fonts = await getSystemFonts();
-    return { data: fonts };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  return await getSystemFonts();
 });
 
 // File manipulation IPC handlers
 ipcMain.handle('aynite:file-create', async (event, { path: filePath, isDirectory }) => {
-  try {
-    if (isDirectory) {
-      await fs.mkdir(filePath, { recursive: true });
-    } else {
-      await fs.writeFile(filePath, '', 'utf-8');
-    }
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
+  if (isDirectory) {
+    await fs.mkdir(filePath, { recursive: true });
+  } else {
+    await fs.writeFile(filePath, '', 'utf-8');
   }
+  return true;
 });
 
 ipcMain.handle('aynite:file-rename', async (event, { oldPath, newPath }) => {
-  try {
-    await fs.rename(oldPath, newPath);
-    await renameWorkspaceFolder(oldPath, newPath);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  await fs.rename(oldPath, newPath);
+  await renameWorkspaceFolder(oldPath, newPath);
+  return true;
 });
 
 ipcMain.handle('aynite:file-copy', async (event, { srcPath, destPath }) => {
-  try {
-    await fs.cp(srcPath, destPath, { recursive: true });
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  await fs.cp(srcPath, destPath, { recursive: true });
+  return true;
 });
 
 ipcMain.handle('aynite:file-delete', async (event, filePath: string) => {
-  try {
-    await fs.rm(filePath, { recursive: true, force: true });
-    await removeWorkspaceFolder(filePath);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  await fs.rm(filePath, { recursive: true, force: true });
+  await removeWorkspaceFolder(filePath);
+  return true;
 });
 
 ipcMain.handle('aynite:file-save', async (event, { path: filePath, content }) => {
-  try {
-    const expandedPath = expandHome(filePath);
-    await fs.mkdir(path.dirname(expandedPath), { recursive: true });
-    await fs.writeFile(expandedPath, content, 'utf-8');
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  const expandedPath = expandHome(filePath);
+  await fs.mkdir(getDirname(expandedPath), { recursive: true });
+  await fs.writeFile(expandedPath, content, 'utf-8');
+  return true;
 });
 
 ipcMain.handle('aynite:open-external', async (event, url: string) => {
-  try {
-    await shell.openExternal(url);
-    return { data: true };
-  } catch (error: any) {
-    return { error: error.message };
-  }
+  await shell.openExternal(url);
+  return true;
 });
 
 ipcMain.handle('aynite:app-version', () => {

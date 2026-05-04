@@ -13,47 +13,23 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
   });
 
   ipcMain.handle('aynite:ai-save-session', async (event, { sessionId, messages }) => {
-    try {
-      await saveSession(sessionId, messages);
-      return { data: true };
-    } catch (error: any) {
-      return { error: error.message };
-    }
+    await saveSession(sessionId, messages);
+    return true;
   });
 
   ipcMain.handle('aynite:ai-load-session', async (event, { sessionId, date }) => {
-    try {
-      const data = await loadSession(sessionId, date);
-      return { data };
-    } catch (error: any) {
-      return { error: error.message };
-    }
+    return await loadSession(sessionId, date);
   });
 
   ipcMain.handle('aynite:ai-session-list', async () => {
-    try {
-      const sessions = await listSessions();
-      return { data: sessions };
-    } catch (error: any) {
-      return { error: error.message };
-    }
+    return await listSessions();
   });
 
   ipcMain.handle('aynite:ai-restore-prompts', async () => {
-    try {
-      const config = await restoreDefaultPrompts();
-      return { data: config };
-    } catch (error: any) {
-      return { error: error.message };
-    }
+    return await restoreDefaultPrompts();
   });
 
   ipcMain.handle('aynite:ai-get-merged-prompts', async (_, globalFiles?: string[], agentFiles?: string[]) => {
-    try {
-      const merged = await getMergedSystemPrompt(globalFiles, agentFiles);
-      return { data: merged };
-    } catch (error: any) {
-      return { error: error.message };
-    }
+    return await getMergedSystemPrompt(globalFiles, agentFiles);
   });
 }

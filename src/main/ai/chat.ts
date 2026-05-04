@@ -185,6 +185,6 @@ export async function handleAiChat(mainWindow: BrowserWindow, { messages, config
     return { requestId };
   } catch (e: any) {
     logEvent('ERROR', { error: e.message });
-    return { error: e.message };
+    throw e;
   }
 }

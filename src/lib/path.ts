@@ -68,8 +68,107 @@ export function getAynitePromptPath(filename: string) {
   return path.join(AYNITE_DIR, AYNITE_SUBDIRS.PROMPTS, filename);
 }
 
+export function getWorkspacesConfigPath() {
+  return path.join(getAyniteConfigDir(), 'workspaces.json');
+}
+
+export function getWorkspacesDir() {
+  return getAynitePath('workspaces');
+}
+
+export function getWorkspaceDataPath(name: string) {
+  return path.join(getWorkspacesDir(), `${name}.json`);
+}
+
+export function getAIConfigPath() {
+  return path.join(getAyniteConfigDir(), 'ai.json');
+}
+
+export function getKeybindingsConfigPath() {
+  return path.join(getAyniteConfigDir(), 'keybindings.json');
+}
+
+export function getIgnoreConfigPath() {
+  return path.join(getAyniteConfigDir(), 'ignore');
+}
+
 export function getMainConfigPath() {
   return path.join(getAyniteConfigDir(), 'config.json');
+}
+
+export function getAppearanceConfigPath() {
+  return path.join(getAyniteConfigDir(), 'appearance.json');
+}
+
+export function getThemesDir() {
+  return getAynitePath('themes');
+}
+
+export function getThemePath(name: string) {
+  return getAynitePath('themes', `${name}.json`);
+}
+
+export function getPlaybookPath() {
+  return getAynitePath('aynite-playbook');
+}
+
+export function getWelcomeMdPath() {
+  return path.join(getPlaybookPath(), 'Welcome.md');
+}
+
+export function getPreloadPath(baseDir: string) {
+  return path.resolve(baseDir, '../preload/index.js');
+}
+
+export function getRendererHtmlPath(baseDir: string) {
+  return path.resolve(baseDir, '../renderer/index.html');
+}
+
+export function getSkillsDir() {
+  return getAynitePath('skills');
+}
+
+export function getCommandsDir() {
+  return getAynitePath('commands');
+}
+
+export function getSkillPath(skillName: string) {
+  return path.join(getSkillsDir(), skillName);
+}
+
+export function getCommandPath(commandName: string) {
+  return path.join(getCommandsDir(), commandName);
+}
+
+// --- Path Utilities (Wrapped to avoid direct path module usage) ---
+
+export function getBasename(p: string, ext?: string) {
+  return path.basename(p, ext);
+}
+
+export function getDirname(p: string) {
+  return path.dirname(p);
+}
+
+export function getExtname(p: string) {
+  return path.extname(p);
+}
+
+export function getRelativePath(from: string, to: string) {
+  return path.relative(from, to);
+}
+
+export function getAbsolutePath(p: string, base?: string) {
+  if (base) return path.resolve(base, p);
+  return path.resolve(p);
+}
+
+export function getPathSep() {
+  return path.sep;
+}
+
+export function joinPaths(...parts: string[]) {
+  return path.join(...parts);
 }
 
 /**

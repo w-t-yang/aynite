@@ -61,9 +61,9 @@ export default function App() {
     setWorkspaceReady(false);
     // @ts-ignore
     const res = await window.api.getWorkspaceState();
-    if (res && res.data) {
-      setActiveWorkspaceName(res.data.name || '');
-      const restoredTabs = res.data.tabs || [];
+    if (res) {
+      setActiveWorkspaceName(res.name || '');
+      const restoredTabs = res.tabs || [];
       const validTabs: Tab[] = [];
 
       for (const tab of restoredTabs) {
@@ -72,10 +72,12 @@ export default function App() {
           const category = getFileCategory(ext);
 
           if (category === 'text' || category === 'markdown' || category === 'html') {
-            // @ts-ignore
-            const fRes = await window.api.readFile(tab.filepath);
-            if (fRes && !fRes.error) {
-              validTabs.push({ ...tab, content: fRes.data, originalContent: fRes.data, isDirty: false });
+            try {
+              // @ts-ignore
+              const content = await window.api.readFile(tab.filepath);
+              validTabs.push({ ...tab, content, originalContent: content, isDirty: false });
+            } catch (e) {
+              console.error('Failed to read file', tab.filepath, e);
             }
           } else {
             validTabs.push({ ...tab, content: '', originalContent: '', isDirty: false });
@@ -86,7 +88,7 @@ export default function App() {
       }
 
       setTabs(validTabs);
-      const restoredActiveId = res.data.activeTabId;
+      const restoredActiveId = res.activeTabId;
       setActiveTabId(validTabs.find(t => t.id === restoredActiveId) ? restoredActiveId : (validTabs.length > 0 ? validTabs[validTabs.length - 1].id : ''));
 
       // Focus the editor if a tab is active
@@ -98,9 +100,9 @@ export default function App() {
 
     // Load workspace folders for the chat agent
     // @ts-ignore
-    const foldersRes = await window.api.getWorkspaceFolders();
-    if (foldersRes && Array.isArray(foldersRes.data)) {
-      setWorkspaceFolders(foldersRes.data);
+    const folders = await window.api.getWorkspaceFolders();
+    if (folders && Array.isArray(folders)) {
+      setWorkspaceFolders(folders);
     }
 
     setWorkspaceReady(true);

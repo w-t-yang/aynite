@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { joinPaths, getDirname } from '../lib/path';
 
 const api = {
   getFiles: (path: string) => ipcRenderer.invoke('aynite:files', path),
@@ -58,8 +59,8 @@ const api = {
   getAppVersion: () => ipcRenderer.invoke('aynite:app-version'),
   
   // Util
-  joinPath: (...paths: string[]) => require('path').join(...paths),
-  dirname: (p: string) => require('path').dirname(p),
+  joinPath: (...paths: string[]) => joinPaths(...paths),
+  dirname: (p: string) => getDirname(p),
   
   // Events
   onFileSystemChange: (callback: (data: { event: string, path: string }) => void) => {

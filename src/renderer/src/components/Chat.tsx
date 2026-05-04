@@ -513,8 +513,8 @@ export default function ChatTab({
   const loadSessions = async () => {
     // @ts-ignore
     const res = await window.api.listSessions();
-    if (res && res.data) {
-      setSessions(res.data);
+    if (res) {
+      setSessions(res);
     }
   };
 
@@ -600,8 +600,8 @@ export default function ChatTab({
         const { id, date } = JSON.parse(lastSession);
         // @ts-ignore
         window.api.loadSession(id, date).then((res: any) => {
-          if (res && res.data) {
-            setMessages(normalizeAndHealMessages(res.data));
+          if (res) {
+            setMessages(normalizeAndHealMessages(res));
             setSessionId(id || null);
           }
         });
@@ -645,8 +645,8 @@ export default function ChatTab({
       const dateStr = date || new Date().toISOString().split('T')[0];
       // @ts-ignore
       window.api.loadSession(id, dateStr).then((res: any) => {
-        if (res && res.data) {
-          setMessages(normalizeAndHealMessages(res.data));
+        if (res) {
+          setMessages(normalizeAndHealMessages(res));
           setSessionId(id);
           localStorage.setItem('lastSession', JSON.stringify({ id, date: dateStr }));
           console.log(`[Chat] Switched and healed session: ${id} (${dateStr})`);
@@ -682,10 +682,10 @@ export default function ChatTab({
     try {
       // @ts-ignore
       const res = await window.api.readFile(filepath);
-      if (res && res.data) {
+      if (res) {
         const name = filepath.split(/[/\\]/).pop() || filepath;
         // Ensure we pass the exactly same structure as Sidebar
-        onOpenFile({ name, path: filepath, isDirectory: false }, res.data);
+        onOpenFile({ name, path: filepath, isDirectory: false }, res);
       }
     } catch (e) {
       console.error('Failed to open file', e);
@@ -752,13 +752,13 @@ export default function ChatTab({
             currentFile: activeTabPath
           });
 
-          const content = [res.data?.stdout, res.data?.stderr].filter(Boolean).join('\n').trim();
+          const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim();
           const userMsg: ChatMessage = { id: genId(), role: 'user', content: text };
           const cmdMsg: ChatMessage = {
             id: genId(),
             role: 'tool',
             name: name,
-            content: content || (res.error ? `Error: ${res.error}` : '(No output)')
+            content: content || '(No output)'
           };
 
           setMessages([...messages, userMsg, cmdMsg]);
@@ -789,9 +789,8 @@ export default function ChatTab({
             });
             commandResults.push({
               name,
-              stdout: res.data?.stdout || '',
-              stderr: res.data?.stderr || '',
-              error: res.error
+              stdout: res.stdout || '',
+              stderr: res.stderr || '',
             });
           } catch (e: any) {
             commandResults.push({ name, stdout: '', stderr: e.message, error: e.message });
@@ -1160,9 +1159,9 @@ export default function ChatTab({
             workspaceFolders={workspaceFolders}
             focusKeybinding={settings.keybindings.agent.focusChat}
             submitKeybinding={settings.keybindings.agent.submit}
-            getFiles={(window as any).api.getFiles}
-            getAvailableSkills={(window as any).api.getAvailableSkills}
-            getAvailableCommands={(window as any).api.getAvailableCommands}
+            getFiles={async (...args) => (await (window as any).api.getFiles(...args))}
+            getAvailableSkills={async (...args) => (await (window as any).api.getAvailableSkills(...args))}
+            getAvailableCommands={async (...args) => (await (window as any).api.getAvailableCommands(...args))}
           />
         </div>
       </div>
