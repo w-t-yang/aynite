@@ -7,24 +7,35 @@ import log from 'electron-log';
 autoUpdater.logger = log;
 (autoUpdater.logger as any).transports.file.level = 'info';
 
+// ─── Channel constants ────────────────────────────────────────────────────
+export const UpdateChannels = {
+  CHECK: 'update:check',
+  INSTALL: 'update:install',
+  CHECKING: 'update:checking',
+  AVAILABLE: 'update:available',
+  NOT_AVAILABLE: 'update:not-available',
+  ERROR: 'update:error',
+  DOWNLOAD_PROGRESS: 'update:download-progress',
+  DOWNLOADED: 'update:downloaded',
+} as const;
+
 export function setupUpdater(mainWindow: BrowserWindow) {
-  // Always register handlers to avoid "No handler registered" errors in dev
-  ipcMain.handle('update:check', async () => {
+  ipcMain.handle(UpdateChannels.CHECK, async () => {
     if (isDev) {
       console.log('Update check skipped in development mode.');
-      mainWindow.webContents.send('update:not-available');
+      mainWindow.webContents.send(UpdateChannels.NOT_AVAILABLE);
       return null;
     }
     try {
       return await autoUpdater.checkForUpdatesAndNotify();
     } catch (err: any) {
       console.error('Failed to check for updates:', err);
-      mainWindow.webContents.send('update:error', err.message);
+      mainWindow.webContents.send(UpdateChannels.ERROR, err.message);
       return null;
     }
   });
 
-  ipcMain.handle('update:install', () => {
+  ipcMain.handle(UpdateChannels.INSTALL, () => {
     if (isDev) {
       console.log('Update install skipped in development mode.');
       return;
@@ -42,27 +53,27 @@ export function setupUpdater(mainWindow: BrowserWindow) {
   }, 60 * 60 * 1000);
 
   autoUpdater.on('checking-for-update', () => {
-    mainWindow.webContents.send('update:checking');
+    mainWindow.webContents.send(UpdateChannels.CHECKING);
   });
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
-    mainWindow.webContents.send('update:available', info);
+    mainWindow.webContents.send(UpdateChannels.AVAILABLE, info);
   });
 
   autoUpdater.on('update-not-available', () => {
-    mainWindow.webContents.send('update:not-available');
+    mainWindow.webContents.send(UpdateChannels.NOT_AVAILABLE);
   });
 
   autoUpdater.on('error', (err) => {
-    mainWindow.webContents.send('update:error', err.message);
+    mainWindow.webContents.send(UpdateChannels.ERROR, err.message);
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
-    mainWindow.webContents.send('update:download-progress', progressObj);
+    mainWindow.webContents.send(UpdateChannels.DOWNLOAD_PROGRESS, progressObj);
   });
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
-    mainWindow.webContents.send('update:downloaded', info);
+    mainWindow.webContents.send(UpdateChannels.DOWNLOADED, info);
   });
 
   // Initial check

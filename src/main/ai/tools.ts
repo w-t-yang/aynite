@@ -2,9 +2,9 @@ import { ipcMain, BrowserWindow } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { jsonSchema } from '@ai-sdk/provider-utils';
-import { 
-  getAyniteDir, 
-  secureReadText, 
+import {
+  getAyniteDir,
+  secureReadText,
   secureWriteText,
   secureListDir,
   secureGetFileTree,
@@ -12,6 +12,7 @@ import {
 } from '../../lib/path';
 import { TOOL_METADATA } from '../../lib/constants/ai';
 import { ERROR_MESSAGES } from '../../lib/constants/messages';
+import { AiEventChannels } from './ipc';
 
 const execAsync = promisify(exec);
 
@@ -60,16 +61,16 @@ export function createTools(context: ToolContext) {
         const runCwd = cwd || workspaceFolders[0] || '.';
 
         const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-        mainWindow.webContents.send('aynite:ai-approval-request', { id: approvalId, command, cwd: runCwd });
+        mainWindow.webContents.send(AiEventChannels.APPROVAL_REQUEST, { id: approvalId, command, cwd: runCwd });
 
         const approved = await new Promise<boolean>((done) => {
           const listener = (_: any, response: { id: string; approved: boolean }) => {
             if (response.id === approvalId) {
-              ipcMain.removeListener('aynite:ai-approval-response', listener);
+              ipcMain.removeListener(AiEventChannels.APPROVAL_RESPONSE, listener);
               done(response.approved);
             }
           };
-          ipcMain.on('aynite:ai-approval-response', listener);
+          ipcMain.on(AiEventChannels.APPROVAL_RESPONSE, listener);
         });
 
         if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED;

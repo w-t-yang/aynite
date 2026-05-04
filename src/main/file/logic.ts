@@ -1,9 +1,10 @@
 import { BrowserWindow } from 'electron';
 import { FSWatcher, watch } from 'chokidar';
-import { 
-  getBasename, 
+import {
+  getBasename,
 } from '../../lib/path';
 import { getIgnorePatterns } from '../config';
+import { FileEventChannels } from './ipc';
 
 let watcher: FSWatcher | null = null;
 
@@ -28,7 +29,7 @@ export function setupWatcher(mainWindow: BrowserWindow, folders: string[]) {
 
     watcher.on('all', (event, path) => {
       if (mainWindow) {
-        mainWindow.webContents.send('aynite:fs-change', { event, path });
+        mainWindow.webContents.send(FileEventChannels.FS_CHANGE, { event, path });
       }
     });
   }).catch(e => {

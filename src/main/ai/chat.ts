@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import { streamText, stepCountIs } from 'ai';
-import { 
-  getAyniteDir, 
+import {
+  getAyniteDir,
   getAyniteLogsDir,
   getAyniteSessionsDir,
   getSessionPath,
@@ -16,6 +16,7 @@ import {
 import { getAIModel, AIProvider } from './factory';
 import { createTools } from './tools';
 import { ERROR_MESSAGES } from '../../lib/constants/messages';
+import { aiChatDeltaChannel } from './ipc';
 
 /**
  * Saves a chat session history as a JSON file.
@@ -166,7 +167,7 @@ export async function handleAiChat(mainWindow: BrowserWindow, { messages, config
             });
           }
 
-          mainWindow.webContents.send(`aynite:ai-chat-delta:${requestId}`, part);
+          mainWindow.webContents.send(aiChatDeltaChannel(requestId), part);
         }
 
         logEvent('RESPONSE', {
@@ -178,7 +179,7 @@ export async function handleAiChat(mainWindow: BrowserWindow, { messages, config
 
       } catch (e: any) {
         logEvent('ERROR', { error: e.message });
-        mainWindow.webContents.send(`aynite:ai-chat-delta:${requestId}`, { type: 'error', error: e.message });
+        mainWindow.webContents.send(aiChatDeltaChannel(requestId), { type: 'error', error: e.message });
       }
     })();
 

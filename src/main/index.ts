@@ -1,10 +1,11 @@
 import { app, BrowserWindow } from 'electron';
-import { 
-  initAppFolders, 
+import {
+  initAppFolders,
   setConfigNotificationCallback,
   setupConfigIpc,
-  loadConfig
+  loadConfig,
 } from './config/index';
+import { ConfigEventChannels } from './config/ipc';
 import { 
   getPreloadPath, 
   getRendererHtmlPath 
@@ -88,7 +89,7 @@ function createWindow(): void {
   mainWindow.webContents.on('before-input-event', (event, input) => {
     const operation = handleKeyboardInput(input);
     if (operation && mainWindow) {
-      mainWindow.webContents.send('aynite:app-operation', operation);
+      mainWindow.webContents.send(ConfigEventChannels.APP_OPERATION, operation);
       event.preventDefault();
     }
   });
@@ -117,7 +118,7 @@ app.whenReady().then(async () => {
     // Set up configuration error notifications
     setConfigNotificationCallback((data) => {
       if (mainWindow) {
-        mainWindow.webContents.send('aynite:config-error', data);
+        mainWindow.webContents.send(ConfigEventChannels.CONFIG_ERROR, data);
       }
     });
 

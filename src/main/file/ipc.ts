@@ -1,9 +1,9 @@
 import { ipcMain } from 'electron';
-import { 
-  getAbsolutePath, 
-  expandHome, 
-  joinPaths, 
-  getExtname, 
+import {
+  getAbsolutePath,
+  expandHome,
+  joinPaths,
+  getExtname,
   getDirname,
   readdir,
   readText,
@@ -18,8 +18,67 @@ import {
 import { getIgnorePatterns } from '../config';
 import { renameWorkspaceFolder, removeWorkspaceFolder } from '../workspace';
 
+// ─── Channel constants ────────────────────────────────────────────────────
+export const FileChannels = {
+  LIST: 'aynite:file-list',
+  READ: 'aynite:file-read',
+  INFO: 'aynite:file-info',
+  CREATE: 'aynite:file-create',
+  RENAME: 'aynite:file-rename',
+  COPY: 'aynite:file-copy',
+  DELETE: 'aynite:file-delete',
+  SAVE: 'aynite:file-save',
+} as const;
+
+// ─── Payload types ─────────────────────────────────────────────────────────
+export interface FileEntry {
+  name: string;
+  isDirectory: boolean;
+  path: string;
+}
+
+export interface FileInfoResult {
+  size: number;
+  createdAt: Date;
+  modifiedAt: Date;
+  isDirectory: boolean;
+  path: string;
+  extension: string;
+  isText: boolean;
+}
+
+export interface FileCreatePayload {
+  path: string;
+  isDirectory: boolean;
+}
+
+export interface FileRenamePayload {
+  oldPath: string;
+  newPath: string;
+}
+
+export interface FileCopyPayload {
+  srcPath: string;
+  destPath: string;
+}
+
+export interface FileSavePayload {
+  path: string;
+  content: string;
+}
+
+export interface FsChangeEvent {
+  event: string;
+  path: string;
+}
+
+// Event channels (main → renderer push)
+export const FileEventChannels = {
+  FS_CHANGE: 'aynite:fs-change',
+} as const;
+
 export function setupFileIpc() {
-  ipcMain.handle('aynite:file-list', async (event, dirPath: string = '.') => {
+  ipcMain.handle(FileChannels.LIST, async (_event, dirPath: string = '.') => {
     try {
       const resolvedPath = getAbsolutePath(expandHome(dirPath));
       const files = await readdir(resolvedPath);
@@ -51,7 +110,7 @@ export function setupFileIpc() {
     }
   });
 
-  ipcMain.handle('aynite:file-read', async (event, filePath: string) => {
+  ipcMain.handle(FileChannels.READ, async (_event, filePath: string) => {
     try {
       return await readText(filePath);
     } catch (error: any) {
@@ -59,7 +118,7 @@ export function setupFileIpc() {
     }
   });
 
-  ipcMain.handle('aynite:file-info', async (event, filePath: string) => {
+  ipcMain.handle(FileChannels.INFO, async (_event, filePath: string) => {
     try {
       const expandedPath = expandHome(filePath);
       const s = await stat(expandedPath);
@@ -79,7 +138,7 @@ export function setupFileIpc() {
     }
   });
 
-  ipcMain.handle('aynite:file-create', async (event, { path: filePath, isDirectory }) => {
+  ipcMain.handle(FileChannels.CREATE, async (_event, { path: filePath, isDirectory }: FileCreatePayload) => {
     if (isDirectory) {
       await ensureDir(filePath);
     } else {
@@ -88,24 +147,24 @@ export function setupFileIpc() {
     return true;
   });
 
-  ipcMain.handle('aynite:file-rename', async (event, { oldPath, newPath }) => {
+  ipcMain.handle(FileChannels.RENAME, async (_event, { oldPath, newPath }: FileRenamePayload) => {
     await rename(oldPath, newPath);
     await renameWorkspaceFolder(oldPath, newPath);
     return true;
   });
 
-  ipcMain.handle('aynite:file-copy', async (event, { srcPath, destPath }) => {
+  ipcMain.handle(FileChannels.COPY, async (_event, { srcPath, destPath }: FileCopyPayload) => {
     await copy(srcPath, destPath, { recursive: true });
     return true;
   });
 
-  ipcMain.handle('aynite:file-delete', async (event, filePath: string) => {
+  ipcMain.handle(FileChannels.DELETE, async (_event, filePath: string) => {
     await remove(filePath, { recursive: true, force: true });
     await removeWorkspaceFolder(filePath);
     return true;
   });
 
-  ipcMain.handle('aynite:file-save', async (event, { path: filePath, content }) => {
+  ipcMain.handle(FileChannels.SAVE, async (_event, { path: filePath, content }: FileSavePayload) => {
     await writeText(filePath, content);
     return true;
   });

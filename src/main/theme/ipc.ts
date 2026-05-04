@@ -1,31 +1,45 @@
 import { ipcMain } from 'electron';
-import { 
-  getThemesList, 
-  getTheme, 
-  saveTheme, 
-  restoreDefaultTheme, 
-  deleteTheme 
+import {
+  getThemesList,
+  getTheme,
+  saveTheme,
+  restoreDefaultTheme,
+  deleteTheme
 } from './logic';
 
+// ─── Channel constants ────────────────────────────────────────────────────
+export const ThemeChannels = {
+  LIST: 'aynite:theme-list',
+  READ: 'aynite:theme-read',
+  SAVE: 'aynite:theme-save',
+  RESTORE: 'aynite:theme-restore',
+  DELETE: 'aynite:theme-delete',
+} as const;
+
+export interface ThemeSavePayload {
+  name: string;
+  data: any;
+}
+
 export function setupThemeIpc() {
-  ipcMain.handle('aynite:theme-list', async () => {
+  ipcMain.handle(ThemeChannels.LIST, async () => {
     return await getThemesList();
   });
 
-  ipcMain.handle('aynite:theme-read', async (event, name: string) => {
+  ipcMain.handle(ThemeChannels.READ, async (_event, name: string) => {
     return await getTheme(name);
   });
 
-  ipcMain.handle('aynite:theme-save', async (event, { name, data }) => {
+  ipcMain.handle(ThemeChannels.SAVE, async (_event, { name, data }: ThemeSavePayload) => {
     await saveTheme(name, data);
     return true;
   });
 
-  ipcMain.handle('aynite:theme-restore', async (event, name: string) => {
+  ipcMain.handle(ThemeChannels.RESTORE, async (_event, name: string) => {
     return await restoreDefaultTheme(name);
   });
 
-  ipcMain.handle('aynite:theme-delete', async (event, name: string) => {
+  ipcMain.handle(ThemeChannels.DELETE, async (_event, name: string) => {
     return await deleteTheme(name);
   });
 }

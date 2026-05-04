@@ -1,9 +1,9 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
-import { 
-  getWorkspacesList, 
-  createWorkspace, 
-  switchWorkspace, 
-  addWorkspaceFolder, 
+import {
+  getWorkspacesList,
+  createWorkspace,
+  switchWorkspace,
+  addWorkspaceFolder,
   getWorkspaceFolders,
   getWorkspaceState,
   saveWorkspaceState,
@@ -15,16 +15,36 @@ import { exists, readdir, getAbsolutePath } from '../../lib/path';
 import { WorkspaceTab } from '../../lib/types/workspace';
 import { setupWatcher } from '../file';
 
+// ─── Channel constants ────────────────────────────────────────────────────
+export const WorkspaceChannels = {
+  LIST: 'aynite:workspace-list',
+  CREATE: 'aynite:workspace-create',
+  SWITCH: 'aynite:workspace-switch',
+  ADD_FOLDER: 'aynite:workspace-add-folder',
+  FOLDER_LIST: 'aynite:workspace-folder-list',
+  STATE_LOAD: 'aynite:workspace-state-load',
+  STATE_SAVE: 'aynite:workspace-state-save',
+  FOLDER_REORDER: 'aynite:workspace-folder-reorder',
+  FOLDER_REMOVE: 'aynite:workspace-folder-remove',
+  FILE_SCAN: 'aynite:workspace-file-scan',
+} as const;
+
+export interface WorkspaceStatePayload {
+  workspaceName: string;
+  tabs: WorkspaceTab[];
+  activeTabId: string;
+}
+
 export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
-  ipcMain.handle('aynite:workspace-list', async () => {
+  ipcMain.handle(WorkspaceChannels.LIST, async () => {
     return await getWorkspacesList();
   });
 
-  ipcMain.handle('aynite:workspace-create', async (event, name: string) => {
+  ipcMain.handle(WorkspaceChannels.CREATE, async (_event, name: string) => {
     return await createWorkspace(name);
   });
 
-  ipcMain.handle('aynite:workspace-switch', async (event, name: string) => {
+  ipcMain.handle(WorkspaceChannels.SWITCH, async (_event, name: string) => {
     const success = await switchWorkspace(name);
     if (success) {
       const folders = await getWorkspaceFolders();
@@ -33,7 +53,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
     return success;
   });
 
-  ipcMain.handle('aynite:workspace-add-folder', async () => {
+  ipcMain.handle(WorkspaceChannels.ADD_FOLDER, async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory']
     });
@@ -47,19 +67,19 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
     return folderPath;
   });
 
-  ipcMain.handle('aynite:workspace-folder-list', async () => {
+  ipcMain.handle(WorkspaceChannels.FOLDER_LIST, async () => {
     return await getWorkspaceFolders();
   });
 
-  ipcMain.handle('aynite:workspace-state-load', async () => {
+  ipcMain.handle(WorkspaceChannels.STATE_LOAD, async () => {
     return await getWorkspaceState();
   });
 
-  ipcMain.handle('aynite:workspace-state-save', async (event, { workspaceName, tabs, activeTabId }: { workspaceName: string, tabs: WorkspaceTab[], activeTabId: string }) => {
+  ipcMain.handle(WorkspaceChannels.STATE_SAVE, async (_event, { workspaceName, tabs, activeTabId }: WorkspaceStatePayload) => {
     return await saveWorkspaceState(workspaceName, tabs, activeTabId);
   });
 
-  ipcMain.handle('aynite:workspace-folder-reorder', async (event, folders: string[]) => {
+  ipcMain.handle(WorkspaceChannels.FOLDER_REORDER, async (_event, folders: string[]) => {
     const success = await reorderWorkspaceFolders(folders);
     if (success) {
       setupWatcher(mainWindow, folders);
@@ -67,7 +87,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
     return success;
   });
 
-  ipcMain.handle('aynite:workspace-folder-remove', async (event, folderPath: string) => {
+  ipcMain.handle(WorkspaceChannels.FOLDER_REMOVE, async (_event, folderPath: string) => {
     const success = await removeWorkspaceFolder(folderPath);
     if (success) {
       const folders = await getWorkspaceFolders();
@@ -76,7 +96,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
     return success;
   });
 
-  ipcMain.handle('aynite:workspace-file-scan', async () => {
+  ipcMain.handle(WorkspaceChannels.FILE_SCAN, async () => {
     const folders = await getWorkspaceFolders();
     const allFiles: any[] = [];
     const ignorePatterns = await getIgnorePatterns();

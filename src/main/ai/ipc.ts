@@ -1,11 +1,11 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
-import { 
-  getToolsMetadata, 
+import {
+  getToolsMetadata,
 } from './tools';
 import {
-  handleAiChat, 
-  saveSession, 
-  loadSession, 
+  handleAiChat,
+  saveSession,
+  loadSession,
   listSessions,
 } from './chat';
 import {
@@ -13,35 +13,97 @@ import {
   getMergedSystemPrompt
 } from './prompts';
 
+// ─── Channel constants ────────────────────────────────────────────────────
+export const AiChannels = {
+  PROMPT_GET_MERGED: 'aynite:ai-prompt-get-merged',
+  GET_TOOLS: 'aynite:ai-get-tools',
+  CHAT: 'aynite:ai-chat',
+  SESSION_SAVE: 'aynite:ai-session-save',
+  SESSION_LOAD: 'aynite:ai-session-load',
+  SESSION_LIST: 'aynite:ai-session-list',
+  PROMPT_RESTORE: 'aynite:ai-prompt-restore',
+  PROMPT_PICK_FILE: 'aynite:ai-prompt-pick-file',
+} as const;
+
+// Event channels (main → renderer push)
+export const AiEventChannels = {
+  CHAT_DELTA_PREFIX: 'aynite:ai-chat-delta',
+  APPROVAL_REQUEST: 'aynite:ai-approval-request',
+  APPROVAL_RESPONSE: 'aynite:ai-approval-response',
+} as const;
+
+export function aiChatDeltaChannel(requestId: string): string {
+  return `${AiEventChannels.CHAT_DELTA_PREFIX}:${requestId}`;
+}
+
+// ─── Payload types ─────────────────────────────────────────────────────────
+export interface AiChatPayload {
+  messages: any[];
+  config: any;
+  workspaceFolders: string[];
+  activeFile?: string;
+}
+
+export interface AiChatResult {
+  requestId?: string;
+  error?: string;
+}
+
+export interface AiApprovalRequest {
+  id: string;
+  command: string;
+  cwd: string;
+}
+
+export interface AiApprovalResponse {
+  id: string;
+  approved: boolean;
+}
+
+export interface SessionSavePayload {
+  sessionId: string;
+  messages: any[];
+}
+
+export interface SessionLoadPayload {
+  sessionId: string;
+  date: string;
+}
+
+export interface SystemPromptPayload {
+  globalFiles?: string[];
+  agentFiles?: string[];
+}
+
 export function setupAiIpc(mainWindow: BrowserWindow) {
-  ipcMain.handle('aynite:ai-prompt-get-merged', async (event, globalFiles?: string[], agentFiles?: string[]) => {
+  ipcMain.handle(AiChannels.PROMPT_GET_MERGED, async (_event, globalFiles?: string[], agentFiles?: string[]) => {
     return await getMergedSystemPrompt(globalFiles, agentFiles);
   });
-  ipcMain.handle('aynite:ai-get-tools', async () => {
+  ipcMain.handle(AiChannels.GET_TOOLS, async () => {
     return await getToolsMetadata();
   });
 
-  ipcMain.handle('aynite:ai-chat', async (event, params) => {
+  ipcMain.handle(AiChannels.CHAT, async (_event, params: AiChatPayload) => {
     return await handleAiChat(mainWindow, params);
   });
 
-  ipcMain.handle('aynite:ai-session-save', async (event, { sessionId, messages }: { sessionId: string, messages: any[] }) => {
+  ipcMain.handle(AiChannels.SESSION_SAVE, async (_event, { sessionId, messages }: SessionSavePayload) => {
     return await saveSession(sessionId, messages);
   });
 
-  ipcMain.handle('aynite:ai-session-load', async (event, { sessionId, date }: { sessionId: string, date: string }) => {
+  ipcMain.handle(AiChannels.SESSION_LOAD, async (_event, { sessionId, date }: SessionLoadPayload) => {
     return await loadSession(sessionId, date);
   });
 
-  ipcMain.handle('aynite:ai-session-list', async () => {
+  ipcMain.handle(AiChannels.SESSION_LIST, async () => {
     return await listSessions();
   });
 
-  ipcMain.handle('aynite:ai-prompt-restore', async () => {
+  ipcMain.handle(AiChannels.PROMPT_RESTORE, async () => {
     return await restoreDefaultPrompts();
   });
 
-  ipcMain.handle('aynite:ai-prompt-pick-file', async () => {
+  ipcMain.handle(AiChannels.PROMPT_PICK_FILE, async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],
       filters: [{ name: 'Markdown', extensions: ['md'] }]

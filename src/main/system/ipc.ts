@@ -4,26 +4,40 @@ import { copy as fsCopy, getBasename, joinPaths, exists } from '../../lib/path';
 
 let clipboardPath: string | null = null;
 
+// ─── Channel constants ────────────────────────────────────────────────────
+export const SystemChannels = {
+  FONT_LIST: 'aynite:system-font-list',
+  OPEN_EXTERNAL: 'aynite:system-open-external',
+  APP_VERSION: 'aynite:system-app-version',
+  APP_QUIT: 'aynite:system-app-quit',
+  DIALOG_SELECT_FILE: 'aynite:dialog-select-file',
+  DIALOG_SELECT_FOLDER: 'aynite:dialog-select-folder',
+  WINDOW_MINIMIZE: 'aynite:window-minimize',
+  WINDOW_MAXIMIZE: 'aynite:window-maximize',
+  WINDOW_CLOSE: 'aynite:window-close',
+  CLIPBOARD_COPY: 'aynite:file-clipboard-copy',
+  CLIPBOARD_PASTE: 'aynite:file-clipboard-paste',
+} as const;
+
 export function setupSystemIpc(mainWindow: BrowserWindow) {
-  ipcMain.handle('aynite:system-font-list', async () => {
+  ipcMain.handle(SystemChannels.FONT_LIST, async () => {
     return await getSystemFonts();
   });
 
-  ipcMain.handle('aynite:system-open-external', async (event, url: string) => {
+  ipcMain.handle(SystemChannels.OPEN_EXTERNAL, async (_event, url: string) => {
     await shell.openExternal(url);
     return true;
   });
 
-  ipcMain.handle('aynite:system-app-version', () => {
+  ipcMain.handle(SystemChannels.APP_VERSION, () => {
     return app.getVersion();
   });
 
-  ipcMain.handle('aynite:system-app-quit', () => {
+  ipcMain.handle(SystemChannels.APP_QUIT, () => {
     app.quit();
   });
 
-  // Dialog handlers
-  ipcMain.handle('aynite:dialog-select-file', async () => {
+  ipcMain.handle(SystemChannels.DIALOG_SELECT_FILE, async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile']
     });
@@ -31,7 +45,7 @@ export function setupSystemIpc(mainWindow: BrowserWindow) {
     return filePaths[0];
   });
 
-  ipcMain.handle('aynite:dialog-select-folder', async () => {
+  ipcMain.handle(SystemChannels.DIALOG_SELECT_FOLDER, async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory']
     });
@@ -39,12 +53,11 @@ export function setupSystemIpc(mainWindow: BrowserWindow) {
     return filePaths;
   });
 
-  // Window control handlers
-  ipcMain.on('aynite:window-minimize', () => {
+  ipcMain.on(SystemChannels.WINDOW_MINIMIZE, () => {
     mainWindow.minimize();
   });
 
-  ipcMain.on('aynite:window-maximize', () => {
+  ipcMain.on(SystemChannels.WINDOW_MAXIMIZE, () => {
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize();
     } else {
@@ -52,17 +65,16 @@ export function setupSystemIpc(mainWindow: BrowserWindow) {
     }
   });
 
-  ipcMain.on('aynite:window-close', () => {
+  ipcMain.on(SystemChannels.WINDOW_CLOSE, () => {
     mainWindow.close();
   });
 
-  // File clipboard (copy/paste for file operations)
-  ipcMain.handle('aynite:file-clipboard-copy', async (_event, path: string) => {
+  ipcMain.handle(SystemChannels.CLIPBOARD_COPY, async (_event, path: string) => {
     clipboardPath = path;
     return true;
   });
 
-  ipcMain.handle('aynite:file-clipboard-paste', async (_event, destDir: string) => {
+  ipcMain.handle(SystemChannels.CLIPBOARD_PASTE, async (_event, destDir: string) => {
     if (!clipboardPath) return false;
     const fileName = getBasename(clipboardPath);
     const destPath = joinPaths(destDir, fileName);
