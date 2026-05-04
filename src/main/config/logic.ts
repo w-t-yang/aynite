@@ -85,10 +85,19 @@ export async function initAppFolders() {
   const ignoreDefault = ['node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
   const workspacesDefault = { active: DEFAULT_WORKSPACE_ID, list: [DEFAULT_WORKSPACE_ID] };
 
-  await writeJson(getAIConfigPath(), aiDefault);
-  await writeJson(getKeybindingsConfigPath(), keybindingsDefault);
-  await writeJson(getMainConfigPath(), configDefault);
-  await writeJson(getWorkspacesConfigPath(), workspacesDefault);
+  if (!(await exists(getAIConfigPath()))) {
+    await writeJson(getAIConfigPath(), aiDefault);
+  }
+  if (!(await exists(getKeybindingsConfigPath()))) {
+    await writeJson(getKeybindingsConfigPath(), keybindingsDefault);
+  }
+  if (!(await exists(getMainConfigPath()))) {
+    await writeJson(getMainConfigPath(), configDefault);
+  }
+  if (!(await exists(getWorkspacesConfigPath()))) {
+    await writeJson(getWorkspacesConfigPath(), workspacesDefault);
+  }
+
 
   const ignorePath = getIgnoreConfigPath();
   if (!(await exists(ignorePath))) {

@@ -9,6 +9,8 @@ export const AppOperation = {
   TILE_RESIZE_UP: 'TILE_RESIZE_UP',
   TILE_RESIZE_DOWN: 'TILE_RESIZE_DOWN',
   TILE_CLOSE: 'TILE_CLOSE',
+
+
   QUIT: 'QUIT',
   // Global & Navigation
   REFRESH_APP: 'REFRESH_APP',

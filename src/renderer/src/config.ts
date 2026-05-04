@@ -24,19 +24,67 @@ class AyniteConfig {
     return window.aynite.setConfig(ConfigKey.WORKSPACE, { id: config.id, config })
   }
 
+  // AI
+  async getAI(): Promise<any> {
+    return window.aynite.getConfig(ConfigKey.AI)
+  }
+
+  async setAI(config: any): Promise<boolean> {
+    return window.aynite.setConfig(ConfigKey.AI, config)
+  }
+
+  // Agents & Prompts
+  async getAgents(): Promise<any> {
+    return window.aynite.getConfig(ConfigKey.AGENTS)
+  }
+
+  async setAgents(config: any): Promise<boolean> {
+    return window.aynite.setConfig(ConfigKey.AGENTS, config)
+  }
+
+  async getPrompts(): Promise<any> {
+    return window.aynite.getConfig(ConfigKey.PROMPTS)
+  }
+
+  async setPrompts(config: any): Promise<boolean> {
+    return window.aynite.setConfig(ConfigKey.PROMPTS, config)
+  }
+
+  // Skills & Commands
+  async getSkills(): Promise<any> {
+    return window.aynite.getConfig(ConfigKey.SKILLS)
+  }
+
+  async setSkills(config: any): Promise<boolean> {
+    return window.aynite.setConfig(ConfigKey.SKILLS, config)
+  }
+
+  async getCommands(): Promise<any> {
+    return window.aynite.getConfig(ConfigKey.COMMANDS)
+  }
+
+  async setCommands(config: any): Promise<boolean> {
+    return window.aynite.setConfig(ConfigKey.COMMANDS, config)
+  }
+
+  // Tools
+  async getTools(): Promise<any> {
+    return window.aynite.getConfig(ConfigKey.TOOLS)
+  }
+
+  async setTools(config: any): Promise<boolean> {
+    return window.aynite.setConfig(ConfigKey.TOOLS, config)
+  }
+
   // Keybindings
   async getKeybindings(): Promise<KeybindingConfig> {
     return window.aynite.getConfig(ConfigKey.KEYBINDINGS)
   }
 
-  async saveKeybindings(config: KeybindingConfig): Promise<boolean> {
+  async setKeybindings(config: any): Promise<boolean> {
     return window.aynite.setConfig(ConfigKey.KEYBINDINGS, config)
   }
 
-  // Views
-  async getViews(): Promise<View[]> {
-    return window.aynite.getConfig(ConfigKey.VIEWS)
-  }
 
   // Themes
   async getThemes(): Promise<any[]> {
@@ -47,6 +95,10 @@ class AyniteConfig {
     return window.aynite.getConfig(ConfigKey.ACTIVE_THEME)
   }
 
+  async setActiveTheme(id: string): Promise<boolean> {
+    return window.aynite.setConfig(ConfigKey.ACTIVE_THEME, id)
+  }
+
   async getTheme(id: string): Promise<any> {
     return window.aynite.getConfig(ConfigKey.THEME, id)
   }
@@ -54,6 +106,11 @@ class AyniteConfig {
   async saveTheme(id: string, theme: any): Promise<boolean> {
     return window.aynite.setConfig(ConfigKey.THEME, { id, theme })
   }
+
+  async getAppVersion(): Promise<string> {
+    return window.aynite.getConfig(ConfigKey.VERSION)
+  }
 }
 
 export const ayniteConfig = new AyniteConfig()
+

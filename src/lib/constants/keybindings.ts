@@ -11,6 +11,8 @@ export const DEFAULT_KEYBINDINGS = {
     [AppOperation.TILE_RESIZE_UP]: { ctrl: true, shift: true, key: 'arrowup' },
     [AppOperation.TILE_RESIZE_DOWN]: { ctrl: true, shift: true, key: 'arrowdown' },
     [AppOperation.QUIT]: { ctrl: true, shift: true, key: 'q' },
+
+
     // Global & Navigation
     [AppOperation.REFRESH_APP]: { ctrl: true, key: 'r' },
     [AppOperation.TOGGLE_LEFT_PANEL]: { ctrl: true, key: 'b' },

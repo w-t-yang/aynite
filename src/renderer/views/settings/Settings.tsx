@@ -17,14 +17,16 @@ import { AboutTab } from '../../shared/pages/settings/AboutTab';
 import { TabButton } from '../../shared/basic/TabButton';
 import { Modal } from '../../shared/basic/Modal';
 import { Button } from '../../shared/basic/Button';
-import { useAynite } from '../../shared/context/MockViewContext';
+import { ayniteConfig } from '../../src/config';
+
 
 
 interface SettingsProps {
 }
 
 export function Settings({ }: SettingsProps) {
-  const aynite = useAynite();
+  const aynite = ayniteConfig;
+
   const [activeTab, setActiveTab] = useState('appearance');
 
   // Broken down settings state
@@ -87,11 +89,17 @@ export function Settings({ }: SettingsProps) {
 
   const handleSetThemes = async (newThemes: { list: any[], activeId: string }) => {
     setThemes(prev => prev ? { ...newThemes, systemFonts: prev.systemFonts } : null);
-    await aynite.setThemes(newThemes);
+    // Save the active theme ID specifically
+    if (newThemes.activeId) {
+      await aynite.setActiveTheme(newThemes.activeId);
+    }
+    // Individual theme saving is handled via setThemes logic if needed, 
+    // but usually themes are static unless customized.
     if (newThemes.list.length === 0) {
       await loadSettings();
     }
   };
+
 
   const handleSetKeybindings = async (kb: SettingsState['keybindings']) => {
     setKeybindings(kb);

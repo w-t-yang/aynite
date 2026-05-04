@@ -154,10 +154,16 @@ export async function routeSetConfig(key: string, payload: any): Promise<boolean
     case ConfigKey.WORKSPACE: {
       const { id, config } = payload as { id: string; config: WorkspaceConfig };
       const dataPath = getWorkspaceDataPath(id);
-      await writeJson(dataPath, { ...config, id });
+      
+      // Defensive merge: load existing first if possible
+      const existing = await readJson<any>(dataPath, {});
+      const updated = { ...existing, ...config, id };
+      
+      await writeJson(dataPath, updated);
 
       return true;
     }
+
 
     case ConfigKey.KEYBINDINGS: {
       await writeJson(getKeybindingsConfigPath(), payload);
