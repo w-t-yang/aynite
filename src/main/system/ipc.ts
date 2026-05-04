@@ -5,19 +5,11 @@ import { copy as fsCopy, getBasename, joinPaths, exists } from '../../lib/path';
 let clipboardPath: string | null = null;
 
 // ─── Channel constants ────────────────────────────────────────────────────
-export const SystemChannels = {
-  FONT_LIST: 'aynite:system-font-list',
-  OPEN_EXTERNAL: 'aynite:system-open-external',
-  APP_VERSION: 'aynite:system-app-version',
-  APP_QUIT: 'aynite:system-app-quit',
-  DIALOG_SELECT_FILE: 'aynite:dialog-select-file',
-  DIALOG_SELECT_FOLDER: 'aynite:dialog-select-folder',
-  WINDOW_MINIMIZE: 'aynite:window-minimize',
-  WINDOW_MAXIMIZE: 'aynite:window-maximize',
-  WINDOW_CLOSE: 'aynite:window-close',
-  CLIPBOARD_COPY: 'aynite:file-clipboard-copy',
-  CLIPBOARD_PASTE: 'aynite:file-clipboard-paste',
-} as const;
+import { SystemChannels } from '../../lib/constants/ipc-channels';
+
+
+
+
 
 export function setupSystemIpc(mainWindow: BrowserWindow) {
   ipcMain.handle(SystemChannels.FONT_LIST, async () => {

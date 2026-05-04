@@ -14,17 +14,11 @@ import { joinPaths } from '../../lib/path';
 
 const execAsync = promisify(exec);
 
-// ─── Channel constants ────────────────────────────────────────────────────
-export const SpellChannels = {
-  SKILL_ADD_FOLDER: 'aynite:spell-skill-add-folder',
-  SKILL_RESTORE: 'aynite:spell-skill-restore-default',
-  COMMAND_ADD_FOLDER: 'aynite:spell-command-add-folder',
-  COMMAND_RESTORE: 'aynite:spell-command-restore-default',
-  SKILL_LIST: 'aynite:spell-skill-list',
-  COMMAND_LIST: 'aynite:spell-command-list',
-  COMMAND_RUN: 'aynite:spell-command-run',
-  COMMAND_RUN_DIRECT: 'aynite:spell-command-run-direct',
-} as const;
+import { SpellChannels } from '../../lib/constants/ipc-channels';
+
+
+
+
 
 export interface CommandRunPayload {
   command: string;

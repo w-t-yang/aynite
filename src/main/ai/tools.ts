@@ -12,7 +12,8 @@ import {
 } from '../../lib/path';
 import { TOOL_METADATA } from '../../lib/constants/ai';
 import { ERROR_MESSAGES } from '../../lib/constants/messages';
-import { AiEventChannels } from './ipc';
+import { AiEventChannels } from '../../lib/constants/ipc-channels';
+
 
 const execAsync = promisify(exec);
 

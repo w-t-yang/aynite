@@ -13,28 +13,12 @@ import {
   getMergedSystemPrompt
 } from './prompts';
 
-// ─── Channel constants ────────────────────────────────────────────────────
-export const AiChannels = {
-  PROMPT_GET_MERGED: 'aynite:ai-prompt-get-merged',
-  GET_TOOLS: 'aynite:ai-get-tools',
-  CHAT: 'aynite:ai-chat',
-  SESSION_SAVE: 'aynite:ai-session-save',
-  SESSION_LOAD: 'aynite:ai-session-load',
-  SESSION_LIST: 'aynite:ai-session-list',
-  PROMPT_RESTORE: 'aynite:ai-prompt-restore',
-  PROMPT_PICK_FILE: 'aynite:ai-prompt-pick-file',
-} as const;
+import { AiChannels, AiEventChannels, aiChatDeltaChannel } from '../../lib/constants/ipc-channels';
 
-// Event channels (main → renderer push)
-export const AiEventChannels = {
-  CHAT_DELTA_PREFIX: 'aynite:ai-chat-delta',
-  APPROVAL_REQUEST: 'aynite:ai-approval-request',
-  APPROVAL_RESPONSE: 'aynite:ai-approval-response',
-} as const;
 
-export function aiChatDeltaChannel(requestId: string): string {
-  return `${AiEventChannels.CHAT_DELTA_PREFIX}:${requestId}`;
-}
+
+
+
 
 // ─── Payload types ─────────────────────────────────────────────────────────
 export interface AiChatPayload {

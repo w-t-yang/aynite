@@ -18,17 +18,11 @@ import {
 import { getIgnorePatterns } from '../config';
 import { renameWorkspaceFolder, removeWorkspaceFolder } from '../workspace';
 
-// ─── Channel constants ────────────────────────────────────────────────────
-export const FileChannels = {
-  LIST: 'aynite:file-list',
-  READ: 'aynite:file-read',
-  INFO: 'aynite:file-info',
-  CREATE: 'aynite:file-create',
-  RENAME: 'aynite:file-rename',
-  COPY: 'aynite:file-copy',
-  DELETE: 'aynite:file-delete',
-  SAVE: 'aynite:file-save',
-} as const;
+import { FileChannels, FileEventChannels } from '../../lib/constants/ipc-channels';
+
+
+
+
 
 // ─── Payload types ─────────────────────────────────────────────────────────
 export interface FileEntry {
@@ -72,10 +66,7 @@ export interface FsChangeEvent {
   path: string;
 }
 
-// Event channels (main → renderer push)
-export const FileEventChannels = {
-  FS_CHANGE: 'aynite:fs-change',
-} as const;
+
 
 export function setupFileIpc() {
   ipcMain.handle(FileChannels.LIST, async (_event, dirPath: string = '.') => {

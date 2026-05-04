@@ -7,14 +7,11 @@ import {
   deleteTheme
 } from './logic';
 
-// ─── Channel constants ────────────────────────────────────────────────────
-export const ThemeChannels = {
-  LIST: 'aynite:theme-list',
-  READ: 'aynite:theme-read',
-  SAVE: 'aynite:theme-save',
-  RESTORE: 'aynite:theme-restore',
-  DELETE: 'aynite:theme-delete',
-} as const;
+import { ThemeChannels } from '../../lib/constants/ipc-channels';
+
+
+
+
 
 export interface ThemeSavePayload {
   name: string;

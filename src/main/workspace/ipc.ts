@@ -15,19 +15,11 @@ import { exists, readdir, getAbsolutePath } from '../../lib/path';
 import { WorkspaceTab } from '../../lib/types/workspace';
 import { setupWatcher } from '../file';
 
-// ─── Channel constants ────────────────────────────────────────────────────
-export const WorkspaceChannels = {
-  LIST: 'aynite:workspace-list',
-  CREATE: 'aynite:workspace-create',
-  SWITCH: 'aynite:workspace-switch',
-  ADD_FOLDER: 'aynite:workspace-add-folder',
-  FOLDER_LIST: 'aynite:workspace-folder-list',
-  STATE_LOAD: 'aynite:workspace-state-load',
-  STATE_SAVE: 'aynite:workspace-state-save',
-  FOLDER_REORDER: 'aynite:workspace-folder-reorder',
-  FOLDER_REMOVE: 'aynite:workspace-folder-remove',
-  FILE_SCAN: 'aynite:workspace-file-scan',
-} as const;
+import { WorkspaceChannels } from '../../lib/constants/ipc-channels';
+
+
+
+
 
 export interface WorkspaceStatePayload {
   workspaceName: string;

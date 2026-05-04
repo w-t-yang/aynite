@@ -1,12 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { joinPaths, getDirname } from '../lib/path';
-import { FileChannels, FileEventChannels } from '../main/file/ipc';
-import { WorkspaceChannels } from '../main/workspace/ipc';
-import { AiChannels, AiEventChannels, aiChatDeltaChannel } from '../main/ai/ipc';
-import { ConfigChannels, ConfigEventChannels } from '../main/config/ipc';
-import { SpellChannels } from '../main/spells/ipc';
-import { SystemChannels } from '../main/system/ipc';
-import { UpdateChannels } from '../main/updater/updater';
+import { 
+  FileChannels, 
+  FileEventChannels,
+  WorkspaceChannels,
+  AiChannels,
+  AiEventChannels,
+  aiChatDeltaChannel,
+  ConfigChannels,
+  ConfigEventChannels,
+  SpellChannels,
+  SystemChannels,
+  UpdateChannels
+} from '../lib/constants/ipc-channels';
+
 
 // ─── Unified Aynite Bridge ────────────────────────────────────────────────
 const aynite = {
@@ -146,8 +152,8 @@ const aynite = {
   },
 
   // ── Utilities ───────────────────────────────────────────────────────────
-  joinPath: (...paths: string[]) => joinPaths(...paths),
-  dirname: (p: string) => getDirname(p),
+  joinPath: (...paths: string[]) => paths.join('/'), // Simple browser-safe join fallback or use a lighter helper
+  dirname: (p: string) => p.split('/').slice(0, -1).join('/') || '.',
   platform: process.platform,
 
   getAvailableSkills: () =>

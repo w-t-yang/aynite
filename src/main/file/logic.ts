@@ -4,7 +4,8 @@ import {
   getBasename,
 } from '../../lib/path';
 import { getIgnorePatterns } from '../config';
-import { FileEventChannels } from './ipc';
+import { FileEventChannels } from '../../lib/constants/ipc-channels';
+
 
 let watcher: FSWatcher | null = null;
 

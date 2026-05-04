@@ -7,17 +7,11 @@ import log from 'electron-log';
 autoUpdater.logger = log;
 (autoUpdater.logger as any).transports.file.level = 'info';
 
-// ─── Channel constants ────────────────────────────────────────────────────
-export const UpdateChannels = {
-  CHECK: 'update:check',
-  INSTALL: 'update:install',
-  CHECKING: 'update:checking',
-  AVAILABLE: 'update:available',
-  NOT_AVAILABLE: 'update:not-available',
-  ERROR: 'update:error',
-  DOWNLOAD_PROGRESS: 'update:download-progress',
-  DOWNLOADED: 'update:downloaded',
-} as const;
+import { UpdateChannels } from '../../lib/constants/ipc-channels';
+
+
+
+
 
 export function setupUpdater(mainWindow: BrowserWindow) {
   ipcMain.handle(UpdateChannels.CHECK, async () => {

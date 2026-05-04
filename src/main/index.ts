@@ -5,7 +5,8 @@ import {
   setupConfigIpc,
   loadConfig,
 } from './config/index';
-import { ConfigEventChannels } from './config/ipc';
+import { ConfigEventChannels } from '../lib/constants/ipc-channels';
+
 import { 
   getPreloadPath, 
   getRendererHtmlPath 

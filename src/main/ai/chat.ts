@@ -16,7 +16,8 @@ import {
 import { getAIModel, AIProvider } from './factory';
 import { createTools } from './tools';
 import { ERROR_MESSAGES } from '../../lib/constants/messages';
-import { aiChatDeltaChannel } from './ipc';
+import { aiChatDeltaChannel } from '../../lib/constants/ipc-channels';
+
 
 /**
  * Saves a chat session history as a JSON file.
