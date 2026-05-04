@@ -2,7 +2,8 @@ import { app, BrowserWindow } from 'electron';
 import { 
   initAppFolders, 
   setConfigNotificationCallback,
-  setupConfigIpc
+  setupConfigIpc,
+  loadConfig
 } from './config/index';
 import { 
   getPreloadPath, 
@@ -18,12 +19,56 @@ import { setupSystemIpc, setupProtocol } from './system/index';
 
 let mainWindow: BrowserWindow | null = null;
 
+// Cached keybinding config for before-input-event matching
+let cachedKeybindings: any = null;
+
+interface KeyBinding {
+  ctrl?: boolean;
+  shift?: boolean;
+  alt?: boolean;
+  meta?: boolean;
+  key: string;
+}
+
+function matchesKeybinding(input: Electron.Input, binding: KeyBinding): boolean {
+  const ctrlMatch = !!binding.ctrl === (input.control || input.meta);
+  const shiftMatch = !!binding.shift === input.shift;
+  const altMatch = !!binding.alt === input.alt;
+  const keyMatch = input.key.toLowerCase() === binding.key.toLowerCase();
+  return ctrlMatch && shiftMatch && altMatch && keyMatch;
+}
+
+function handleKeyboardInput(input: Electron.Input): string | null {
+  if (!cachedKeybindings || input.type !== 'keyDown') return null;
+
+  // Check app-level keybindings
+  if (cachedKeybindings.app) {
+    for (const [operation, binding] of Object.entries(cachedKeybindings.app)) {
+      if (matchesKeybinding(input, binding as KeyBinding)) {
+        return operation;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function refreshKeybindings() {
+  try {
+    const config = await loadConfig();
+    cachedKeybindings = config.keybindings;
+  } catch (e) {
+    console.error('Failed to load keybindings:', e);
+  }
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1000,
+    width: 1200,
     height: 800,
     title: 'Aynite',
     autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
     webPreferences: {
       preload: getPreloadPath(__dirname),
       sandbox: false,
@@ -38,6 +83,15 @@ function createWindow(): void {
   }
 
   mainWindow.setMenuBarVisibility(false);
+
+  // Keybinding dispatch via before-input-event
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const operation = handleKeyboardInput(input);
+    if (operation && mainWindow) {
+      mainWindow.webContents.send('aynite:app-operation', operation);
+      event.preventDefault();
+    }
+  });
 }
 
 if (process.platform === 'linux') {
@@ -58,7 +112,7 @@ app.whenReady().then(async () => {
     setupThemeIpc();
     setupFileIpc();
     setupSpellsIpc(mainWindow);
-    setupSystemIpc();
+    setupSystemIpc(mainWindow);
 
     // Set up configuration error notifications
     setConfigNotificationCallback((data) => {
@@ -70,6 +124,9 @@ app.whenReady().then(async () => {
     // Initial watcher setup
     const folders = await getWorkspaceFolders();
     setupWatcher(mainWindow, folders);
+
+    // Cache keybindings for before-input-event dispatch
+    await refreshKeybindings();
   }
 
   app.on('activate', () => {

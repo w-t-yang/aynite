@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
-// import Dropdown from './shared/Dropdown'
-// import FormModal from './shared/compound/FormModal'
-// import logo from '../../assets/electron.svg'
+import Dropdown from './shared/Dropdown'
+import FormModal from './shared/compound/FormModal'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 
@@ -89,10 +88,11 @@ const TitleBar: React.FC = () => {
                 key={layout.id}
                 onClick={() => switchLayout(layout.id)}
                 title={layout.title}
-                className={`w-6 h-6 flex items-center justify-center rounded text-[11px] font-bold transition-all ${workspaceConfig.activeLayoutId === layout.id
-                  ? 'bg-accent text-accent-foreground shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)]'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
+                className={`w-6 h-6 flex items-center justify-center rounded text-[11px] font-bold transition-all ${
+                  workspaceConfig.activeLayoutId === layout.id
+                    ? 'bg-accent text-accent-foreground shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)]'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
               >
                 {layout.label}
               </button>
@@ -101,7 +101,6 @@ const TitleBar: React.FC = () => {
         </div>
 
         <div className="flex-1 flex justify-center items-center gap-2">
-          {/*}
           <Dropdown
             trigger={
               <button className="no-drag px-3 py-1 rounded-md hover:bg-muted transition-colors flex items-center gap-2 group">
@@ -131,10 +130,11 @@ const TitleBar: React.FC = () => {
                 <button
                   key={id}
                   onClick={() => switchWorkspace(id)}
-                  className={`w-full px-3 py-2 text-left text-[13px] rounded-md transition-colors ${id === workspaceConfig.id
+                  className={`w-full px-3 py-2 text-left text-[13px] rounded-md transition-colors ${
+                    id === workspaceConfig.id
                       ? 'bg-accent/10 text-accent font-medium'
                       : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                    }`}
+                  }`}
                 >
                   {id}
                 </button>
@@ -159,11 +159,11 @@ const TitleBar: React.FC = () => {
                 New Workspace
               </button>
             </div>
-          </Dropdown>*/}
+          </Dropdown>
         </div>
 
         <div className="flex items-center no-drag pr-1 gap-2">
-          {/* Theme Switcher 
+          {/* Theme Switcher */}
           <Dropdown
             trigger={
               <button
@@ -213,10 +213,11 @@ const TitleBar: React.FC = () => {
                 <button
                   key={t.id}
                   onClick={() => setTheme(t.id)}
-                  className={`w-full px-3 py-2 text-left text-[13px] rounded-md transition-colors flex items-center justify-between ${t.id === activeTheme?.id
+                  className={`w-full px-3 py-2 text-left text-[13px] rounded-md transition-colors flex items-center justify-between ${
+                    t.id === activeTheme?.id
                       ? 'bg-accent/10 text-accent font-medium'
                       : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                    }`}
+                  }`}
                 >
                   {t.name}
                   <div
@@ -226,10 +227,9 @@ const TitleBar: React.FC = () => {
                 </button>
               ))}
             </div>
-          </Dropdown>*/}
+          </Dropdown>
 
           <div className="flex items-center gap-2 px-3 py-1 border-l border-border ml-1">
-            {/* <img src={logo} className="h-4 w-4 opacity-50 grayscale contrast-200" alt="logo" /> */}
             <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">
               Aynite
             </span>
@@ -239,7 +239,7 @@ const TitleBar: React.FC = () => {
       </div>
 
       {showAddWorkspaceModal && (
-        {/*<FormModal
+        <FormModal
           onClose={() => setShowAddWorkspaceModal(false)}
           title="Create New Workspace"
           label="Workspace Name"
@@ -248,7 +248,7 @@ const TitleBar: React.FC = () => {
             addWorkspace(name)
             setShowAddWorkspaceModal(false)
           }}
-        />*/}
+        />
       )}
     </>
   )

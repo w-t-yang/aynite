@@ -159,6 +159,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   )
 
   useEffect(() => {
+    if (!window.aynite) return
     const removeListener = window.aynite.onAppOperation(executeAppOperation)
     return () => removeListener()
   }, [executeAppOperation])

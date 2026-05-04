@@ -1,7 +1,10 @@
-import { app, ipcMain, shell, protocol, net } from 'electron';
+import { app, ipcMain, shell, protocol, net, dialog, BrowserWindow } from 'electron';
 import { getSystemFonts } from './logic';
+import { copy as fsCopy, getBasename, joinPaths, exists } from '../../lib/path';
 
-export function setupSystemIpc() {
+let clipboardPath: string | null = null;
+
+export function setupSystemIpc(mainWindow: BrowserWindow) {
   ipcMain.handle('aynite:system-font-list', async () => {
     return await getSystemFonts();
   });
@@ -17,6 +20,57 @@ export function setupSystemIpc() {
 
   ipcMain.handle('aynite:system-app-quit', () => {
     app.quit();
+  });
+
+  // Dialog handlers
+  ipcMain.handle('aynite:dialog-select-file', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile']
+    });
+    if (canceled || filePaths.length === 0) return null;
+    return filePaths[0];
+  });
+
+  ipcMain.handle('aynite:dialog-select-folder', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory']
+    });
+    if (canceled || filePaths.length === 0) return null;
+    return filePaths;
+  });
+
+  // Window control handlers
+  ipcMain.on('aynite:window-minimize', () => {
+    mainWindow.minimize();
+  });
+
+  ipcMain.on('aynite:window-maximize', () => {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  });
+
+  ipcMain.on('aynite:window-close', () => {
+    mainWindow.close();
+  });
+
+  // File clipboard (copy/paste for file operations)
+  ipcMain.handle('aynite:file-clipboard-copy', async (_event, path: string) => {
+    clipboardPath = path;
+    return true;
+  });
+
+  ipcMain.handle('aynite:file-clipboard-paste', async (_event, destDir: string) => {
+    if (!clipboardPath) return false;
+    const fileName = getBasename(clipboardPath);
+    const destPath = joinPaths(destDir, fileName);
+    if (await exists(clipboardPath)) {
+      await fsCopy(clipboardPath, destPath, { recursive: true });
+      return true;
+    }
+    return false;
   });
 }
 

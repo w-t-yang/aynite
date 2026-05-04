@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { joinPaths, getDirname } from '../lib/path';
 
+// ─── Legacy API (window.api) ───────────────────────────────────────────────
 const api = {
   getFiles: (path: string) => ipcRenderer.invoke('aynite:file-list', path),
   runCommand: (command: string, cwd?: string) => ipcRenderer.invoke('aynite:spell-command-run', { command, cwd }),
@@ -125,10 +126,81 @@ const api = {
   }
 };
 
+// ─── New Aynite API (window.aynite) ────────────────────────────────────────
+// Implements the AyniteWindow interface expected by the renderer.
+const ayniteApi = {
+  // Config (key-based routing)
+  getConfig: (key: string, payload?: any) => ipcRenderer.invoke('aynite:config-get', { key, payload }),
+  setConfig: (key: string, payload: any) => ipcRenderer.invoke('aynite:config-set', { key, payload }),
+
+  // Theme
+  applyTheme: async (_theme: any) => {
+    // Theme application is handled on the renderer side via CSS variables
+  },
+  onThemeChanged: (callback: (theme: any) => void) => {
+    const listener = (_: any, theme: any) => callback(theme);
+    ipcRenderer.on('aynite:theme-changed', listener);
+    return () => ipcRenderer.removeListener('aynite:theme-changed', listener);
+  },
+
+  // File operations
+  selectFile: () => ipcRenderer.invoke('aynite:dialog-select-file'),
+  selectFolder: () => ipcRenderer.invoke('aynite:dialog-select-folder'),
+  listFolder: (path: string) => ipcRenderer.invoke('aynite:file-list', path),
+  treeDir: (path: string) => ipcRenderer.invoke('aynite:file-list', path),
+  readFile: (path: string) => ipcRenderer.invoke('aynite:file-read', path),
+  writeFile: (path: string, content: string) => ipcRenderer.invoke('aynite:file-save', { path, content }),
+  createFile: (path: string, isDirectory: boolean) => ipcRenderer.invoke('aynite:file-create', { path, isDirectory }),
+  move: (oldPath: string, newPath: string) => ipcRenderer.invoke('aynite:file-rename', { oldPath, newPath }),
+  remove: (path: string) => ipcRenderer.invoke('aynite:file-delete', path),
+  copy: (path: string) => ipcRenderer.invoke('aynite:file-clipboard-copy', path),
+  paste: (destDir: string) => ipcRenderer.invoke('aynite:file-clipboard-paste', destDir),
+  getFiles: (path: string) => ipcRenderer.invoke('aynite:file-list', path),
+
+  // AI operations
+  aiChat: (payload: any) => ipcRenderer.invoke('aynite:ai-chat', payload),
+  getMergedSystemPrompt: (payload: { globalFiles?: string[], agentFiles?: string[] }) =>
+    ipcRenderer.invoke('aynite:ai-prompt-get-merged', payload?.globalFiles, payload?.agentFiles),
+  listChatLogs: () => ipcRenderer.invoke('aynite:ai-session-list'),
+  saveChatLog: (payload: { id: string, messages: any[] }) =>
+    ipcRenderer.invoke('aynite:ai-session-save', { sessionId: payload.id, messages: payload.messages }),
+  loadChatLog: (payload: { id: string, date: string }) =>
+    ipcRenderer.invoke('aynite:ai-session-load', { sessionId: payload.id, date: payload.date }),
+  runDirectCommand: (payload: any) => ipcRenderer.invoke('aynite:spell-command-run-direct', payload),
+  respondToAiApproval: (id: string, approved: boolean) =>
+    ipcRenderer.send('aynite:ai-approval-response', { id, approved }),
+
+  // Events
+  onAppOperation: (callback: (operation: string) => void) => {
+    const listener = (_: any, operation: string) => callback(operation);
+    ipcRenderer.on('aynite:app-operation', listener);
+    return () => ipcRenderer.removeListener('aynite:app-operation', listener);
+  },
+  onViewOperation: (callback: (operation: string) => void) => {
+    const listener = (_: any, operation: string) => callback(operation);
+    ipcRenderer.on('aynite:view-operation', listener);
+    return () => ipcRenderer.removeListener('aynite:view-operation', listener);
+  },
+  onWorkspaceChanged: (callback: (data: any) => void) => {
+    const listener = (_: any, data: any) => callback(data);
+    ipcRenderer.on('aynite:workspace-changed', listener);
+    return () => ipcRenderer.removeListener('aynite:workspace-changed', listener);
+  },
+
+  // Window operations
+  minimize: () => ipcRenderer.send('aynite:window-minimize'),
+  maximize: () => ipcRenderer.send('aynite:window-maximize'),
+  close: () => ipcRenderer.send('aynite:window-close'),
+
+  platform: process.platform
+};
+
+// ─── Expose bridges ─────────────────────────────────────────────────────────
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', { ipcRenderer });
     contextBridge.exposeInMainWorld('api', api);
+    contextBridge.exposeInMainWorld('aynite', ayniteApi);
   } catch (error) {
     console.error(error);
   }
@@ -137,4 +209,6 @@ if (process.contextIsolated) {
   window.electron = { ipcRenderer };
   // @ts-ignore
   window.api = api;
+  // @ts-ignore
+  window.aynite = ayniteApi;
 }

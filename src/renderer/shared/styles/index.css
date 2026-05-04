@@ -176,6 +176,13 @@ iframe {
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
 
+  /* Tile & Splitter colors */
+  --color-tile-bg: var(--card);
+  --color-tile-border: var(--border);
+  --color-tile-text: var(--foreground);
+  --color-splitter-bg: var(--muted);
+  --color-splitter-hover: var(--accent);
+
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
@@ -192,6 +199,65 @@ iframe {
 
   --font-size-xs: var(--font-size-xs);
   --font-size-xxs: var(--font-size-xxs);
+}
+
+/* ─── Tile & Splitter Component Styles ───────────────────────────── */
+
+@layer components {
+  .tile {
+    @apply bg-tile-bg border border-tile-border flex flex-col relative overflow-hidden m-[1px] rounded-[4px] transition-colors duration-200;
+  }
+
+  .tile.is-active {
+    @apply border-accent ring-1 ring-accent/30;
+  }
+
+  .tile:hover:not(.is-active) {
+    @apply border-accent/50;
+  }
+
+  .tile-title {
+    @apply px-3 py-2 bg-sidebar/50 text-muted-foreground text-[12px] font-semibold uppercase tracking-wider border-b border-tile-border;
+  }
+
+  .tile-content {
+    @apply flex-1 p-0 relative overflow-hidden bg-black/5;
+  }
+
+  .splitter {
+    @apply relative z-[100] transition-colors duration-200 bg-transparent;
+  }
+
+  /* Larger hit area for splitters */
+  .splitter::after {
+    content: '';
+    @apply absolute inset-[-4px] z-[101];
+  }
+
+  .splitter.horizontal {
+    @apply w-[2px] cursor-col-resize hover:bg-splitter-hover active:bg-splitter-hover;
+  }
+
+  .splitter.vertical {
+    @apply h-[2px] cursor-row-resize hover:bg-splitter-hover active:bg-splitter-hover;
+  }
+
+  .drag {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
+
+body.is-resizing {
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+body.is-resizing iframe {
+  pointer-events: none !important;
 }
 
 /* ─── Tiptap Chat Input Styles ────────────────────────────────────── */
