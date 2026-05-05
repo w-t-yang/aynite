@@ -249,7 +249,6 @@ export function AIChat() {
   const [sessions, setSessions] = useState<any[]>([]);
 
   const loadSessions = async () => {
-    // @ts-ignore
     const res = await window.aynite.listChatLogs();
     if (res) {
       setSessions(res);
@@ -336,7 +335,6 @@ export function AIChat() {
     if (lastSession) {
       try {
         const { id, date } = JSON.parse(lastSession);
-        // @ts-ignore
         window.aynite.loadChatLog(id, date).then((res: any) => {
           if (res) {
             setMessages(normalizeAndHealMessages(res));
@@ -363,7 +361,6 @@ export function AIChat() {
   useEffect(() => {
     if (sessionId && messages.length > 0) {
       const timer = setTimeout(() => {
-        // @ts-ignore
         window.aynite.saveChatLog(sessionId, messages);
       }, 1000);
       return () => clearTimeout(timer);
@@ -381,7 +378,6 @@ export function AIChat() {
     };
     (window as any).setChatSession = (id: string, date?: string) => {
       const dateStr = date || new Date().toISOString().split('T')[0];
-      // @ts-ignore
       window.aynite.loadChatLog(id, dateStr).then((res: any) => {
         if (res) {
           setMessages(normalizeAndHealMessages(res));
@@ -418,7 +414,6 @@ export function AIChat() {
   const handleOpenFileInternal = async (filepath: string) => {
     if (!onOpenFile) return;
     try {
-      // @ts-ignore
       const res = await window.aynite.readFile(filepath);
       if (res) {
         const name = filepath.split(/[/\\]/).pop() || filepath;
@@ -483,7 +478,6 @@ export function AIChat() {
 
         setLoading(true);
         try {
-          // @ts-ignore
           const res = await window.aynite.runDirectCommand({
             commandPath: path,
             params: params,
@@ -521,7 +515,6 @@ export function AIChat() {
         for (const match of commandMatches) {
           const [full, name, path] = match;
           try {
-            // @ts-ignore
             const res = await window.aynite.runDirectCommand({
               commandPath: path,
               params: [],
@@ -754,11 +747,9 @@ export function AIChat() {
 
     // Use first workspace folder as base if available
     const baseDir = workspaceFolders.length > 0 ? workspaceFolders[0] : '';
-    // @ts-ignore
     const fullPath = baseDir ? await window.aynite.joinPath(baseDir, filename) : filename;
 
     try {
-      // @ts-ignore
       await window.aynite.writeFile(fullPath, text);
     } catch (err) {
       console.error('Failed to save file', err);

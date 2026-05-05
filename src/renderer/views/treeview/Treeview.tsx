@@ -107,9 +107,7 @@ export function Treeview() {
   }, []);
 
   useEffect(() => {
-    // @ts-ignore
     const unsubscribe = window.aynite.onFileSystemChange(async ({ event, path }) => {
-      // @ts-ignore
       const dirname = await window.aynite.dirname(path);
       window.dispatchEvent(new CustomEvent('reload-folder', { detail: dirname }));
 
@@ -220,7 +218,6 @@ export function Treeview() {
 
   const fetchFiles = async (dirPath: string): Promise<FileNode[]> => {
     try {
-      // @ts-ignore
       const res = await window.aynite.getFiles(dirPath);
       return res.map((f: any) => ({
         id: f.path,
@@ -238,14 +235,12 @@ export function Treeview() {
 
   const loadWorkspaceData = async () => {
     try {
-      // @ts-ignore
       const wsConfig = await window.aynite.getWorkspacesList();
       if (wsConfig) {
         setWorkspaces(wsConfig.list);
         setActiveWorkspace(wsConfig.active);
       }
 
-      // @ts-ignore
       const folders = await window.aynite.getWorkspaceFolders();
       console.log('Sidebar: loaded folders from backend', folders);
       if (folders && Array.isArray(folders)) {
@@ -287,7 +282,6 @@ export function Treeview() {
       setShowNewWorkspaceModal(true);
       return;
     }
-    // @ts-ignore
     await window.aynite.switchWorkspace(ws);
     await loadWorkspaceData();
     onWorkspaceChange?.();
@@ -301,7 +295,6 @@ export function Treeview() {
 
       return;
     }
-    // @ts-ignore
     await window.aynite.createWorkspace(name);
     await loadWorkspaceData();
     onWorkspaceChange?.();
@@ -310,7 +303,6 @@ export function Treeview() {
   };
 
   const handleAddFolder = async () => {
-    // @ts-ignore
     const res = await window.aynite.addWorkspaceFolder();
     if (res) {
       await loadWorkspaceData();
@@ -327,7 +319,6 @@ export function Treeview() {
       }
       const newOrder = rootFilesPaths.filter(id => !dragIds.includes(id));
       newOrder.splice(index, 0, ...dragIds);
-      // @ts-ignore
       await window.aynite.reorderWorkspaceFolders(newOrder);
       await loadWorkspaceData();
     } else {
@@ -343,10 +334,8 @@ export function Treeview() {
 
       for (const id of dragIds) {
         const name = id.split(/[\/\\]/).pop();
-        // @ts-ignore
         const newPath = await window.aynite.joinPath(parentId, name);
         if (id !== newPath) {
-          // @ts-ignore
           await window.aynite.renameFile(id, newPath);
           window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath: id, newPath } }));
         }
@@ -371,7 +360,6 @@ export function Treeview() {
       return;
     }
 
-    // @ts-ignore
     const dirname = await window.aynite.dirname(file.id);
     const reloadPath = (action === 'new-file' || action === 'new-folder' || action === 'paste') && file.isDirectory ? file.id : dirname;
     const parentDirForPaste = file.isDirectory ? file.id : dirname;
@@ -381,31 +369,23 @@ export function Treeview() {
         if (action === 'paste' && clipboard) {
           for (const src of clipboard.paths) {
             const name = src.split(/[\/\\]/).pop();
-            // @ts-ignore
             const dest = await window.aynite.joinPath(parentDirForPaste, name);
-            // @ts-ignore
             await window.aynite.copyFile(src, dest);
           }
         } else if ((action === 'new-file' || action === 'new-folder') && payloadVal) {
-          // @ts-ignore
           const newPath = await window.aynite.joinPath(file.id, payloadVal);
-          // @ts-ignore
           await window.aynite.createFile(newPath, action === 'new-folder');
           if (action === 'new-file' && onSelectFile) {
             onSelectFile({ name: payloadVal, isDirectory: false, path: newPath });
           }
         } else if (action === 'rename' && payloadVal && payloadVal !== file.name) {
-          // @ts-ignore
           const newPath = await window.aynite.joinPath(dirname, payloadVal);
-          // @ts-ignore
           await window.aynite.renameFile(file.id, newPath);
           window.dispatchEvent(new CustomEvent('file-renamed', { detail: { oldPath: file.id, newPath } }));
         } else if (action === 'delete') {
-          // @ts-ignore
           await window.aynite.deleteFile(file.id);
           window.dispatchEvent(new CustomEvent('file-deleted', { detail: file.id }));
         } else if (action === 'remove-from-workspace') {
-          // @ts-ignore
           await window.aynite.removeWorkspaceFolder(file.id);
         }
 
