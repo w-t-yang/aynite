@@ -5,7 +5,6 @@ import { getFileCategory, FileInfo } from '../../lib/file-handlers';
 import { KeyManager } from '../../lib/key-handlers';
 import { FileHandlerComponents } from './index';
 import Editor from 'react-simple-code-editor';
-// @ts-ignore
 import { highlight, languages } from 'prismjs';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-javascript';
@@ -49,7 +48,6 @@ function FileViewer({
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false);
   const lastLocalWriteTime = useRef(0);
   
-  // @ts-ignore
   const category = fileInfo ? getFileCategory(fileInfo.extension, fileInfo.isText, fileInfo.path) : 'text';
   const MAX_TEXT_SIZE = 10 * 1024 * 1024;
   const isTextLike = category === 'text' || category === 'markdown' || category === 'html';
@@ -97,7 +95,6 @@ function FileViewer({
       setError(null);
       try {
         const path = id.startsWith('file-') ? id.replace('file-', '') : id;
-        // @ts-ignore
         const res = await window.aynite.getFileInfo(path);
         setFileInfo({
           ...res,
@@ -136,7 +133,6 @@ function FileViewer({
 
   useEffect(() => {
     // Listen for file system changes
-    // @ts-ignore
     const cleanup = window.aynite.onFileSystemChange((data) => {
       const currentPath = id.startsWith('file-') ? id.replace('file-', '') : id;
       // We normalize paths to be safe (Chokidar might use different slashes)
@@ -174,7 +170,6 @@ function FileViewer({
     setLoading(true);
     try {
       const path = id.startsWith('file-') ? id.replace('file-', '') : id;
-      // @ts-ignore
       const res = await window.aynite.readFile(path);
       
       setLocalContent(res);
@@ -185,7 +180,6 @@ function FileViewer({
       }
       setExternalChangeDetected(false);
       // Also update file info to get latest metadata
-      // @ts-ignore
       const infoRes = await window.aynite.getFileInfo(path);
       setFileInfo({
         ...infoRes,

@@ -820,7 +820,7 @@ export function AIChat() {
       </div>
 
       {/* Input Area */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent z-20">
+      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent z-10">
         <div className="max-w-4xl mx-auto relative group">
           <ChatInput
             ref={inputRef}

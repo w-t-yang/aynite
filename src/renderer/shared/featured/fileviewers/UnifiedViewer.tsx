@@ -137,7 +137,6 @@ export const UnifiedViewer: React.FC<{
           e.stopPropagation();
 
           if (isExternal) {
-            // @ts-ignore
             window.aynite?.openExternal(url);
           } else {
             let cleanPath = url;

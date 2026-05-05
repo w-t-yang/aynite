@@ -28,7 +28,6 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // @ts-ignore
     window.aynite.workspaceAllFiles().then(res => {
       if (res && res.data) {
         setWorkspaceFiles(res.data);
@@ -73,7 +72,6 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
           if (item.isTab) {
             onSelect(item.id);
           } else {
-            // @ts-ignore
             window.aynite.readFile(item.filepath).then(res => {
               if (res && res.data) {
                 onOpenFile({ name: item.title, path: item.filepath!, isDirectory: false }, res.data);
@@ -131,7 +129,6 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
               if (item.isTab) {
                 onSelect(item.id);
               } else {
-                // @ts-ignore
                 window.aynite.readFile(item.filepath).then(res => {
                   if (res && res.data) {
                     onOpenFile({ name: item.title, path: item.filepath!, isDirectory: false }, res.data);

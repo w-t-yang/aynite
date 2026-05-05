@@ -148,7 +148,6 @@ export async function runAgentLoop(
 
   let requestId;
   try {
-    // @ts-ignore
     const res = await window.aynite.aiChat({
       messages: apiMessages,
       config: {
@@ -196,7 +195,6 @@ export async function runAgentLoop(
     };
 
     // Listen for approval requests
-    // @ts-ignore
     const removeApprovalListener = window.aynite.onAiApprovalRequest(async (data: { id: string, command: string, cwd: string }) => {
       onEvent({
         type: 'approval_request',
@@ -206,11 +204,9 @@ export async function runAgentLoop(
         approvalId: data.id,
       });
       const approved = await requestApproval(data.command, data.cwd);
-      // @ts-ignore
       window.aynite.respondToAiApproval(data.id, approved);
     });
 
-    // @ts-ignore
     const removeDeltaListener = window.aynite.onAiChatDelta(requestId, (part: any) => {
       if (abortSignal?.aborted) {
         removeDeltaListener();

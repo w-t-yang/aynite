@@ -186,7 +186,6 @@ export async function loadConfig() {
   if (!mainConfig.skills) mainConfig.skills = await getSkillsConfig();
   if (!mainConfig.commands) mainConfig.commands = await getCommandsConfig();
   if (mainConfig.prompts && mainConfig.prompts.files) {
-    // @ts-ignore
     mainConfig.prompts.files = mainConfig.prompts.files.filter((f: string) => !f.split('/').pop().startsWith('agent-'));
   }
   if (!mainConfig.agents) {
