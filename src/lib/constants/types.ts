@@ -70,6 +70,31 @@ export interface FileNode {
   isExpanded?: boolean
 }
 
+export interface MainConfig {
+  lastUsed?: string
+  activeTheme?: string
+  aiTools?: Record<string, boolean>
+  agents?: {
+    activeId: string
+    list: Array<{
+      id: string
+      name: string
+      promptFiles: string[]
+    }>
+  }
+  prompts?: {
+    files: string[]
+  }
+  skills?: {
+    folders: string[]
+  }
+  commands?: {
+    folders: string[]
+  }
+  views?: View[]
+  [key: string]: unknown // Allow unknown keys for forward compat
+}
+
 export interface Theme {
   id: string
   name: string

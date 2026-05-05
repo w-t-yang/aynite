@@ -6,7 +6,7 @@
  */
 import { app } from 'electron';
 import { ConfigKey } from '../../lib/constants/config';
-import { WorkspaceConfig, LayoutConfig } from '../../lib/constants/types';
+import { WorkspaceConfig, LayoutConfig, MainConfig } from '../../lib/constants/types';
 import { loadConfig, saveConfig } from './logic';
 import {
   getWorkspacesList,
@@ -70,7 +70,7 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
 
     case ConfigKey.VIEWS: {
       const config = await loadConfig();
-      return (config as any).views || [];
+      return (config as MainConfig).views || [];
     }
 
     case ConfigKey.THEMES: {
@@ -83,7 +83,7 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
     }
 
     case ConfigKey.ACTIVE_THEME: {
-      const mainConfig = await readJson<any>(getMainConfigPath(), {});
+      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {});
       return mainConfig.activeTheme || 'light';
     }
 
@@ -109,27 +109,27 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
 
     case ConfigKey.AGENTS: {
       const config = await loadConfig();
-      return (config as any).agents || { activeId: 'aynite', list: [] };
+      return config.agents || { activeId: 'aynite', list: [] };
     }
 
     case ConfigKey.PROMPTS: {
       const config = await loadConfig();
-      return (config as any).prompts || { files: [] };
+      return config.prompts || { files: [] };
     }
 
     case ConfigKey.SKILLS: {
       const config = await loadConfig();
-      return (config as any).skills || { folders: [] };
+      return config.skills || { folders: [] };
     }
 
     case ConfigKey.COMMANDS: {
       const config = await loadConfig();
-      return (config as any).commands || { folders: [] };
+      return config.commands || { folders: [] };
     }
 
     case ConfigKey.TOOLS: {
       const list = await getToolsMetadata();
-      const mainCfg = await readJson<any>(getMainConfigPath(), {});
+      const mainCfg = await readJson<MainConfig>(getMainConfigPath(), {});
       const active = mainCfg.aiTools || DEFAULT_AI_TOOLS;
       return { active, list };
     }
@@ -160,7 +160,7 @@ export async function routeSetConfig(key: string, payload: any): Promise<boolean
       const dataPath = getWorkspaceDataPath(id);
       
       // Defensive merge: load existing first if possible
-      const existing = await readJson<any>(dataPath, {});
+      const existing = await readJson<Record<string, unknown>>(dataPath, {});
       const updated = { ...existing, ...config, id };
       
       await writeJson(dataPath, updated);
@@ -175,14 +175,14 @@ export async function routeSetConfig(key: string, payload: any): Promise<boolean
     }
 
     case ConfigKey.ACTIVE_THEME: {
-      const mainConfig = await readJson<any>(getMainConfigPath(), {});
+      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {});
       mainConfig.activeTheme = payload;
       await writeJson(getMainConfigPath(), mainConfig);
       return true;
     }
 
     case ConfigKey.THEME: {
-      const { id, theme } = payload as { id: string; theme: any };
+      const { id, theme } = payload as { id: string; theme: Record<string, unknown> };
       await saveTheme(id, theme);
       return true;
     }
@@ -201,7 +201,7 @@ export async function routeSetConfig(key: string, payload: any): Promise<boolean
 
     case ConfigKey.TOOLS: {
       // payload is { active: { [key: string]: boolean }, list: [...] }
-      const mainConfig = await readJson<any>(getMainConfigPath(), {});
+      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {});
       mainConfig.aiTools = payload.active;
       await writeJson(getMainConfigPath(), mainConfig);
       return true;
@@ -212,7 +212,7 @@ export async function routeSetConfig(key: string, payload: any): Promise<boolean
     case ConfigKey.SKILLS:
     case ConfigKey.COMMANDS: {
       // These are sub-keys of the main config
-      const mainConfig = await readJson<any>(getMainConfigPath(), {});
+      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {});
       mainConfig[key] = payload;
       await writeJson(getMainConfigPath(), mainConfig);
       return true;

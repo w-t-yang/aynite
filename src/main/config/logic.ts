@@ -159,7 +159,7 @@ export async function initAppFolders() {
 export async function loadConfig() {
   const ai = await readJson(getAIConfigPath(), { provider: 'gemini', configs: {} });
   let keybindings = await readJson(getKeybindingsConfigPath(), DEFAULT_KEYBINDINGS);
-  const mainConfig: any = await readJson(getMainConfigPath(), {});
+  const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {});
 
   let modified = false;
   const ensureKeys = (target: any, defaults: any) => {
