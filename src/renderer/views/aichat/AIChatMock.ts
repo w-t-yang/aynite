@@ -1,5 +1,5 @@
-import { ChatApi } from '../../shared/context/ChatMockContext';
-import { SettingsMock } from '../../shared/context/MockViewContext';
+import { ChatApi } from '../context/ChatMockContext';
+import { SettingsMock } from '../context/MockViewContext';
 
 export const AIChatMockData: ChatApi = {
   getSettings: async () => {

@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const SHARED_DIR = path.join(ROOT_DIR, 'src/renderer/shared');
 const VIEWS_DIR = path.join(ROOT_DIR, 'src/renderer/views');
+const SRC_DIR = path.join(ROOT_DIR, 'src/renderer/src');
 
 interface AuditIssue {
   type: string;
@@ -121,7 +122,7 @@ const activeViolations = focusArg
 
 const targetFolders = folderArg 
   ? [path.resolve(ROOT_DIR, folderArg)] 
-  : [SHARED_DIR, VIEWS_DIR];
+  : [SHARED_DIR, VIEWS_DIR, SRC_DIR];
 
 const IGNORE_STRINGS = [
   'void', 'any', 'string', 'number', 'boolean', 'Promise', 'React', 'null', 'undefined',
@@ -175,6 +176,10 @@ const auditFile = (filepath: string) => {
   else if (filepath.includes(path.join(SHARED_DIR, 'featured'))) category = 'featured';
   else if (filepath.includes(path.join(SHARED_DIR, 'pages'))) category = 'pages';
   else if (filepath.includes(path.join(SHARED_DIR, 'context'))) category = 'context';
+  else if (filepath.includes(path.join(SRC_DIR, 'context'))) category = 'src-context';
+  else if (filepath.includes(path.join(SRC_DIR, 'components'))) category = 'src-components';
+  else if (filepath.includes(SRC_DIR)) category = 'src';
+  else if (filepath.includes(path.join(VIEWS_DIR, 'context'))) category = 'views-context';
   else if (filepath.includes(VIEWS_DIR)) category = 'views';
 
   // 1. Import Hierarchy Audit
@@ -195,14 +200,20 @@ const auditFile = (filepath: string) => {
         else if (resolvedPath.includes(path.join(SHARED_DIR, 'featured'))) targetCategory = 'featured';
         else if (resolvedPath.includes(path.join(SHARED_DIR, 'pages'))) targetCategory = 'pages';
         else if (resolvedPath.includes(path.join(SHARED_DIR, 'context'))) targetCategory = 'context';
+        else if (resolvedPath.includes(path.join(SRC_DIR, 'context'))) targetCategory = 'src-context';
+        else if (resolvedPath.includes(path.join(SRC_DIR, 'components'))) targetCategory = 'src-components';
+        else if (resolvedPath.includes(SRC_DIR)) targetCategory = 'src';
+        else if (resolvedPath.includes(path.join(VIEWS_DIR, 'context'))) targetCategory = 'views-context';
         else if (resolvedPath.includes(VIEWS_DIR)) targetCategory = 'views';
 
         let violation = false;
         let msg = '';
 
         if (category === 'lib') {
-          violation = true;
-          msg = 'lib module should only import from external packages.';
+          if (targetCategory !== 'lib' && targetCategory !== '') {
+            violation = true;
+            msg = 'lib module should only import from external packages or other lib files.';
+          }
         } else if (category === 'basic') {
           const isException = filepath.endsWith('basic/Modal.tsx') || filepath.endsWith('basic/Select.tsx');
           if (targetCategory !== 'lib' && targetCategory !== 'context' && !isException) {
@@ -210,9 +221,9 @@ const auditFile = (filepath: string) => {
             msg = 'basic components should only import from lib or context.';
           }
         } else if (category === 'featured') {
-          if (targetCategory !== 'basic' && targetCategory !== 'lib' && targetCategory !== 'context') {
+          if (targetCategory !== 'basic' && targetCategory !== 'lib' && targetCategory !== 'context' && targetCategory !== 'featured') {
             violation = true;
-            msg = 'featured components should only import from basic, lib, or context.';
+            msg = 'featured components should only import from basic, lib, context, or sibling featured components.';
           }
         } else if (category === 'advanced') {
           if (targetCategory !== 'featured' && targetCategory !== 'basic' && targetCategory !== 'lib' && targetCategory !== 'context' && targetCategory !== 'advanced') {
@@ -231,6 +242,16 @@ const auditFile = (filepath: string) => {
             violation = true;
             msg = 'Shared pages should not import from views.';
           }
+        } else if (category === 'src-components') {
+          if (targetCategory === 'src' || targetCategory === 'src-context' || targetCategory === 'views' || targetCategory === 'views-context') {
+            violation = true;
+            msg = 'src/components can only import from shared (lib, basic, featured, etc.).';
+          }
+        } else if (category === 'views' || category === 'views-context') {
+          if (targetCategory.startsWith('src')) {
+            violation = true;
+            msg = 'Views should not import from renderer/src. Views are standalone micro-apps.';
+          }
         }
 
         if (violation) {
@@ -243,6 +264,22 @@ const auditFile = (filepath: string) => {
           });
         }
       }
+    }
+  }
+
+  // 1.5. View Isolation Audit (window.aynite usage)
+  if (category === 'views') {
+    const bridgeRegex = /\b(?:window\.)?aynite\.(?!platform)\w+|\bAyniteWindow\b/g;
+    let bridgeMatch;
+    while ((bridgeMatch = bridgeRegex.exec(content)) !== null) {
+      const lineNum = content.substring(0, bridgeMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.IMPORT_HIERARCHY.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: 'Views should not use window.aynite or AyniteWindow directly. They must remain decoupled from the main bridge.'
+      });
     }
   }
 

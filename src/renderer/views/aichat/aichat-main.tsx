@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { AIChat } from './AIChat'
-import { ChatMockProvider } from '../../shared/context/ChatMockContext'
+import { ChatMockProvider } from '../context/ChatMockContext'
 import { AIChatMockData } from './AIChatMock'
 import '../../shared/styles/index.css'
 

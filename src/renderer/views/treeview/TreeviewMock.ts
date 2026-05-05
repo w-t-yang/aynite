@@ -1,4 +1,4 @@
-import { SidebarApi, FileNode } from '../../shared/context/SidebarMockContext';
+import { SidebarApi, FileNode } from '../context/SidebarMockContext';
 
 export const TreeviewMockData: SidebarApi = {
   getWorkspacesList: async () => ({

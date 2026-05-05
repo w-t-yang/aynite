@@ -2,29 +2,29 @@ import React, { useState, useEffect } from 'react';
 import {
   Sun, Keyboard, Bot, FileText, Wrench, Zap, Terminal, Info, X, RotateCcw
 } from 'lucide-react';
-import { SettingsState } from '../../shared/lib/types';
-import { cn } from '../../shared/lib/utils';
+import { SettingsState } from '../../lib/types';
+import { cn } from '../../lib/utils';
 
 // Shared Tabs
-import { AppearanceTab } from '../../shared/pages/settings/AppearanceTab';
-import { KeybindingsTab } from '../../shared/pages/settings/KeybindingsTab';
-import { AITab } from '../../shared/pages/settings/AITab';
-import { AgentsTab } from '../../shared/pages/settings/AgentsTab';
-import { SkillsTab } from '../../shared/pages/settings/SkillsTab';
-import { CommandsTab } from '../../shared/pages/settings/CommandsTab';
-import { ToolsTab } from '../../shared/pages/settings/ToolsTab';
-import { AboutTab } from '../../shared/pages/settings/AboutTab';
-import { TabButton } from '../../shared/basic/TabButton';
-import { Modal } from '../../shared/basic/Modal';
-import { Button } from '../../shared/basic/Button';
-import { ayniteConfig } from '../../src/config';
+import { AppearanceTab } from './AppearanceTab';
+import { KeybindingsTab } from './KeybindingsTab';
+import { AITab } from './AITab';
+import { AgentsTab } from './AgentsTab';
+import { SkillsTab } from './SkillsTab';
+import { CommandsTab } from './CommandsTab';
+import { ToolsTab } from './ToolsTab';
+import { AboutTab } from './AboutTab';
+import { TabButton } from '../../basic/TabButton';
+import { Modal } from '../../basic/Modal';
+import { Button } from '../../basic/Button';
+import { ayniteConfig } from '../../../src/config';
 
 
 
 interface SettingsProps {
 }
 
-export function Settings({ }: SettingsProps) {
+export function SettingsPage({ }: SettingsProps) {
   const aynite = ayniteConfig;
 
   const [activeTab, setActiveTab] = useState('appearance');

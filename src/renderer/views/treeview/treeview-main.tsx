@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { Treeview } from './Treeview'
-import { SidebarMockProvider } from '../../shared/context/SidebarMockContext'
+import { SidebarMockProvider } from '../context/SidebarMockContext'
 import { TreeviewMockData } from './TreeviewMock'
 import '../../shared/styles/index.css'
 
