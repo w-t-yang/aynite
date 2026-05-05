@@ -125,6 +125,13 @@ const aynite = {
     return () => ipcRenderer.removeListener(ConfigEventChannels.APP_OPERATION, listener);
   },
 
+  // ── Theme events ────────────────────────────────────────────────────────
+  onThemeChanged: (callback: (themeId: string) => void) => {
+    const listener = (_: any, themeId: string) => callback(themeId);
+    ipcRenderer.on(ConfigEventChannels.THEME_CHANGED, listener);
+    return () => ipcRenderer.removeListener(ConfigEventChannels.THEME_CHANGED, listener);
+  },
+
   // ── Update ──────────────────────────────────────────────────────────────
   installUpdate: () =>
     ipcRenderer.invoke(UpdateChannels.INSTALL),

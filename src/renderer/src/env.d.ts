@@ -57,6 +57,7 @@ export interface AyniteWindow {
   selectFolder: () => Promise<string[] | null>
 
   onAppOperation: (callback: (operation: string) => void) => () => void
+  onThemeChanged: (callback: (themeId: string) => void) => () => void
 
   // Update
   installUpdate: () => Promise<void>

@@ -159,5 +159,10 @@ User-installable skills and commands live under `~/.aynite/skills/` and `~/.ayni
 6. **IPC channels** use the `aynite:resource-action` naming convention (e.g., `aynite:file-read`, `aynite:workspace-list`). All channel strings are defined in `ipc-channels.ts`.
 7. **App data directory** is `~/.aynite-desktop/`, with subdirectories for config, logs, prompts, themes, skills, commands, views, workspaces, sessions.
 8. **AI streaming**: The `ai` package's `streamText` is used for chat. Deltas are forwarded to the renderer via `webContents.send` on a per-request channel (`aynite:ai-chat-delta:<requestId>`). Tool calls and approvals go through `AiEventChannels.APPROVAL_REQUEST` / `APPROVAL_RESPONSE`.
-9. **Theme injection**: Themes are CSS custom properties set on `document.documentElement` by `ThemeContext`. The `data-theme` attribute tracks light/dark mode.
+9. **Theme system**: Themes are CSS custom properties set on `document.documentElement`. The `data-theme` attribute tracks light/dark mode. Theme changes flow through a broadcast mechanism:
+   - `config/ipc.ts` broadcasts `ConfigEventChannels.THEME_CHANGED` to all BrowserWindows when `ConfigKey.ACTIVE_THEME` is set
+   - `ThemeContext.tsx` (main renderer) applies themes via `applyThemeColors()` from `shared/lib/utils.ts`
+   - Iframe views self-apply themes via `ThemeAwareView` from `shared/lib/useTheme.tsx`, which listens for `onThemeChanged` and loads/applies the theme independently
+   - Views use `shared/lib/useTheme.tsx` (`useViewTheme` hook / `ThemeAwareView` wrapper) — no parent-injected CSS in iframes
+   - The audit rule `VIEW_THEME_USAGE` ensures view entry files import the theme module
 10. **Keybinding dispatch**: Main process caches keybinding config and matches `before-input-event` against it. On match, sends `aynite:app-operation` to the renderer. The renderer's `AppContext.executeAppOperation()` calls `executeLayoutOperation()` from `utils/tile`.

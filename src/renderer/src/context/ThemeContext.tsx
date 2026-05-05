@@ -9,7 +9,7 @@ import React, {
 import { WorkspaceConfig, KeybindingConfig, View, Theme } from '../../../lib/constants/types'
 import { ConfigKey } from '../../../lib/constants/config'
 import { ayniteConfig } from '../config'
-import { toCSSVar } from '../../shared/lib/utils'
+import { applyThemeColors as applySharedThemeColors } from '../../shared/lib/utils'
 
 interface ThemeContextType {
   activeTheme: Theme | null
@@ -27,25 +27,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
 
   const applyThemeColors = useCallback((theme: Theme) => {
-    const root = document.documentElement
-
-    // Apply colors
-    for (const [key, value] of Object.entries(theme.colors)) {
-      root.style.setProperty(toCSSVar(key), value as string)
-    }
-
-    // Apply fonts
-    if (theme.fonts) {
-      if (theme.fonts.fontFamily) root.style.setProperty('--font-sans', theme.fonts.fontFamily)
-      if (theme.fonts.fontMono) root.style.setProperty('--font-mono', theme.fonts.fontMono)
-      if (theme.fonts.fontSize) {
-        root.style.setProperty('--font-size-base', theme.fonts.fontSize)
-        root.style.fontSize = theme.fonts.fontSize
-      }
-    }
-
-    // Set data attribute for theme type (light/dark)
-    root.setAttribute('data-theme', theme.type)
+    applySharedThemeColors(theme)
   }, [])
 
   const loadThemes = useCallback(async () => {

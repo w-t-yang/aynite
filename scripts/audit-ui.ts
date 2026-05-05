@@ -116,6 +116,11 @@ const VIOLATIONS = {
     name: 'Forbidden Global Access',
     regex: /\bwindow\.(?!aynite|addEventListener|removeEventListener|localStorage|sessionStorage|location|open|close|focus|blur|print|scrollTo|scrollBy|innerWidth|innerHeight|outerWidth|outerHeight|devicePixelRatio|screen|requestAnimationFrame|cancelAnimationFrame|matchMedia|getComputedStyle|setTimeout|setInterval|clearTimeout|clearInterval|crypto|performance|history|document|navigator|top|parent|self|frames|ayniteConfig|dispatchEvent|removeEventListener|getSelection|getComputedStyle)\b[a-zA-Z0-9_]+/g,
     description: 'Avoid accessing custom or internal window.xxx properties. Only window.aynite and standard Web APIs are allowed.'
+  },
+  VIEW_THEME_USAGE: {
+    key: 'theme',
+    name: 'View Theme Usage',
+    description: 'View entry files must import ThemeAwareView or useViewTheme from shared/lib/useTheme to self-apply themes.',
   }
 } satisfies Record<string, ViolationRule>;
 
@@ -527,10 +532,11 @@ const auditFile = (filepath: string) => {
 
   // 13. Bridge Usage
   if (activeViolations.some(v => v.key === 'bridge')) {
-    const isAllowedFile = 
-      filepath.endsWith('AIChat.tsx') || 
-      filepath.endsWith('Treeview.tsx') || 
-      filepath.endsWith('Settings.tsx') || 
+    const isAllowedFile =
+      filepath.endsWith('AIChat.tsx') ||
+      filepath.endsWith('Treeview.tsx') ||
+      filepath.endsWith('Settings.tsx') ||
+      filepath.includes('useTheme.ts') ||
       filepath.includes('src/renderer/src/');
     if (!isAllowedFile) {
       let bridgeMatch;
@@ -547,7 +553,25 @@ const auditFile = (filepath: string) => {
     }
   }
 
-  // 14. Forbidden Globals
+  // 14. View Theme Usage
+  if (activeViolations.some(v => v.key === 'theme') && category === 'views') {
+    const isViewEntry = filepath.match(/views\/[^/]+\/[a-z-]+-main\.tsx$/);
+    if (isViewEntry) {
+      const hasThemeImport = content.includes("shared/lib/useTheme'") || content.includes('shared/lib/useTheme"');
+      if (!hasThemeImport) {
+        const lineNum = 1;
+        report.push({
+          type: VIOLATIONS.VIEW_THEME_USAGE.name,
+          file: relativePath,
+          line: lineNum,
+          snippet: lines[0]?.trim() || '',
+          message: 'View entry files must import ThemeAwareView or useViewTheme from shared/lib/useTheme. Wrap your view root with <ThemeAwareView> to enable self-contained theming.'
+        });
+      }
+    }
+  }
+
+  // 15. Forbidden Globals
   if (activeViolations.some(v => v.key === 'globals')) {
     let globalMatch;
     while ((globalMatch = VIOLATIONS.FORBIDDEN_GLOBALS.regex!.exec(content)) !== null) {
@@ -586,6 +610,7 @@ const DISPLAY_ORDER = [
   VIOLATIONS.BACKGROUND_COLORS.name,
   VIOLATIONS.LEGACY_MESSAGING.name,
   VIOLATIONS.BRIDGE_USAGE.name,
+  VIOLATIONS.VIEW_THEME_USAGE.name,
   VIOLATIONS.FORBIDDEN_GLOBALS.name
 ];
 
