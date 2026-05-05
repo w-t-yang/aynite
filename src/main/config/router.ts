@@ -38,6 +38,7 @@ import {
 } from '../../lib/path';
 
 import { DEFAULT_WORKSPACE_CONFIG } from '../../lib/constants/workspace';
+import { DEFAULT_AI_TOOLS } from '../../lib/constants/ai';
 
 
 
@@ -127,7 +128,10 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
     }
 
     case ConfigKey.TOOLS: {
-      return await getToolsMetadata();
+      const list = await getToolsMetadata();
+      const mainCfg = await readJson<any>(getMainConfigPath(), {});
+      const active = mainCfg.aiTools || DEFAULT_AI_TOOLS;
+      return { active, list };
     }
 
     case ConfigKey.VERSION: {
@@ -192,6 +196,14 @@ export async function routeSetConfig(key: string, payload: any): Promise<boolean
 
     case ConfigKey.AI: {
       await writeJson(getAIConfigPath(), payload);
+      return true;
+    }
+
+    case ConfigKey.TOOLS: {
+      // payload is { active: { [key: string]: boolean }, list: [...] }
+      const mainConfig = await readJson<any>(getMainConfigPath(), {});
+      mainConfig.aiTools = payload.active;
+      await writeJson(getMainConfigPath(), mainConfig);
       return true;
     }
 

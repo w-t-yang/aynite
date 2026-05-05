@@ -20,10 +20,10 @@ interface FileNode {
 export function Treeview() {
   const [activeTabPath, setActiveTabPath] = useState<string>('');
   const [dirtyFiles, setDirtyFiles] = useState<string[]>([]);
-  const onWorkspaceChange = () => {};
+  const onWorkspaceChange = () => { };
   const onSelectFile = (file: { name: string; isDirectory: boolean; path: string }) => console.log('Selecting file:', file.path);
-  const onOpenSettings = () => {};
-  const onClose = () => {};
+  const onOpenSettings = () => { };
+  const onClose = () => { };
 
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [workspaces, setWorkspaces] = useState<string[]>([]);

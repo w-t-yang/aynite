@@ -114,7 +114,7 @@ const aynite = {
   getAvailableViews: () =>
     ipcRenderer.invoke(SystemChannels.VIEW_LIST),
   checkForUpdates: () =>
-    ipcRenderer.send(UpdateChannels.CHECK),
+    ipcRenderer.invoke(UpdateChannels.CHECK),
 
 
 
