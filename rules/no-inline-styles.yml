@@ -1,0 +1,9 @@
+id: no-inline-styles
+message: Avoid inline `style` props. Use Tailwind classes instead.
+note: Inline styles bypass the Tailwind class system and create inconsistency.
+severity: warning
+language: tsx
+rule:
+  any:
+    - pattern: <$$$ style={$$$}>
+    - pattern: <$$$ style={{$$$}}>

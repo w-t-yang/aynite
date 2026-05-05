@@ -16,6 +16,21 @@ npm run audit:ui           # Audit renderer code for rule violations
 npm run audit              # Run both audits
 npm run test:ai            # Test AI provider configurations
 
+# Test
+npm test                # Run all tests
+npm run test:watch      # Watch mode
+npm run test:coverage   # Run with coverage report
+npm run test:unit       # Core logic tests only (lib + main)
+
+# Lint (Biome)
+npm run lint            # Check for issues
+npm run lint:fix        # Auto-fix what it can
+
+# Audit (custom rules)
+npm run lint:audit      # ast-grep structural rules (button types, inline styles, etc.)
+npm run lint:deadcode   # Knip — find unused files, exports, and dependencies
+npm run inventory       # Generate component inventory report
+
 # Standalone (browser-only, no Electron)
 npm run dev:standalone     # Vite dev server for standalone mode
 npm run build:standalone   # Audit + build standalone + copy to ~/.aynite
@@ -35,7 +50,7 @@ npm run patch-beta         # Bump prerelease beta, push + tags
 
 No TypeScript compiler — `tsconfig.json` uses `noEmit: true`; electron-vite handles bundling.
 
-No linter or test runner. Audit scripts (`scripts/audit-main.ts`, `scripts/audit-ui.ts`) enforce architecture rules via `tsx`.
+Test runner is Vitest. Linter is Biome. Audit scripts (`scripts/audit-main.ts`, `scripts/audit-ui.ts`) enforce architecture rules via `tsx`. Structural pattern rules via ast-grep (`rules/`). Dead code detection via Knip (`knip.json`). Component inventory via `scripts/component-inventory.ts`.
 
 ## Architecture
 

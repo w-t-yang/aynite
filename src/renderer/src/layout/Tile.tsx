@@ -1,42 +1,50 @@
-import React from 'react'
+import type React from 'react'
 import { useRef } from 'react'
-import { LeafNode } from '../../../lib/constants/types'
 import { AppOperation } from '../../../lib/constants/app'
+import type { LeafNode } from '../../../lib/constants/types'
 
 import { Button } from '../../shared/basic/Button'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
-import { useApp } from '../context/AppContext'
 import { cn } from '../../shared/lib/utils'
-
+import { useApp } from '../context/AppContext'
 
 interface TileProps {
   node: LeafNode
 }
 
 const Tile: React.FC<TileProps> = ({ node }) => {
-  const { activeTileId, setActiveTileId, executeAppOperation, updateTileView, availableViews, isResizing } = useApp()
+  const {
+    activeTileId,
+    setActiveTileId,
+    executeAppOperation,
+    updateTileView,
+    availableViews,
+    isResizing,
+  } = useApp()
   const { id, content: title, size, url } = node
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  const viewOptions = availableViews.map(v => ({ id: v.id, label: v.name }))
+  const viewOptions = availableViews.map((v) => ({ id: v.id, label: v.name }))
 
   const handleSelectView = (selectedUrl: string) => {
-    console.log(`[Tile] handleSelectView: ${selectedUrl} for tile ${id}`);
+    console.log(`[Tile] handleSelectView: ${selectedUrl} for tile ${id}`)
     if (selectedUrl === 'close') {
       executeAppOperation(AppOperation.TILE_CLOSE)
     } else {
-      const view = viewOptions.find(v => v.id === selectedUrl)
-      console.log(`[Tile] updating tile ${id} to ${selectedUrl}`);
-      updateTileView(id, { url: selectedUrl, content: view?.label || 'New View' })
+      const view = viewOptions.find((v) => v.id === selectedUrl)
+      console.log(`[Tile] updating tile ${id} to ${selectedUrl}`)
+      updateTileView(id, {
+        url: selectedUrl,
+        content: view?.label || 'New View',
+      })
     }
   }
-
 
   const menuItems = [
     ...viewOptions,
     { id: 'divider-1', type: 'divider' },
-    { id: 'close', label: 'Close Tile', className: 'text-destructive' }
+    { id: 'close', label: 'Close Tile', className: 'text-destructive' },
   ]
 
   return (
@@ -44,23 +52,19 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       id={id}
       className={cn(
         'tile relative group border-2',
-        isActive
-          ? 'border-primary z-10'
-          : 'border-tile-border'
+        isActive ? 'border-primary z-10' : 'border-tile-border',
       )}
       style={{ flex: `${size} 1 0%` }}
       onMouseDown={() => setActiveTileId(id)}
     >
-
-      <div 
+      <div
         className={cn(
-          "absolute top-2 right-2 z-50 transition-opacity",
-          url ? "opacity-0 hover:opacity-100" : "opacity-100"
+          'absolute top-2 right-2 z-50 transition-opacity',
+          url ? 'opacity-0 hover:opacity-100' : 'opacity-100',
         )}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-
         <SelectionMenu
           items={menuItems}
           activeId={url || ''}
@@ -90,20 +94,18 @@ const Tile: React.FC<TileProps> = ({ node }) => {
         />
       </div>
 
-
       <div className="tile-content h-full p-0 relative overflow-hidden">
         {url ? (
-            <iframe
-              ref={iframeRef}
-              src={url}
-              className="w-full h-full border-none"
-              style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
-              title={title}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              allow="clipboard-read; clipboard-write"
-            />
+          <iframe
+            ref={iframeRef}
+            src={url}
+            className="w-full h-full border-none"
+            style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
+            title={title}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            allow="clipboard-read; clipboard-write"
+          />
         ) : (
-
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -123,7 +125,6 @@ const Tile: React.FC<TileProps> = ({ node }) => {
           </div>
         )}
       </div>
-
     </div>
   )
 }

@@ -1,15 +1,19 @@
-import React from 'react';
-import { Modal } from '../basic/Modal';
-import { Button } from '../basic/Button';
+import { Button } from '../basic/Button'
+import { Modal } from '../basic/Modal'
 
 interface ConfirmModalProps {
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  title?: string;
+  message: string
+  onConfirm: () => void
+  onCancel: () => void
+  title?: string
 }
 
-export function ConfirmModal({ message, onConfirm, onCancel, title = "Confirm Deletion" }: ConfirmModalProps) {
+export function ConfirmModal({
+  message,
+  onConfirm,
+  onCancel,
+  title = 'Confirm Deletion',
+}: ConfirmModalProps) {
   return (
     <Modal
       isOpen={true}
@@ -18,12 +22,16 @@ export function ConfirmModal({ message, onConfirm, onCancel, title = "Confirm De
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button variant="destructive" onClick={onConfirm}>Confirm</Button>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Confirm
+          </Button>
         </>
       }
     >
       <p className="text-sm text-muted-foreground break-words">{message}</p>
     </Modal>
-  );
+  )
 }

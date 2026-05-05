@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 import type { Theme } from '../../../lib/constants/types'
 
 export function cn(...inputs: ClassValue[]) {
@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function toCSSVar(key: string): string {
-  return '--' + key.replace(/([A-Z])/g, '-$1').toLowerCase()
+  return `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`
 }
 
 /**
@@ -22,8 +22,10 @@ export function applyThemeColors(theme: Theme) {
 
   // Apply fonts
   if (theme.fonts) {
-    if (theme.fonts.fontFamily) root.style.setProperty('--font-sans', theme.fonts.fontFamily)
-    if (theme.fonts.fontMono) root.style.setProperty('--font-mono', theme.fonts.fontMono)
+    if (theme.fonts.fontFamily)
+      root.style.setProperty('--font-sans', theme.fonts.fontFamily)
+    if (theme.fonts.fontMono)
+      root.style.setProperty('--font-mono', theme.fonts.fontMono)
     if (theme.fonts.fontSize) {
       root.style.setProperty('--font-size-base', theme.fonts.fontSize)
       root.style.fontSize = theme.fonts.fontSize

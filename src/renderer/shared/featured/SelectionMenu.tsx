@@ -1,37 +1,37 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { SelectionList, SelectionItem } from '../basic/SelectionList';
-import { Input } from '../basic/Input';
-import { Search, ChevronDown } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { ChevronDown, Search } from 'lucide-react'
+import type React from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Input } from '../basic/Input'
+import { type SelectionItem, SelectionList } from '../basic/SelectionList'
+import { cn } from '../lib/utils'
 
 export interface SelectionMenuProps {
-  items: SelectionItem[];
-  onSelect: (id: string) => void;
-  onClose?: () => void;
-  
-  // Trigger-based (Dropdown/Select style)
-  trigger?: React.ReactNode;
-  activeId?: string; // To show active state in trigger if it's a default Select style
-  placeholder?: string;
-  disabled?: boolean;
-  align?: 'left' | 'center' | 'right';
-  
-  // Position-based (Context Menu style)
-  x?: number;
-  y?: number;
-  
-  // Customization
-  title?: string;
-  footer?: React.ReactNode;
-  searchable?: boolean;
-  searchPlaceholder?: string;
-  className?: string;
-  menuClassName?: string;
-  divided?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-  label?: string;
-}
+  items: SelectionItem[]
+  onSelect: (id: string) => void
+  onClose?: () => void
 
+  // Trigger-based (Dropdown/Select style)
+  trigger?: React.ReactNode
+  activeId?: string // To show active state in trigger if it's a default Select style
+  placeholder?: string
+  disabled?: boolean
+  align?: 'left' | 'center' | 'right'
+
+  // Position-based (Context Menu style)
+  x?: number
+  y?: number
+
+  // Customization
+  title?: string
+  footer?: React.ReactNode
+  searchable?: boolean
+  searchPlaceholder?: string
+  className?: string
+  menuClassName?: string
+  divided?: boolean
+  size?: 'sm' | 'md' | 'lg'
+  label?: string
+}
 
 /**
  * A unified component that handles Selects, Dropdowns, and Context Menus.
@@ -43,7 +43,7 @@ export function SelectionMenu({
   onClose,
   trigger,
   activeId,
-  placeholder = "Select...",
+  placeholder = 'Select...',
   disabled = false,
   align = 'left',
 
@@ -52,96 +52,106 @@ export function SelectionMenu({
   title,
   footer,
   searchable = false,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = 'Search...',
   className,
   menuClassName,
   divided = false,
   size = 'sm',
-  label
+  label,
 }: SelectionMenuProps) {
-  const [internalIsOpen, setInternalIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
-  const isControlled = typeof x === 'number' && typeof y === 'number';
-  const isOpen = isControlled ? true : internalIsOpen;
+  const isControlled = typeof x === 'number' && typeof y === 'number'
+  const isOpen = isControlled ? true : internalIsOpen
 
   useEffect(() => {
-
-    if (!isOpen) return;
+    if (!isOpen) return
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        handleClose();
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        handleClose()
       }
-    };
+    }
 
     // Use a small delay to avoid immediate closing from the opening click
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 10);
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 10)
 
     return () => {
-
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, isControlled]);
+      clearTimeout(timer)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen, handleClose])
 
   const handleClose = () => {
-    setInternalIsOpen(false);
-    setSearch('');
-    onClose?.();
-  };
+    setInternalIsOpen(false)
+    setSearch('')
+    onClose?.()
+  }
 
   const handleSelect = (id: string) => {
-    onSelect(id);
-    handleClose();
-  };
+    onSelect(id)
+    handleClose()
+  }
 
-  const filteredItems = useMemo(() => 
-    items.filter((item: SelectionItem) => {
-      if (!search) return true;
-      const labelMatch = item.label?.toLowerCase().includes(search.toLowerCase()) ?? false;
-      const subtitleMatch = item.subtitle?.toLowerCase().includes(search.toLowerCase()) ?? false;
-      return labelMatch || subtitleMatch;
-    }), [items, search]);
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item: SelectionItem) => {
+        if (!search) return true
+        const labelMatch =
+          item.label?.toLowerCase().includes(search.toLowerCase()) ?? false
+        const subtitleMatch =
+          item.subtitle?.toLowerCase().includes(search.toLowerCase()) ?? false
+        return labelMatch || subtitleMatch
+      }),
+    [items, search],
+  )
 
+  const activeItem = useMemo(
+    () => items.find((item: SelectionItem) => item.id === activeId),
+    [items, activeId],
+  )
 
-
-  const activeItem = useMemo(() => 
-    items.find((item: SelectionItem) => item.id === activeId), [items, activeId]);
-
-  const selectedIndex = useMemo(() => 
-    filteredItems.findIndex((item: SelectionItem) => item.id === activeId), [filteredItems, activeId]);
+  const selectedIndex = useMemo(
+    () =>
+      filteredItems.findIndex((item: SelectionItem) => item.id === activeId),
+    [filteredItems, activeId],
+  )
 
   const alignStyles = {
     left: 'left-0',
     center: 'left-1/2 -translate-x-1/2',
-    right: 'right-0'
-  };
+    right: 'right-0',
+  }
 
-  const menuStyle: React.CSSProperties = isControlled ? {
-    position: 'fixed',
-    left: x,
-    top: y,
-    zIndex: 3000
-  } : {};
-
+  const menuStyle: React.CSSProperties = isControlled
+    ? {
+        position: 'fixed',
+        left: x,
+        top: y,
+        zIndex: 3000,
+      }
+    : {}
 
   // Simple boundary adjustment for context menus
   if (isControlled && x !== undefined && y !== undefined) {
     if (x > window.innerWidth - 220) {
-      menuStyle.left = Math.max(0, x - 220);
+      menuStyle.left = Math.max(0, x - 220)
     }
     if (y > window.innerHeight - 300) {
-      menuStyle.top = Math.max(0, y - 300);
+      menuStyle.top = Math.max(0, y - 300)
     }
   }
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)} ref={containerRef}>
+    <div className={cn('flex flex-col gap-1.5', className)} ref={containerRef}>
       {label && (
         <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
           {label}
@@ -150,40 +160,52 @@ export function SelectionMenu({
 
       <div className="relative">
         {trigger ? (
-          <div 
-            onClick={(e) => { e.stopPropagation(); !disabled && setInternalIsOpen(!internalIsOpen); }} 
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              !disabled && setInternalIsOpen(!internalIsOpen)
+            }}
             className="cursor-pointer"
           >
             {trigger}
           </div>
-
         ) : (
           <button
             type="button"
             disabled={disabled}
             onClick={() => setInternalIsOpen(!internalIsOpen)}
             className={cn(
-              "w-full flex items-center justify-between bg-transparent border-b border-border/60 py-1.5 text-xs focus:outline-none focus:border-primary transition-all hover:border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]",
-              isOpen && "border-primary"
+              'w-full flex items-center justify-between bg-transparent border-b border-border/60 py-1.5 text-xs focus:outline-none focus:border-primary transition-all hover:border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]',
+              isOpen && 'border-primary',
             )}
           >
-            <span className={cn("truncate font-medium", !activeItem && "text-muted-foreground/50")}>
+            <span
+              className={cn(
+                'truncate font-medium',
+                !activeItem && 'text-muted-foreground/50',
+              )}
+            >
               {activeItem ? activeItem.label : placeholder}
             </span>
-            <ChevronDown size={14} className={cn("transition-transform opacity-50 text-muted-foreground", isOpen && "rotate-180")} />
+            <ChevronDown
+              size={14}
+              className={cn(
+                'transition-transform opacity-50 text-muted-foreground',
+                isOpen && 'rotate-180',
+              )}
+            />
           </button>
         )}
-
 
         {isOpen && (
           <div
             ref={menuRef}
             style={menuStyle}
             className={cn(
-              "bg-sidebar border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col ring-1 ring-black/5 min-w-[200px]",
-              !isControlled && "absolute top-full mt-2 z-[2000]",
+              'bg-sidebar border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col ring-1 ring-black/5 min-w-[200px]',
+              !isControlled && 'absolute top-full mt-2 z-[2000]',
               !isControlled && alignStyles[align],
-              menuClassName
+              menuClassName,
             )}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
@@ -202,7 +224,9 @@ export function SelectionMenu({
                   type="text"
                   placeholder={searchPlaceholder}
                   value={search}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSearch(e.target.value)
+                  }
                   className="w-full text-xs py-1"
                 />
               </div>
@@ -226,6 +250,5 @@ export function SelectionMenu({
         )}
       </div>
     </div>
-  );
+  )
 }
-

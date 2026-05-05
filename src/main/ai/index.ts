@@ -1,5 +1,9 @@
-export { setupAiIpc } from './ipc';
-export type { AIProvider } from './factory';
-export { getDefaultGlobalPrompts, restoreDefaultPrompts, getMergedSystemPrompt } from './prompts';
-export { listSessions, saveSession, loadSession } from './chat';
-export { getToolsMetadata } from './tools';
+export { listSessions, loadSession, saveSession } from './chat'
+export type { AIProvider } from './factory'
+export { setupAiIpc } from './ipc'
+export {
+  getDefaultGlobalPrompts,
+  getMergedSystemPrompt,
+  restoreDefaultPrompts,
+} from './prompts'
+export { getToolsMetadata } from './tools'

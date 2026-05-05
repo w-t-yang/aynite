@@ -1,5 +1,8 @@
-import { WorkspaceConfig, KeybindingConfig, View } from '../../lib/constants/types'
 import { ConfigKey } from '../../lib/constants/config'
+import type {
+  KeybindingConfig,
+  WorkspaceConfig,
+} from '../../lib/constants/types'
 
 class AyniteConfig {
   // Workspace Config
@@ -19,9 +22,11 @@ class AyniteConfig {
     return window.aynite.createWorkspace(name)
   }
 
-
   async saveWorkspace(config: WorkspaceConfig): Promise<boolean> {
-    return window.aynite.setConfig(ConfigKey.WORKSPACE, { id: config.id, config })
+    return window.aynite.setConfig(ConfigKey.WORKSPACE, {
+      id: config.id,
+      config,
+    })
   }
 
   // AI
@@ -85,7 +90,6 @@ class AyniteConfig {
     return window.aynite.setConfig(ConfigKey.KEYBINDINGS, config)
   }
 
-
   // Themes
   async getThemes(): Promise<any[]> {
     return window.aynite.getConfig(ConfigKey.THEMES)
@@ -120,7 +124,4 @@ class AyniteConfig {
   }
 }
 
-
-
 export const ayniteConfig = new AyniteConfig()
-

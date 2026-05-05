@@ -1,48 +1,48 @@
 /// <reference types="vite/client" />
 
-import type { WorkspacesConfig } from '../../lib/types/workspace';
+import type { WorkspacesConfig } from '../../lib/types/workspace'
 
 interface FileEntry {
-  name: string;
-  path: string;
-  isDirectory: boolean;
+  name: string
+  path: string
+  isDirectory: boolean
 }
 
 interface ChatSessionEntry {
-  id: string;
-  date: string;
-  lastModified: string;
-  size: number;
-  preview: string;
+  id: string
+  date: string
+  lastModified: string
+  size: number
+  preview: string
 }
 
 interface SkillEntry {
-  name: string;
-  description: string;
-  path: string;
-  error: string | null;
+  name: string
+  description: string
+  path: string
+  error: string | null
 }
 
 interface CommandEntry {
-  name: string;
-  description: string;
-  parameters: any[];
-  example: string;
-  path: string;
-  error: string | null;
+  name: string
+  description: string
+  parameters: any[]
+  example: string
+  path: string
+  error: string | null
 }
 
 interface AiChatPayload {
-  messages: any[];
-  config: any;
-  workspaceFolders: string[];
-  activeFile?: string;
+  messages: any[]
+  config: any
+  workspaceFolders: string[]
+  activeFile?: string
 }
 
 interface DirectCommandPayload {
-  commandPath: string;
-  params: string[];
-  currentFile?: string;
+  commandPath: string
+  params: string[]
+  currentFile?: string
 }
 
 export interface AyniteWindow {
@@ -58,9 +58,19 @@ export interface AyniteWindow {
   renameFile: (oldPath: string, newPath: string) => Promise<boolean>
   copyFile: (srcPath: string, destPath: string) => Promise<boolean>
   deleteFile: (path: string) => Promise<boolean>
-  getFileInfo: (path: string) => Promise<{ size: number; createdAt: string; modifiedAt: string; isDirectory: boolean; path: string; extension: string; isText: boolean }>
+  getFileInfo: (path: string) => Promise<{
+    size: number
+    createdAt: string
+    modifiedAt: string
+    isDirectory: boolean
+    path: string
+    extension: string
+    isText: boolean
+  }>
   getFiles: (path: string) => Promise<FileEntry[]>
-  onFileSystemChange: (callback: (data: { event: string; path: string }) => void) => () => void
+  onFileSystemChange: (
+    callback: (data: { event: string; path: string }) => void,
+  ) => () => void
   move: (oldPath: string, newPath: string) => Promise<boolean>
   remove: (path: string) => Promise<boolean>
   copy: (path: string) => Promise<boolean>
@@ -77,10 +87,15 @@ export interface AyniteWindow {
   workspaceAllFiles: () => Promise<FileEntry[]>
 
   // AI operations
-  aiChat: (payload: AiChatPayload) => Promise<{ requestId?: string; error?: string }>
+  aiChat: (
+    payload: AiChatPayload,
+  ) => Promise<{ requestId?: string; error?: string }>
   getMergedSystemPrompt: {
     (globalFiles?: string[], agentFiles?: string[]): Promise<string>
-    (payload: { globalFiles?: string[]; agentFiles?: string[] }): Promise<string>
+    (payload: {
+      globalFiles?: string[]
+      agentFiles?: string[]
+    }): Promise<string>
   }
   listChatLogs: () => Promise<ChatSessionEntry[]>
   saveChatLog: {
@@ -91,10 +106,17 @@ export interface AyniteWindow {
     (sessionId: string, date: string): Promise<any>
     (payload: { id: string; date: string }): Promise<any>
   }
-  runDirectCommand: (payload: DirectCommandPayload) => Promise<{ stdout: string; stderr: string }>
+  runDirectCommand: (
+    payload: DirectCommandPayload,
+  ) => Promise<{ stdout: string; stderr: string }>
   respondToAiApproval: (id: string, approved: boolean) => void
-  onAiChatDelta: (requestId: string, callback: (part: any) => void) => () => void
-  onAiApprovalRequest: (callback: (data: { id: string; command: string; cwd: string }) => void) => () => void
+  onAiChatDelta: (
+    requestId: string,
+    callback: (part: any) => void,
+  ) => () => void
+  onAiApprovalRequest: (
+    callback: (data: { id: string; command: string; cwd: string }) => void,
+  ) => () => void
 
   // System
   openExternal: (url: string) => Promise<boolean>

@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { Treeview } from './Treeview'
 import { ThemeAwareView } from '../../shared/lib/useTheme'
+import { Treeview } from './Treeview'
 import '../../shared/styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
@@ -11,5 +11,5 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
         <Treeview />
       </div>
     </ThemeAwareView>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

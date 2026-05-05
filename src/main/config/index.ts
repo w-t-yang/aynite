@@ -1,3 +1,3 @@
-export * from './ipc';
-export * from './logic';
-export * from './router';
+export * from './ipc'
+export * from './logic'
+export * from './router'

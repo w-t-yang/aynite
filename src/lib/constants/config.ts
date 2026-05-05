@@ -17,10 +17,5 @@ export enum ConfigKey {
   SKILLS = 'skills',
   COMMANDS = 'commands',
   TOOLS = 'tools',
-  VERSION = 'version'
+  VERSION = 'version',
 }
-
-
-
-
-

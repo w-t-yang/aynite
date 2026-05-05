@@ -1,20 +1,19 @@
-import React, { useState } from 'react';
-import { Trash2 } from 'lucide-react';
-import { cn } from '../lib/utils';
-import { Input } from '../basic/Input';
-import { SelectionMenu } from './SelectionMenu';
-import { Button } from '../basic/Button';
-import { Radio } from '../basic/Radio';
-
-import { Modal } from '../basic/Modal';
-import { AIProviderInstance } from '../lib/types';
+import { Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Button } from '../basic/Button'
+import { Input } from '../basic/Input'
+import { Modal } from '../basic/Modal'
+import { Radio } from '../basic/Radio'
+import type { AIProviderInstance } from '../lib/types'
+import { cn } from '../lib/utils'
+import { SelectionMenu } from './SelectionMenu'
 
 interface AIProviderCardProps {
-  provider: AIProviderInstance;
-  isActive: boolean;
-  onSetActive: (id: string) => void;
-  onUpdate: (id: string, field: string, value: any) => void;
-  onDelete: (id: string) => void;
+  provider: AIProviderInstance
+  isActive: boolean
+  onSetActive: (id: string) => void
+  onUpdate: (id: string, field: string, value: any) => void
+  onDelete: (id: string) => void
 }
 
 export function AIProviderCard({
@@ -22,16 +21,18 @@ export function AIProviderCard({
   isActive,
   onSetActive,
   onUpdate,
-  onDelete
+  onDelete,
 }: AIProviderCardProps) {
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   return (
     <>
-      <div className={cn(
-        "p-5 rounded-xl border transition-all space-y-4",
-        isActive ? "border-primary bg-accent/5" : "border-border bg-accent/5"
-      )}>
+      <div
+        className={cn(
+          'p-5 rounded-xl border transition-all space-y-4',
+          isActive ? 'border-primary bg-accent/5' : 'border-border bg-accent/5',
+        )}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Radio
@@ -47,9 +48,9 @@ export function AIProviderCard({
               placeholder="Config Name"
             />
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowDeleteModal(true)}
             className="hover:text-destructive hover:bg-destructive/10"
           >
@@ -68,10 +69,9 @@ export function AIProviderCard({
               { id: 'anthropic', label: 'Anthropic' },
               { id: 'gemini', label: 'Gemini/Google' },
               { id: 'deepseek', label: 'DeepSeek' },
-              { id: 'others', label: 'Other (Compatible)' }
+              { id: 'others', label: 'Other (Compatible)' },
             ]}
           />
-
 
           <Input
             label="Model"
@@ -86,7 +86,9 @@ export function AIProviderCard({
                 label="API Key"
                 type="password"
                 value={provider.apiKey || ''}
-                onChange={(e) => onUpdate(provider.id, 'apiKey', e.target.value)}
+                onChange={(e) =>
+                  onUpdate(provider.id, 'apiKey', e.target.value)
+                }
                 placeholder="sk-..."
               />
             </div>
@@ -97,7 +99,11 @@ export function AIProviderCard({
               label="Base URL"
               value={provider.url || ''}
               onChange={(e) => onUpdate(provider.id, 'url', e.target.value)}
-              placeholder={provider.provider === 'ollama' ? "http://localhost:11434" : "API URL"}
+              placeholder={
+                provider.provider === 'ollama'
+                  ? 'http://localhost:11434'
+                  : 'API URL'
+              }
             />
           </div>
 
@@ -109,18 +115,19 @@ export function AIProviderCard({
               items={[
                 { id: 'openai', label: 'OpenAI' },
                 { id: 'anthropic', label: 'Anthropic' },
-                { id: 'google', label: 'Google' }
+                { id: 'google', label: 'Google' },
               ]}
             />
           )}
-
 
           {provider.provider === 'ollama' && (
             <Input
               label="Context Window"
               type="number"
               value={provider.contextWindow || 8192}
-              onChange={(e) => onUpdate(provider.id, 'contextWindow', e.target.value)}
+              onChange={(e) =>
+                onUpdate(provider.id, 'contextWindow', e.target.value)
+              }
             />
           )}
         </div>
@@ -133,18 +140,27 @@ export function AIProviderCard({
         size="md"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => {
-              onDelete(provider.id);
-              setShowDeleteModal(false);
-            }}>Delete Provider</Button>
+            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                onDelete(provider.id)
+                setShowDeleteModal(false)
+              }}
+            >
+              Delete Provider
+            </Button>
           </>
         }
       >
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Are you sure you want to delete <span className="font-bold text-foreground">"{provider.name}"</span>? This action will permanently remove this provider configuration.
+          Are you sure you want to delete{' '}
+          <span className="font-bold text-foreground">"{provider.name}"</span>?
+          This action will permanently remove this provider configuration.
         </p>
       </Modal>
     </>
-  );
+  )
 }

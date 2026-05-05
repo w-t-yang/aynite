@@ -1,28 +1,30 @@
-import React from 'react';
-import { Bot, CloudDownload, RefreshCw, Github, Bug } from 'lucide-react';
-import { Button } from '../../shared/basic/Button';
-import { SettingsPage } from '../../shared/featured/SettingsPage';
-import { Section } from '../../shared/basic/Section';
+import { Bot, Bug, CloudDownload, Github, RefreshCw } from 'lucide-react'
+import { Button } from '../../shared/basic/Button'
+import { Section } from '../../shared/basic/Section'
+import { SettingsPage } from '../../shared/featured/SettingsPage'
 
 interface AboutTabProps {
   state: {
-    appVersion: string;
-    updateStatus: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error';
-    updateInfo: any;
-  };
+    appVersion: string
+    updateStatus:
+      | 'idle'
+      | 'checking'
+      | 'available'
+      | 'downloading'
+      | 'downloaded'
+      | 'error'
+    updateInfo: any
+  }
   actions: {
-    onCheckUpdates: () => void;
-    onInstallUpdate: () => void;
-    onOpenExternal: (url: string) => void;
-  };
+    onCheckUpdates: () => void
+    onInstallUpdate: () => void
+    onOpenExternal: (url: string) => void
+  }
 }
 
-export function AboutTab({
-  state,
-  actions
-}: AboutTabProps) {
-  const { appVersion, updateStatus, updateInfo } = state;
-  const { onCheckUpdates, onInstallUpdate, onOpenExternal } = actions;
+export function AboutTab({ state, actions }: AboutTabProps) {
+  const { appVersion, updateStatus, updateInfo } = state
+  const { onCheckUpdates, onInstallUpdate, onOpenExternal } = actions
 
   const updateButton = (
     <div className="flex items-center gap-2">
@@ -37,8 +39,8 @@ export function AboutTab({
         </Button>
       )}
       {updateStatus === 'checking' && (
-        <Button 
-          disabled 
+        <Button
+          disabled
           variant="secondary"
           size="sm"
           className="px-4 py-1.5 flex items-center gap-2"
@@ -47,8 +49,8 @@ export function AboutTab({
         </Button>
       )}
       {updateStatus === 'available' && (
-        <Button 
-          disabled 
+        <Button
+          disabled
           variant="primary"
           size="sm"
           className="px-4 py-1.5 bg-primary/20 text-primary"
@@ -67,7 +69,7 @@ export function AboutTab({
         </Button>
       )}
     </div>
-  );
+  )
 
   return (
     <SettingsPage
@@ -79,10 +81,16 @@ export function AboutTab({
           <Bot size={56} className="text-primary-foreground" />
         </div>
         <div className="space-y-1.5 text-center">
-          <h3 className="text-4xl font-black tracking-tighter text-foreground">Aynite</h3>
+          <h3 className="text-4xl font-black tracking-tighter text-foreground">
+            Aynite
+          </h3>
           <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-bold text-primary tracking-[0.3em] uppercase">A.Y.N.I.T.E</p>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest opacity-60">All You Need Is The Editor</p>
+            <p className="text-sm font-bold text-primary tracking-[0.3em] uppercase">
+              A.Y.N.I.T.E
+            </p>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest opacity-60">
+              All You Need Is The Editor
+            </p>
           </div>
         </div>
         <div className="px-4 py-1.5 bg-accent/30 rounded-full border border-border/50 text-xs font-mono text-muted-foreground shadow-sm">
@@ -91,7 +99,10 @@ export function AboutTab({
       </div>
 
       <div className="grid grid-cols-2 gap-8">
-        <Section title="Software Update" description="Keep your application up to date with the latest features.">
+        <Section
+          title="Software Update"
+          description="Keep your application up to date with the latest features."
+        >
           <div className="p-6 rounded-2xl border border-border bg-accent/5 flex items-center justify-between group">
             <div className="space-y-1">
               <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -111,30 +122,41 @@ export function AboutTab({
           </div>
         </Section>
 
-        <Section title="Resources" description="Join the community and help improve the project.">
+        <Section
+          title="Resources"
+          description="Join the community and help improve the project."
+        >
           <div className="grid grid-cols-1 gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
-              onClick={() => onOpenExternal('https://github.com/w-t-yang/aynite')} 
+              onClick={() =>
+                onOpenExternal('https://github.com/w-t-yang/aynite')
+              }
               className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
             >
               <Github size={18} className="text-foreground" />
               <div className="text-left">
                 <div className="font-bold">GitHub Project</div>
-                <div className="text-[10px] text-muted-foreground font-normal">View source code</div>
+                <div className="text-[10px] text-muted-foreground font-normal">
+                  View source code
+                </div>
               </div>
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
-              onClick={() => onOpenExternal('https://github.com/w-t-yang/aynite/issues')} 
+              onClick={() =>
+                onOpenExternal('https://github.com/w-t-yang/aynite/issues')
+              }
               className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
             >
               <Bug size={18} className="text-destructive" />
               <div className="text-left">
                 <div className="font-bold">Report an Issue</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Submit bug reports</div>
+                <div className="text-[10px] text-muted-foreground font-normal">
+                  Submit bug reports
+                </div>
               </div>
             </Button>
           </div>
@@ -147,5 +169,5 @@ export function AboutTab({
         </p>
       </div>
     </SettingsPage>
-  );
+  )
 }

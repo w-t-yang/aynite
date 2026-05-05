@@ -9,7 +9,7 @@ export const ConfigChannels = {
   SET: 'aynite:config-set',
   LOAD: 'aynite:config-load',
   SAVE: 'aynite:config-save',
-} as const;
+} as const
 
 export const ConfigEventChannels = {
   APP_OPERATION: 'aynite:app-operation',
@@ -17,8 +17,7 @@ export const ConfigEventChannels = {
   WORKSPACE_CHANGED: 'aynite:workspace-changed',
   THEME_CHANGED: 'aynite:theme-changed',
   VIEW_OPERATION: 'aynite:view-operation',
-} as const;
-
+} as const
 
 export const FileChannels = {
   LIST: 'aynite:file-list',
@@ -29,11 +28,11 @@ export const FileChannels = {
   COPY: 'aynite:file-copy',
   DELETE: 'aynite:file-delete',
   INFO: 'aynite:file-info',
-} as const;
+} as const
 
 export const FileEventChannels = {
   FS_CHANGE: 'aynite:fs-change',
-} as const;
+} as const
 
 export const WorkspaceChannels = {
   LIST: 'aynite:workspace-list',
@@ -46,8 +45,7 @@ export const WorkspaceChannels = {
   FILE_SCAN: 'aynite:workspace-file-scan',
   STATE_LOAD: 'aynite:workspace-state-load',
   STATE_SAVE: 'aynite:workspace-state-save',
-} as const;
-
+} as const
 
 export const AiChannels = {
   PROMPT_GET_MERGED: 'aynite:ai-prompt-get-merged',
@@ -58,16 +56,16 @@ export const AiChannels = {
   SESSION_LIST: 'aynite:ai-session-list',
   PROMPT_RESTORE: 'aynite:ai-prompt-restore',
   PROMPT_PICK_FILE: 'aynite:ai-prompt-pick-file',
-} as const;
+} as const
 
 export const AiEventChannels = {
   CHAT_DELTA_PREFIX: 'aynite:ai-chat-delta',
   APPROVAL_REQUEST: 'aynite:ai-approval-request',
   APPROVAL_RESPONSE: 'aynite:ai-approval-response',
-} as const;
+} as const
 
 export function aiChatDeltaChannel(requestId: string): string {
-  return `${AiEventChannels.CHAT_DELTA_PREFIX}:${requestId}`;
+  return `${AiEventChannels.CHAT_DELTA_PREFIX}:${requestId}`
 }
 
 export const SpellChannels = {
@@ -79,8 +77,7 @@ export const SpellChannels = {
   COMMAND_LIST: 'aynite:spell-command-list',
   COMMAND_RUN: 'aynite:spell-command-run',
   COMMAND_RUN_DIRECT: 'aynite:spell-command-run-direct',
-} as const;
-
+} as const
 
 export const SystemChannels = {
   FONT_LIST: 'aynite:system-font-list',
@@ -95,8 +92,7 @@ export const SystemChannels = {
   CLIPBOARD_COPY: 'aynite:file-clipboard-copy',
   CLIPBOARD_PASTE: 'aynite:file-clipboard-paste',
   VIEW_LIST: 'aynite:system-view-list',
-} as const;
-
+} as const
 
 export const UpdateChannels = {
   CHECK: 'aynite:update-check',
@@ -107,8 +103,7 @@ export const UpdateChannels = {
   ERROR: 'aynite:update-error',
   DOWNLOAD_PROGRESS: 'aynite:update-download-progress',
   DOWNLOADED: 'aynite:update-downloaded',
-} as const;
-
+} as const
 
 export const ThemeChannels = {
   LIST: 'aynite:theme-list',
@@ -116,5 +111,4 @@ export const ThemeChannels = {
   SAVE: 'aynite:theme-save',
   RESTORE: 'aynite:theme-restore',
   DELETE: 'aynite:theme-delete',
-} as const;
-
+} as const

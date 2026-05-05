@@ -1,0 +1,38 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/main/index.ts",
+    "src/preload/index.ts",
+    "src/renderer/src/main.tsx",
+    "src/renderer/views/aichat/aichat-main.tsx",
+    "src/renderer/views/settings/settings-main.tsx",
+    "src/renderer/views/treeview/treeview-main.tsx",
+    "src/renderer/src/config.ts",
+    "scripts/*.ts",
+    "electron.vite.config.ts",
+    "vite.standalone.config.ts",
+    "vitest.config.ts"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "scripts/*.ts",
+    "tests/**/*.ts"
+  ],
+  "ignore": [
+    "resources/**",
+    "src/renderer/shared/featured/fileviewers/"
+  ],
+  "ignoreDependencies": [
+    "@tailwindcss/vite",
+    "@tailwindcss/typography",
+    "autoprefixer",
+    "serve",
+    "@google/genai",
+    "@types/prismjs"
+  ],
+  "rules": {
+    "files": "warn",
+    "dependencies": "warn"
+  }
+}

@@ -1,18 +1,24 @@
-import React from 'react';
-import { Modal } from '../basic/Modal';
-import { Input } from '../basic/Input';
-import { Button } from '../basic/Button';
+import { Button } from '../basic/Button'
+import { Input } from '../basic/Input'
+import { Modal } from '../basic/Modal'
 
 interface PromptModalProps {
-  title: string;
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  onConfirm: (v: string) => void;
-  onCancel: () => void;
+  title: string
+  placeholder: string
+  value: string
+  onChange: (v: string) => void
+  onConfirm: (v: string) => void
+  onCancel: () => void
 }
 
-export function PromptModal({ title, placeholder, value, onChange, onConfirm, onCancel }: PromptModalProps) {
+export function PromptModal({
+  title,
+  placeholder,
+  value,
+  onChange,
+  onConfirm,
+  onCancel,
+}: PromptModalProps) {
   return (
     <Modal
       isOpen={true}
@@ -21,9 +27,11 @@ export function PromptModal({ title, placeholder, value, onChange, onConfirm, on
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button 
-            variant="primary" 
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
             onClick={() => value.trim() && onConfirm(value.trim())}
             disabled={!value.trim()}
           >
@@ -32,14 +40,14 @@ export function PromptModal({ title, placeholder, value, onChange, onConfirm, on
         </>
       }
     >
-      <Input 
+      <Input
         autoFocus
-        type="text" 
+        type="text"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full"
       />
     </Modal>
-  );
+  )
 }

@@ -10,7 +10,6 @@ export const AppOperation = {
   TILE_RESIZE_DOWN: 'TILE_RESIZE_DOWN',
   TILE_CLOSE: 'TILE_CLOSE',
 
-
   QUIT: 'QUIT',
   // Global & Navigation
   REFRESH_APP: 'REFRESH_APP',
@@ -19,9 +18,8 @@ export const AppOperation = {
   FOCUS_CHAT: 'FOCUS_CHAT',
   FOCUS_SKILLS: 'FOCUS_SKILLS',
   FOCUS_COMMANDS: 'FOCUS_COMMANDS',
-  SUBMIT_CHAT: 'SUBMIT_CHAT'
+  SUBMIT_CHAT: 'SUBMIT_CHAT',
 } as const
-
 
 export const ViewOperation = {
   BEGINNING_OF_LINE: 'BEGINNING_OF_LINE',
@@ -37,10 +35,8 @@ export const ViewOperation = {
   FORWARD_CHAR: 'FORWARD_CHAR',
   BACKWARD_CHAR: 'BACKWARD_CHAR',
   KEYBOARD_QUIT: 'KEYBOARD_QUIT',
-  REFRESH: 'REFRESH'
+  REFRESH: 'REFRESH',
 } as const
-
-
 
 export type AppOperationType = keyof typeof AppOperation
 export type ViewOperationType = keyof typeof ViewOperation

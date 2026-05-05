@@ -42,7 +42,6 @@ export interface WorkspaceConfig {
   activeTabId?: string // Legacy compatibility
 }
 
-
 export interface Keybinding {
   ctrl?: boolean
   shift?: boolean
@@ -55,7 +54,6 @@ export interface KeybindingConfig {
   app: { [key: string]: Keybinding }
   view: { [key: string]: Keybinding }
 }
-
 
 export interface View {
   id: string
@@ -106,5 +104,3 @@ export interface Theme {
     fontSize?: string
   }
 }
-
-

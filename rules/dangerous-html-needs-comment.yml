@@ -1,0 +1,9 @@
+id: dangerous-html-needs-comment
+message: >-
+  `dangerouslySetInnerHTML` should have a preceding comment explaining why
+  the content is safe (e.g., sanitized Markdown).
+note: This bypasses React's XSS protection. A justification comment is required.
+severity: error
+language: tsx
+rule:
+  pattern: dangerouslySetInnerHTML={$$$}

@@ -1,43 +1,61 @@
-import React, { useState, useMemo } from 'react'
+import type React from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '../../shared/basic/Button'
-import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { FormModal } from '../../shared/featured/FormModal'
+import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 
 const TitleBar: React.FC = () => {
-  const { workspaceConfig, workspaces, switchWorkspace, addWorkspace, switchLayout } = useApp()
+  const {
+    workspaceConfig,
+    workspaces,
+    switchWorkspace,
+    addWorkspace,
+    switchLayout,
+  } = useApp()
   const { themes, activeTheme, setTheme } = useTheme()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
 
-  const workspaceOptions = useMemo(() => 
-    workspaces.map(id => ({
-      id,
-      label: id
-    })), [workspaces])
+  const workspaceOptions = useMemo(
+    () =>
+      workspaces.map((id) => ({
+        id,
+        label: id,
+      })),
+    [workspaces],
+  )
 
-  const themeOptions = useMemo(() => 
-    themes.map(t => ({
-      id: t.id,
-      label: t.name,
-      icon: <div
-        className="w-3 h-3 rounded-full border border-border"
-        style={{ background: t.colors.primary }}
-      />
-    })), [themes])
+  const themeOptions = useMemo(
+    () =>
+      themes.map((t) => ({
+        id: t.id,
+        label: t.name,
+        icon: (
+          <div
+            className="w-3 h-3 rounded-full border border-border"
+            style={{ background: t.colors.primary }}
+          />
+        ),
+      })),
+    [themes],
+  )
 
   if (!workspaceConfig) return null
 
   return (
     <>
       <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2 relative z-[100]">
-
         {/* Left: Layout switcher (dynamic from workspace config) */}
         <div className="flex items-center gap-1 no-drag">
           {workspaceConfig.layouts.map((layout) => (
             <Button
               key={layout.id}
-              variant={workspaceConfig.activeLayoutId === layout.id ? 'secondary' : 'ghost'}
+              variant={
+                workspaceConfig.activeLayoutId === layout.id
+                  ? 'secondary'
+                  : 'ghost'
+              }
               size="sm"
               onClick={() => switchLayout(layout.id)}
               title={layout.name}
@@ -56,8 +74,11 @@ const TitleBar: React.FC = () => {
             divided={false}
             align="center"
             trigger={
-
-              <Button variant="ghost" size="sm" className="flex items-center gap-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1.5"
+              >
                 <span>{workspaceConfig.id}</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -107,12 +128,7 @@ const TitleBar: React.FC = () => {
             divided={false}
             align="right"
             trigger={
-
-              <Button
-                variant="ghost"
-                size="icon"
-                title="Change Theme"
-              >
+              <Button variant="ghost" size="icon" title="Change Theme">
                 {activeTheme?.type === 'light' ? (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -172,6 +188,4 @@ const TitleBar: React.FC = () => {
   )
 }
 
-
 export default TitleBar
-

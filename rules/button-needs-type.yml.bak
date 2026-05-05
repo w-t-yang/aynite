@@ -1,0 +1,16 @@
+id: button-needs-type
+message: Buttons should have an explicit `type` attribute (`button` or `submit`)
+note: Without an explicit type, buttons inside forms default to `type="submit"`, which can cause unexpected form submissions.
+severity: warning
+language: tsx
+rule:
+  kind: jsx_opening_element
+  all:
+    - has:
+        field: name
+        regex: button
+    - has:
+        field: attribute
+        has:
+          field: name
+          regex: onClick

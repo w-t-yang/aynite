@@ -1,12 +1,17 @@
-import React, {
+import type React from 'react'
+import {
   createContext,
-  useContext,
-  useState,
-  useEffect,
+  type ReactNode,
   useCallback,
-  ReactNode
+  useContext,
+  useEffect,
+  useState,
 } from 'react'
-import { WorkspaceConfig, LayoutNode, LeafNode } from '../../../lib/constants/types'
+import type {
+  LayoutNode,
+  LeafNode,
+  WorkspaceConfig,
+} from '../../../lib/constants/types'
 import { ayniteConfig } from '../config'
 import { executeLayoutOperation } from '../utils/tile'
 
@@ -15,8 +20,7 @@ interface AppContextType {
   workspaces: string[]
   activeTileId: string | null
   isResizing: boolean
-  availableViews: { id: string, name: string }[]
-
+  availableViews: { id: string; name: string }[]
 
   setActiveTileId: (id: string | null) => void
 
@@ -34,34 +38,38 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [workspaceConfig, setWorkspaceConfig] = useState<WorkspaceConfig | null>(null)
+export const AppProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [workspaceConfig, setWorkspaceConfig] =
+    useState<WorkspaceConfig | null>(null)
   const [workspaces, setWorkspaces] = useState<string[]>([])
   const [activeTileId, setActiveTileId] = useState<string | null>(null)
   const [isResizing, setIsResizing] = useState(false)
-  const [availableViews, setAvailableViews] = useState<{ id: string, name: string }[]>([])
-
+  const [availableViews, setAvailableViews] = useState<
+    { id: string; name: string }[]
+  >([])
 
   const loadData = useCallback(() => {
     if (!window.aynite) {
       console.error('CRITICAL: Aynite Electron API not found.')
       return
     }
-    Promise.all([ayniteConfig.getWorkspaces(), ayniteConfig.getActiveWorkspace()]).then(
-      ([workspaceList, activeId]) => {
-        const activeWorkspace = workspaceList.find((w) => w.id === activeId)
-        if (activeWorkspace) {
-          setWorkspaceConfig(activeWorkspace)
-        }
-        setWorkspaces(workspaceList.map((w) => w.id))
+    Promise.all([
+      ayniteConfig.getWorkspaces(),
+      ayniteConfig.getActiveWorkspace(),
+    ]).then(([workspaceList, activeId]) => {
+      const activeWorkspace = workspaceList.find((w) => w.id === activeId)
+      if (activeWorkspace) {
+        setWorkspaceConfig(activeWorkspace)
       }
-    )
+      setWorkspaces(workspaceList.map((w) => w.id))
+    })
 
     if (window.aynite.getAvailableViews) {
       window.aynite.getAvailableViews().then(setAvailableViews)
     }
   }, [])
-
 
   useEffect(() => {
     loadData()
@@ -73,7 +81,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         loadData()
       })
     },
-    [loadData]
+    [loadData],
   )
 
   const addWorkspace = useCallback(
@@ -82,9 +90,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         loadData()
       })
     },
-    [loadData]
+    [loadData],
   )
-
 
   const switchLayout = useCallback((id: string) => {
     setWorkspaceConfig((prev) => {
@@ -102,39 +109,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const newConfig = {
           ...prev,
           layouts: prev.layouts.map((l) =>
-            l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l
-          )
+            l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l,
+          ),
         }
         if (!isResizing) ayniteConfig.saveWorkspace(newConfig)
         return newConfig
       })
     },
-    [isResizing]
+    [isResizing],
   )
 
-  const updateTileView = useCallback((nodeId: string, updates: Partial<LeafNode>) => {
-    const updateNodeTree = (node: LayoutNode): LayoutNode => {
-      if (node.id === nodeId && node.type === 'leaf') return { ...node, ...updates }
-      if (node.type === 'split') return { ...node, children: node.children.map(updateNodeTree) }
-      return node
-    }
-
-    setWorkspaceConfig((prev) => {
-      if (!prev) return null
-      console.log(`[AppContext] updateTileView: finding node ${nodeId}`);
-      const activeLayout = prev.layouts.find((l) => l.id === prev.activeLayoutId)
-      if (!activeLayout) return prev
-      const newLayout = updateNodeTree(activeLayout.layout)
-      const newConfig = {
-        ...prev,
-        layouts: prev.layouts.map((l) =>
-          l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l
-        )
+  const updateTileView = useCallback(
+    (nodeId: string, updates: Partial<LeafNode>) => {
+      const updateNodeTree = (node: LayoutNode): LayoutNode => {
+        if (node.id === nodeId && node.type === 'leaf')
+          return { ...node, ...updates }
+        if (node.type === 'split')
+          return { ...node, children: node.children.map(updateNodeTree) }
+        return node
       }
-      // ayniteConfig.saveWorkspace(newConfig)
-      return newConfig
-    })
-  }, [])
+
+      setWorkspaceConfig((prev) => {
+        if (!prev) return null
+        console.log(`[AppContext] updateTileView: finding node ${nodeId}`)
+        const activeLayout = prev.layouts.find(
+          (l) => l.id === prev.activeLayoutId,
+        )
+        if (!activeLayout) return prev
+        const newLayout = updateNodeTree(activeLayout.layout)
+        const newConfig = {
+          ...prev,
+          layouts: prev.layouts.map((l) =>
+            l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l,
+          ),
+        }
+        // ayniteConfig.saveWorkspace(newConfig)
+        return newConfig
+      })
+    },
+    [],
+  )
 
   useEffect(() => {
     if (workspaceConfig && !isResizing) {
@@ -142,18 +156,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [workspaceConfig, isResizing])
 
-
   const executeAppOperation = useCallback(
     (operation: string) => {
       setWorkspaceConfig((prev) => {
         if (!prev) return null
-        const activeLayout = prev.layouts.find((l) => l.id === prev.activeLayoutId)
+        const activeLayout = prev.layouts.find(
+          (l) => l.id === prev.activeLayoutId,
+        )
         if (!activeLayout) return prev
 
         const { node: newLayoutNode, newActiveId } = executeLayoutOperation(
           activeLayout.layout,
           activeTileId,
-          operation
+          operation,
         )
 
         if (newActiveId) setActiveTileId(newActiveId)
@@ -162,15 +177,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const newConfig = {
           ...prev,
           layouts: prev.layouts.map((l) =>
-            l.id === prev.activeLayoutId ? { ...l, layout: newLayoutNode } : l
-          )
+            l.id === prev.activeLayoutId ? { ...l, layout: newLayoutNode } : l,
+          ),
         }
 
         ayniteConfig.saveWorkspace(newConfig)
         return newConfig
       })
     },
-    [activeTileId]
+    [activeTileId],
   )
 
   useEffect(() => {
@@ -178,8 +193,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const removeListener = window.aynite.onAppOperation(executeAppOperation)
     return () => removeListener()
   }, [executeAppOperation])
-
-
 
   const handleResizeStart = useCallback(() => {
     setIsResizing(true)
@@ -195,23 +208,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     })
   }, [])
 
-  const openFile = useCallback((path: string) => {
+  const _openFile = useCallback((path: string) => {
     setWorkspaceConfig((prev) => {
       if (!prev) return null
       const currentFiles = prev.files || []
-      const newFiles = currentFiles.includes(path) ? currentFiles : [...currentFiles, path]
+      const newFiles = currentFiles.includes(path)
+        ? currentFiles
+        : [...currentFiles, path]
       const newConfig = {
         ...prev,
         files: newFiles,
-        activeFile: path
+        activeFile: path,
       }
       ayniteConfig.saveWorkspace(newConfig)
       return newConfig
     })
     return true
   }, [])
-
-
 
   // Expose context to window for debugging in development
   useEffect(() => {
@@ -230,7 +243,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateTileView,
         executeAppOperation,
         handleResizeStart,
-        handleResizeEnd
+        handleResizeEnd,
       }
     }
   }, [
@@ -238,7 +251,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     workspaces,
     activeTileId,
     isResizing,
-    setActiveTileId,
     loadData,
     switchWorkspace,
     addWorkspace,
@@ -247,10 +259,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     updateTileView,
     executeAppOperation,
     handleResizeStart,
-    handleResizeEnd
+    handleResizeEnd,
   ])
-
-
 
   return (
     <AppContext.Provider
@@ -269,10 +279,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         executeAppOperation,
         handleResizeStart,
         handleResizeEnd,
-        availableViews
+        availableViews,
       }}
     >
-
       {children}
     </AppContext.Provider>
   )

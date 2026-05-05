@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react'
+import type React from 'react'
+import { useEffect, useRef } from 'react'
 
 interface TileSplitterProps {
   direction: 'horizontal' | 'vertical'
@@ -11,7 +12,7 @@ const TileSplitter: React.FC<TileSplitterProps> = ({
   direction,
   onResize,
   onResizeStart,
-  onResizeEnd
+  onResizeEnd,
 }) => {
   // Use a ref to always have the latest callback without re-binding listeners
   const onResizeRef = useRef(onResize)
@@ -29,7 +30,8 @@ const TileSplitter: React.FC<TileSplitterProps> = ({
     let lastPos = startPos
 
     const onMouseMove = (moveEvent: MouseEvent) => {
-      const currentPos = direction === 'horizontal' ? moveEvent.clientX : moveEvent.clientY
+      const currentPos =
+        direction === 'horizontal' ? moveEvent.clientX : moveEvent.clientY
       const incrementalDelta = currentPos - lastPos
 
       // Only trigger if there's actual movement
@@ -49,7 +51,9 @@ const TileSplitter: React.FC<TileSplitterProps> = ({
     window.addEventListener('mouseup', onMouseUp)
   }
 
-  return <div className={`splitter ${direction}`} onMouseDown={handleMouseDown} />
+  return (
+    <div className={`splitter ${direction}`} onMouseDown={handleMouseDown} />
+  )
 }
 
 export default TileSplitter

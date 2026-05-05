@@ -1,55 +1,74 @@
-import React, { useState, useEffect } from 'react';
 import {
-  Sun, Keyboard, Bot, FileText, Wrench, Zap, Terminal, Info, X, RotateCcw
-} from 'lucide-react';
-import type { Theme } from '../../../lib/constants/types';
-import { SettingsState } from '../../shared/lib/types';
-import { cn } from '../../shared/lib/utils';
-
+  Bot,
+  FileText,
+  Info,
+  Keyboard,
+  Sun,
+  Terminal,
+  Wrench,
+  Zap,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import type { Theme } from '../../../lib/constants/types'
+import { Button } from '../../shared/basic/Button'
+import { Modal } from '../../shared/basic/Modal'
+import { TabButton } from '../../shared/basic/TabButton'
+import type { SettingsState } from '../../shared/lib/types'
+import { AboutTab } from './AboutTab'
+import { AgentsTab } from './AgentsTab'
+import { AITab } from './AITab'
 // Shared Tabs
-import { AppearanceTab } from './AppearanceTab';
-import { KeybindingsTab } from './KeybindingsTab';
-import { AITab } from './AITab';
-import { AgentsTab } from './AgentsTab';
-import { SkillsTab } from './SkillsTab';
-import { CommandsTab } from './CommandsTab';
-import { ToolsTab } from './ToolsTab';
-import { AboutTab } from './AboutTab';
-import { TabButton } from '../../shared/basic/TabButton';
-import { Modal } from '../../shared/basic/Modal';
-import { Button } from '../../shared/basic/Button';
+import { AppearanceTab } from './AppearanceTab'
+import { CommandsTab } from './CommandsTab'
+import { KeybindingsTab } from './KeybindingsTab'
+import { SkillsTab } from './SkillsTab'
+import { ToolsTab } from './ToolsTab'
 
-
-
-interface SettingsProps {
-}
+type SettingsProps = {}
 
 export function Settings() {
-  const [activeTab, setActiveTab] = useState('appearance');
+  const [activeTab, setActiveTab] = useState('appearance')
 
   // Broken down settings state
-  const [themes, setThemes] = useState<{ list: Theme[], activeId: string, systemFonts: string[] } | null>(null);
-  const [ai, setAI] = useState<SettingsState['ai'] | null>(null);
-  const [agents, setAgents] = useState<SettingsState['agents'] | null>(null);
-  const [prompts, setPrompts] = useState<SettingsState['prompts'] | null>(null);
-  const [keybindings, setKeybindings] = useState<SettingsState['keybindings'] | null>(null);
-  const [skills, setSkills] = useState<any | null>(null);
-  const [commands, setCommands] = useState<any | null>(null);
-  const [aiTools, setAiTools] = useState<SettingsState['aiTools'] | null>(null);
+  const [themes, setThemes] = useState<{
+    list: Theme[]
+    activeId: string
+    systemFonts: string[]
+  } | null>(null)
+  const [ai, setAI] = useState<SettingsState['ai'] | null>(null)
+  const [agents, setAgents] = useState<SettingsState['agents'] | null>(null)
+  const [prompts, setPrompts] = useState<SettingsState['prompts'] | null>(null)
+  const [keybindings, setKeybindings] = useState<
+    SettingsState['keybindings'] | null
+  >(null)
+  const [skills, setSkills] = useState<any | null>(null)
+  const [commands, setCommands] = useState<any | null>(null)
+  const [aiTools, setAiTools] = useState<SettingsState['aiTools'] | null>(null)
 
   // Other shared state
-  const [appVersion, setAppVersion] = useState<string>('');
-  const [availableTools, setAvailableTools] = useState<{ id: string; name: string; description: string }[]>([]);
-  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>('')
+  const [availableTools, setAvailableTools] = useState<
+    { id: string; name: string; description: string }[]
+  >([])
+  const [showRestoreModal, setShowRestoreModal] = useState(false)
 
   useEffect(() => {
-    loadSettings();
-    loadVersion();
-  }, []);
+    loadSettings()
+    loadVersion()
+  }, [loadVersion, loadSettings])
 
   const loadSettings = async () => {
     // Parallel load all decoupled resources
-    const [resAI, resAgents, resPrompts, resKb, resSkills, resCmds, resTools, resThemes] = await Promise.all([
+    const [
+      resAI,
+      resAgents,
+      resPrompts,
+      resKb,
+      resSkills,
+      resCmds,
+      resTools,
+      resThemes,
+    ] = await Promise.all([
       window.aynite.getConfig('ai'),
       window.aynite.getConfig('agents'),
       window.aynite.getConfig('prompts'),
@@ -57,81 +76,98 @@ export function Settings() {
       window.aynite.getConfig('skills'),
       window.aynite.getConfig('commands'),
       window.aynite.getConfig('tools'),
-      window.aynite.getConfig('themes')
-    ]);
+      window.aynite.getConfig('themes'),
+    ])
 
-    if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list });
-    if (resAgents) setAgents({ activeId: resAgents.activeId, list: resAgents.list });
-    if (resPrompts) setPrompts({ files: resPrompts.list });
-    if (resKb) setKeybindings(resKb);
+    if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list })
+    if (resAgents)
+      setAgents({ activeId: resAgents.activeId, list: resAgents.list })
+    if (resPrompts) setPrompts({ files: resPrompts.list })
+    if (resKb) setKeybindings(resKb)
 
-    if (resSkills) setSkills(resSkills);
-    if (resCmds) setCommands(resCmds);
+    if (resSkills) setSkills(resSkills)
+    if (resCmds) setCommands(resCmds)
     if (resTools) {
-      setAiTools(resTools.active);
-      setAvailableTools(resTools.list);
+      setAiTools(resTools.active)
+      setAvailableTools(resTools.list)
     }
     if (resThemes) {
-      const activeThemeId = await window.aynite.getConfig('activeTheme');
-      const systemFonts = await window.aynite.getSystemFonts();
-      setThemes({ list: resThemes, activeId: activeThemeId, systemFonts: systemFonts || [] });
+      const activeThemeId = await window.aynite.getConfig('activeTheme')
+      const systemFonts = await window.aynite.getSystemFonts()
+      setThemes({
+        list: resThemes,
+        activeId: activeThemeId,
+        systemFonts: systemFonts || [],
+      })
     }
-
-  };
+  }
 
   const loadVersion = async () => {
-    const version = await window.aynite.getConfig('version');
-    setAppVersion(version);
-  };
-
+    const version = await window.aynite.getConfig('version')
+    setAppVersion(version)
+  }
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
+    setActiveTab(tab)
+  }
 
   // ─── Tab Set Handlers ──────────────────────────────────────────────
 
-  const handleSetThemes = async (newThemes: { list: Theme[], activeId: string }) => {
-    setThemes(prev => prev ? { ...newThemes, systemFonts: prev.systemFonts } : null);
+  const handleSetThemes = async (newThemes: {
+    list: Theme[]
+    activeId: string
+  }) => {
+    setThemes((prev) =>
+      prev ? { ...newThemes, systemFonts: prev.systemFonts } : null,
+    )
     // Save the active theme ID specifically
     if (newThemes.activeId) {
-      await window.aynite.setConfig('activeTheme',newThemes.activeId);
+      await window.aynite.setConfig('activeTheme', newThemes.activeId)
     }
-    // Individual theme saving is handled via setThemes logic if needed, 
+    // Individual theme saving is handled via setThemes logic if needed,
     // but usually themes are static unless customized.
     if (newThemes.list.length === 0) {
-      await loadSettings();
+      await loadSettings()
     }
-  };
-
+  }
 
   const handleSetKeybindings = async (kb: SettingsState['keybindings']) => {
-    setKeybindings(kb);
-    await window.aynite.setConfig('keybindings',{ list: kb });
-  };
+    setKeybindings(kb)
+    await window.aynite.setConfig('keybindings', { list: kb })
+  }
 
   const handleSetAI = async (newAI: SettingsState['ai']) => {
-    setAI(newAI);
-    await window.aynite.setConfig('ai',{ activeId: newAI.activeId, list: newAI.providers });
-  };
+    setAI(newAI)
+    await window.aynite.setConfig('ai', {
+      activeId: newAI.activeId,
+      list: newAI.providers,
+    })
+  }
 
   const handleSetSkills = async (newSkills: any) => {
-    setSkills(newSkills);
-    await window.aynite.setConfig('skills',newSkills);
-  };
+    setSkills(newSkills)
+    await window.aynite.setConfig('skills', newSkills)
+  }
 
   const handleSetCommands = async (newCommands: any) => {
-    setCommands(newCommands);
-    await window.aynite.setConfig('commands',newCommands);
-  };
+    setCommands(newCommands)
+    await window.aynite.setConfig('commands', newCommands)
+  }
 
   const handleSetTools = async (newTools: SettingsState['aiTools']) => {
-    setAiTools(newTools);
-    await window.aynite.setConfig('tools',{ active: newTools, list: availableTools });
-  };
+    setAiTools(newTools)
+    await window.aynite.setConfig('tools', {
+      active: newTools,
+      list: availableTools,
+    })
+  }
 
   if (!ai || !agents || !prompts || !keybindings || !aiTools) {
-    return <div className="w-full h-full bg-background flex items-center justify-center text-muted-foreground">Loading settings...</div>;
+    return (
+      <div className="w-full h-full bg-background flex items-center justify-center text-muted-foreground">
+        Loading settings...
+      </div>
+    )
   }
 
   return (
@@ -139,43 +175,101 @@ export function Settings() {
       <div className="flex flex-1 overflow-hidden">
         {/* Settings Sidebar */}
         <div className="w-52 border-r border-border bg-sidebar/50 p-4 space-y-1 shrink-0">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mb-2 px-3">Basic</div>
-          <TabButton active={activeTab === 'appearance'} onClick={() => handleTabChange('appearance')} icon={<Sun size={16} />} label="Appearance" />
-          <TabButton active={activeTab === 'keybindings'} onClick={() => handleTabChange('keybindings')} icon={<Keyboard size={16} />} label="Keybindings" />
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mb-2 px-3">
+            Basic
+          </div>
+          <TabButton
+            active={activeTab === 'appearance'}
+            onClick={() => handleTabChange('appearance')}
+            icon={<Sun size={16} />}
+            label="Appearance"
+          />
+          <TabButton
+            active={activeTab === 'keybindings'}
+            onClick={() => handleTabChange('keybindings')}
+            icon={<Keyboard size={16} />}
+            label="Keybindings"
+          />
 
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">AI</div>
-          <TabButton active={activeTab === 'ai'} onClick={() => handleTabChange('ai')} icon={<Bot size={16} />} label="Providers" />
-          <TabButton active={activeTab === 'agents'} onClick={() => handleTabChange('agents')} icon={<FileText size={16} />} label="Agents" />
-          <TabButton active={activeTab === 'tools'} onClick={() => handleTabChange('tools')} icon={<Wrench size={16} />} label="Tools" />
-          <TabButton active={activeTab === 'skills'} onClick={() => handleTabChange('skills')} icon={<Zap size={16} />} label="Skills" />
-          <TabButton active={activeTab === 'commands'} onClick={() => handleTabChange('commands')} icon={<Terminal size={16} />} label="Commands" />
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
+            AI
+          </div>
+          <TabButton
+            active={activeTab === 'ai'}
+            onClick={() => handleTabChange('ai')}
+            icon={<Bot size={16} />}
+            label="Providers"
+          />
+          <TabButton
+            active={activeTab === 'agents'}
+            onClick={() => handleTabChange('agents')}
+            icon={<FileText size={16} />}
+            label="Agents"
+          />
+          <TabButton
+            active={activeTab === 'tools'}
+            onClick={() => handleTabChange('tools')}
+            icon={<Wrench size={16} />}
+            label="Tools"
+          />
+          <TabButton
+            active={activeTab === 'skills'}
+            onClick={() => handleTabChange('skills')}
+            icon={<Zap size={16} />}
+            label="Skills"
+          />
+          <TabButton
+            active={activeTab === 'commands'}
+            onClick={() => handleTabChange('commands')}
+            icon={<Terminal size={16} />}
+            label="Commands"
+          />
 
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">App</div>
-          <TabButton active={activeTab === 'about'} onClick={() => handleTabChange('about')} icon={<Info size={16} />} label="About" />
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
+            App
+          </div>
+          <TabButton
+            active={activeTab === 'about'}
+            onClick={() => handleTabChange('about')}
+            icon={<Info size={16} />}
+            label="About"
+          />
         </div>
 
         {/* Settings Content */}
         <div className="flex-1 flex flex-col overflow-hidden bg-card">
           <div className="flex-1 overflow-auto custom-scrollbar relative">
-
             {activeTab === 'appearance' && themes && (
               <AppearanceTab
-                state={{ list: themes.list, activeId: themes.activeId, systemFonts: themes.systemFonts }}
-                actions={{ setThemes: handleSetThemes, onRestore: () => setShowRestoreModal(true) }}
+                state={{
+                  list: themes.list,
+                  activeId: themes.activeId,
+                  systemFonts: themes.systemFonts,
+                }}
+                actions={{
+                  setThemes: handleSetThemes,
+                  onRestore: () => setShowRestoreModal(true),
+                }}
               />
             )}
 
             {activeTab === 'keybindings' && (
               <KeybindingsTab
                 state={{ keybindings }}
-                actions={{ setKeybindings: handleSetKeybindings, onRestore: () => setShowRestoreModal(true) }}
+                actions={{
+                  setKeybindings: handleSetKeybindings,
+                  onRestore: () => setShowRestoreModal(true),
+                }}
               />
             )}
 
             {activeTab === 'ai' && (
               <AITab
                 state={{ ai }}
-                actions={{ setAI: handleSetAI, onRestore: () => setShowRestoreModal(true) }}
+                actions={{
+                  setAI: handleSetAI,
+                  onRestore: () => setShowRestoreModal(true),
+                }}
               />
             )}
 
@@ -185,16 +279,21 @@ export function Settings() {
                 actions={{
                   setAgentsTab: async (payload) => {
                     if (payload.agents) {
-                      setAgents(payload.agents);
-                      await window.aynite.setConfig('agents',{ activeId: payload.agents.activeId, list: payload.agents.list });
+                      setAgents(payload.agents)
+                      await window.aynite.setConfig('agents', {
+                        activeId: payload.agents.activeId,
+                        list: payload.agents.list,
+                      })
                     }
                     if (payload.prompts) {
-                      setPrompts(payload.prompts);
-                      await window.aynite.setConfig('prompts',{ list: payload.prompts.files });
+                      setPrompts(payload.prompts)
+                      await window.aynite.setConfig('prompts', {
+                        list: payload.prompts.files,
+                      })
                     }
                   },
                   onPickPromptFile: async () => null, // Removed
-                  onRestore: () => setShowRestoreModal(true)
+                  onRestore: () => setShowRestoreModal(true),
                 }}
               />
             )}
@@ -203,16 +302,19 @@ export function Settings() {
               <SkillsTab
                 state={{
                   skills: { folders: skills?.list || [] },
-                  availableSkills: skills?.items || []
+                  availableSkills: skills?.items || [],
                 }}
                 actions={{
                   setSkills: (newSkills) => {
                     if (newSkills) {
-                      handleSetSkills({ list: newSkills.folders, items: skills?.items || [] });
+                      handleSetSkills({
+                        list: newSkills.folders,
+                        items: skills?.items || [],
+                      })
                     }
                   },
                   onPickSkillFolder: async () => null, // Removed
-                  onRestore: () => setShowRestoreModal(true)
+                  onRestore: () => setShowRestoreModal(true),
                 }}
               />
             )}
@@ -221,16 +323,19 @@ export function Settings() {
               <CommandsTab
                 state={{
                   commands: { folders: commands?.list || [] },
-                  availableCommands: commands?.items || []
+                  availableCommands: commands?.items || [],
                 }}
                 actions={{
                   setCommands: (newCmds) => {
                     if (newCmds) {
-                      handleSetCommands({ list: newCmds.folders, items: commands?.items || [] });
+                      handleSetCommands({
+                        list: newCmds.folders,
+                        items: commands?.items || [],
+                      })
                     }
                   },
                   onPickCommandFolder: async () => null, // Removed
-                  onRestore: () => setShowRestoreModal(true)
+                  onRestore: () => setShowRestoreModal(true),
                 }}
               />
             )}
@@ -238,7 +343,10 @@ export function Settings() {
             {activeTab === 'tools' && (
               <ToolsTab
                 state={{ aiTools, availableTools }}
-                actions={{ setTools: handleSetTools, onRestore: () => setShowRestoreModal(true) }}
+                actions={{
+                  setTools: handleSetTools,
+                  onRestore: () => setShowRestoreModal(true),
+                }}
               />
             )}
 
@@ -247,12 +355,12 @@ export function Settings() {
                 state={{
                   appVersion,
                   updateStatus: 'idle',
-                  updateInfo: null
+                  updateInfo: null,
                 }}
                 actions={{
                   onCheckUpdates: window.aynite.checkForUpdates,
-                  onInstallUpdate: () => { },
-                  onOpenExternal: (url) => window.open(url, '_blank')
+                  onInstallUpdate: () => {},
+                  onOpenExternal: (url) => window.open(url, '_blank'),
                 }}
               />
             )}
@@ -268,41 +376,48 @@ export function Settings() {
         size="md"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowRestoreModal(false)}>Cancel</Button>
-            <Button 
-              variant="primary" 
+            <Button variant="ghost" onClick={() => setShowRestoreModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
               onClick={async () => {
                 // Execute standardized restore logic
-                if (activeTab === 'appearance') await handleSetThemes({ list: [], activeId: '' });
+                if (activeTab === 'appearance')
+                  await handleSetThemes({ list: [], activeId: '' })
                 if (activeTab === 'keybindings') {
-                  const res = await window.aynite.getConfig('keybindings');
-                  if (res) handleSetKeybindings(res);
+                  const res = await window.aynite.getConfig('keybindings')
+                  if (res) handleSetKeybindings(res)
                 }
 
                 if (activeTab === 'ai') {
-                  const res = await window.aynite.getConfig('ai');
-                  if (res) handleSetAI({ activeId: res.activeId, providers: res.list });
+                  const res = await window.aynite.getConfig('ai')
+                  if (res)
+                    handleSetAI({ activeId: res.activeId, providers: res.list })
                 }
                 if (activeTab === 'agents') {
-                  const res = await window.aynite.getConfig('agents');
+                  const res = await window.aynite.getConfig('agents')
                   if (res) {
-                    setAgents({ activeId: res.activeId, list: res.list });
-                    await window.aynite.setConfig('agents',{ activeId: res.activeId, list: res.list });
+                    setAgents({ activeId: res.activeId, list: res.list })
+                    await window.aynite.setConfig('agents', {
+                      activeId: res.activeId,
+                      list: res.list,
+                    })
                   }
                 }
                 if (activeTab === 'skills') {
-                  const res = await window.aynite.getConfig('skills');
-                  if (res) handleSetSkills(res);
+                  const res = await window.aynite.getConfig('skills')
+                  if (res) handleSetSkills(res)
                 }
                 if (activeTab === 'commands') {
-                  const res = await window.aynite.getConfig('commands');
-                  if (res) handleSetCommands(res);
+                  const res = await window.aynite.getConfig('commands')
+                  if (res) handleSetCommands(res)
                 }
                 if (activeTab === 'tools') {
-                  const res = await window.aynite.getConfig('tools');
-                  if (res) handleSetTools(res.active);
+                  const res = await window.aynite.getConfig('tools')
+                  if (res) handleSetTools(res.active)
                 }
-                setShowRestoreModal(false);
+                setShowRestoreModal(false)
               }}
             >
               Confirm Restore
@@ -311,11 +426,17 @@ export function Settings() {
         }
       >
         <div className="space-y-3">
-          <p className="text-sm text-foreground">Are you sure you want to restore <span className="font-bold capitalize">{activeTab}</span> settings to their default values?</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">This will overwrite all your current configurations for this tab. This action cannot be undone.</p>
+          <p className="text-sm text-foreground">
+            Are you sure you want to restore{' '}
+            <span className="font-bold capitalize">{activeTab}</span> settings
+            to their default values?
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This will overwrite all your current configurations for this tab.
+            This action cannot be undone.
+          </p>
         </div>
       </Modal>
     </div>
-  );
+  )
 }
-

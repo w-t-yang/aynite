@@ -1,24 +1,27 @@
-import React from 'react';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import yaml from 'js-yaml';
-import { UnifiedViewer } from './UnifiedViewer';
-import { FileInfo } from '../../lib/file-handlers';
+import yaml from 'js-yaml'
+import type React from 'react'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import type { FileInfo } from '../../lib/file-handlers'
+import { UnifiedViewer } from './UnifiedViewer'
 
-export const MarkdownViewer: React.FC<{ file: FileInfo; content?: string }> = ({ file, content }) => {
-  const dirPath = file.path.substring(0, file.path.lastIndexOf('/'));
-  
+export const MarkdownViewer: React.FC<{ file: FileInfo; content?: string }> = ({
+  file,
+  content,
+}) => {
+  const dirPath = file.path.substring(0, file.path.lastIndexOf('/'))
+
   // Parse frontmatter
-  let frontmatter: any = null;
-  let markdown = content || '';
-  
-  const fmMatch = markdown.match(/^---\r?\n([\s\S]+?)\r?\n---/);
+  let frontmatter: any = null
+  let markdown = content || ''
+
+  const fmMatch = markdown.match(/^---\r?\n([\s\S]+?)\r?\n---/)
   if (fmMatch) {
     try {
-      frontmatter = yaml.load(fmMatch[1]);
-      markdown = markdown.substring(fmMatch[0].length).trim();
+      frontmatter = yaml.load(fmMatch[1])
+      markdown = markdown.substring(fmMatch[0].length).trim()
     } catch (e) {
-      console.warn('Failed to parse frontmatter:', e);
+      console.warn('Failed to parse frontmatter:', e)
     }
   }
 
@@ -34,21 +37,28 @@ export const MarkdownViewer: React.FC<{ file: FileInfo; content?: string }> = ({
             </h3>
             <div className="grid grid-cols-2 gap-x-12 gap-y-6">
               {Object.entries(frontmatter).map(([key, value]) => (
-                <div key={key} className={`flex flex-col gap-1.5 ${key === 'description' || String(value).length > 50 ? 'col-span-2' : ''}`}>
-                  <span className="text-[10px] font-bold text-primary/80 uppercase tracking-wide">{key}</span>
+                <div
+                  key={key}
+                  className={`flex flex-col gap-1.5 ${key === 'description' || String(value).length > 50 ? 'col-span-2' : ''}`}
+                >
+                  <span className="text-[10px] font-bold text-primary/80 uppercase tracking-wide">
+                    {key}
+                  </span>
                   <span className="text-[13px] text-foreground/80 leading-relaxed font-medium">
-                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    {typeof value === 'object'
+                      ? JSON.stringify(value)
+                      : String(value)}
                   </span>
                 </div>
               ))}
             </div>
           </div>
         )}
-        
+
         <div className="prose prose-invert prose-slate max-w-none prose-headings:font-bold prose-h1:text-3xl prose-h1:tracking-tight prose-pre:bg-muted/40 prose-pre:border prose-pre:border-border/40">
           <Markdown remarkPlugins={[remarkGfm]}>{markdown}</Markdown>
         </div>
       </div>
     </UnifiedViewer>
-  );
-};
+  )
+}

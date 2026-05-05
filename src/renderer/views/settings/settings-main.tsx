@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { Settings } from './Settings'
 import { ThemeAwareView } from '../../shared/lib/useTheme'
+import { Settings } from './Settings'
 import '../../shared/styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
@@ -11,5 +11,5 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
         <Settings />
       </div>
     </ThemeAwareView>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

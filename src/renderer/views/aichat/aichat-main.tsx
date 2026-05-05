@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { AIChat } from './AIChat'
 import { ThemeAwareView } from '../../shared/lib/useTheme'
+import { AIChat } from './AIChat'
 import '../../shared/styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
@@ -11,5 +11,5 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
         <AIChat />
       </div>
     </ThemeAwareView>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

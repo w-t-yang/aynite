@@ -1,7 +1,7 @@
-import React from 'react';
-import { Music } from 'lucide-react';
-import { UnifiedViewer } from './UnifiedViewer';
-import { FileInfo, formatFileSize } from '../../lib/file-handlers';
+import { Music } from 'lucide-react'
+import type React from 'react'
+import { type FileInfo, formatFileSize } from '../../lib/file-handlers'
+import { UnifiedViewer } from './UnifiedViewer'
 
 export const AudioViewer: React.FC<{ file: FileInfo }> = ({ file }) => (
   <UnifiedViewer padding="p-8">
@@ -11,11 +11,19 @@ export const AudioViewer: React.FC<{ file: FileInfo }> = ({ file }) => (
           <Music size={32} className="text-primary" />
         </div>
         <div className="text-center">
-           <h3 className="font-medium text-foreground mb-1 truncate w-64">{file.path.split(/[\/\\]/).pop()}</h3>
-           <p className="text-xs text-muted-foreground uppercase tracking-widest">{file.extension} • {formatFileSize(file.size)}</p>
+          <h3 className="font-medium text-foreground mb-1 truncate w-64">
+            {file.path.split(/[/\\]/).pop()}
+          </h3>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest">
+            {file.extension} • {formatFileSize(file.size)}
+          </p>
         </div>
-        <audio controls className="w-full" src={`aynite-resource://${file.path}`} />
+        <audio
+          controls
+          className="w-full"
+          src={`aynite-resource://${file.path}`}
+        />
       </div>
     </div>
   </UnifiedViewer>
-);
+)

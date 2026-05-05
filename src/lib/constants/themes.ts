@@ -36,13 +36,13 @@ export const DEFAULT_THEMES: Record<string, any> = {
       tabActive: '#ffffff',
       tabActiveBorder: '#3b82f6',
       scrollbarThumb: '#d4d4d8',
-      scrollbarTrack: 'transparent'
+      scrollbarTrack: 'transparent',
     },
     fonts: {
       fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
       fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
+      fontSize: '14px',
+    },
   },
   dark: {
     name: 'Dark',
@@ -81,13 +81,13 @@ export const DEFAULT_THEMES: Record<string, any> = {
       tabActive: '#09090b',
       tabActiveBorder: '#3b82f6',
       scrollbarThumb: '#27272a',
-      scrollbarTrack: 'transparent'
+      scrollbarTrack: 'transparent',
     },
     fonts: {
       fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
       fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
+      fontSize: '14px',
+    },
   },
   aurora: {
     name: 'Aurora',
@@ -126,13 +126,13 @@ export const DEFAULT_THEMES: Record<string, any> = {
       tabActive: '#0f0e17',
       tabActiveBorder: '#a78bfa',
       scrollbarThumb: '#393552',
-      scrollbarTrack: 'transparent'
+      scrollbarTrack: 'transparent',
     },
     fonts: {
       fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
       fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
+      fontSize: '14px',
+    },
   },
   ember: {
     name: 'Ember',
@@ -171,13 +171,13 @@ export const DEFAULT_THEMES: Record<string, any> = {
       tabActive: '#1a1210',
       tabActiveBorder: '#f59e0b',
       scrollbarThumb: '#3d322c',
-      scrollbarTrack: 'transparent'
+      scrollbarTrack: 'transparent',
     },
     fonts: {
       fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
       fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
+      fontSize: '14px',
+    },
   },
   nord: {
     name: 'Nord',
@@ -216,12 +216,12 @@ export const DEFAULT_THEMES: Record<string, any> = {
       tabActive: '#2e3440',
       tabActiveBorder: '#88c0d0',
       scrollbarThumb: '#4c566a',
-      scrollbarTrack: 'transparent'
+      scrollbarTrack: 'transparent',
     },
     fonts: {
       fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
       fontMono: 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace',
-      fontSize: '14px'
-    }
-  }
-};
+      fontSize: '14px',
+    },
+  },
+}

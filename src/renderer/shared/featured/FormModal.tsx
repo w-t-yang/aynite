@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { Modal } from '../basic/Modal';
-import { Button } from '../basic/Button';
-import { Input } from '../basic/Input';
+import type React from 'react'
+import { useState } from 'react'
+import { Button } from '../basic/Button'
+import { Input } from '../basic/Input'
+import { Modal } from '../basic/Modal'
 
 interface FormModalProps {
-  title: string;
-  label: string;
-  placeholder?: string;
-  submitLabel?: string;
-  onSubmit: (value: string) => void;
-  onClose: () => void;
+  title: string
+  label: string
+  placeholder?: string
+  submitLabel?: string
+  onSubmit: (value: string) => void
+  onClose: () => void
 }
 
 export function FormModal({
@@ -18,17 +19,17 @@ export function FormModal({
   placeholder,
   submitLabel = 'Submit',
   onSubmit,
-  onClose
+  onClose,
 }: FormModalProps) {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (value.trim()) {
-      onSubmit(value.trim());
-      onClose();
+      onSubmit(value.trim())
+      onClose()
     }
-  };
+  }
 
   return (
     <Modal isOpen={true} onClose={onClose} title={title} size="sm">
@@ -37,11 +38,18 @@ export function FormModal({
           autoFocus
           label={label}
           value={value}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setValue(e.target.value)
+          }
           placeholder={placeholder}
         />
         <div className="flex gap-2 pt-2">
-          <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+          >
             Cancel
           </Button>
           <Button
@@ -55,5 +63,5 @@ export function FormModal({
         </div>
       </form>
     </Modal>
-  );
+  )
 }

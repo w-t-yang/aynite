@@ -34,7 +34,7 @@
     --foreground: #fafafa;
 
     --sidebar: #121214;
-    
+
     --card: #09090b;
     --card-foreground: #fafafa;
 
@@ -120,10 +120,10 @@
     display: none;
   }
   .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
-  
+
   .num-scrollbar::-webkit-scrollbar {
     height: 4px;
     width: 4px;
@@ -209,8 +209,6 @@
     @apply bg-tile-bg border border-tile-border flex flex-col relative overflow-hidden m-[1px] rounded-[4px] transition-colors duration-200;
   }
 
-
-
   .tile-title {
     @apply px-3 py-2 bg-sidebar/50 text-muted-foreground text-[12px] font-semibold uppercase tracking-wider border-b border-tile-border;
   }
@@ -225,7 +223,7 @@
 
   /* Larger hit area for splitters */
   .splitter::after {
-    content: '';
+    content: "";
     @apply absolute inset-[-4px] z-[101];
   }
 
@@ -247,12 +245,12 @@
 }
 
 body.is-resizing {
-  user-select: none !important;
-  cursor: grabbing !important;
+  user-select: none;
+  cursor: grabbing;
 }
 
 body.is-resizing iframe {
-  pointer-events: none !important;
+  pointer-events: none;
 }
 
 /* ─── Tiptap Chat Input Styles ────────────────────────────────────── */
@@ -285,9 +283,18 @@ body.is-resizing iframe {
 }
 
 @keyframes loading-bar-ping-pong {
-  0% { left: -30%; width: 30%; }
-  50% { left: 100%; width: 30%; }
-  100% { left: -30%; width: 30%; }
+  0% {
+    left: -30%;
+    width: 30%;
+  }
+  50% {
+    left: 100%;
+    width: 30%;
+  }
+  100% {
+    left: -30%;
+    width: 30%;
+  }
 }
 
 .chat-input-editor .is-editor-empty:first-child::before {
@@ -335,27 +342,28 @@ body.is-resizing iframe {
 
 /* Tippy Popup */
 .tippy-box {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .tippy-content {
-  padding: 0 !important;
+  padding: 0;
 }
 
 .tippy-arrow {
-  display: none !important;
+  display: none;
 }
-
-
 
 /* ─── Atmosphere & Depth Utilities ───────────────────────────────── */
 
 .bg-ambient-gradient {
-  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--primary), transparent 97%), transparent 80%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--primary), transparent 97%),
+    transparent 80%
+  );
 }
-
 
 /* Prose Adjustments */
 .prose {
@@ -377,34 +385,40 @@ body.is-resizing iframe {
 }
 
 .mask-fade-vertical {
-  mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 5%,
+    black 95%,
+    transparent
+  );
 }
 
 /* ─── Prism Syntax Highlighting Overrides ────────────────────────── */
 
 code[class*="language-"],
 pre[class*="language-"] {
-  color: var(--foreground) !important;
-  background: transparent !important;
-  text-shadow: none !important;
-  font-family: var(--font-mono) !important;
+  color: var(--foreground);
+  background: transparent;
+  text-shadow: none;
+  font-family: var(--font-mono);
 }
 
 .token.comment,
 .token.prolog,
 .token.doctype,
 .token.cdata {
-  color: var(--muted-foreground) !important;
+  color: var(--muted-foreground);
   font-style: italic;
 }
 
 .token.punctuation {
-  color: var(--foreground) !important;
+  color: var(--foreground);
   opacity: 0.6;
 }
 
 .token.namespace {
-  opacity: .7;
+  opacity: 0.7;
 }
 
 .token.property,
@@ -414,7 +428,7 @@ pre[class*="language-"] {
 .token.constant,
 .token.symbol,
 .token.deleted {
-  color: var(--info) !important;
+  color: var(--info);
 }
 
 .token.selector,
@@ -423,7 +437,7 @@ pre[class*="language-"] {
 .token.char,
 .token.builtin,
 .token.inserted {
-  color: var(--success) !important;
+  color: var(--success);
 }
 
 .token.operator,
@@ -431,24 +445,24 @@ pre[class*="language-"] {
 .token.url,
 .language-css .token.string,
 .style .token.string {
-  color: var(--warning) !important;
+  color: var(--warning);
 }
 
 .token.atrule,
 .token.attr-value,
 .token.keyword {
-  color: var(--primary) !important;
+  color: var(--primary);
 }
 
 .token.function,
 .token.class-name {
-  color: var(--link) !important;
+  color: var(--link);
 }
 
 .token.regex,
 .token.important,
 .token.variable {
-  color: var(--warning) !important;
+  color: var(--warning);
 }
 
 .token.bold {

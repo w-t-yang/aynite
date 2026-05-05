@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Palette, RotateCcw, Trash2, Copy } from 'lucide-react';
-import { Section } from '../../shared/basic/Section';
-import { SettingsPage } from '../../shared/featured/SettingsPage';
-import { ThemePreview } from '../../shared/featured/ThemePreview';
-import { ColorInput } from '../../shared/featured/ColorInput';
-import { SelectionMenu } from '../../shared/featured/SelectionMenu';
-import { Modal } from '../../shared/basic/Modal';
-import { Input } from '../../shared/basic/Input';
-import { Button } from '../../shared/basic/Button';
-import type { Theme } from '../../../lib/constants/types';
-
+import { Copy, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import type { Theme } from '../../../lib/constants/types'
+import { Button } from '../../shared/basic/Button'
+import { Input } from '../../shared/basic/Input'
+import { Modal } from '../../shared/basic/Modal'
+import { Section } from '../../shared/basic/Section'
+import { ColorInput } from '../../shared/featured/ColorInput'
+import { SelectionMenu } from '../../shared/featured/SelectionMenu'
+import { SettingsPage } from '../../shared/featured/SettingsPage'
+import { ThemePreview } from '../../shared/featured/ThemePreview'
 
 const COLOR_LABELS: Record<string, string> = {
   background: 'Background',
@@ -33,78 +32,78 @@ const COLOR_LABELS: Record<string, string> = {
   'destructive-foreground': 'Destructive Text',
   warning: 'Warning',
   success: 'Success',
-};
+}
 
 interface AppearanceTabProps {
   state: {
-    list: Theme[];
-    activeId: string;
-    systemFonts: string[];
-  };
+    list: Theme[]
+    activeId: string
+    systemFonts: string[]
+  }
   actions: {
-    setThemes: (payload: { list: Theme[], activeId: string }) => void;
-    onRestore?: () => void;
-  };
+    setThemes: (payload: { list: Theme[]; activeId: string }) => void
+    onRestore?: () => void
+  }
 }
 
-export function AppearanceTab({
-  state,
-  actions
-}: AppearanceTabProps) {
-  const { list, activeId, systemFonts } = state;
+export function AppearanceTab({ state, actions }: AppearanceTabProps) {
+  const { list, activeId, systemFonts } = state
 
   // Local state for immediate UI feedback
-  const [localThemes, setLocalThemes] = useState(list);
-  const [localActiveId, setLocalActiveId] = useState(activeId);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [duplicateName, setDuplicateName] = useState('');
-  const [duplicateError, setDuplicateError] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [localThemes, setLocalThemes] = useState(list)
+  const [localActiveId, setLocalActiveId] = useState(activeId)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [duplicateName, setDuplicateName] = useState('')
+  const [duplicateError, setDuplicateError] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   // Sync from props if they change externally
   useEffect(() => {
-    setLocalThemes(list);
-    setLocalActiveId(activeId);
-  }, [list, activeId]);
+    setLocalThemes(list)
+    setLocalActiveId(activeId)
+  }, [list, activeId])
 
-  const editingTheme = localThemes.find(t => t.id === localActiveId);
+  const editingTheme = localThemes.find((t) => t.id === localActiveId)
 
   const persist = (list: any[], activeId: string) => {
-    actions.setThemes({ list, activeId });
-  };
+    actions.setThemes({ list, activeId })
+  }
 
   const handleSelectTheme = (id: string) => {
-    setLocalActiveId(id);
-    persist(localThemes, id);
-  };
+    setLocalActiveId(id)
+    persist(localThemes, id)
+  }
 
   const handleUpdateTheme = (updatedTheme: any) => {
-    const newThemes = localThemes.map(t => t.id === updatedTheme.id ? updatedTheme : t);
-    setLocalThemes(newThemes);
-    persist(newThemes, localActiveId);
-  };
-
+    const newThemes = localThemes.map((t) =>
+      t.id === updatedTheme.id ? updatedTheme : t,
+    )
+    setLocalThemes(newThemes)
+    persist(newThemes, localActiveId)
+  }
 
   const handleDeleteTheme = () => {
-    if (!editingTheme || editingTheme.isSystem) return;
-    const newThemes = localThemes.filter(t => t.id !== editingTheme.id);
-    const newActiveId = 'nord'; // Fallback
-    setLocalThemes(newThemes);
-    setLocalActiveId(newActiveId);
-    persist(newThemes, newActiveId);
-    setShowDeleteModal(false);
-  };
+    if (!editingTheme || editingTheme.isSystem) return
+    const newThemes = localThemes.filter((t) => t.id !== editingTheme.id)
+    const newActiveId = 'nord' // Fallback
+    setLocalThemes(newThemes)
+    setLocalActiveId(newActiveId)
+    persist(newThemes, newActiveId)
+    setShowDeleteModal(false)
+  }
 
   const handleDuplicate = () => {
     if (duplicateName.trim() && editingTheme) {
-      const name = duplicateName.trim();
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const name = duplicateName.trim()
+      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
 
       // Validation: Check for duplicate name or id
-      const isDuplicate = localThemes.some(t => t.id === id || t.name.toLowerCase() === name.toLowerCase());
+      const isDuplicate = localThemes.some(
+        (t) => t.id === id || t.name.toLowerCase() === name.toLowerCase(),
+      )
       if (isDuplicate) {
-        setDuplicateError('A theme with this name or ID already exists.');
-        return;
+        setDuplicateError('A theme with this name or ID already exists.')
+        return
       }
 
       const newTheme = {
@@ -113,17 +112,17 @@ export function AppearanceTab({
         type: editingTheme.type,
         isSystem: false,
         colors: { ...editingTheme.colors },
-        fonts: { ...(editingTheme.fonts || {}) }
-      };
-      const newThemes = [...localThemes, newTheme];
-      setLocalThemes(newThemes);
-      setLocalActiveId(id);
-      persist(newThemes, id);
-      setShowDuplicateModal(false);
-      setDuplicateName('');
-      setDuplicateError('');
+        fonts: { ...(editingTheme.fonts || {}) },
+      }
+      const newThemes = [...localThemes, newTheme]
+      setLocalThemes(newThemes)
+      setLocalActiveId(id)
+      persist(newThemes, id)
+      setShowDuplicateModal(false)
+      setDuplicateName('')
+      setDuplicateError('')
     }
-  };
+  }
 
   return (
     <SettingsPage
@@ -136,7 +135,11 @@ export function AppearanceTab({
         title="Theme Presets"
         description="Select a predefined theme to quickly change the aesthetic."
         action={
-          <Button variant="outline" size="sm" onClick={() => setShowDuplicateModal(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDuplicateModal(true)}
+          >
             <Copy size={14} /> Duplicate Theme
           </Button>
         }
@@ -158,11 +161,18 @@ export function AppearanceTab({
         <Section
           title="Active Theme Customization"
           description={`Fine-tune the "${editingTheme.name}" theme's colors and fonts.`}
-          action={!editingTheme.isSystem && (
-            <Button variant="ghost" size="icon" onClick={() => setShowDeleteModal(true)} className="text-destructive hover:bg-destructive/10">
-              <Trash2 size={16} />
-            </Button>
-          )}
+          action={
+            !editingTheme.isSystem && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteModal(true)}
+                className="text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 size={16} />
+              </Button>
+            )
+          }
         >
           <div className="space-y-12">
             {/* Fonts */}
@@ -171,42 +181,51 @@ export function AppearanceTab({
                 label="Interface Font"
                 searchable
                 activeId={editingTheme.fonts?.sans || 'Inter'}
-                items={systemFonts.map(f => ({ id: f, label: f }))}
-                onSelect={(v) => handleUpdateTheme({
-                  ...editingTheme,
-                  fonts: { ...(editingTheme.fonts || {}), sans: v }
-                })}
+                items={systemFonts.map((f) => ({ id: f, label: f }))}
+                onSelect={(v) =>
+                  handleUpdateTheme({
+                    ...editingTheme,
+                    fonts: { ...(editingTheme.fonts || {}), sans: v },
+                  })
+                }
               />
               <SelectionMenu
                 label="Monospace Font"
                 searchable
                 activeId={editingTheme.fonts?.mono || 'JetBrains Mono'}
-                items={systemFonts.map(f => ({ id: f, label: f }))}
-                onSelect={(v) => handleUpdateTheme({
-                  ...editingTheme,
-                  fonts: { ...(editingTheme.fonts || {}), mono: v }
-                })}
+                items={systemFonts.map((f) => ({ id: f, label: f }))}
+                onSelect={(v) =>
+                  handleUpdateTheme({
+                    ...editingTheme,
+                    fonts: { ...(editingTheme.fonts || {}), mono: v },
+                  })
+                }
               />
             </div>
 
-
             {/* Colors */}
             <div className="grid grid-cols-2 gap-x-16 gap-y-4">
-              {Object.entries(editingTheme.colors).map(([key, value]: [string, any]) => (
-                <ColorInput
-                  key={key}
-                  label={COLOR_LABELS[key] || key}
-                  value={value}
-                  onPickerChange={(v) => handleUpdateTheme({
-                    ...editingTheme,
-                    colors: { ...editingTheme.colors, [key]: v }
-                  })}
-                  onTextChange={(v) => handleUpdateTheme({
-                    ...editingTheme,
-                    colors: { ...editingTheme.colors, [key]: v }
-                  })}
-                />
-              ))}
+              {Object.entries(editingTheme.colors).map(
+                ([key, value]: [string, any]) => (
+                  <ColorInput
+                    key={key}
+                    label={COLOR_LABELS[key] || key}
+                    value={value}
+                    onPickerChange={(v) =>
+                      handleUpdateTheme({
+                        ...editingTheme,
+                        colors: { ...editingTheme.colors, [key]: v },
+                      })
+                    }
+                    onTextChange={(v) =>
+                      handleUpdateTheme({
+                        ...editingTheme,
+                        colors: { ...editingTheme.colors, [key]: v },
+                      })
+                    }
+                  />
+                ),
+              )}
             </div>
           </div>
         </Section>
@@ -216,15 +235,22 @@ export function AppearanceTab({
       <Modal
         isOpen={showDuplicateModal}
         onClose={() => {
-          setShowDuplicateModal(false);
-          setDuplicateError('');
+          setShowDuplicateModal(false)
+          setDuplicateError('')
         }}
         title="Duplicate Theme"
         size="md"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowDuplicateModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleDuplicate}>Create Theme</Button>
+            <Button
+              variant="ghost"
+              onClick={() => setShowDuplicateModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleDuplicate}>
+              Create Theme
+            </Button>
           </>
         }
       >
@@ -235,12 +261,18 @@ export function AppearanceTab({
             placeholder="e.g. My Dark Theme"
             value={duplicateName}
             onChange={(e) => {
-              setDuplicateName(e.target.value);
-              setDuplicateError('');
+              setDuplicateName(e.target.value)
+              setDuplicateError('')
             }}
-            className={duplicateError ? "border-destructive focus:ring-destructive" : ""}
+            className={
+              duplicateError ? 'border-destructive focus:ring-destructive' : ''
+            }
           />
-          {duplicateError && <p className="text-xs text-destructive font-medium">{duplicateError}</p>}
+          {duplicateError && (
+            <p className="text-xs text-destructive font-medium">
+              {duplicateError}
+            </p>
+          )}
         </div>
       </Modal>
 
@@ -252,7 +284,9 @@ export function AppearanceTab({
         size="md"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
             <Button variant="destructive" onClick={handleDeleteTheme}>
               Delete Forever
             </Button>
@@ -261,13 +295,15 @@ export function AppearanceTab({
       >
         <div className="space-y-4">
           <p className="text-sm text-foreground leading-relaxed">
-            Are you sure you want to delete <span className="font-bold">"{editingTheme?.name}"</span>?
+            Are you sure you want to delete{' '}
+            <span className="font-bold">"{editingTheme?.name}"</span>?
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed bg-destructive/5 p-3 rounded-lg border border-destructive/10">
-            This action cannot be undone. All custom colors and font settings for this theme will be permanently removed.
+            This action cannot be undone. All custom colors and font settings
+            for this theme will be permanently removed.
           </p>
         </div>
       </Modal>
     </SettingsPage>
-  );
+  )
 }

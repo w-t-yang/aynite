@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback } from 'react'
+import type React from 'react'
+import { useCallback, useEffect } from 'react'
 import type { Theme } from '../../../lib/constants/types'
 import { applyThemeColors } from './utils'
 

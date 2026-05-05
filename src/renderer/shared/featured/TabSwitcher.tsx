@@ -1,108 +1,148 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, FileText, Settings as SettingsIcon } from 'lucide-react';
-import { SelectionList, SelectionItem } from '../../shared/basic/SelectionList';
-import { KeyManager } from '../lib/key-handlers';
+import { FileText, Search, Settings as SettingsIcon } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  type SelectionItem,
+  SelectionList,
+} from '../../shared/basic/SelectionList'
+import { KeyManager } from '../lib/key-handlers'
 
 interface TabItem {
-  id: string;
-  title: string;
-  filepath?: string;
-  type: string;
+  id: string
+  title: string
+  filepath?: string
+  type: string
 }
 
 interface TabSwitcherProps {
-  tabs: TabItem[];
-  activeTabId: string;
-  onSelect: (tabId: string) => void;
-  onOpenFile: (file: { name: string, path: string, isDirectory: boolean }, content: string) => void;
-  onClose: () => void;
+  tabs: TabItem[]
+  activeTabId: string
+  onSelect: (tabId: string) => void
+  onOpenFile: (
+    file: { name: string; path: string; isDirectory: boolean },
+    content: string,
+  ) => void
+  onClose: () => void
 }
 
-export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, onClose }: TabSwitcherProps) {
-  const [query, setQuery] = useState('');
+export default function TabSwitcher({
+  tabs,
+  activeTabId,
+  onSelect,
+  onOpenFile,
+  onClose,
+}: TabSwitcherProps) {
+  const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(() => {
-    const activeIdx = tabs.findIndex(t => t.id === activeTabId);
-    return activeIdx >= 0 && tabs.length > 1 ? (activeIdx + 1) % tabs.length : 0;
-  });
-  const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+    const activeIdx = tabs.findIndex((t) => t.id === activeTabId)
+    return activeIdx >= 0 && tabs.length > 1 ? (activeIdx + 1) % tabs.length : 0
+  })
+  const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    window.aynite.workspaceAllFiles().then(res => {
-      if (res && res.data) {
-        setWorkspaceFiles(res.data);
+    window.aynite.workspaceAllFiles().then((res) => {
+      if (res?.data) {
+        setWorkspaceFiles(res.data)
       }
-    });
-  }, []);
+    })
+  }, [])
 
-  const openTabPaths = new Set(tabs.map(t => t.filepath?.replace(/\\/g, '/')));
+  const openTabPaths = new Set(tabs.map((t) => t.filepath?.replace(/\\/g, '/')))
 
   const combinedItems = [
-    ...tabs.map(t => ({ ...t, isTab: true })),
+    ...tabs.map((t) => ({ ...t, isTab: true })),
     ...workspaceFiles
-      .filter(f => !openTabPaths.has(f.path.replace(/\\/g, '/')))
-      .map(f => ({ id: f.path, title: f.name, filepath: f.path, type: 'file', isTab: false }))
-  ];
+      .filter((f) => !openTabPaths.has(f.path.replace(/\\/g, '/')))
+      .map((f) => ({
+        id: f.path,
+        title: f.name,
+        filepath: f.path,
+        type: 'file',
+        isTab: false,
+      })),
+  ]
 
   const filtered = combinedItems
-    .filter(t =>
-      t.title.toLowerCase().includes(query.toLowerCase()) ||
-      (t.filepath && t.filepath.toLowerCase().includes(query.toLowerCase()))
+    .filter(
+      (t) =>
+        t.title.toLowerCase().includes(query.toLowerCase()) ||
+        t.filepath?.toLowerCase().includes(query.toLowerCase()),
     )
-    .slice(0, 30);
+    .slice(0, 30)
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    inputRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     if (query.trim() !== '') {
-      setSelectedIndex(0);
+      setSelectedIndex(0)
     }
-  }, [query]);
+  }, [query])
 
   useEffect(() => {
     const api = {
       moveSelection: (dir: 'up' | 'down') => {
-        setSelectedIndex(prev => (dir === 'up' ? (prev + filtered.length - 1) : (prev + 1)) % filtered.length);
+        setSelectedIndex(
+          (prev) =>
+            (dir === 'up' ? prev + filtered.length - 1 : prev + 1) %
+            filtered.length,
+        )
       },
       confirmSelection: () => {
-        const item = filtered[selectedIndex];
+        const item = filtered[selectedIndex]
         if (item) {
           if (item.isTab) {
-            onSelect(item.id);
+            onSelect(item.id)
           } else {
-            window.aynite.readFile(item.filepath).then(res => {
-              if (res && res.data) {
-                onOpenFile({ name: item.title, path: item.filepath!, isDirectory: false }, res.data);
+            window.aynite.readFile(item.filepath).then((res) => {
+              if (res?.data) {
+                onOpenFile(
+                  {
+                    name: item.title,
+                    path: item.filepath!,
+                    isDirectory: false,
+                  },
+                  res.data,
+                )
               }
-            });
+            })
           }
-          onClose();
+          onClose()
         }
-      }
-    };
+      },
+    }
 
-    KeyManager.registerTabSwitcher(api);
-    return () => KeyManager.unregisterTabSwitcher();
-  }, [filtered, selectedIndex, onClose, onSelect, onOpenFile]);
+    KeyManager.registerTabSwitcher(api)
+    return () => KeyManager.unregisterTabSwitcher()
+  }, [filtered, selectedIndex, onClose, onSelect, onOpenFile])
 
-  const selectionItems: SelectionItem[] = filtered.map(item => ({
+  const selectionItems: SelectionItem[] = filtered.map((item) => ({
     id: item.id,
     label: item.title,
     subtitle: item.filepath,
     isActive: item.id === activeTabId,
     badge: item.isTab ? 'OPEN' : 'FILE',
-    icon: item.type === 'settings' ? <SettingsIcon size={16} /> : <FileText size={16} />
-  }));
+    icon:
+      item.type === 'settings' ? (
+        <SettingsIcon size={16} />
+      ) : (
+        <FileText size={16} />
+      ),
+  }))
 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
       {/* Panel */}
       <div className="relative z-10 w-full max-w-3xl bg-sidebar border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
@@ -124,18 +164,25 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
           items={selectionItems}
           selectedIndex={selectedIndex}
           onSelect={(selection) => {
-            const item = filtered.find(f => f.id === selection.id);
+            const item = filtered.find((f) => f.id === selection.id)
             if (item) {
               if (item.isTab) {
-                onSelect(item.id);
+                onSelect(item.id)
               } else {
-                window.aynite.readFile(item.filepath).then(res => {
-                  if (res && res.data) {
-                    onOpenFile({ name: item.title, path: item.filepath!, isDirectory: false }, res.data);
+                window.aynite.readFile(item.filepath).then((res) => {
+                  if (res?.data) {
+                    onOpenFile(
+                      {
+                        name: item.title,
+                        path: item.filepath!,
+                        isDirectory: false,
+                      },
+                      res.data,
+                    )
                   }
-                });
+                })
               }
-              onClose();
+              onClose()
             }
           }}
           className="max-h-[50vh]"
@@ -144,16 +191,25 @@ export default function TabSwitcher({ tabs, activeTabId, onSelect, onOpenFile, o
         {/* Footer hint */}
         <div className="px-4 py-2 border-t border-border/30 flex items-center gap-4 text-[10px] text-muted-foreground/40 bg-muted/5">
           <div className="flex items-center gap-1.5">
-            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">↑↓</span> navigate
+            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">
+              ↑↓
+            </span>{' '}
+            navigate
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">Enter</span> select
+            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">
+              Enter
+            </span>{' '}
+            select
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">Esc</span> close
+            <span className="px-1 py-0.5 rounded border border-border bg-accent/20">
+              Esc
+            </span>{' '}
+            close
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

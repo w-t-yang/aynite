@@ -1,15 +1,16 @@
-import React, {
+import type React from 'react'
+import {
   createContext,
-  useContext,
-  useState,
-  useEffect,
+  type ReactNode,
   useCallback,
-  ReactNode
+  useContext,
+  useEffect,
+  useState,
 } from 'react'
-import { WorkspaceConfig, KeybindingConfig, View, Theme } from '../../../lib/constants/types'
 import { ConfigKey } from '../../../lib/constants/config'
-import { ayniteConfig } from '../config'
+import type { Theme } from '../../../lib/constants/types'
 import { applyThemeColors as applySharedThemeColors } from '../../shared/lib/utils'
+import { ayniteConfig } from '../config'
 
 interface ThemeContextType {
   activeTheme: Theme | null
@@ -20,11 +21,11 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [activeTheme, setActiveTheme] = useState<Theme | null>(null)
   const [themes, setThemes] = useState<Theme[]>([])
-
-
 
   const applyThemeColors = useCallback((theme: Theme) => {
     applySharedThemeColors(theme)
@@ -53,8 +54,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     loadThemes()
   }, [loadThemes])
 
-
-
   // Expose theme context to window for debugging in development
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -62,14 +61,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         activeTheme,
         themes,
         setTheme,
-        loadThemes
+        loadThemes,
       }
     }
   }, [activeTheme, themes, setTheme, loadThemes])
 
-
   return (
-    <ThemeContext.Provider value={{ activeTheme, themes, setTheme, loadThemes }}>
+    <ThemeContext.Provider
+      value={{ activeTheme, themes, setTheme, loadThemes }}
+    >
       {children}
     </ThemeContext.Provider>
   )

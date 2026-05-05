@@ -1,0 +1,9 @@
+id: no-raw-ipc
+message: Use `window.aynite` API instead of raw `window.electron.ipcRenderer`
+note: The `window.electron` bridge is legacy and being phased out. Use the typed `window.aynite` methods instead.
+severity: error
+language: tsx
+rule:
+  any:
+    - pattern: window.electron
+    - pattern: window.api

@@ -1,0 +1,9 @@
+id: test-button
+message: test
+severity: warning
+language: tsx
+rule:
+  kind: jsx_opening_element
+  has:
+    field: name
+    regex: button

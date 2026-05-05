@@ -1,8 +1,8 @@
 import React, { useCallback, useRef } from 'react'
-import { LayoutNode } from '../../../lib/constants/types'
+import type { LayoutNode } from '../../../lib/constants/types'
+import { useApp } from '../context/AppContext'
 import Tile from './Tile'
 import TileSplitter from './TileSplitter'
-import { useApp } from '../context/AppContext'
 
 /**
  * TileNode: A recursive component that renders the Tiling Layout Tree.
@@ -52,9 +52,13 @@ interface TileNodeProps {
 const TileNode: React.FC<TileNodeProps> = ({
   node,
   isRoot,
-  onUpdateLayout: onUpdateLayoutProp
+  onUpdateLayout: onUpdateLayoutProp,
 }) => {
-  const { updateLayout: globalUpdateLayout, handleResizeStart, handleResizeEnd } = useApp()
+  const {
+    updateLayout: globalUpdateLayout,
+    handleResizeStart,
+    handleResizeEnd,
+  } = useApp()
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Use global update if root, otherwise use passed prop from parent TileNode
@@ -92,7 +96,7 @@ const TileNode: React.FC<TileNodeProps> = ({
       newChildren[index + 1] = { ...rightChild, size: newRightSize }
       onUpdateLayout({ ...node, children: newChildren })
     },
-    [node, onUpdateLayout]
+    [node, onUpdateLayout],
   )
 
   // TERMINATION CASE: Render the actual Tile
@@ -100,7 +104,11 @@ const TileNode: React.FC<TileNodeProps> = ({
     const tile = <Tile node={node} />
 
     if (isRoot) {
-      return <div className="w-full h-full flex flex-col overflow-hidden">{tile}</div>
+      return (
+        <div className="w-full h-full flex flex-col overflow-hidden">
+          {tile}
+        </div>
+      )
     }
     return tile
   }
@@ -117,7 +125,7 @@ const TileNode: React.FC<TileNodeProps> = ({
         flexDirection: node.direction === 'horizontal' ? 'row' : 'column',
         position: 'relative',
         width: '100%',
-        height: '100%'
+        height: '100%',
       }}
     >
       {node.children.map((child, index) => (

@@ -35,7 +35,7 @@ export enum ViewRequest {
   SAVE_CHAT_LOG = 'api:save-chat-log',
   LOAD_CHAT_LOG = 'api:load-chat-log',
   RUN_DIRECT_COMMAND = 'api:run-direct-command',
-  RESPOND_TO_APPROVAL = 'api:respond-to-approval'
+  RESPOND_TO_APPROVAL = 'api:respond-to-approval',
 }
 
 // Protocol Identifiers
@@ -44,7 +44,8 @@ export const AYNITE_VIEW_RESPONSE = 'aynite-view-response'
 export const AYNITE_VIEW_OPERATION = 'aynite-view-operation'
 
 // Operation Keys
-export const AYNITE_EVENT_ACTIVE_FILE_CHANGED = 'aynite:event-active-file-changed'
+export const AYNITE_EVENT_ACTIVE_FILE_CHANGED =
+  'aynite:event-active-file-changed'
 export const AYNITE_EVENT_THEME_CHANGED = 'aynite:event-theme-changed'
 
 /**

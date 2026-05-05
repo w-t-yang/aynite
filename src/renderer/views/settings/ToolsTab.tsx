@@ -1,33 +1,27 @@
-import React from 'react';
-import { RotateCcw } from 'lucide-react';
-import { Button } from '../../shared/basic/Button';
-import { Switch } from '../../shared/basic/Switch';
-import { SettingsPage } from '../../shared/featured/SettingsPage';
-import { Section } from '../../shared/basic/Section';
-import { SettingsState } from '../../shared/lib/types';
+import { Section } from '../../shared/basic/Section'
+import { Switch } from '../../shared/basic/Switch'
+import { SettingsPage } from '../../shared/featured/SettingsPage'
+import type { SettingsState } from '../../shared/lib/types'
 
 interface ToolsTabProps {
   state: {
-    aiTools: SettingsState['aiTools'];
-    availableTools: { id: string; name: string; description: string }[];
-  };
+    aiTools: SettingsState['aiTools']
+    availableTools: { id: string; name: string; description: string }[]
+  }
   actions: {
-    setTools: (tools: SettingsState['aiTools']) => void;
-    onRestore?: () => void;
-  };
+    setTools: (tools: SettingsState['aiTools']) => void
+    onRestore?: () => void
+  }
 }
 
-export function ToolsTab({
-  state,
-  actions
-}: ToolsTabProps) {
-  const { aiTools, availableTools } = state;
-  const { setTools } = actions;
+export function ToolsTab({ state, actions }: ToolsTabProps) {
+  const { aiTools, availableTools } = state
+  const { setTools } = actions
 
   const handleToggleTool = (id: string) => {
-    const newTools = { ...aiTools, [id]: !aiTools[id] };
-    setTools(newTools);
-  };
+    const newTools = { ...aiTools, [id]: !aiTools[id] }
+    setTools(newTools)
+  }
 
   return (
     <SettingsPage
@@ -35,13 +29,23 @@ export function ToolsTab({
       description="Enable or disable built-in tools for the AI to interact with your system. These tools allow the assistant to perform actions like file management, web search, and terminal execution."
       onRestore={actions.onRestore}
     >
-      <Section title="System Capabilities" description="Toggle individual tools to control what the assistant can do.">
+      <Section
+        title="System Capabilities"
+        description="Toggle individual tools to control what the assistant can do."
+      >
         <div className="grid grid-cols-2 gap-4">
-          {availableTools.map(tool => (
-            <div key={tool.id} className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group">
+          {availableTools.map((tool) => (
+            <div
+              key={tool.id}
+              className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group"
+            >
               <div className="space-y-1 flex-1 min-w-0 pr-6">
-                <h4 className="text-sm font-bold uppercase tracking-wider">{tool.name}</h4>
-                <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed line-clamp-2">{tool.description}</p>
+                <h4 className="text-sm font-bold uppercase tracking-wider">
+                  {tool.name}
+                </h4>
+                <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed line-clamp-2">
+                  {tool.description}
+                </p>
               </div>
               <Switch
                 checked={!!aiTools?.[tool.id]}
@@ -57,5 +61,5 @@ export function ToolsTab({
         </div>
       </Section>
     </SettingsPage>
-  );
+  )
 }

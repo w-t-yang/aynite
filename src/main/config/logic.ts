@@ -1,71 +1,75 @@
-import { app } from 'electron';
-import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings';
-import { 
-  getAyniteDir, 
-  expandHome, 
-  getAyniteConfigDir, 
-  getAynitePromptPath,
-  getWorkspacesConfigPath,
-  getWorkspaceDataPath,
-  getAIConfigPath,
-  getKeybindingsConfigPath,
-  getIgnoreConfigPath,
-  getMainConfigPath,
-  getAppearanceConfigPath,
-  getPlaybookPath,
-  getWelcomeMdPath,
-  joinPaths,
-  ensureDir, 
-  readJson, 
-  writeJson, 
-  readText, 
-  writeText,
-  exists,
-  unlink,
-  copy,
-  AYNITE_SUBDIRS
-} from '../../lib/path';
-import { getDefaultGlobalPrompts, restoreDefaultPrompts } from '../ai';
-import { 
-  DEFAULT_AI_CONFIG, 
-  AGENT_PROMPTS, 
-  DEFAULT_AGENTS
-} from '../../lib/constants/ai';
-import { initThemes } from '../theme';
-import { restoreSkill, restoreCommand, getSkillsConfig, getCommandsConfig, setSpellsNotificationCallback } from '../spells';
-
-import { 
+import { app } from 'electron'
+import {
+  AGENT_PROMPTS,
+  DEFAULT_AGENTS,
+  DEFAULT_AI_CONFIG,
+} from '../../lib/constants/ai'
+import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
+import {
+  DEFAULT_WORKSPACE_CONFIG,
   DEFAULT_WORKSPACE_ID,
-  DEFAULT_WORKSPACE_CONFIG 
-} from '../../lib/constants/workspace';
+} from '../../lib/constants/workspace'
+import {
+  AYNITE_SUBDIRS,
+  copy,
+  ensureDir,
+  exists,
+  expandHome,
+  getAIConfigPath,
+  getAppearanceConfigPath,
+  getAyniteDir,
+  getAynitePromptPath,
+  getIgnoreConfigPath,
+  getKeybindingsConfigPath,
+  getMainConfigPath,
+  getPlaybookPath,
+  getWorkspaceDataPath,
+  getWorkspacesConfigPath,
+  joinPaths,
+  readJson,
+  readText,
+  unlink,
+  writeJson,
+  writeText,
+} from '../../lib/path'
+import { getDefaultGlobalPrompts, restoreDefaultPrompts } from '../ai'
+import {
+  getCommandsConfig,
+  getSkillsConfig,
+  restoreCommand,
+  restoreSkill,
+  setSpellsNotificationCallback,
+} from '../spells'
+import { initThemes } from '../theme'
 
-let notificationCallback: ((data: { type: 'skill' | 'command', path: string, error: string }) => void) | null = null;
+let notificationCallback:
+  | ((data: { type: 'skill' | 'command'; path: string; error: string }) => void)
+  | null = null
 
 export function setConfigNotificationCallback(cb: typeof notificationCallback) {
-  notificationCallback = cb;
-  setSpellsNotificationCallback(cb);
+  notificationCallback = cb
+  setSpellsNotificationCallback(cb)
 }
 
-export { getAyniteDir, expandHome };
+export { expandHome, getAyniteDir }
 
 export function getBundledResourcesPath(): string {
   if (app.isPackaged) {
-    return process.resourcesPath;
+    return process.resourcesPath
   } else {
-    return joinPaths(process.cwd(), 'resources');
+    return joinPaths(process.cwd(), 'resources')
   }
 }
 
-
 export async function initAppFolders() {
-  const baseDir = getAyniteDir();
-  const folders = Object.values(AYNITE_SUBDIRS);
+  const baseDir = getAyniteDir()
+  const folders = Object.values(AYNITE_SUBDIRS)
   for (const folder of folders) {
-    await ensureDir(joinPaths(baseDir, folder));
+    await ensureDir(joinPaths(baseDir, folder))
   }
 
-  const aiDefault = DEFAULT_AI_CONFIG;
-  const keybindingsDefault = DEFAULT_KEYBINDINGS;
+  const aiDefault = DEFAULT_AI_CONFIG
+  const keybindingsDefault = DEFAULT_KEYBINDINGS
 
   const configDefault = {
     lastUsed: new Date().toISOString(),
@@ -75,187 +79,229 @@ export async function initAppFolders() {
     prompts: { files: getDefaultGlobalPrompts() },
     agents: {
       activeId: 'aynite',
-      list: DEFAULT_AGENTS.map(agent => ({
+      list: DEFAULT_AGENTS.map((agent) => ({
         id: agent.id,
         name: agent.name,
-        promptFiles: [getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename)]
-      }))
-    }
-  };
-  const ignoreDefault = ['node_modules', '.DS_Store', 'dist', 'build', 'out', 'target', 'vendor', 'venv'].join('\n');
-  const workspacesDefault = { active: DEFAULT_WORKSPACE_ID, list: [DEFAULT_WORKSPACE_ID] };
+        promptFiles: [
+          getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename),
+        ],
+      })),
+    },
+  }
+  const ignoreDefault = [
+    'node_modules',
+    '.DS_Store',
+    'dist',
+    'build',
+    'out',
+    'target',
+    'vendor',
+    'venv',
+  ].join('\n')
+  const workspacesDefault = {
+    active: DEFAULT_WORKSPACE_ID,
+    list: [DEFAULT_WORKSPACE_ID],
+  }
 
   if (!(await exists(getAIConfigPath()))) {
-    await writeJson(getAIConfigPath(), aiDefault);
+    await writeJson(getAIConfigPath(), aiDefault)
   }
   if (!(await exists(getKeybindingsConfigPath()))) {
-    await writeJson(getKeybindingsConfigPath(), keybindingsDefault);
+    await writeJson(getKeybindingsConfigPath(), keybindingsDefault)
   }
   if (!(await exists(getMainConfigPath()))) {
-    await writeJson(getMainConfigPath(), configDefault);
+    await writeJson(getMainConfigPath(), configDefault)
   }
   if (!(await exists(getWorkspacesConfigPath()))) {
-    await writeJson(getWorkspacesConfigPath(), workspacesDefault);
+    await writeJson(getWorkspacesConfigPath(), workspacesDefault)
   }
 
-
-  const ignorePath = getIgnoreConfigPath();
+  const ignorePath = getIgnoreConfigPath()
   if (!(await exists(ignorePath))) {
-    await writeText(ignorePath, ignoreDefault);
+    await writeText(ignorePath, ignoreDefault)
   }
 
-  await restoreAynitePlaybook();
-  await initThemes();
+  await restoreAynitePlaybook()
+  await initThemes()
 
   // Initialize workspaces.json if missing
-  const workspacesJsonPath = getWorkspacesConfigPath();
+  const workspacesJsonPath = getWorkspacesConfigPath()
   if (!(await exists(workspacesJsonPath))) {
-    await writeJson(workspacesJsonPath, workspacesDefault);
+    await writeJson(workspacesJsonPath, workspacesDefault)
   }
 
   // Ensure default workspace config exists
-  const defaultWorkspacePath = getWorkspaceDataPath(DEFAULT_WORKSPACE_ID);
+  const defaultWorkspacePath = getWorkspaceDataPath(DEFAULT_WORKSPACE_ID)
   if (!(await exists(defaultWorkspacePath))) {
-    const playbookPath = getPlaybookPath();
+    const playbookPath = getPlaybookPath()
     // Add playbook to default folders if it's the first time
-    const initialConfig = { 
-      ...DEFAULT_WORKSPACE_CONFIG, 
+    const initialConfig = {
+      ...DEFAULT_WORKSPACE_CONFIG,
       id: DEFAULT_WORKSPACE_ID,
-      folders: [playbookPath] 
-    };
-    await writeJson(defaultWorkspacePath, initialConfig);
+      folders: [playbookPath],
+    }
+    await writeJson(defaultWorkspacePath, initialConfig)
   }
 
   // Ensure default skills/commands
 
-
   // Ensure default skills/commands
-  for (const skillName of ['skill-creator', 'command-creator', 'hello-skill', 'theme-creator']) {
+  for (const skillName of [
+    'skill-creator',
+    'command-creator',
+    'hello-skill',
+    'theme-creator',
+  ]) {
     if (!(await exists(joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS, skillName)))) {
-      await restoreSkill(skillName);
+      await restoreSkill(skillName)
     }
   }
   for (const cmdName of ['hello-command']) {
     if (!(await exists(joinPaths(baseDir, AYNITE_SUBDIRS.COMMANDS, cmdName)))) {
-      await restoreCommand(cmdName);
+      await restoreCommand(cmdName)
     }
   }
 
-  await restoreDefaultPrompts();
-  
+  await restoreDefaultPrompts()
+
   // Copy bundled views to ~/.aynite/views
-  const bundledViewsDir = joinPaths(getBundledResourcesPath(), 'renderer', 'views');
-  const targetViewsDir = joinPaths(baseDir, AYNITE_SUBDIRS.VIEWS);
+  const bundledViewsDir = joinPaths(
+    getBundledResourcesPath(),
+    'renderer',
+    'views',
+  )
+  const targetViewsDir = joinPaths(baseDir, AYNITE_SUBDIRS.VIEWS)
   if (await exists(bundledViewsDir)) {
     try {
-      await copy(bundledViewsDir, targetViewsDir, { recursive: true });
+      await copy(bundledViewsDir, targetViewsDir, { recursive: true })
     } catch (e) {
-      console.error(`[Init] Error copying bundled views:`, e);
+      console.error(`[Init] Error copying bundled views:`, e)
     }
   }
 }
 
-
 export async function loadConfig() {
-  const ai = await readJson(getAIConfigPath(), { provider: 'gemini', configs: {} });
-  let keybindings = await readJson(getKeybindingsConfigPath(), DEFAULT_KEYBINDINGS);
-  const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {});
+  const ai = await readJson(getAIConfigPath(), {
+    provider: 'gemini',
+    configs: {},
+  })
+  const keybindings = await readJson(
+    getKeybindingsConfigPath(),
+    DEFAULT_KEYBINDINGS,
+  )
+  const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
 
-  let modified = false;
+  let modified = false
   const ensureKeys = (target: any, defaults: any) => {
     for (const key in defaults) {
       if (target[key] === undefined) {
-        target[key] = JSON.parse(JSON.stringify(defaults[key]));
-        modified = true;
+        target[key] = JSON.parse(JSON.stringify(defaults[key]))
+        modified = true
       } else if (typeof defaults[key] === 'object' && defaults[key] !== null) {
         if (typeof target[key] !== 'object' || target[key] === null) {
-          target[key] = JSON.parse(JSON.stringify(defaults[key]));
-          modified = true;
+          target[key] = JSON.parse(JSON.stringify(defaults[key]))
+          modified = true
         } else {
-          ensureKeys(target[key], defaults[key]);
+          ensureKeys(target[key], defaults[key])
         }
       }
     }
-  };
-
-  ensureKeys(keybindings, DEFAULT_KEYBINDINGS);
-  if (modified) {
-    await writeJson(getKeybindingsConfigPath(), keybindings);
   }
 
-  if (!mainConfig.skills) mainConfig.skills = await getSkillsConfig();
-  if (!mainConfig.commands) mainConfig.commands = await getCommandsConfig();
-  if (mainConfig.prompts && mainConfig.prompts.files) {
-    mainConfig.prompts.files = mainConfig.prompts.files.filter((f: string) => !f.split('/').pop().startsWith('agent-'));
+  ensureKeys(keybindings, DEFAULT_KEYBINDINGS)
+  if (modified) {
+    await writeJson(getKeybindingsConfigPath(), keybindings)
+  }
+
+  if (!mainConfig.skills) mainConfig.skills = await getSkillsConfig()
+  if (!mainConfig.commands) mainConfig.commands = await getCommandsConfig()
+  if (mainConfig.prompts?.files) {
+    mainConfig.prompts.files = mainConfig.prompts.files.filter(
+      (f: string) => !f.split('/').pop().startsWith('agent-'),
+    )
   }
   if (!mainConfig.agents) {
     mainConfig.agents = {
       activeId: 'aynite',
-      list: DEFAULT_AGENTS.map(agent => ({
+      list: DEFAULT_AGENTS.map((agent) => ({
         id: agent.id,
         name: agent.name,
-        promptFiles: [getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename)]
-      }))
-    };
+        promptFiles: [
+          getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename),
+        ],
+      })),
+    }
   }
 
-  const appearancePath = getAppearanceConfigPath();
+  const appearancePath = getAppearanceConfigPath()
   if (await exists(appearancePath)) {
     try {
-      const appearance = await readJson(appearancePath);
-      if (appearance.theme && !mainConfig.activeTheme) mainConfig.activeTheme = appearance.theme;
-      await unlink(appearancePath);
-    } catch { }
+      const appearance = await readJson(appearancePath)
+      if (appearance.theme && !mainConfig.activeTheme)
+        mainConfig.activeTheme = appearance.theme
+      await unlink(appearancePath)
+    } catch {}
   }
 
-  const { ignore: _, ...restConfig } = mainConfig;
+  const { ignore: _, ...restConfig } = mainConfig
   return {
     activeTheme: mainConfig.activeTheme || 'light',
     ignore: await getIgnorePatterns(),
     keybindings: keybindings,
     ai: ai,
-    ...restConfig
-  };
+    ...restConfig,
+  }
 }
 
 export async function getIgnorePatterns(): Promise<string[]> {
-  const ignorePath = getIgnoreConfigPath();
+  const ignorePath = getIgnoreConfigPath()
   try {
-    if (!(await exists(ignorePath))) return ['.git', 'node_modules'];
-    const data = await readText(ignorePath);
-    return data.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+    if (!(await exists(ignorePath))) return ['.git', 'node_modules']
+    const data = await readText(ignorePath)
+    return data
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'))
   } catch {
-    return ['.git', 'node_modules'];
+    return ['.git', 'node_modules']
   }
 }
 
 export async function saveConfig(settings: any) {
-  const { ai = DEFAULT_AI_CONFIG, keybindings = DEFAULT_KEYBINDINGS, ignore, ...rest } = settings;
-  const mainConfig = { ...rest, updatedAt: new Date().toISOString() };
+  const {
+    ai = DEFAULT_AI_CONFIG,
+    keybindings = DEFAULT_KEYBINDINGS,
+    ignore,
+    ...rest
+  } = settings
+  const mainConfig = { ...rest, updatedAt: new Date().toISOString() }
 
-  await writeJson(getAIConfigPath(), ai);
-  await writeJson(getKeybindingsConfigPath(), keybindings);
-  await writeJson(getMainConfigPath(), mainConfig);
+  await writeJson(getAIConfigPath(), ai)
+  await writeJson(getKeybindingsConfigPath(), keybindings)
+  await writeJson(getMainConfigPath(), mainConfig)
 
   if (ignore !== undefined) {
-    await writeText(getIgnoreConfigPath(), Array.isArray(ignore) ? ignore.join('\n') : ignore);
+    await writeText(
+      getIgnoreConfigPath(),
+      Array.isArray(ignore) ? ignore.join('\n') : ignore,
+    )
   }
-  return true;
+  return true
 }
 
 export async function restoreAynitePlaybook() {
-  const destDir = getPlaybookPath();
-  if (await exists(joinPaths(destDir, 'Welcome.md'))) return true;
+  const destDir = getPlaybookPath()
+  if (await exists(joinPaths(destDir, 'Welcome.md'))) return true
 
-  const srcDir = joinPaths(getBundledResourcesPath(), 'aynite-playbook');
+  const srcDir = joinPaths(getBundledResourcesPath(), 'aynite-playbook')
   if (await exists(srcDir)) {
     try {
-      await copy(srcDir, destDir, { recursive: true });
-      return true;
+      await copy(srcDir, destDir, { recursive: true })
+      return true
     } catch (e) {
-      console.error(`[Restore] Error copying aynite-playbook:`, e);
-      return false;
+      console.error(`[Restore] Error copying aynite-playbook:`, e)
+      return false
     }
   }
-  return false;
+  return false
 }

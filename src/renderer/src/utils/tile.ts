@@ -1,5 +1,5 @@
-import { LayoutNode } from '../../../lib/constants/types'
 import { AppOperation } from '../../../lib/constants/app'
+import type { LayoutNode } from '../../../lib/constants/types'
 
 export const getAllLeafIds = (node: LayoutNode): string[] => {
   if (node.type === 'leaf') return [node.id]
@@ -9,20 +9,24 @@ export const getAllLeafIds = (node: LayoutNode): string[] => {
 export const splitActiveTile = (
   node: LayoutNode,
   activeTileId: string,
-  direction: 'horizontal' | 'vertical'
+  direction: 'horizontal' | 'vertical',
 ): LayoutNode => {
   const transform = (n: LayoutNode): LayoutNode => {
     if (n.type === 'split') {
       const targetIndex = n.children.findIndex(
         (child) =>
           child.id === activeTileId ||
-          (child.type === 'split' && getAllLeafIds(child).includes(activeTileId))
+          (child.type === 'split' &&
+            getAllLeafIds(child).includes(activeTileId)),
       )
 
       if (targetIndex !== -1) {
         const updatedChildren = [...n.children]
 
-        if (n.direction === direction && n.children[targetIndex].id === activeTileId) {
+        if (
+          n.direction === direction &&
+          n.children[targetIndex].id === activeTileId
+        ) {
           const newId = `tile-${Math.random().toString(36).substr(2, 9)}`
           const activeChild = n.children[targetIndex]
           const halfSize = activeChild.size / 2
@@ -32,7 +36,7 @@ export const splitActiveTile = (
             type: 'leaf',
             id: newId,
             content: 'New Tile',
-            size: halfSize
+            size: halfSize,
           })
           return { ...n, children: updatedChildren }
         }
@@ -56,8 +60,8 @@ export const splitActiveTile = (
         size: n.size,
         children: [
           { ...n, size: 50 },
-          { type: 'leaf', id: newId, content: 'New Tile', size: 50 }
-        ]
+          { type: 'leaf', id: newId, content: 'New Tile', size: 50 },
+        ],
       }
     }
     return n
@@ -65,19 +69,27 @@ export const splitActiveTile = (
   return transform(node)
 }
 
-export const closeActiveTile = (node: LayoutNode, activeTileId: string): LayoutNode | null => {
+export const closeActiveTile = (
+  node: LayoutNode,
+  activeTileId: string,
+): LayoutNode | null => {
   const leafIds = getAllLeafIds(node)
   if (leafIds.length <= 1) return node
 
   const transform = (n: LayoutNode): LayoutNode | null => {
     if (n.type === 'leaf') return n.id === activeTileId ? null : n
-    const newChildren = n.children.map(transform).filter((c): c is LayoutNode => c !== null)
+    const newChildren = n.children
+      .map(transform)
+      .filter((c): c is LayoutNode => c !== null)
     if (newChildren.length === 0) return null
     if (newChildren.length === 1) return { ...newChildren[0], size: n.size }
     const currentTotal = newChildren.reduce((sum, c) => sum + c.size, 0)
     return {
       ...n,
-      children: newChildren.map((c) => ({ ...c, size: (c.size / currentTotal) * 100 }))
+      children: newChildren.map((c) => ({
+        ...c,
+        size: (c.size / currentTotal) * 100,
+      })),
     }
   }
   return transform(node)
@@ -86,7 +98,7 @@ export const closeActiveTile = (node: LayoutNode, activeTileId: string): LayoutN
 export const resizeActiveTile = (
   node: LayoutNode,
   activeTileId: string,
-  dir: 'up' | 'down' | 'left' | 'right'
+  dir: 'up' | 'down' | 'left' | 'right',
 ): LayoutNode => {
   const deltaPx = 20
   const isHorizontal = dir === 'left' || dir === 'right'
@@ -98,7 +110,8 @@ export const resizeActiveTile = (
       const targetIndex = n.children.findIndex(
         (child) =>
           child.id === activeTileId ||
-          (child.type === 'split' && getAllLeafIds(child).includes(activeTileId))
+          (child.type === 'split' &&
+            getAllLeafIds(child).includes(activeTileId)),
       )
 
       if (targetIndex !== -1) {
@@ -122,7 +135,10 @@ export const resizeActiveTile = (
 
           if (splitterIndex < 0 && n.children.length > 1) {
             splitterIndex = 0
-          } else if (splitterIndex >= n.children.length - 1 && n.children.length > 1) {
+          } else if (
+            splitterIndex >= n.children.length - 1 &&
+            n.children.length > 1
+          ) {
             splitterIndex = n.children.length - 2
           }
 
@@ -170,7 +186,7 @@ export const resizeActiveTile = (
 export const executeLayoutOperation = (
   node: LayoutNode,
   activeTileId: string | null,
-  operation: string
+  operation: string,
 ): { node: LayoutNode; newActiveId?: string } => {
   if (operation === AppOperation.TILE_CYCLE) {
     const leafIds = getAllLeafIds(node)
@@ -190,7 +206,10 @@ export const executeLayoutOperation = (
       const result = closeActiveTile(node, activeTileId)
       if (!result) return { node }
       const newLeafIds = getAllLeafIds(result)
-      return { node: result, newActiveId: newLeafIds.length > 0 ? newLeafIds[0] : undefined }
+      return {
+        node: result,
+        newActiveId: newLeafIds.length > 0 ? newLeafIds[0] : undefined,
+      }
     }
     case AppOperation.TILE_RESIZE_LEFT:
       return { node: resizeActiveTile(node, activeTileId, 'left') }
@@ -204,5 +223,3 @@ export const executeLayoutOperation = (
       return { node }
   }
 }
-
-

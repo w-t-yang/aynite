@@ -1,2 +1,2 @@
-export * from './ipc';
-export * from './logic';
+export * from './ipc'
+export * from './logic'
