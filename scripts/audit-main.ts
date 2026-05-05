@@ -85,6 +85,12 @@ const VIOLATIONS: Record<string, ViolationRule> = {
     name: 'Forbidden Path Functions',
     regex: /(?<!\.)\b(?:join|dirname|resolve|extname|basename)\b(?!\s*:)(?=\s*\()|(?<!\.)\bsep\b(?!\s*:)/g,
     description: 'Do not use raw path functions (join, dirname, etc.). Use project-specific path getters or their abstracted wrappers (joinPaths, getDirname, etc.) from lib/path.ts.'
+  },
+  TS_IGNORE: {
+    key: 'ts-ignore',
+    name: 'Stale @ts-ignore Comment',
+    regex: /\/\/\s*@ts-ignore/g,
+    description: 'Avoid @ts-ignore comments. Declare proper types (e.g., add missing methods to the AyniteWindow interface) instead of suppressing type errors.'
   }
 };
 
@@ -310,6 +316,21 @@ const auditFile = (filepath: string) => {
         line: lineNum,
         snippet: lines[lineNum - 1].trim(),
         message: VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.description
+      });
+    }
+  }
+
+  // 8. Stale @ts-ignore Comments
+  if (activeViolations.some(v => v.key === 'ts-ignore')) {
+    let tsIgnoreMatch;
+    while ((tsIgnoreMatch = VIOLATIONS.TS_IGNORE.regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, tsIgnoreMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.TS_IGNORE.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.TS_IGNORE.description
       });
     }
   }

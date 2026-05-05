@@ -25,9 +25,9 @@ import {
   listSessions,
   saveSession,
   loadSession,
-} from '../ai/chat';
-import { getMergedSystemPrompt } from '../ai/prompts';
-import { getToolsMetadata } from '../ai/tools';
+  getMergedSystemPrompt,
+  getToolsMetadata,
+} from '../ai';
 import {
   readJson,
   writeJson,

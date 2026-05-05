@@ -121,6 +121,12 @@ const VIOLATIONS = {
     key: 'theme',
     name: 'View Theme Usage',
     description: 'View entry files must import ThemeAwareView or useViewTheme from shared/lib/useTheme to self-apply themes.',
+  },
+  TS_IGNORE: {
+    key: 'ts-ignore',
+    name: 'Stale @ts-ignore Comment',
+    regex: /\/\/\s*@ts-ignore/g,
+    description: 'Avoid @ts-ignore comments. Declare proper types (e.g., add missing methods to the AyniteWindow interface) instead of suppressing type errors.'
   }
 } satisfies Record<string, ViolationRule>;
 
@@ -585,6 +591,21 @@ const auditFile = (filepath: string) => {
       });
     }
   }
+
+  // 16. Stale @ts-ignore Comments
+  if (activeViolations.some(v => v.key === 'ts-ignore')) {
+    let tsIgnoreMatch;
+    while ((tsIgnoreMatch = VIOLATIONS.TS_IGNORE.regex!.exec(content)) !== null) {
+      const lineNum = content.substring(0, tsIgnoreMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.TS_IGNORE.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.TS_IGNORE.description
+      });
+    }
+  }
 };
 
 
@@ -611,7 +632,8 @@ const DISPLAY_ORDER = [
   VIOLATIONS.LEGACY_MESSAGING.name,
   VIOLATIONS.BRIDGE_USAGE.name,
   VIOLATIONS.VIEW_THEME_USAGE.name,
-  VIOLATIONS.FORBIDDEN_GLOBALS.name
+  VIOLATIONS.FORBIDDEN_GLOBALS.name,
+  VIOLATIONS.TS_IGNORE.name
 ];
 
 
