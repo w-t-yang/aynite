@@ -92,6 +92,9 @@ const VIOLATIONS: Record<string, ViolationRule> = {
   }
 };
 
+// Baseline counts — update these when intentionally reducing violations
+const ANY_BASELINE = 42;
+
 // Help display
 if (process.argv.includes('-h') || process.argv.includes('--help')) {
   console.log('\nAynite Main Architecture Auditor');
@@ -99,6 +102,7 @@ if (process.argv.includes('-h') || process.argv.includes('--help')) {
   console.log('Options:');
   console.log('  --focus=[type]    Only run specific checks (import, fs, path, types, strings)');
   console.log('  --folder=[path]   Audit a specific folder or file');
+  console.log('  --check           Exit with code 1 if any violation baseline is exceeded');
   console.log('  -h, --help        Show this help message\n');
   console.log('Examples:');
   console.log('  npm run audit:main -- --focus=fs');
@@ -109,6 +113,7 @@ if (process.argv.includes('-h') || process.argv.includes('--help')) {
 // Arguments
 const focusArg = process.argv.find(arg => arg.startsWith('--focus='))?.split('=')[1];
 const folderArg = process.argv.find(arg => arg.startsWith('--folder='))?.split('=')[1];
+const checkArg = process.argv.includes('--check');
 
 const activeViolations = focusArg
   ? Object.values(VIOLATIONS).filter(v => v.key === focusArg || v.name.toLowerCase().includes(focusArg))
@@ -361,3 +366,14 @@ if (report.length === 0) {
   });
 }
 console.log('\n=== End of Report ===\n');
+
+// Baseline check — fail CI if typing violations exceed baseline
+if (checkArg) {
+  const typingCount = grouped[VIOLATIONS.STRICT_TYPING.name]?.length || 0;
+  if (typingCount > ANY_BASELINE) {
+    console.error(`❌ TYPING REGRESSION: Strict Typing violations (${typingCount}) exceed baseline (${ANY_BASELINE}).`);
+    process.exit(1);
+  } else {
+    console.log(`✅ TYPING OK: Strict Typing violations (${typingCount}) at or below baseline (${ANY_BASELINE}).`);
+  }
+}
