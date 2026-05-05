@@ -4,18 +4,41 @@ import { LeafNode } from '../../../lib/constants/types'
 import { AppOperation } from '../../../lib/constants/app'
 
 import { Button } from '../../shared/basic/Button'
+import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { useApp } from '../context/AppContext'
 import { ViewParentProvider } from '../context/ViewParentContext'
+
 
 interface TileProps {
   node: LeafNode
 }
 
 const Tile: React.FC<TileProps> = ({ node }) => {
-  const { activeTileId, setActiveTileId, executeAppOperation } = useApp()
+  const { activeTileId, setActiveTileId, executeAppOperation, updateTileView, availableViews, isResizing } = useApp()
   const { id, content: title, size, url } = node
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  const viewOptions = availableViews.map(v => ({ id: v.id, label: v.name }))
+
+  const handleSelectView = (selectedUrl: string) => {
+    console.log(`[Tile] handleSelectView: ${selectedUrl} for tile ${id}`);
+    if (selectedUrl === 'close') {
+      executeAppOperation(AppOperation.TILE_CLOSE)
+    } else {
+      const view = viewOptions.find(v => v.id === selectedUrl)
+      console.log(`[Tile] updating tile ${id} to ${selectedUrl}`);
+      updateTileView(id, { url: selectedUrl, content: view?.label || 'New View' })
+    }
+  }
+
+
+  const menuItems = [
+    ...viewOptions,
+    { id: 'divider-1', type: 'divider' },
+    { id: 'close', label: 'Close Tile', className: 'text-destructive' }
+  ]
+
 
   return (
     <div
@@ -29,27 +52,41 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       onMouseDown={() => setActiveTileId(id)}
     >
 
-      {/* Close button, visible on hover */}
-      <div className="absolute top-2 right-2 z-50 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => executeAppOperation(AppOperation.TILE_CLOSE)}
-          title="Close tile"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </Button>
+      <div 
+        className="absolute top-2 right-2 z-50 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+
+        <SelectionMenu
+          items={menuItems}
+          activeId={url || ''}
+          onSelect={handleSelectView}
+          align="right"
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Tile Options"
+              className="bg-background/80 backdrop-blur-md border border-border/50 hover:border-primary/50"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </Button>
+          }
+        />
       </div>
+
 
       <div className="tile-content h-full p-0 relative overflow-hidden bg-tile-bg/50">
         {url ? (
@@ -58,12 +95,14 @@ const Tile: React.FC<TileProps> = ({ node }) => {
               ref={iframeRef}
               src={url}
               className="w-full h-full border-none"
+              style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
               title={title}
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               allow="clipboard-read; clipboard-write"
             />
           </ViewParentProvider>
         ) : (
+
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"

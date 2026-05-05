@@ -101,10 +101,14 @@ export function SelectionMenu({
   };
 
   const filteredItems = useMemo(() => 
-    items.filter((item: SelectionItem) => 
-      item.label.toLowerCase().includes(search.toLowerCase()) ||
-      item.subtitle?.toLowerCase().includes(search.toLowerCase())
-    ), [items, search]);
+    items.filter((item: SelectionItem) => {
+      if (!search) return true;
+      const labelMatch = item.label?.toLowerCase().includes(search.toLowerCase()) ?? false;
+      const subtitleMatch = item.subtitle?.toLowerCase().includes(search.toLowerCase()) ?? false;
+      return labelMatch || subtitleMatch;
+    }), [items, search]);
+
+
 
   const activeItem = useMemo(() => 
     items.find((item: SelectionItem) => item.id === activeId), [items, activeId]);
@@ -143,11 +147,12 @@ export function SelectionMenu({
       <div className="relative">
         {trigger ? (
           <div 
-            onClick={() => !disabled && setInternalIsOpen(!internalIsOpen)} 
+            onClick={(e) => { e.stopPropagation(); !disabled && setInternalIsOpen(!internalIsOpen); }} 
             className="cursor-pointer"
           >
             {trigger}
           </div>
+
         ) : (
           <button
             type="button"

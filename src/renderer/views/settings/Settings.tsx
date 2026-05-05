@@ -65,14 +65,20 @@ export function Settings({ }: SettingsProps) {
     if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list });
     if (resAgents) setAgents({ activeId: resAgents.activeId, list: resAgents.list });
     if (resPrompts) setPrompts({ files: resPrompts.list });
-    if (resKb) setKeybindings(resKb.list);
+    if (resKb) setKeybindings(resKb);
+
     if (resSkills) setSkills(resSkills);
     if (resCmds) setCommands(resCmds);
     if (resTools) {
       setAiTools(resTools.active);
       setAvailableTools(resTools.list);
     }
-    if (resThemes) setThemes(resThemes);
+    if (resThemes) {
+      const activeThemeId = await aynite.getActiveThemeId();
+      const systemFonts = await aynite.getSystemFonts();
+      setThemes({ list: resThemes, activeId: activeThemeId, systemFonts: systemFonts || [] });
+    }
+
   };
 
   const loadVersion = async () => {
@@ -272,8 +278,9 @@ export function Settings({ }: SettingsProps) {
                 if (activeTab === 'appearance') await handleSetThemes({ list: [], activeId: '' });
                 if (activeTab === 'keybindings') {
                   const res = await aynite.getKeybindings();
-                  if (res && res.list) handleSetKeybindings(res.list);
+                  if (res) handleSetKeybindings(res);
                 }
+
                 if (activeTab === 'ai') {
                   const res = await aynite.getAI();
                   if (res) handleSetAI({ activeId: res.activeId, providers: res.list });

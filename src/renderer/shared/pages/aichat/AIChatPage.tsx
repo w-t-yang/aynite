@@ -512,8 +512,10 @@ export function AIChatPage({
 
           setMessages([...messages, userMsg, cmdMsg]);
         } catch (e: Error | unknown) {
-          setMessages([...messages, { id: genId(), role: 'user', content: text }, { id: genId(), role: 'assistant', content: `❌ **Execution Error**: ${e.message}` }]);
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          setMessages([...messages, { id: genId(), role: 'user', content: text }, { id: genId(), role: 'assistant', content: `❌ **Execution Error**: ${errorMsg}` }]);
         } finally {
+
           setLoading(false);
         }
         return;
@@ -542,7 +544,9 @@ export function AIChatPage({
               stderr: res.stderr || '',
             });
           } catch (e: Error | unknown) {
-            commandResults.push({ name, stdout: '', stderr: e.message, error: e.message });
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            commandResults.push({ name, stdout: '', stderr: errorMsg, error: errorMsg });
+
           }
         }
       }
@@ -705,7 +709,8 @@ export function AIChatPage({
           {
             id: genId(),
             role: 'assistant',
-            content: `❌ **System Error**: ${e.message}`,
+            content: `❌ **System Error**: ${e instanceof Error ? e.message : String(e)}`,
+
           },
         ]);
       } finally {
@@ -896,7 +901,6 @@ export function AIChatPage({
               )}
             </div>
 
-          </div>
 
           <ChatInput
             ref={inputRef}

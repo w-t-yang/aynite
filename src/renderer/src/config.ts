@@ -110,7 +110,17 @@ class AyniteConfig {
   async getAppVersion(): Promise<string> {
     return window.aynite.getConfig(ConfigKey.VERSION)
   }
+
+  async getSystemFonts(): Promise<string[]> {
+    return window.aynite.getSystemFonts()
+  }
+
+  async checkForUpdates(): Promise<void> {
+    return window.aynite.checkForUpdates()
+  }
 }
+
+
 
 export const ayniteConfig = new AyniteConfig()
 

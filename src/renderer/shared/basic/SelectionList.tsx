@@ -3,7 +3,8 @@ import { cn } from '../lib/utils';
 
 export interface SelectionItem {
   id: string;
-  label: string;
+  label?: string;
+
   subtitle?: string;
   icon?: React.ReactNode;
   isActive?: boolean;
@@ -70,12 +71,18 @@ export function SelectionList({
     >
       {items.map((item, index) => {
         const isSelected = index === selectedIndex;
+        
+        if (item.type === 'divider') {
+          return <div key={item.id} className="h-px bg-border/40 my-1 mx-1 shrink-0" />;
+        }
+
         return (
           <React.Fragment key={item.id}>
-            {index > 0 && divided && (
+            {index > 0 && divided && items[index-1]?.type !== 'divider' && (
               <div className="h-px bg-border/40 my-1 mx-1 shrink-0" />
             )}
             <button
+
               type="button"
               onClick={() => onSelect(item)}
               className={cn(

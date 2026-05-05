@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, protocol } from 'electron';
+
 import {
   initAppFolders,
   setConfigNotificationCallback,
@@ -74,8 +75,10 @@ function createWindow(): void {
     webPreferences: {
       preload: getPreloadPath(__dirname),
       sandbox: false,
-      contextIsolation: true
+      contextIsolation: true,
+      nodeIntegrationInSubFrames: true
     }
+
   });
 
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
@@ -101,7 +104,13 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('wayland-text-input-v3');
 }
 
+protocol.registerSchemesAsPrivileged([
+
+  { scheme: 'aynite', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
+]);
+
 app.whenReady().then(async () => {
+
   setupProtocol();
   await initAppFolders();
   createWindow();

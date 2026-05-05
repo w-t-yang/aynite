@@ -19,6 +19,12 @@ export interface LeafNode extends BaseNode {
 
 export type LayoutNode = SplitNode | LeafNode
 
+export interface SelectionItem {
+  id: string
+  label?: string
+  layout: LayoutNode
+}
+
 export interface LayoutConfig {
   id: string
   name: string
@@ -38,8 +44,16 @@ export interface WorkspaceConfig {
 
 
 export interface KeybindingConfig {
-  [key: string]: string
+  global: { [key: string]: string }
+  explorer: { [key: string]: string }
+  agent: { [key: string]: string }
+  content: {
+    navigation: { [key: string]: string }
+    viewer: { [key: string]: string }
+    generic: { [key: string]: string }
+  }
 }
+
 
 export interface View {
   id: string
@@ -123,11 +137,14 @@ export interface AyniteWindow {
 
   // System
   openExternal: (url: string) => Promise<boolean>
+  getSystemFonts: () => Promise<string[]>
   selectFolder: () => Promise<string[] | null>
+
   onAppOperation: (callback: (operation: string) => void) => () => void
 
   // Update
   installUpdate: () => Promise<void>
+  checkForUpdates: () => void
   onUpdateChecking: (callback: () => void) => () => void
   onUpdateAvailable: (callback: (info: any) => void) => () => void
   onUpdateNotAvailable: (callback: () => void) => () => void
@@ -138,6 +155,7 @@ export interface AyniteWindow {
   // Skills & Commands
   getAvailableSkills: () => Promise<any[]>
   getAvailableCommands: () => Promise<any[]>
+  getAvailableViews: () => Promise<{ id: string; name: string }[]>
 
   // Utilities
   joinPath: (...paths: string[]) => string

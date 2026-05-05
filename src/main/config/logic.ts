@@ -142,7 +142,19 @@ export async function initAppFolders() {
   }
 
   await restoreDefaultPrompts();
+  
+  // Copy bundled views to ~/.aynite/views
+  const bundledViewsDir = joinPaths(getBundledResourcesPath(), 'renderer', 'views');
+  const targetViewsDir = joinPaths(baseDir, AYNITE_SUBDIRS.VIEWS);
+  if (await exists(bundledViewsDir)) {
+    try {
+      await copy(bundledViewsDir, targetViewsDir, { recursive: true });
+    } catch (e) {
+      console.error(`[Init] Error copying bundled views:`, e);
+    }
+  }
 }
+
 
 export async function loadConfig() {
   const ai = await readJson(getAIConfigPath(), { provider: 'gemini', configs: {} });

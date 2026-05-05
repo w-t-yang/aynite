@@ -18,6 +18,8 @@ interface AppContextType {
   workspaces: string[]
   activeTileId: string | null
   isResizing: boolean
+  availableViews: { id: string, name: string }[]
+
 
   setActiveTileId: (id: string | null) => void
 
@@ -40,6 +42,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [workspaces, setWorkspaces] = useState<string[]>([])
   const [activeTileId, setActiveTileId] = useState<string | null>(null)
   const [isResizing, setIsResizing] = useState(false)
+  const [availableViews, setAvailableViews] = useState<{ id: string, name: string }[]>([])
+
 
   const loadData = useCallback(() => {
     if (!window.aynite) {
@@ -55,7 +59,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setWorkspaces(workspaceList.map((w) => w.id))
       }
     )
+
+    if (window.aynite.getAvailableViews) {
+      window.aynite.getAvailableViews().then(setAvailableViews)
+    }
   }, [])
+
 
   useEffect(() => {
     loadData()
@@ -115,6 +124,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setWorkspaceConfig((prev) => {
       if (!prev) return null
+      console.log(`[AppContext] updateTileView: finding node ${nodeId}`);
       const activeLayout = prev.layouts.find((l) => l.id === prev.activeLayoutId)
       if (!activeLayout) return prev
       const newLayout = updateNodeTree(activeLayout.layout)
@@ -124,10 +134,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l
         )
       }
-      ayniteConfig.saveWorkspace(newConfig)
+      // ayniteConfig.saveWorkspace(newConfig)
       return newConfig
     })
   }, [])
+
+  useEffect(() => {
+    if (workspaceConfig && !isResizing) {
+      ayniteConfig.saveWorkspace(workspaceConfig)
+    }
+  }, [workspaceConfig, isResizing])
+
 
   const executeAppOperation = useCallback(
     (operation: string) => {
@@ -262,9 +279,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateTileView,
         executeAppOperation,
         handleResizeStart,
-        handleResizeEnd
+        handleResizeEnd,
+        availableViews
       }}
     >
+
       {children}
     </AppContext.Provider>
   )

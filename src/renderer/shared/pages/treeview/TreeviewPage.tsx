@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus } from 'lucide-react';
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../../lib/utils';
@@ -41,7 +42,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const containerRef = useRef<HTMLDivElement>(null);
   const [treeHeight, setTreeHeight] = useState(800);
   
-  const rootFilesPaths = treeData.map((node: string) => node.id);
+  const rootFilesPaths = treeData.map((node) => node.id);
+
 
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean;
@@ -143,7 +145,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   useEffect(() => {
     const expandPathIteratively = async (targetPath: string) => {
       if (!treeData.length) return;
-      const root = treeData.map((n: string) => n.id).find(r => targetPath.startsWith(r));
+      const root = treeData.map((n) => n.id).find(r => targetPath.startsWith(r));
+
       if (!root) return;
 
       const separator = targetPath.includes('\\') ? '\\' : '/';
@@ -190,8 +193,9 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   }, [activeTabPath, treeData.length]);
 
   useEffect(() => {
-    const handleReload = async (e: unknown) => {
+    const handleReload = async (e: any) => {
       const folderPath = e.detail;
+
       const children = await fetchFiles(folderPath);
       setTreeData((prev: FileNode[]) => updateNodeChildren(prev, folderPath, children));
     };
@@ -200,8 +204,9 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   }, []);
 
   const updateNodeChildren = (nodes: FileNode[], targetId: string, children: FileNode[]): FileNode[] => {
-    return nodes.map((node: string) => {
+    return nodes.map((node) => {
       if (node.id === targetId) {
+
         return { ...node, children, isLoaded: true };
       }
       if (node.children) {
@@ -215,8 +220,9 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     try {
       // @ts-ignore
       const res = await window.aynite.getFiles(dirPath);
-      return res.map((f: unknown) => ({
+      return res.map((f: any) => ({
         id: f.path,
+
         name: f.name,
         isDirectory: f.isDirectory,
         isLoaded: !f.isDirectory,
@@ -245,6 +251,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           console.warn('Sidebar: Workspace has NO folders.');
         }
         const rootNodes = folders.map((f: string) => ({
+
           id: f,
           name: f.split(/[\/\\]/).pop() || f,
           isDirectory: true,
@@ -288,7 +295,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     const name = newWorkspaceName.trim();
     if (!name) return;
     if (workspaces.includes(name)) {
-      (window as unknown).showToast('Workspace already exists', 'error');
+      (window as any).showToast('Workspace already exists', 'error');
+
       return;
     }
     // @ts-ignore
@@ -311,7 +319,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     if (parentId === null) {
       const isAllRoots = dragIds.every(id => rootFilesPaths.includes(id));
       if (!isAllRoots) {
-        (window as unknown).showToast("Cannot move subfolders to the workspace root.", 'error');
+        (window as any).showToast("Cannot move subfolders to the workspace root.", 'error');
+
         return;
       }
       const newOrder = rootFilesPaths.filter(id => !dragIds.includes(id));
@@ -322,7 +331,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     } else {
       const hasRoot = dragIds.some(id => rootFilesPaths.includes(id));
       if (hasRoot) {
-        (window as unknown).showToast("Cannot move a workspace folder into a subfolder.", 'error');
+        (window as any).showToast("Cannot move a workspace folder into a subfolder.", 'error');
+
         return;
       }
       
@@ -396,7 +406,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
         if (action === 'remove-from-workspace') loadWorkspaceData();
       } catch (e) {
         console.error(e);
-        (window as unknown).showToast(String(e), 'error');
+        (window as any).showToast(String(e), 'error');
+
       }
     };
 

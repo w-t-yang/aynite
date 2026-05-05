@@ -1,6 +1,8 @@
 import { app, ipcMain, shell, protocol, net, dialog, BrowserWindow } from 'electron';
-import { getSystemFonts } from './logic';
-import { copy as fsCopy, getBasename, joinPaths, exists } from '../../lib/path';
+import { getSystemFonts, getAvailableViews } from './logic';
+
+import { copy as fsCopy, getBasename, joinPaths, exists, expandHome } from '../../lib/path';
+
 
 let clipboardPath: string | null = null;
 
@@ -76,9 +78,40 @@ export function setupSystemIpc(mainWindow: BrowserWindow) {
     }
     return false;
   });
+
+  ipcMain.handle(SystemChannels.VIEW_LIST, async () => {
+    return await getAvailableViews();
+  });
 }
 
+
 export function setupProtocol() {
+  // aynite:// protocol for internal views
+  protocol.handle('aynite', (request) => {
+    const url = request.url.replace('aynite://', '');
+    try {
+      const decodedPath = decodeURIComponent(url);
+      let filePath = '';
+
+      if (decodedPath.includes('assets/')) {
+        // Redirect asset requests to ~/.aynite/assets
+        const assetPath = decodedPath.split('assets/').pop();
+        filePath = expandHome(joinPaths('~/.aynite', 'assets', assetPath!));
+      } else {
+        // Standard view request
+        filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath));
+      }
+
+      const fileUrl = 'file://' + (filePath.startsWith('/') ? '' : '/') + filePath;
+      return net.fetch(fileUrl);
+    } catch (e) {
+      console.error('Failed to handle aynite protocol:', e);
+      return new Response('View not found', { status: 404 });
+    }
+  });
+
+
+  // aynite-resource:// protocol for arbitrary files
   protocol.handle('aynite-resource', (request) => {
     const url = request.url.replace('aynite-resource://', '');
     try {
@@ -91,3 +124,4 @@ export function setupProtocol() {
     }
   });
 }
+

@@ -109,6 +109,14 @@ const aynite = {
   // ── System ──────────────────────────────────────────────────────────────
   openExternal: (url: string) =>
     ipcRenderer.invoke(SystemChannels.OPEN_EXTERNAL, url),
+  getSystemFonts: () =>
+    ipcRenderer.invoke(SystemChannels.FONT_LIST),
+  getAvailableViews: () =>
+    ipcRenderer.invoke(SystemChannels.VIEW_LIST),
+  checkForUpdates: () =>
+    ipcRenderer.send(UpdateChannels.CHECK),
+
+
 
   // ── App-level events ────────────────────────────────────────────────────
   onAppOperation: (callback: (operation: string) => void) => {
