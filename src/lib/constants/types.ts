@@ -82,8 +82,4 @@ export interface Theme {
   }
 }
 
-export interface GlobalSettings {
-  activeTheme: string
-}
-
 

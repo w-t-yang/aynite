@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react'
-import { applyThemeColors, Theme } from './utils'
+import type { Theme } from '../../../lib/constants/types'
+import { applyThemeColors } from './utils'
 
 /**
  * Hook for iframe views to self-apply the active theme.
