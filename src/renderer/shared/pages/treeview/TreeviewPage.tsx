@@ -523,9 +523,9 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
         {isDirectory ? (
           node.isOpen ? <FolderOpen size={14} className="mr-1.5 text-primary" /> : <Folder size={14} className="mr-1.5 text-primary" />
         ) : (
-          <File size={14} className="mr-1.5 opacity-70" />
+          <File size={14} className="mr-1.5" />
         )}
-        <span className={cn("truncate", isDirty && "italic font-medium text-primary")}>
+        <span className={cn("truncate text-foreground font-medium", isDirty && "italic text-primary")}>
           {name}{isDirty && " •"}
         </span>
       </div>
@@ -533,7 +533,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   }
 
   return (
-    <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none px-2 py-4" tabIndex={-1}>
+    <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none px-2 py-3" tabIndex={-1}>
       {/* HIDDEN: Workspace Selection and Actions Row */}
       {/* 
       <div className="px-3 py-3 flex items-center justify-between border-b border-border/40 shrink-0">
@@ -601,11 +601,14 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
         )}
       </div>
 
+      {/* HIDDEN: Footer Action Row */}
+      {/* 
       <div className="mt-auto border-t border-border p-2 shrink-0 bg-sidebar">
         <Button variant="ghost" onClick={handleAddFolder} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
           <FolderPlus size={16} /> Add Folder to Workspace
         </Button>
       </div>
+      */}
 
       {showNewWorkspaceModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">

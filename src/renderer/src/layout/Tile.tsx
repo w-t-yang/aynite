@@ -7,6 +7,7 @@ import { Button } from '../../shared/basic/Button'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { useApp } from '../context/AppContext'
 import { ViewParentProvider } from '../context/ViewParentContext'
+import { cn } from '../../shared/lib/utils'
 
 
 interface TileProps {
@@ -53,7 +54,10 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     >
 
       <div 
-        className="absolute top-2 right-2 z-50 opacity-0 group-hover:opacity-100 hover:opacity-100"
+        className={cn(
+          "absolute top-2 right-2 z-50 transition-opacity",
+          url ? "opacity-0 hover:opacity-100" : "opacity-100"
+        )}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >

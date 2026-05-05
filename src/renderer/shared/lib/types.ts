@@ -1,3 +1,5 @@
+export { Keybinding, KeybindingConfig } from '../../../lib/constants/types';
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'model' | 'tool' | 'system';
@@ -50,16 +52,7 @@ export interface SettingsState {
   commands?: {
     folders: string[];
   };
-  keybindings: {
-    global: { [key: string]: string };
-    explorer: { [key: string]: string };
-    agent: { [key: string]: string };
-    content: {
-      navigation: { [key: string]: string };
-      viewer: { [key: string]: string };
-      generic: { [key: string]: string };
-    };
-  };
+  keybindings: KeybindingConfig;
   prompts: {
     files: string[];
   };

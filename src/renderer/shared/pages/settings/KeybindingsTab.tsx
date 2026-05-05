@@ -1,5 +1,5 @@
 import React from 'react';
-import { SettingsState } from '../../lib/types';
+import { SettingsState, Keybinding } from '../../lib/types';
 import { KeybindingRow } from '../../featured/KeybindingRow';
 import { SettingsPage } from '../../featured/SettingsPage';
 import { Section } from '../../basic/Section';
@@ -21,17 +21,34 @@ export function KeybindingsTab({
   const { keybindings } = state;
   const { setKeybindings } = actions;
 
-  const handleKeybindingChange = (group: string, type: string, value: string) => {
-    const newKeybindings = { ...keybindings } as any;
-    newKeybindings[group] = { ...newKeybindings[group], [type]: value };
-    setKeybindings(newKeybindings);
+  const formatKeybinding = (kb?: Keybinding): string => {
+    if (!kb) return '';
+    const parts = [];
+    if (kb.ctrl) parts.push('Ctrl');
+    if (kb.meta) parts.push('Cmd');
+    if (kb.alt) parts.push('Alt');
+    if (kb.shift) parts.push('Shift');
+    if (kb.key) parts.push(kb.key.toUpperCase());
+    return parts.join('+');
   };
 
-  const handleKeybindingChangeNested = (group: string, subGroup: string, type: string, value: string) => {
-    const newKeybindings = { ...keybindings } as any;
+  const parseKeybinding = (value: string): Keybinding => {
+    const parts = value.split('+');
+    const key = parts.pop()?.toLowerCase() || '';
+    return {
+      ctrl: parts.includes('Ctrl'),
+      meta: parts.includes('Cmd'),
+      alt: parts.includes('Alt'),
+      shift: parts.includes('Shift'),
+      key
+    };
+  };
+
+  const handleKeybindingChange = (group: 'app' | 'view', type: string, value: string) => {
+    const newKeybindings = { ...keybindings };
     newKeybindings[group] = { 
       ...newKeybindings[group], 
-      [subGroup]: { ...newKeybindings[group][subGroup], [type]: value } 
+      [type]: parseKeybinding(value) 
     };
     setKeybindings(newKeybindings);
   };
@@ -39,61 +56,46 @@ export function KeybindingsTab({
   return (
     <SettingsPage
       title="Keybindings"
-      description="Configure keyboard shortcuts for navigation, editing, and assistant actions. Press any combination of keys to assign a shortcut."
+      description="Configure keyboard shortcuts for navigation, editing, and assistant actions. Shortcuts are automatically applied app-wide."
       onRestore={actions.onRestore}
     >
       <div className="grid grid-cols-2 gap-12">
         <div className="space-y-12">
-          <Section title="Global" description="App-wide shortcuts.">
+          <Section title="Application" description="Global app-wide shortcuts.">
             <div className="space-y-1">
-              <KeybindingRow label="Refresh App" value={keybindings.global.refresh} onChange={(v) => handleKeybindingChange('global', 'refresh', v)} />
-              <KeybindingRow label="Quit App" value={keybindings.global.quit} onChange={(v) => handleKeybindingChange('global', 'quit', v)} />
+              <KeybindingRow label="Cycle Tile" value={formatKeybinding(keybindings.app['app:tile-cycle'])} onChange={(v) => handleKeybindingChange('app', 'app:tile-cycle', v)} />
+              <KeybindingRow label="Split Vertical" value={formatKeybinding(keybindings.app['app:tile-split-vertical'])} onChange={(v) => handleKeybindingChange('app', 'app:tile-split-vertical', v)} />
+              <KeybindingRow label="Split Horizontal" value={formatKeybinding(keybindings.app['app:tile-split-horizontal'])} onChange={(v) => handleKeybindingChange('app', 'app:tile-split-horizontal', v)} />
+              <KeybindingRow label="Close Tile" value={formatKeybinding(keybindings.app['app:tile-close'])} onChange={(v) => handleKeybindingChange('app', 'app:tile-close', v)} />
+              <KeybindingRow label="Refresh App" value={formatKeybinding(keybindings.app['app:refresh-app'])} onChange={(v) => handleKeybindingChange('app', 'app:refresh-app', v)} />
+              <KeybindingRow label="Quit App" value={formatKeybinding(keybindings.app['app:quit'])} onChange={(v) => handleKeybindingChange('app', 'app:quit', v)} />
             </div>
           </Section>
 
-          <Section title="Explorer" description="Navigation in the file tree.">
+          <Section title="Panels" description="Toggle sidebar and chat panels.">
             <div className="space-y-1">
-              <KeybindingRow label="Toggle Left Panel" value={keybindings.explorer.toggleLeftPanel} onChange={(v) => handleKeybindingChange('explorer', 'toggleLeftPanel', v)} />
-            </div>
-          </Section>
-
-          <Section title="Aynite Assistant" description="Interactions with the AI chat.">
-            <div className="space-y-1">
-              <KeybindingRow label="Focus Chat Input" value={keybindings.agent.focusChat} onChange={(v) => handleKeybindingChange('agent', 'focusChat', v)} />
-              <KeybindingRow label="Focus & Skills" value={keybindings.agent.focusSkills} onChange={(v) => handleKeybindingChange('agent', 'focusSkills', v)} />
-              <KeybindingRow label="Focus & Commands" value={keybindings.agent.focusCommands} onChange={(v) => handleKeybindingChange('agent', 'focusCommands', v)} />
-              <KeybindingRow label="Chat Submit" value={keybindings.agent.submit} onChange={(v) => handleKeybindingChange('agent', 'submit', v)} />
-              <KeybindingRow label="Toggle Right Panel" value={keybindings.agent.toggleRightPanel} onChange={(v) => handleKeybindingChange('agent', 'toggleRightPanel', v)} />
+              <KeybindingRow label="Toggle Left Panel" value={formatKeybinding(keybindings.app['app:toggle-left-panel'])} onChange={(v) => handleKeybindingChange('app', 'app:toggle-left-panel', v)} />
+              <KeybindingRow label="Toggle Right Panel" value={formatKeybinding(keybindings.app['app:toggle-right-panel'])} onChange={(v) => handleKeybindingChange('app', 'app:toggle-right-panel', v)} />
+              <KeybindingRow label="Focus Chat" value={formatKeybinding(keybindings.app['app:focus-chat'])} onChange={(v) => handleKeybindingChange('app', 'app:focus-chat', v)} />
+              <KeybindingRow label="Focus Skills" value={formatKeybinding(keybindings.app['app:focus-skills'])} onChange={(v) => handleKeybindingChange('app', 'app:focus-skills', v)} />
+              <KeybindingRow label="Focus Commands" value={formatKeybinding(keybindings.app['app:focus-commands'])} onChange={(v) => handleKeybindingChange('app', 'app:focus-commands', v)} />
+              <KeybindingRow label="Submit Chat" value={formatKeybinding(keybindings.app['app:submit-chat'])} onChange={(v) => handleKeybindingChange('app', 'app:submit-chat', v)} />
             </div>
           </Section>
         </div>
 
         <div className="space-y-12">
-          <Section title="Content Navigation" description="Moving between tabs and views.">
+          <Section title="View Control" description="Shortcuts for active views and editing.">
             <div className="space-y-1">
-              <KeybindingRow label="Switch Tab" value={keybindings.content.navigation.switchTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'switchTab', v)} />
-              <KeybindingRow label="Close Active Tab" value={keybindings.content.navigation.closeTab} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'closeTab', v)} />
-              <KeybindingRow label="Focus Active Tab" value={keybindings.content.navigation.focusContent} onChange={(v) => handleKeybindingChangeNested('content', 'navigation', 'focusContent', v)} />
-            </div>
-          </Section>
-
-          <Section title="Content Viewer" description="Read-only mode navigation.">
-            <div className="space-y-1">
-              <KeybindingRow label="Enter Edit Mode" value={keybindings.content.viewer.enterEdit} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'enterEdit', v)} />
-              <KeybindingRow label="Vim Move Down" value={keybindings.content.viewer.moveDown} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveDown', v)} />
-              <KeybindingRow label="Vim Move Up" value={keybindings.content.viewer.moveUp} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'moveUp', v)} />
-              <KeybindingRow label="Search Buffer" value={keybindings.content.viewer.search} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'search', v)} />
-              <KeybindingRow label="Refresh Tab / Revert" value={keybindings.content.viewer.refresh} onChange={(v) => handleKeybindingChangeNested('content', 'viewer', 'refresh', v)} />
-            </div>
-          </Section>
-
-          <Section title="Editing" description="Shortcuts available in edit mode.">
-            <div className="space-y-1">
-              <KeybindingRow label="Exit Edit (Esc)" value={keybindings.content.generic.exitEdit} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'exitEdit', v)} />
-              <KeybindingRow label="Select All" value={keybindings.content.generic.selectAll} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'selectAll', v)} />
-              <KeybindingRow label="Cut" value={keybindings.content.generic.cut} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'cut', v)} />
-              <KeybindingRow label="Copy" value={keybindings.content.generic.copy} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'copy', v)} />
-              <KeybindingRow label="Paste" value={keybindings.content.generic.paste} onChange={(v) => handleKeybindingChangeNested('content', 'generic', 'paste', v)} />
+              <KeybindingRow label="Beginning of Line" value={formatKeybinding(keybindings.view['view:beginning-of-line'])} onChange={(v) => handleKeybindingChange('view', 'view:beginning-of-line', v)} />
+              <KeybindingRow label="End of Line" value={formatKeybinding(keybindings.view['view:end-of-line'])} onChange={(v) => handleKeybindingChange('view', 'view:end-of-line', v)} />
+              <KeybindingRow label="Kill Line" value={formatKeybinding(keybindings.view['view:kill-line'])} onChange={(v) => handleKeybindingChange('view', 'view:kill-line', v)} />
+              <KeybindingRow label="Copy" value={formatKeybinding(keybindings.view['view:copy'])} onChange={(v) => handleKeybindingChange('view', 'view:copy', v)} />
+              <KeybindingRow label="Paste" value={formatKeybinding(keybindings.view['view:paste'])} onChange={(v) => handleKeybindingChange('view', 'view:paste', v)} />
+              <KeybindingRow label="Cut" value={formatKeybinding(keybindings.view['view:cut'])} onChange={(v) => handleKeybindingChange('view', 'view:cut', v)} />
+              <KeybindingRow label="Next Line" value={formatKeybinding(keybindings.view['view:next-line'])} onChange={(v) => handleKeybindingChange('view', 'view:next-line', v)} />
+              <KeybindingRow label="Previous Line" value={formatKeybinding(keybindings.view['view:previous-line'])} onChange={(v) => handleKeybindingChange('view', 'view:previous-line', v)} />
+              <KeybindingRow label="Escape / Quit" value={formatKeybinding(keybindings.view['view:keyboard-quit'])} onChange={(v) => handleKeybindingChange('view', 'view:keyboard-quit', v)} />
             </div>
           </Section>
         </div>

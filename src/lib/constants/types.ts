@@ -43,15 +43,17 @@ export interface WorkspaceConfig {
 }
 
 
+export interface Keybinding {
+  ctrl?: boolean
+  shift?: boolean
+  alt?: boolean
+  meta?: boolean
+  key: string
+}
+
 export interface KeybindingConfig {
-  global: { [key: string]: string }
-  explorer: { [key: string]: string }
-  agent: { [key: string]: string }
-  content: {
-    navigation: { [key: string]: string }
-    viewer: { [key: string]: string }
-    generic: { [key: string]: string }
-  }
+  app: { [key: string]: Keybinding }
+  view: { [key: string]: Keybinding }
 }
 
 

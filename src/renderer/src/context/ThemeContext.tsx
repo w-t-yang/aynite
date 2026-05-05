@@ -6,7 +6,7 @@ import React, {
   useCallback,
   ReactNode
 } from 'react'
-import { Theme } from '../../../lib/constants/types'
+import { WorkspaceConfig, KeybindingConfig, View, Theme } from '../../../lib/constants/types'
 import { ConfigKey } from '../../../lib/constants/config'
 import { ViewRequest } from '../../../lib/constants/view'
 import { ayniteConfig } from '../config'

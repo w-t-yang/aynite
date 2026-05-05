@@ -92,6 +92,12 @@ const VIOLATIONS = {
     name: 'Animation/Transition Effects',
     regex: /\b(transition|duration)-[a-z0-9]+/g,
     description: 'Avoid manual transition or duration classes. Use standardized animation primitives or maintain a static UI for consistency.'
+  },
+  BACKGROUND_COLORS: {
+    key: 'bg-colors',
+    name: 'Background Color Usage',
+    regex: /\bbg-[a-z0-9-]+/g,
+    description: 'Audit usage of background color utilities in views to ensure theme consistency.'
   }
 } satisfies Record<string, ViolationRule>;
 
@@ -118,7 +124,7 @@ const thoroughArg = process.argv.includes('--thorough');
 
 const activeViolations = focusArg
   ? Object.values(VIOLATIONS).filter(v => v.key === focusArg || v.name.toLowerCase().includes(focusArg))
-  : Object.values(VIOLATIONS).filter(v => thoroughArg || v.key !== 'animation');
+  : Object.values(VIOLATIONS).filter(v => thoroughArg || (v.key !== 'animation' && v.key !== 'bg-colors'));
 
 const targetFolders = folderArg 
   ? [path.resolve(ROOT_DIR, folderArg)] 
@@ -485,6 +491,21 @@ const auditFile = (filepath: string) => {
       });
     }
   }
+  
+  // 11. Background Colors (Thorough & Views specific)
+  if (activeViolations.some(v => v.key === 'bg-colors') && category === 'views') {
+    let bgMatch;
+    while ((bgMatch = VIOLATIONS.BACKGROUND_COLORS.regex!.exec(content)) !== null) {
+      const lineNum = content.substring(0, bgMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.BACKGROUND_COLORS.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.BACKGROUND_COLORS.description
+      });
+    }
+  }
 };
 
 
@@ -506,7 +527,8 @@ const DISPLAY_ORDER = [
   VIOLATIONS.DIRECT_PATH_IMPORT.name,
   VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name,
   VIOLATIONS.Z_INDEX_HIERARCHY.name,
-  VIOLATIONS.ANIMATION_EFFECTS.name
+  VIOLATIONS.ANIMATION_EFFECTS.name,
+  VIOLATIONS.BACKGROUND_COLORS.name
 ];
 
 
