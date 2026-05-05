@@ -10,6 +10,7 @@ import { SelectionMenu } from '../../featured/SelectionMenu';
 import { cn } from '../../lib/utils';
 import { ChatMessageItem } from '../../featured/advanced/ChatMessage';
 import { Collapsible } from '../../basic/Collapsible';
+import { AppOperation } from '../../../../lib/constants/app';
 
 
 // ─── Message Types ───────────────────────────────────────────────────
@@ -907,8 +908,8 @@ export function AIChatPage({
             onSubmit={sendMessage}
             disabled={loading}
             workspaceFolders={workspaceFolders}
-            focusKeybinding={settings.keybindings.agent.focusChat}
-            submitKeybinding={settings.keybindings.agent.submit}
+            focusKeybinding={settings.keybindings.app[AppOperation.FOCUS_CHAT]}
+            submitKeybinding={settings.keybindings.app[AppOperation.SUBMIT_CHAT]}
             getFiles={async (...args) => (await window.aynite.getFiles(...args))}
             getAvailableSkills={async (...args) => (await window.aynite.getAvailableSkills(...args))}
             getAvailableCommands={async (...args) => (await window.aynite.getAvailableCommands(...args))}

@@ -1,3 +1,6 @@
+import { Keybinding } from './types';
+import { AppOperation, ViewOperation } from '../../../lib/constants/app';
+
 export interface GlobalAPI {
   saveActiveTab: () => void;
   reload: () => void;
@@ -126,16 +129,17 @@ export class KeyManager {
     this.chatApi = null;
   }
 
-  private static checkMatch(e: KeyboardEvent, shortcutStr: string | undefined): boolean {
-    if (!shortcutStr) return false;
-    const parts = shortcutStr.toUpperCase().split('+');
-    const targetKey = parts[parts.length - 1];
-    const key = e.key.toUpperCase();
-    
-    return key === targetKey && 
-           parts.includes('CTRL') === (e.ctrlKey || e.metaKey) && 
-           parts.includes('SHIFT') === e.shiftKey && 
-           parts.includes('ALT') === e.altKey;
+  private static checkMatch(e: KeyboardEvent, kb: Keybinding | undefined): boolean {
+    if (!kb) return false;
+    const isDarwin = window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const isShift = e.shiftKey;
+    const isAlt = e.altKey;
+
+    return (!!kb.ctrl === (e.ctrlKey || (!isDarwin && e.metaKey))) && 
+           (!!kb.meta === (isDarwin ? e.metaKey : false)) &&
+           (!!kb.shift === isShift) && 
+           (!!kb.alt === isAlt) && 
+           e.key.toUpperCase() === kb.key.toUpperCase();
   }
 
   private static handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -151,18 +155,16 @@ export class KeyManager {
 
     // 2. Global Shortcuts (Highest Priority)
     if (isCmd && key === 'S') { e.preventDefault(); this.globalApi.saveActiveTab(); return; }
-    if (this.checkMatch(e, kb.global.refresh)) { e.preventDefault(); this.globalApi.reload(); return; }
-    if (this.checkMatch(e, kb.explorer.toggleLeftPanel)) { e.preventDefault(); this.globalApi.toggleLeftPanel(); return; }
-    if (this.checkMatch(e, kb.agent.toggleRightPanel)) { e.preventDefault(); this.globalApi.toggleRightPanel(); return; }
-    if (this.checkMatch(e, kb.agent.focusChat)) { e.preventDefault(); this.globalApi.focusChat(); return; }
-    if (this.checkMatch(e, kb.agent.focusSkills)) { e.preventDefault(); this.globalApi.focusSkills(); return; }
-    if (this.checkMatch(e, kb.agent.focusCommands)) { e.preventDefault(); this.globalApi.focusCommands(); return; }
-    if (this.checkMatch(e, kb.content.navigation.closeTab)) { e.preventDefault(); this.globalApi.closeTab(); return; }
-    if (this.checkMatch(e, kb.content.navigation.switchTab)) { e.preventDefault(); this.globalApi.switchTab(); return; }
-    if (this.checkMatch(e, kb.content.navigation.focusContent)) { e.preventDefault(); this.globalApi.focusContent(); return; }
+    
+    if (this.checkMatch(e, kb.app[AppOperation.REFRESH_APP])) { e.preventDefault(); this.globalApi.reload(); return; }
+    if (this.checkMatch(e, kb.app[AppOperation.TOGGLE_LEFT_PANEL])) { e.preventDefault(); this.globalApi.toggleLeftPanel(); return; }
+    if (this.checkMatch(e, kb.app[AppOperation.TOGGLE_RIGHT_PANEL])) { e.preventDefault(); this.globalApi.toggleRightPanel(); return; }
+    if (this.checkMatch(e, kb.app[AppOperation.FOCUS_CHAT])) { e.preventDefault(); this.globalApi.focusChat(); return; }
+    if (this.checkMatch(e, kb.app[AppOperation.FOCUS_SKILLS])) { e.preventDefault(); this.globalApi.focusSkills(); return; }
+    if (this.checkMatch(e, kb.app[AppOperation.FOCUS_COMMANDS])) { e.preventDefault(); this.globalApi.focusCommands(); return; }
     
     // 2.5 Tab Refresh (Catch early to prevent browser reload)
-    if (this.checkMatch(e, kb.content.viewer.refresh)) {
+    if (this.checkMatch(e, kb.view[ViewOperation.REFRESH] || kb.app[AppOperation.REFRESH_APP])) {
       e.preventDefault();
       if (this.activeTabId && this.tabApis.has(this.activeTabId)) {
         this.tabApis.get(this.activeTabId)!.refresh();
@@ -221,7 +223,7 @@ export class KeyManager {
     }
 
     if (context === 'chat' && this.chatApi) {
-      if (this.checkMatch(e, kb.agent.submit)) {
+      if (this.checkMatch(e, kb.app[AppOperation.SUBMIT_CHAT])) {
         e.preventDefault();
         this.chatApi.submit();
         return;
@@ -257,7 +259,7 @@ export class KeyManager {
         this.sidebarApi.paste();
         return;
       }
-      if (e.key === 'Enter' && el.tagName === 'INPUT') {
+      if (e.key === 'Enter') {
         e.preventDefault();
         this.sidebarApi.submit();
         return;
@@ -270,27 +272,10 @@ export class KeyManager {
     }
   };
 
-  private static handleGlobalKeyUp = (e: KeyboardEvent) => {
-    // Releasing Ctrl/Meta no longer auto-confirms selection.
-    // The TabSwitcher will now stay open until explicit confirmation (Enter/Click) or cancel (Escape).
-  };
-
-  private static handleEditorKeys(e: KeyboardEvent, api: EditorAPI, keybindings: any): boolean {
+  private static handleEditorKeys = (e: KeyboardEvent, api: EditorAPI, kb: any): boolean => {
     const isCmd = e.metaKey || e.ctrlKey;
-    const isShift = e.shiftKey;
-    const isAlt = e.altKey;
     const key = e.key.toUpperCase();
 
-    if (e.key === 'Tab' && !isCmd && !isAlt) {
-      const target = e.target as HTMLElement;
-      if (api.isSearchActive() && api.isSearchInputFocused(target)) {
-        return false; // Let standard tab behavior work in search input
-      }
-      e.preventDefault();
-      return true;
-    }
-
-    // ─── Search Gate ───
     if (api.isSearchActive()) {
       if (e.key === 'Escape' || (isCmd && key === 'G')) {
         e.preventDefault();
@@ -302,72 +287,51 @@ export class KeyManager {
         api.nextSearch();
         return true;
       }
-      // If we are typing in search, let it pass natively
       if (api.isSearchInputFocused(e.target)) return false;
     }
 
-    // ─── Edit Mode Gate ───
     if (!api.isEditing()) {
-      if (key === 'A') {
+      if (this.checkMatch(e, kb.view[ViewOperation.MARK_WHOLE_BUFFER])) {
         e.preventDefault();
         api.setIsEditing(true);
         return true;
       }
-      // Prevent deletion in view mode
+      
       if (e.key === 'Backspace' || e.key === 'Delete') {
         e.preventDefault(); return true;
       }
       
-      const isPlainKey = !isCmd && !isAlt && !isShift;
-      const v = keybindings.content.viewer;
-      
-      if (isPlainKey && key === v.enterEdit?.toUpperCase()) {
-        e.preventDefault();
-        api.setIsEditing(true);
-        return true;
-      } else if (isPlainKey && key === v.moveDown?.toUpperCase()) {
+      const v = kb.view;
+      if (this.checkMatch(e, v[ViewOperation.NEXT_LINE])) {
         e.preventDefault(); api.moveCursor('down'); return true;
-      } else if (isPlainKey && key === v.moveUp?.toUpperCase()) {
+      } else if (this.checkMatch(e, v[ViewOperation.PREVIOUS_LINE])) {
         e.preventDefault(); api.moveCursor('up'); return true;
-      } else if (isPlainKey && key === v.moveLeft?.toUpperCase()) {
+      } else if (this.checkMatch(e, v[ViewOperation.BACKWARD_CHAR])) {
         e.preventDefault(); api.moveCursor('left'); return true;
-      } else if (isPlainKey && key === v.moveRight?.toUpperCase()) {
+      } else if (this.checkMatch(e, v[ViewOperation.FORWARD_CHAR])) {
         e.preventDefault(); api.moveCursor('right'); return true;
-      } else if (isPlainKey && e.key === v.search) {
-        e.preventDefault();
-        api.setSearchActive(true);
-        return true;
       }
     }
 
-    // ─── Generic Keys ───
-    const g = keybindings.content.generic || {};
-    const isMatch = (binding: string | undefined) => isCmd && key === binding?.split('+').pop()?.toUpperCase();
-
-    if (api.isEditing() && (e.key === 'Escape' || (isCmd && key === 'G'))) {
+    const v = kb.view;
+    if (api.isEditing() && (e.key === 'Escape' || this.checkMatch(e, v[ViewOperation.KEYBOARD_QUIT]))) {
       e.preventDefault(); api.setIsEditing(false); return true;
-    } else if (isMatch(g.endOfLine)) {
+    } else if (this.checkMatch(e, v[ViewOperation.END_OF_LINE])) {
       e.preventDefault(); api.endOfLine(); return true;
-    } else if (isMatch(g.startOfLine)) {
+    } else if (this.checkMatch(e, v[ViewOperation.BEGINNING_OF_LINE])) {
       e.preventDefault(); api.startOfLine(); return true;
-    } else if (isMatch(g.killLine)) {
+    } else if (this.checkMatch(e, v[ViewOperation.KILL_LINE])) {
       if (!api.isEditing()) return true;
       e.preventDefault(); api.killLine(); return true;
-    } else if (isMatch(g.selectAll)) {
-      e.preventDefault(); api.selectAll(); return true;
-    } else if (isMatch(g.prevLine)) {
-      e.preventDefault(); api.moveCursor('up'); return true;
-    } else if (isMatch(g.nextLine)) {
-      e.preventDefault(); api.moveCursor('down'); return true;
-    } else if (isMatch(g.forwardChar)) {
-      e.preventDefault(); api.moveCursor('right'); return true;
-    } else if (isMatch(g.backwardChar)) {
-      e.preventDefault(); api.moveCursor('left'); return true;
-    } else if (isCmd && key === 'D') {
+    } else if (this.checkMatch(e, v[ViewOperation.DELETE_CHAR])) {
       if (!api.isEditing()) return true;
-      e.preventDefault(); api.deleteForward?.(); return true;
+      e.preventDefault(); api.deleteForward(); return true;
     }
 
     return false;
-  }
+  };
+
+  private static handleGlobalKeyUp = (e: KeyboardEvent) => {
+    // Optional: implement if needed
+  };
 }

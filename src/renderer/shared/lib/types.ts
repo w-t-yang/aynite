@@ -1,4 +1,5 @@
-export { Keybinding, KeybindingConfig } from '../../../lib/constants/types';
+import type { Keybinding, KeybindingConfig } from '../../../lib/constants/types';
+export type { Keybinding, KeybindingConfig };
 
 export interface ChatMessage {
   id: string;

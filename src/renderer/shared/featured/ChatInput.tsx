@@ -101,12 +101,14 @@ export interface ChatInputHandle {
   trigger: (prefix: string) => void;
 }
 
+import { Keybinding } from '../lib/types';
+
 interface ChatInputProps {
   onSubmit: (text: string) => void;
   disabled?: boolean;
   workspaceFolders?: string[];
-  focusKeybinding?: string;
-  submitKeybinding?: string;
+  focusKeybinding?: Keybinding;
+  submitKeybinding?: Keybinding;
   // API Props for indexing
   getFiles: (path: string) => Promise<{ path: string, name: string, isDirectory: boolean }[]>;
   getAvailableSkills: () => Promise<{ name: string, path: string, error?: string }[]>;
@@ -117,7 +119,7 @@ interface ChatInputProps {
 
 function createSuggestion(
   triggerChar: string,
-  getItems: (query: string) => { id: string; label: string }[]
+  getItems: (query: string) => { id: string; label?: string }[]
 ) {
   return {
     char: triggerChar,
@@ -231,7 +233,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     // Unified effect for indexing workspace files, skills, and commands
     useEffect(() => {
       let isMounted = true;
-      
+
       const rebuild = async () => {
         // 1. Immediately clear indexes to prevent cross-workspace pollution
         fileItemsRef.current = [];
@@ -262,16 +264,16 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           ]);
 
           if (isMounted && skillsRes) {
-            const items = skillsRes.map((s: any) => ({ 
-              id: s.path, label: s.name, name: s.name, subtitle: 'Skill', error: s.error 
+            const items = skillsRes.map((s: any) => ({
+              id: s.path, label: s.name, name: s.name, subtitle: 'Skill', error: s.error
             }));
             skillItemsRef.current = items;
             setSkillItems(items);
           }
 
           if (isMounted && cmdsRes) {
-            const items = cmdsRes.map((c: any) => ({ 
-              id: c.path, label: c.name, name: c.name, subtitle: 'Command', error: c.error 
+            const items = cmdsRes.map((c: any) => ({
+              id: c.path, label: c.name, name: c.name, subtitle: 'Command', error: c.error
             }));
             commandItemsRef.current = items;
             setCommandItems(items);
@@ -321,12 +323,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         suggestion: createSuggestion('@', (query) => {
           const q = query.toLowerCase();
           return fileItemsRef.current
-            .filter((item) => item.label.toLowerCase().includes(q))
+            .filter((item) => (item.label || '').toLowerCase().includes(q))
             .sort((a, b) => {
               const aName = (a.name || '').toLowerCase();
               const bName = (b.name || '').toLowerCase();
-              const aLabel = a.label.toLowerCase();
-              const bLabel = b.label.toLowerCase();
+              const aLabel = (a.label || '').toLowerCase();
+              const bLabel = (b.label || '').toLowerCase();
 
               // 1. Exact name match
               if (aName === q && bName !== q) return -1;
@@ -349,16 +351,26 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       BaseMention.extend({ name: 'skillMention' }).configure({
         HTMLAttributes: { class: 'mention mention-skill' },
         suggestion: createSuggestion('/', (query) =>
-          skillItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
+          skillItemsRef.current.filter((item) => (item.label || '').toLowerCase().includes(query))
         ),
       }),
       BaseMention.extend({ name: 'commandMention' }).configure({
         HTMLAttributes: { class: 'mention mention-command' },
         suggestion: createSuggestion('>', (query) =>
-          commandItemsRef.current.filter((item) => item.label.toLowerCase().includes(query))
+          commandItemsRef.current.filter((item) => (item.label || '').toLowerCase().includes(query))
         ),
       }),
     ], [workspaceFolders]);
+
+    const checkMatch = (e: KeyboardEvent, kb?: Keybinding) => {
+      if (!kb) return false;
+      const isDarwin = window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      return (!!kb.ctrl === (e.ctrlKey || (!isDarwin && e.metaKey))) &&
+        (!!kb.meta === (isDarwin ? e.metaKey : false)) &&
+        (!!kb.shift === e.shiftKey) &&
+        (!!kb.alt === e.altKey) &&
+        e.key.toUpperCase() === kb.key.toUpperCase();
+    };
 
     const editor = useEditor({
       extensions,
@@ -381,6 +393,23 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onSubmit(text);
       editor.commands.clearContent();
     }, [editor, disabled, onSubmit]);
+
+    // Handle submit keybinding
+    useEffect(() => {
+      if (!editor) return;
+      editor.setOptions({
+        editorProps: {
+          handleKeyDown: (view, event) => {
+            if (checkMatch(event, submitKeybinding)) {
+              event.preventDefault();
+              handleSubmit();
+              return true;
+            }
+            return false;
+          }
+        }
+      });
+    }, [editor, submitKeybinding, handleSubmit]);
 
     // Update editable when disabled changes
     useEffect(() => {
@@ -405,7 +434,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }));
 
     return (
-      <div 
+      <div
         onClick={() => {
           if (editor) {
             editor.commands.focus('end');
