@@ -99,7 +99,11 @@ function FileViewer({
         const path = id.startsWith('file-') ? id.replace('file-', '') : id;
         // @ts-ignore
         const res = await window.aynite.getFileInfo(path);
-        setFileInfo(res);
+        setFileInfo({
+          ...res,
+          createdAt: new Date(res.createdAt),
+          modifiedAt: new Date(res.modifiedAt)
+        });
       } catch (e: any) {
         console.error('Failed to fetch file info:', e);
         setError(e.message);
@@ -183,7 +187,11 @@ function FileViewer({
       // Also update file info to get latest metadata
       // @ts-ignore
       const infoRes = await window.aynite.getFileInfo(path);
-      setFileInfo(infoRes);
+      setFileInfo({
+        ...infoRes,
+        createdAt: new Date(infoRes.createdAt),
+        modifiedAt: new Date(infoRes.modifiedAt)
+      });
     } catch (e: any) {
       console.error('Failed to refresh file:', e);
       setError(`Failed to refresh: ${e.message}`);

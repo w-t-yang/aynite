@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus } from 'lucide-react';
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, PanelLeftClose, Settings, FolderPlus, Plus, Edit2, FilePlus, Trash2, X, Copy } from 'lucide-react';
 import { Tree, TreeApi, NodeApi, MoveHandler, NodeRendererProps } from 'react-arborist';
 import { cn } from '../../lib/utils';
 import { getFileCategory } from '../../lib/file-handlers';
@@ -36,12 +36,12 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const [showNewWorkspaceModal, setShowNewWorkspaceModal] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileNode } | null>(null);
-  
+
   const [clipboard, setClipboard] = useState<{ paths: string[], action: 'copy' | 'cut' } | null>(null);
   const treeRef = useRef<TreeApi<FileNode> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [treeHeight, setTreeHeight] = useState(800);
-  
+
   const rootFilesPaths = treeData.map((node) => node.id);
 
 
@@ -59,7 +59,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     onConfirm: () => Promise<void>;
   } | null>(null);
 
-  const workspaceOptions = useMemo((): SelectionItem[] => 
+  const workspaceOptions = useMemo((): SelectionItem[] =>
     workspaces.map(ws => ({
       id: ws,
       label: ws,
@@ -69,29 +69,35 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const contextMenuItems = useMemo((): SelectionItem[] => {
     if (!contextMenu) return [];
     const { file } = contextMenu;
+
+    // Empty space context menu
+    if (!file) {
+      return [{ id: 'add-folder', label: 'Add Folder to Workspace...', icon: <FolderPlus size={14} /> }];
+    }
+
     const items: SelectionItem[] = [];
 
     if (file.isDirectory) {
-      items.push({ id: 'new-file', label: 'New File' });
-      items.push({ id: 'new-folder', label: 'New Folder' });
+      items.push({ id: 'new-file', label: 'New File', icon: <FilePlus size={14} /> });
+      items.push({ id: 'new-folder', label: 'New Folder', icon: <FolderPlus size={14} /> });
     }
 
-    items.push({ id: 'rename', label: 'Rename' });
-    items.push({ id: 'copy', label: 'Copy' });
+    items.push({ id: 'rename', label: 'Rename', icon: <Edit2 size={14} /> });
+    items.push({ id: 'copy', label: 'Copy', icon: <Copy size={14} /> });
 
     if (clipboard && file.isDirectory) {
-      items.push({ id: 'paste', label: 'Paste' });
+      items.push({ id: 'paste', label: 'Paste', icon: <Copy size={14} /> });
     }
 
     if (rootFilesPaths.includes(file.id)) {
-      items.push({ id: 'remove-from-workspace', label: 'Remove from Workspace', badge: 'ROOT' });
+      items.push({ id: 'add-folder', label: 'Add Folder to Workspace...', icon: <FolderPlus size={14} /> });
+      items.push({ id: 'remove-from-workspace', label: 'Remove from Workspace', icon: <X size={14} /> });
     } else {
-      items.push({ id: 'delete', label: 'Delete' });
+      items.push({ id: 'delete', label: 'Delete', icon: <Trash2 size={14} className="text-destructive" />, className: 'text-destructive' });
     }
 
     return items;
   }, [contextMenu, clipboard, rootFilesPaths]);
-
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -110,11 +116,11 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       // @ts-ignore
       const dirname = await window.aynite.dirname(path);
       window.dispatchEvent(new CustomEvent('reload-folder', { detail: dirname }));
-      
+
       if (event === 'addDir' || event === 'unlinkDir') {
-         window.dispatchEvent(new CustomEvent('reload-folder', { detail: path }));
+        window.dispatchEvent(new CustomEvent('reload-folder', { detail: path }));
       }
-      
+
       if (workspaces.length > 0) {
         const isRootChange = rootFilesPaths.includes(path) || rootFilesPaths.includes(dirname);
         if (isRootChange) loadWorkspaceData();
@@ -175,7 +181,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       if (changed) {
         setTreeData(newData);
       }
-      
+
       setTimeout(() => {
         if (!treeRef.current) return;
         for (const p of pathsToOpen) {
@@ -275,8 +281,8 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   const handleToggle = async (id: string) => {
     const node = treeRef.current?.get(id);
     if (node && node.isOpen && !node.data.isLoaded && node.data.isDirectory) {
-       const children = await fetchFiles(id);
-       setTreeData((prev: FileNode[]) => updateNodeChildren(prev, id, children));
+      const children = await fetchFiles(id);
+      setTreeData((prev: FileNode[]) => updateNodeChildren(prev, id, children));
     }
   };
 
@@ -335,7 +341,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
 
         return;
       }
-      
+
       const parentNode = treeRef.current?.get(parentId);
       if (!parentNode?.data.isDirectory) return;
 
@@ -353,8 +359,13 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     }
   };
 
-  const handleCtxAction = async (action: 'new-file' | 'new-folder' | 'rename' | 'delete' | 'remove-from-workspace' | 'copy' | 'paste') => {
-    if (!contextMenu) return;
+  const handleCtxAction = async (action: 'new-file' | 'new-folder' | 'rename' | 'delete' | 'remove-from-workspace' | 'copy' | 'paste' | 'add-folder') => {
+    if (action === 'add-folder') {
+      handleAddFolder();
+      setContextMenu(null);
+      return;
+    }
+    if (!contextMenu || !contextMenu.file) return;
     const { file } = contextMenu;
     setContextMenu(null);
 
@@ -401,7 +412,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           // @ts-ignore
           await window.aynite.removeWorkspaceFolder(file.id);
         }
-        
+
         window.dispatchEvent(new CustomEvent('reload-folder', { detail: reloadPath }));
         if (action === 'remove-from-workspace') loadWorkspaceData();
       } catch (e) {
@@ -482,11 +493,11 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
     const isDirty = dirtyFiles.includes(id);
 
     return (
-      <div 
-        style={style} 
-        ref={dragHandle} 
+      <div
+        style={style}
+        ref={dragHandle}
         className={cn(
-          "flex items-center cursor-pointer hover:bg-accent text-sm select-none",
+          "flex items-center cursor-pointer hover:bg-accent text-sm select-none px-0.5 py-0.5",
           isSelected ? "bg-primary/10 text-primary font-medium hover:bg-primary/20" : "text-muted-foreground"
         )}
         onClick={(e: React.MouseEvent) => {
@@ -495,7 +506,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
             if (isDirectory) {
               node.toggle();
             } else {
-               onSelectFile?.({ name, isDirectory, path: id });
+              onSelectFile?.({ name, isDirectory, path: id });
             }
           }
         }}
@@ -506,7 +517,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           setContextMenu({ x: e.clientX, y: e.clientY, file: node.data });
         }}
       >
-        <span className="w-4 h-4 mr-1 flex items-center justify-center">
+        <span className="w-6 h-6 mr-1 flex items-center justify-center">
           {isDirectory ? (node.isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : null}
         </span>
         {isDirectory ? (
@@ -522,7 +533,9 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
   }
 
   return (
-    <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none" tabIndex={-1}>
+    <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none px-2 py-4" tabIndex={-1}>
+      {/* HIDDEN: Workspace Selection and Actions Row */}
+      {/* 
       <div className="px-3 py-3 flex items-center justify-between border-b border-border/40 shrink-0">
         <div className="relative flex-1 min-w-0 mr-2">
           <SelectionMenu
@@ -552,14 +565,18 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           {onClose && <Button variant="ghost" onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"><PanelLeftClose size={16} /></Button>}
         </div>
       </div>
+      */}
 
-      <div ref={containerRef} className="flex-1 overflow-hidden outline-none">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-hidden outline-none"
+      >
         {treeData.length > 0 ? (
           <Tree
             ref={treeRef}
             data={treeData}
             width="100%"
-            height={treeHeight}
+            height={treeHeight - 16}
             indent={12}
             rowHeight={28}
             openByDefault={false}
@@ -574,7 +591,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           </Tree>
         ) : (
           <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
-            <Button variant="ghost" 
+            <Button variant="ghost"
               onClick={handleAddFolder}
               className="mt-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
             >
@@ -583,10 +600,10 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           </div>
         )}
       </div>
-      
+
       <div className="mt-auto border-t border-border p-2 shrink-0 bg-sidebar">
-        <Button variant="ghost" onClick={onOpenSettings} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
-          <Settings size={16} /> Settings
+        <Button variant="ghost" onClick={handleAddFolder} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+          <FolderPlus size={16} /> Add Folder to Workspace
         </Button>
       </div>
 
@@ -594,9 +611,9 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
             <h3 className="text-lg font-medium mb-4 text-foreground">New Workspace</h3>
-            <Input 
+            <Input
               autoFocus
-              type="text" 
+              type="text"
               placeholder="Workspace name"
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
@@ -611,21 +628,21 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
       )}
 
       {promptModal?.isOpen && (
-        <PromptModal 
-           title={promptModal.title}
-           placeholder={promptModal.placeholder}
-           value={promptValue}
-           onChange={setPromptValue}
-           onConfirm={async (v) => { await promptModal.onConfirm(v); setPromptModal(null); }}
-           onCancel={() => setPromptModal(null)}
+        <PromptModal
+          title={promptModal.title}
+          placeholder={promptModal.placeholder}
+          value={promptValue}
+          onChange={setPromptValue}
+          onConfirm={async (v) => { await promptModal.onConfirm(v); setPromptModal(null); }}
+          onCancel={() => setPromptModal(null)}
         />
       )}
 
       {confirmModal?.isOpen && (
-        <ConfirmModal 
-           message={confirmModal.message}
-           onConfirm={async () => { await confirmModal.onConfirm(); setConfirmModal(null); }}
-           onCancel={() => setConfirmModal(null)}
+        <ConfirmModal
+          message={confirmModal.message}
+          onConfirm={async () => { await confirmModal.onConfirm(); setConfirmModal(null); }}
+          onCancel={() => setConfirmModal(null)}
         />
       )}
 
@@ -649,9 +666,9 @@ function PromptModal({ title, placeholder, value, onChange, onConfirm, onCancel 
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
       <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
         <h3 className="text-lg font-medium mb-4 text-foreground">{title}</h3>
-        <Input 
+        <Input
           autoFocus
-          type="text" 
+          type="text"
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}

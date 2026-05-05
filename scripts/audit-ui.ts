@@ -31,7 +31,7 @@ interface ViolationRule {
   tags?: string[];
 }
 
-const VIOLATIONS: Record<string, ViolationRule> = {
+const VIOLATIONS = {
   IMPORT_HIERARCHY: {
     key: 'import',
     name: 'Import Hierarchy Violation',
@@ -93,7 +93,7 @@ const VIOLATIONS: Record<string, ViolationRule> = {
     regex: /\b(transition|duration)-[a-z0-9]+/g,
     description: 'Avoid manual transition or duration classes. Use standardized animation primitives or maintain a static UI for consistency.'
   }
-};
+} satisfies Record<string, ViolationRule>;
 
 
 

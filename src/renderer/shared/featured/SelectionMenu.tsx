@@ -132,8 +132,12 @@ export function SelectionMenu({
 
   // Simple boundary adjustment for context menus
   if (isControlled && x !== undefined && y !== undefined) {
-    if (x > window.innerWidth - 220) menuStyle.left = x - 220;
-    if (y > window.innerHeight - 300) menuStyle.top = y - 300;
+    if (x > window.innerWidth - 220) {
+      menuStyle.left = Math.max(0, x - 220);
+    }
+    if (y > window.innerHeight - 300) {
+      menuStyle.top = Math.max(0, y - 300);
+    }
   }
 
   return (
