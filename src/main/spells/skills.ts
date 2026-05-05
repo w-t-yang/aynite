@@ -74,9 +74,10 @@ export async function listAvailableSkills() {
         if (match) {
           try {
             meta = yaml.load(match[1]) || {};
-          } catch (e: any) {
-            yamlError = e.message;
-            notifyError('skill', skillMdPath, e.message);
+          } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            yamlError = message;
+            notifyError('skill', skillMdPath, message);
           }
         }
         const name = meta.name || getBasename(itemPath);

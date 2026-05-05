@@ -88,8 +88,9 @@ export function createTools(context: ToolContext) {
           } catch (jsonErr) {}
 
           return output;
-        } catch (e: any) {
-          return ERROR_MESSAGES.COMMAND_EXEC_ERROR(e.message, e.stdout || '', e.stderr || '');
+        } catch (e: unknown) {
+          const cmdErr = e as { stdout?: string; stderr?: string; message?: string };
+          return ERROR_MESSAGES.COMMAND_EXEC_ERROR(cmdErr.message || '', cmdErr.stdout || '', cmdErr.stderr || '');
         }
       },
     },
@@ -116,8 +117,9 @@ export function createTools(context: ToolContext) {
             .replace(/\s+/g, ' ')
             .trim()
             .slice(0, 10000);
-        } catch (e: any) {
-          return ERROR_MESSAGES.URL_GENERIC_ERROR(e.message);
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
+          return ERROR_MESSAGES.URL_GENERIC_ERROR(message);
         }
       }
     },

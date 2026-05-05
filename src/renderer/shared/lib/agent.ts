@@ -162,9 +162,10 @@ export async function runAgentLoop(
       activeFile
     });
     requestId = res.requestId;
-  } catch (error: any) {
-    const errorMsg: ChatMessage = { id: genId(), role: 'assistant', content: `❌ **AI Error**: ${error.message}` };
-    onEvent({ type: 'error', content: `AI Error: ${error.message}` });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const errorMsg: ChatMessage = { id: genId(), role: 'assistant', content: `❌ **AI Error**: ${message}` };
+    onEvent({ type: 'error', content: `AI Error: ${message}` });
     return [...fullHistory, userMsg, errorMsg];
   }
 

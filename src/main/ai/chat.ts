@@ -178,15 +178,17 @@ export async function handleAiChat(mainWindow: BrowserWindow, { messages, config
           toolResults: fullToolResults
         });
 
-      } catch (e: any) {
-        logEvent('ERROR', { error: e.message });
-        mainWindow.webContents.send(aiChatDeltaChannel(requestId), { type: 'error', error: e.message });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        logEvent('ERROR', { error: message });
+        mainWindow.webContents.send(aiChatDeltaChannel(requestId), { type: 'error', error: message });
       }
     })();
 
     return { requestId };
-  } catch (e: any) {
-    logEvent('ERROR', { error: e.message });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    logEvent('ERROR', { error: message });
     throw e;
   }
 }

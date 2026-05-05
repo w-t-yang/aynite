@@ -101,9 +101,10 @@ function FileViewer({
           createdAt: new Date(res.createdAt),
           modifiedAt: new Date(res.modifiedAt)
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
         console.error('Failed to fetch file info:', e);
-        setError(e.message);
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -186,9 +187,10 @@ function FileViewer({
         createdAt: new Date(infoRes.createdAt),
         modifiedAt: new Date(infoRes.modifiedAt)
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
       console.error('Failed to refresh file:', e);
-      setError(`Failed to refresh: ${e.message}`);
+      setError(`Failed to refresh: ${message}`);
     } finally {
       setLoading(false);
     }

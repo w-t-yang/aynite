@@ -22,9 +22,10 @@ export function setupUpdater(mainWindow: BrowserWindow) {
     }
     try {
       return await autoUpdater.checkForUpdatesAndNotify();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error('Failed to check for updates:', err);
-      mainWindow.webContents.send(UpdateChannels.ERROR, err.message);
+      mainWindow.webContents.send(UpdateChannels.ERROR, message);
       return null;
     }
   });

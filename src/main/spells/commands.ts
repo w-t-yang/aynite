@@ -50,9 +50,10 @@ export async function listAvailableCommands() {
         if (match) {
           try {
             meta = yaml.load(match[1]) || {};
-          } catch (e: any) {
-            yamlError = e.message;
-            notifyError('command', cmdMdPath, e.message);
+          } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            yamlError = message;
+            notifyError('command', cmdMdPath, message);
           }
         }
         const name = meta.name || getBasename(itemPath);

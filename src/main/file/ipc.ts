@@ -95,7 +95,7 @@ export function setupFileIpc() {
         return a.name.localeCompare(b.name);
       });
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('aynite:file-list error:', error);
       throw error;
     }
@@ -104,7 +104,7 @@ export function setupFileIpc() {
   ipcMain.handle(FileChannels.READ, async (_event, filePath: string) => {
     try {
       return await readText(filePath);
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   });
@@ -124,7 +124,7 @@ export function setupFileIpc() {
         extension: getExtname(expandedPath).toLowerCase().slice(1),
         isText
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   });

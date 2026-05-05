@@ -286,8 +286,9 @@ export async function secureReadText(filePath: string, domainFolders: string[]):
   }
   try {
     return await readText(filePath);
-  } catch (e: any) {
-    return ERROR_MESSAGES.FILE_READ_ERROR(e.message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return ERROR_MESSAGES.FILE_READ_ERROR(message);
   }
 }
 
@@ -298,8 +299,9 @@ export async function secureWriteText(filePath: string, content: string, domainF
   try {
     await writeText(filePath, content);
     return ERROR_MESSAGES.FILE_WRITE_SUCCESS(filePath);
-  } catch (e: any) {
-    return ERROR_MESSAGES.FILE_WRITE_ERROR(e.message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return ERROR_MESSAGES.FILE_WRITE_ERROR(message);
   }
 }
 
@@ -311,8 +313,9 @@ export async function secureListDir(dirPath: string, domainFolders: string[]): P
     const files = await readdir(dirPath);
     const entries = files.map((f) => `${f.isDirectory() ? '📁' : '📄'} ${f.name}`);
     return entries.join('\n') || ERROR_MESSAGES.DIR_EMPTY;
-  } catch (e: any) {
-    return ERROR_MESSAGES.DIR_LIST_ERROR(e.message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return ERROR_MESSAGES.DIR_LIST_ERROR(message);
   }
 }
 
