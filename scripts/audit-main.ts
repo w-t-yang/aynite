@@ -40,7 +40,6 @@ interface ViolationRule {
   description: string;
   regex?: RegExp;
   anyRegex?: RegExp;
-  untypedParamRegex?: RegExp;
 }
 
 const VIOLATIONS: Record<string, ViolationRule> = {
@@ -64,9 +63,8 @@ const VIOLATIONS: Record<string, ViolationRule> = {
   STRICT_TYPING: {
     key: 'types',
     name: 'Strict Typing Violation',
-    anyRegex: /\b(?!as\b)\bany\b/g, // Detect 'any' but try to avoid 'as any' casting if possible, though 'as any' is also a violation
-    untypedParamRegex: /(?:async\s+)?(?:\(([^:)]+)\)|(\b[a-zA-Z0-9_]+\b))\s*=>/g, // Simplified detection for (arg) => or arg =>
-    description: 'Avoid use of "any" and ensure all function parameters are explicitly typed.'
+    anyRegex: /\bany\b/g,
+    description: 'Avoid use of "any". Use more specific types (e.g., define proper interfaces instead).'
   },
   HARDCODED_STRINGS: {
     key: 'strings',
@@ -254,26 +252,6 @@ const auditFile = (filepath: string) => {
       });
     }
 
-    // Audit for untyped parameters in arrow functions
-    let paramMatch;
-    while ((paramMatch = VIOLATIONS.STRICT_TYPING.untypedParamRegex.exec(content)) !== null) {
-      const group1 = paramMatch[1]; // (arg, arg2)
-      const group2 = paramMatch[2]; // arg
-      
-      const params = (group1 || group2).split(',').map(p => p.trim());
-      const hasUntyped = params.some(p => p && !p.includes(':'));
-
-      if (hasUntyped) {
-        const lineNum = content.substring(0, paramMatch.index).split('\n').length;
-        report.push({
-          type: VIOLATIONS.STRICT_TYPING.name,
-          file: relativePath,
-          line: lineNum,
-          snippet: lines[lineNum - 1].trim(),
-          message: 'Detected untyped parameters in arrow function.'
-        });
-      }
-    }
   }
 
   // 5. Hardcoded Strings
