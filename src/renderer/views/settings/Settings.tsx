@@ -17,7 +17,6 @@ import { AboutTab } from './AboutTab';
 import { TabButton } from '../../shared/basic/TabButton';
 import { Modal } from '../../shared/basic/Modal';
 import { Button } from '../../shared/basic/Button';
-import { ayniteConfig } from '../../src/config';
 
 
 
@@ -25,8 +24,6 @@ interface SettingsProps {
 }
 
 export function Settings() {
-  const aynite = ayniteConfig;
-
   const [activeTab, setActiveTab] = useState('appearance');
 
   // Broken down settings state
@@ -52,14 +49,14 @@ export function Settings() {
   const loadSettings = async () => {
     // Parallel load all decoupled resources
     const [resAI, resAgents, resPrompts, resKb, resSkills, resCmds, resTools, resThemes] = await Promise.all([
-      aynite.getAI(),
-      aynite.getAgents(),
-      aynite.getPrompts(),
-      aynite.getKeybindings(),
-      aynite.getSkills(),
-      aynite.getCommands(),
-      aynite.getTools(),
-      aynite.getThemes()
+      window.aynite.getConfig('ai'),
+      window.aynite.getConfig('agents'),
+      window.aynite.getConfig('prompts'),
+      window.aynite.getConfig('keybindings'),
+      window.aynite.getConfig('skills'),
+      window.aynite.getConfig('commands'),
+      window.aynite.getConfig('tools'),
+      window.aynite.getConfig('themes')
     ]);
 
     if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list });
@@ -74,15 +71,15 @@ export function Settings() {
       setAvailableTools(resTools.list);
     }
     if (resThemes) {
-      const activeThemeId = await aynite.getActiveThemeId();
-      const systemFonts = await aynite.getSystemFonts();
+      const activeThemeId = await window.aynite.getConfig('activeTheme');
+      const systemFonts = await window.aynite.getSystemFonts();
       setThemes({ list: resThemes, activeId: activeThemeId, systemFonts: systemFonts || [] });
     }
 
   };
 
   const loadVersion = async () => {
-    const version = await aynite.getAppVersion();
+    const version = await window.aynite.getConfig('version');
     setAppVersion(version);
   };
 
@@ -97,7 +94,7 @@ export function Settings() {
     setThemes(prev => prev ? { ...newThemes, systemFonts: prev.systemFonts } : null);
     // Save the active theme ID specifically
     if (newThemes.activeId) {
-      await aynite.setActiveTheme(newThemes.activeId);
+      await window.aynite.setConfig('activeTheme',newThemes.activeId);
     }
     // Individual theme saving is handled via setThemes logic if needed, 
     // but usually themes are static unless customized.
@@ -109,27 +106,27 @@ export function Settings() {
 
   const handleSetKeybindings = async (kb: SettingsState['keybindings']) => {
     setKeybindings(kb);
-    await aynite.setKeybindings({ list: kb });
+    await window.aynite.setConfig('keybindings',{ list: kb });
   };
 
   const handleSetAI = async (newAI: SettingsState['ai']) => {
     setAI(newAI);
-    await aynite.setAI({ activeId: newAI.activeId, list: newAI.providers });
+    await window.aynite.setConfig('ai',{ activeId: newAI.activeId, list: newAI.providers });
   };
 
   const handleSetSkills = async (newSkills: any) => {
     setSkills(newSkills);
-    await aynite.setSkills(newSkills);
+    await window.aynite.setConfig('skills',newSkills);
   };
 
   const handleSetCommands = async (newCommands: any) => {
     setCommands(newCommands);
-    await aynite.setCommands(newCommands);
+    await window.aynite.setConfig('commands',newCommands);
   };
 
   const handleSetTools = async (newTools: SettingsState['aiTools']) => {
     setAiTools(newTools);
-    await aynite.setTools({ active: newTools, list: availableTools });
+    await window.aynite.setConfig('tools',{ active: newTools, list: availableTools });
   };
 
   if (!ai || !agents || !prompts || !keybindings || !aiTools) {
@@ -188,11 +185,11 @@ export function Settings() {
                   setAgentsTab: async (payload) => {
                     if (payload.agents) {
                       setAgents(payload.agents);
-                      await aynite.setAgents({ activeId: payload.agents.activeId, list: payload.agents.list });
+                      await window.aynite.setConfig('agents',{ activeId: payload.agents.activeId, list: payload.agents.list });
                     }
                     if (payload.prompts) {
                       setPrompts(payload.prompts);
-                      await aynite.setPrompts({ list: payload.prompts.files });
+                      await window.aynite.setConfig('prompts',{ list: payload.prompts.files });
                     }
                   },
                   onPickPromptFile: async () => null, // Removed
@@ -252,7 +249,7 @@ export function Settings() {
                   updateInfo: null
                 }}
                 actions={{
-                  onCheckUpdates: aynite.checkForUpdates,
+                  onCheckUpdates: window.aynite.checkForUpdates,
                   onInstallUpdate: () => { },
                   onOpenExternal: (url) => window.open(url, '_blank')
                 }}
@@ -277,31 +274,31 @@ export function Settings() {
                 // Execute standardized restore logic
                 if (activeTab === 'appearance') await handleSetThemes({ list: [], activeId: '' });
                 if (activeTab === 'keybindings') {
-                  const res = await aynite.getKeybindings();
+                  const res = await window.aynite.getConfig('keybindings');
                   if (res) handleSetKeybindings(res);
                 }
 
                 if (activeTab === 'ai') {
-                  const res = await aynite.getAI();
+                  const res = await window.aynite.getConfig('ai');
                   if (res) handleSetAI({ activeId: res.activeId, providers: res.list });
                 }
                 if (activeTab === 'agents') {
-                  const res = await aynite.getAgents();
+                  const res = await window.aynite.getConfig('agents');
                   if (res) {
                     setAgents({ activeId: res.activeId, list: res.list });
-                    await aynite.setAgents({ activeId: res.activeId, list: res.list });
+                    await window.aynite.setConfig('agents',{ activeId: res.activeId, list: res.list });
                   }
                 }
                 if (activeTab === 'skills') {
-                  const res = await aynite.getSkills();
+                  const res = await window.aynite.getConfig('skills');
                   if (res) handleSetSkills(res);
                 }
                 if (activeTab === 'commands') {
-                  const res = await aynite.getCommands();
+                  const res = await window.aynite.getConfig('commands');
                   if (res) handleSetCommands(res);
                 }
                 if (activeTab === 'tools') {
-                  const res = await aynite.getTools();
+                  const res = await window.aynite.getConfig('tools');
                   if (res) handleSetTools(res.active);
                 }
                 setShowRestoreModal(false);
