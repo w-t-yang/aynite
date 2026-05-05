@@ -1,12 +1,57 @@
 /// <reference types="vite/client" />
 
+import type { WorkspacesConfig } from '../../lib/types/workspace';
+
+interface FileEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+}
+
+interface ChatSessionEntry {
+  id: string;
+  date: string;
+  lastModified: string;
+  size: number;
+  preview: string;
+}
+
+interface SkillEntry {
+  name: string;
+  description: string;
+  path: string;
+  error: string | null;
+}
+
+interface CommandEntry {
+  name: string;
+  description: string;
+  parameters: any[];
+  example: string;
+  path: string;
+  error: string | null;
+}
+
+interface AiChatPayload {
+  messages: any[];
+  config: any;
+  workspaceFolders: string[];
+  activeFile?: string;
+}
+
+interface DirectCommandPayload {
+  commandPath: string;
+  params: string[];
+  currentFile?: string;
+}
+
 export interface AyniteWindow {
   // Config
   getConfig: (key: string, payload?: any) => Promise<any>
   setConfig: (key: string, payload: any) => Promise<boolean>
 
   // File operations
-  listFolder: (path: string) => Promise<{ name: string; path: string; isDirectory: boolean }[]>
+  listFolder: (path: string) => Promise<FileEntry[]>
   readFile: (path: string) => Promise<string>
   writeFile: (path: string, content: string) => Promise<boolean>
   createFile: (path: string, isDirectory: boolean) => Promise<boolean>
@@ -14,7 +59,7 @@ export interface AyniteWindow {
   copyFile: (srcPath: string, destPath: string) => Promise<boolean>
   deleteFile: (path: string) => Promise<boolean>
   getFileInfo: (path: string) => Promise<{ size: number; createdAt: string; modifiedAt: string; isDirectory: boolean; path: string; extension: string; isText: boolean }>
-  getFiles: (path: string) => Promise<{ name: string; path: string; isDirectory: boolean }[]>
+  getFiles: (path: string) => Promise<FileEntry[]>
   onFileSystemChange: (callback: (data: { event: string; path: string }) => void) => () => void
   move: (oldPath: string, newPath: string) => Promise<boolean>
   remove: (path: string) => Promise<boolean>
@@ -22,22 +67,22 @@ export interface AyniteWindow {
   paste: (destDir: string) => Promise<boolean>
 
   // Workspace
-  getWorkspacesList: () => Promise<any>
-  createWorkspace: (name: string) => Promise<any>
-  switchWorkspace: (name: string) => Promise<boolean>
+  getWorkspacesList: () => Promise<WorkspacesConfig>
+  createWorkspace: (name: string) => Promise<WorkspacesConfig>
+  switchWorkspace: (name: string) => Promise<WorkspacesConfig>
   addWorkspaceFolder: () => Promise<string | null>
   removeWorkspaceFolder: (path: string) => Promise<boolean>
   reorderWorkspaceFolders: (folders: string[]) => Promise<boolean>
   getWorkspaceFolders: () => Promise<string[]>
-  workspaceAllFiles: () => Promise<any[]>
+  workspaceAllFiles: () => Promise<FileEntry[]>
 
   // AI operations
-  aiChat: (payload: any) => Promise<{ requestId?: string; error?: string }>
+  aiChat: (payload: AiChatPayload) => Promise<{ requestId?: string; error?: string }>
   getMergedSystemPrompt: {
     (globalFiles?: string[], agentFiles?: string[]): Promise<string>
     (payload: { globalFiles?: string[]; agentFiles?: string[] }): Promise<string>
   }
-  listChatLogs: () => Promise<any[]>
+  listChatLogs: () => Promise<ChatSessionEntry[]>
   saveChatLog: {
     (sessionId: string, messages: any[]): Promise<void>
     (payload: { id: string; messages: any[] }): Promise<void>
@@ -46,7 +91,7 @@ export interface AyniteWindow {
     (sessionId: string, date: string): Promise<any>
     (payload: { id: string; date: string }): Promise<any>
   }
-  runDirectCommand: (payload: any) => Promise<any>
+  runDirectCommand: (payload: DirectCommandPayload) => Promise<{ stdout: string; stderr: string }>
   respondToAiApproval: (id: string, approved: boolean) => void
   onAiChatDelta: (requestId: string, callback: (part: any) => void) => () => void
   onAiApprovalRequest: (callback: (data: { id: string; command: string; cwd: string }) => void) => () => void
@@ -70,8 +115,8 @@ export interface AyniteWindow {
   onUpdateDownloaded: (callback: (info: any) => void) => () => void
 
   // Skills & Commands
-  getAvailableSkills: () => Promise<any[]>
-  getAvailableCommands: () => Promise<any[]>
+  getAvailableSkills: () => Promise<SkillEntry[]>
+  getAvailableCommands: () => Promise<CommandEntry[]>
   getAvailableViews: () => Promise<{ id: string; name: string }[]>
 
   // Utilities
