@@ -1,10 +1,10 @@
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
-import { Button } from '../../basic/Button';
-import { Switch } from '../../basic/Switch';
-import { SettingsPage } from '../../featured/SettingsPage';
-import { Section } from '../../basic/Section';
-import { SettingsState } from '../../lib/types';
+import { Button } from '../../shared/basic/Button';
+import { Switch } from '../../shared/basic/Switch';
+import { SettingsPage } from '../../shared/featured/SettingsPage';
+import { Section } from '../../shared/basic/Section';
+import { SettingsState } from '../../shared/lib/types';
 
 interface ToolsTabProps {
   state: {

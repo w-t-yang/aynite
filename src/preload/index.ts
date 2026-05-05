@@ -183,13 +183,8 @@ const aynite = {
 };
 
 // ─── Expose bridges ─────────────────────────────────────────────────────────
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('aynite', aynite);
-  } catch (error) {
-    console.error(error);
-  }
-} else {
-  // @ts-ignore
-  window.aynite = aynite;
+try {
+  contextBridge.exposeInMainWorld('aynite', aynite);
+} catch (error) {
+  console.error(error);
 }

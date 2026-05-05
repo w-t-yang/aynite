@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Plus, FileText } from 'lucide-react';
-import { Button } from '../../basic/Button';
-import { Modal } from '../../basic/Modal';
-import { SettingsPage } from '../../featured/SettingsPage';
-import { Section } from '../../basic/Section';
-import { SettingsState, Agent } from '../../lib/types';
-import { AgentCard } from '../../featured/AgentCard';
-import { Collapsible } from '../../basic/Collapsible';
+import { Button } from '../../shared/basic/Button';
+import { Modal } from '../../shared/basic/Modal';
+import { SettingsPage } from '../../shared/featured/SettingsPage';
+import { Section } from '../../shared/basic/Section';
+import { SettingsState, Agent } from '../../shared/lib/types';
+import { AgentCard } from '../../shared/featured/AgentCard';
+import { Collapsible } from '../../shared/basic/Collapsible';
 import { Trash2 } from 'lucide-react';
 
 interface PromptFileRowProps {

@@ -98,6 +98,24 @@ const VIOLATIONS = {
     name: 'Background Color Usage',
     regex: /\bbg-[a-z0-9-]+/g,
     description: 'Audit usage of background color utilities in views to ensure theme consistency.'
+  },
+  LEGACY_MESSAGING: {
+    key: 'messaging',
+    name: 'Legacy Messaging Usage',
+    regex: /\bpostMessage\s*\(|\baddEventListener\s*\(/g,
+    description: 'Avoid postMessage or manual event listeners. Use direct Electron IPC (window.aynite) or standardized React hooks instead.'
+  },
+  BRIDGE_USAGE: {
+    key: 'bridge',
+    name: 'Direct Bridge Usage',
+    regex: /\bwindow\.aynite\b/g,
+    description: 'Direct window.aynite access is only allowed in Page components (XXXPage.tsx) and renderer/src/ files. Use standardized context providers elsewhere.'
+  },
+  FORBIDDEN_GLOBALS: {
+    key: 'globals',
+    name: 'Forbidden Global Access',
+    regex: /\bwindow\.(?!aynite|addEventListener|removeEventListener|localStorage|sessionStorage|location|open|close|focus|blur|print|scrollTo|scrollBy|innerWidth|innerHeight|outerWidth|outerHeight|devicePixelRatio|screen|requestAnimationFrame|cancelAnimationFrame|matchMedia|getComputedStyle|setTimeout|setInterval|clearTimeout|clearInterval|crypto|performance|history|document|navigator|top|parent|self|frames|ayniteConfig|dispatchEvent|removeEventListener|getSelection|getComputedStyle)\b[a-zA-Z0-9_]+/g,
+    description: 'Avoid accessing custom or internal window.xxx properties. Only window.aynite and standard Web APIs are allowed.'
   }
 } satisfies Record<string, ViolationRule>;
 
@@ -273,21 +291,7 @@ const auditFile = (filepath: string) => {
     }
   }
 
-  // 1.5. View Isolation Audit (window.aynite usage)
-  if (category === 'views') {
-    const bridgeRegex = /\b(?:window\.)?aynite\.(?!platform)\w+|\bAyniteWindow\b/g;
-    let bridgeMatch;
-    while ((bridgeMatch = bridgeRegex.exec(content)) !== null) {
-      const lineNum = content.substring(0, bridgeMatch.index).split('\n').length;
-      report.push({
-        type: VIOLATIONS.IMPORT_HIERARCHY.name,
-        file: relativePath,
-        line: lineNum,
-        snippet: lines[lineNum - 1].trim(),
-        message: 'Views should not use window.aynite or AyniteWindow directly. They must remain decoupled from the main bridge.'
-      });
-    }
-  }
+
 
   // 2. Strict Typing
   if (activeViolations.some(v => v.key === 'types')) {
@@ -491,7 +495,6 @@ const auditFile = (filepath: string) => {
       });
     }
   }
-  
   // 11. Background Colors (Thorough & Views specific)
   if (activeViolations.some(v => v.key === 'bg-colors') && category === 'views') {
     let bgMatch;
@@ -503,6 +506,58 @@ const auditFile = (filepath: string) => {
         line: lineNum,
         snippet: lines[lineNum - 1].trim(),
         message: VIOLATIONS.BACKGROUND_COLORS.description
+      });
+    }
+  }
+
+  // 12. Legacy Messaging (Thorough)
+  if (activeViolations.some(v => v.key === 'messaging')) {
+    let msgMatch;
+    while ((msgMatch = VIOLATIONS.LEGACY_MESSAGING.regex!.exec(content)) !== null) {
+      const lineNum = content.substring(0, msgMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.LEGACY_MESSAGING.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.LEGACY_MESSAGING.description
+      });
+    }
+  }
+
+  // 13. Bridge Usage
+  if (activeViolations.some(v => v.key === 'bridge')) {
+    const isAllowedFile = 
+      filepath.endsWith('AIChat.tsx') || 
+      filepath.endsWith('Treeview.tsx') || 
+      filepath.endsWith('Settings.tsx') || 
+      filepath.includes('src/renderer/src/');
+    if (!isAllowedFile) {
+      let bridgeMatch;
+      while ((bridgeMatch = VIOLATIONS.BRIDGE_USAGE.regex!.exec(content)) !== null) {
+        const lineNum = content.substring(0, bridgeMatch.index).split('\n').length;
+        report.push({
+          type: VIOLATIONS.BRIDGE_USAGE.name,
+          file: relativePath,
+          line: lineNum,
+          snippet: lines[lineNum - 1].trim(),
+          message: VIOLATIONS.BRIDGE_USAGE.description
+        });
+      }
+    }
+  }
+
+  // 14. Forbidden Globals
+  if (activeViolations.some(v => v.key === 'globals')) {
+    let globalMatch;
+    while ((globalMatch = VIOLATIONS.FORBIDDEN_GLOBALS.regex!.exec(content)) !== null) {
+      const lineNum = content.substring(0, globalMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.FORBIDDEN_GLOBALS.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.FORBIDDEN_GLOBALS.description
       });
     }
   }
@@ -528,7 +583,10 @@ const DISPLAY_ORDER = [
   VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name,
   VIOLATIONS.Z_INDEX_HIERARCHY.name,
   VIOLATIONS.ANIMATION_EFFECTS.name,
-  VIOLATIONS.BACKGROUND_COLORS.name
+  VIOLATIONS.BACKGROUND_COLORS.name,
+  VIOLATIONS.LEGACY_MESSAGING.name,
+  VIOLATIONS.BRIDGE_USAGE.name,
+  VIOLATIONS.FORBIDDEN_GLOBALS.name
 ];
 
 
@@ -552,6 +610,8 @@ if (report.length === 0) {
     const badge = typeName === VIOLATIONS.IMPORT_HIERARCHY.name ? '🚨 ARCHITECTURE' : 
                   typeName === VIOLATIONS.STRICT_TYPING.name ? '🚨 TYPING' :
                   typeName === VIOLATIONS.SYSTEM_CALLS.name ? '🚨 CRITICAL' : 
+                  typeName === VIOLATIONS.BRIDGE_USAGE.name ? '🚨 CRITICAL' :
+                  typeName === VIOLATIONS.FORBIDDEN_GLOBALS.name ? '🚨 CRITICAL' :
                   typeName === VIOLATIONS.ADAPTIVE_STYLES.name ? '⚠️ WARNING' :
                   typeName === VIOLATIONS.COMPONENT_DUPLICATION.name ? '⚠️ WARNING' : '📝 NOTICE';
 

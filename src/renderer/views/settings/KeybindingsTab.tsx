@@ -1,9 +1,9 @@
 import React from 'react';
-import { SettingsState, Keybinding } from '../../lib/types';
-import { KeybindingRow } from '../../featured/KeybindingRow';
-import { SettingsPage } from '../../featured/SettingsPage';
-import { Section } from '../../basic/Section';
-import { AppOperation, ViewOperation } from '../../../../lib/constants/app';
+import { SettingsState, Keybinding } from '../../shared/lib/types';
+import { KeybindingRow } from '../../shared/featured/KeybindingRow';
+import { SettingsPage } from '../../shared/featured/SettingsPage';
+import { Section } from '../../shared/basic/Section';
+import { AppOperation, ViewOperation } from '../../../lib/constants/app';
 
 interface KeybindingsTabProps {
   state: {

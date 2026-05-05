@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, RotateCcw, Trash2, Copy } from 'lucide-react';
-import { Section } from '../../basic/Section';
-import { SettingsPage } from '../../featured/SettingsPage';
-import { ThemePreview } from '../../featured/ThemePreview';
-import { ColorInput } from '../../featured/ColorInput';
-import { SelectionMenu } from '../../featured/SelectionMenu';
-import { Modal } from '../../basic/Modal';
-import { Input } from '../../basic/Input';
-import { Button } from '../../basic/Button';
+import { Section } from '../../shared/basic/Section';
+import { SettingsPage } from '../../shared/featured/SettingsPage';
+import { ThemePreview } from '../../shared/featured/ThemePreview';
+import { ColorInput } from '../../shared/featured/ColorInput';
+import { SelectionMenu } from '../../shared/featured/SelectionMenu';
+import { Modal } from '../../shared/basic/Modal';
+import { Input } from '../../shared/basic/Input';
+import { Button } from '../../shared/basic/Button';
 
 
 const COLOR_LABELS: Record<string, string> = {

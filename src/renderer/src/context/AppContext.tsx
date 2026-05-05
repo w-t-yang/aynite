@@ -7,11 +7,8 @@ import React, {
   ReactNode
 } from 'react'
 import { WorkspaceConfig, LayoutNode, LeafNode } from '../../../lib/constants/types'
-import { ViewRequest } from '../../../lib/constants/view'
-import { ConfigKey } from '../../../lib/constants/config'
 import { ayniteConfig } from '../config'
 import { executeLayoutOperation } from '../utils/tile'
-import { viewManager } from '../view-manager'
 
 interface AppContextType {
   workspaceConfig: WorkspaceConfig | null
@@ -182,13 +179,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => removeListener()
   }, [executeAppOperation])
 
-  useEffect(() => {
-    viewManager.registerListener(ViewRequest.SET_CONFIG, (payload) => {
-      if (payload.key === ConfigKey.WORKSPACE || payload.key === ConfigKey.ACTIVE_WORKSPACE) {
-        loadData()
-      }
-    })
-  }, [loadData])
+
 
   const handleResizeStart = useCallback(() => {
     setIsResizing(true)
@@ -220,9 +211,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return true
   }, [])
 
-  useEffect(() => {
-    viewManager.registerListener(ViewRequest.OPEN_FILE, (path: string) => openFile(path))
-  }, [openFile])
+
 
   // Expose context to window for debugging in development
   useEffect(() => {

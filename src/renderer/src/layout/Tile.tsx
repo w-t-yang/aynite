@@ -6,7 +6,6 @@ import { AppOperation } from '../../../lib/constants/app'
 import { Button } from '../../shared/basic/Button'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { useApp } from '../context/AppContext'
-import { ViewParentProvider } from '../context/ViewParentContext'
 import { cn } from '../../shared/lib/utils'
 
 
@@ -94,7 +93,6 @@ const Tile: React.FC<TileProps> = ({ node }) => {
 
       <div className="tile-content h-full p-0 relative overflow-hidden bg-tile-bg/50">
         {url ? (
-          <ViewParentProvider id={id} iframeRef={iframeRef}>
             <iframe
               ref={iframeRef}
               src={url}
@@ -104,7 +102,6 @@ const Tile: React.FC<TileProps> = ({ node }) => {
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               allow="clipboard-read; clipboard-write"
             />
-          </ViewParentProvider>
         ) : (
 
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">

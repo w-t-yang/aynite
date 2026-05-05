@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Sun, Keyboard, Bot, FileText, Wrench, Zap, Terminal, Info, X, RotateCcw
 } from 'lucide-react';
-import { SettingsState } from '../../lib/types';
-import { cn } from '../../lib/utils';
+import { SettingsState } from '../../shared/lib/types';
+import { cn } from '../../shared/lib/utils';
 
 // Shared Tabs
 import { AppearanceTab } from './AppearanceTab';
@@ -14,17 +14,17 @@ import { SkillsTab } from './SkillsTab';
 import { CommandsTab } from './CommandsTab';
 import { ToolsTab } from './ToolsTab';
 import { AboutTab } from './AboutTab';
-import { TabButton } from '../../basic/TabButton';
-import { Modal } from '../../basic/Modal';
-import { Button } from '../../basic/Button';
-import { ayniteConfig } from '../../../src/config';
+import { TabButton } from '../../shared/basic/TabButton';
+import { Modal } from '../../shared/basic/Modal';
+import { Button } from '../../shared/basic/Button';
+import { ayniteConfig } from '../../src/config';
 
 
 
 interface SettingsProps {
 }
 
-export function SettingsPage({ }: SettingsProps) {
+export function Settings() {
   const aynite = ayniteConfig;
 
   const [activeTab, setActiveTab] = useState('appearance');

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Bot, CloudDownload, RefreshCw, Github, Bug } from 'lucide-react';
-import { Button } from '../../basic/Button';
-import { SettingsPage } from '../../featured/SettingsPage';
-import { Section } from '../../basic/Section';
+import { Button } from '../../shared/basic/Button';
+import { SettingsPage } from '../../shared/featured/SettingsPage';
+import { Section } from '../../shared/basic/Section';
 
 interface AboutTabProps {
   state: {

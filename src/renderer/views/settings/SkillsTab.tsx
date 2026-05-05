@@ -1,60 +1,60 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
-import { Button } from '../../basic/Button';
-import { SettingsPage } from '../../featured/SettingsPage';
-import { Section } from '../../basic/Section';
-import { Modal } from '../../basic/Modal';
-import { SettingsState } from '../../lib/types';
-import { cn } from '../../lib/utils';
+import { Button } from '../../shared/basic/Button';
+import { SettingsPage } from '../../shared/featured/SettingsPage';
+import { Section } from '../../shared/basic/Section';
+import { Modal } from '../../shared/basic/Modal';
+import { SettingsState } from '../../shared/lib/types';
+import { cn } from '../../shared/lib/utils';
 
-interface CommandsTabProps {
+interface SkillsTabProps {
   state: {
-    commands: SettingsState['commands'];
-    availableCommands: any[];
+    skills: SettingsState['skills'];
+    availableSkills: any[];
   };
   actions: {
-    setCommands: (commands: SettingsState['commands']) => void;
-    onPickCommandFolder: () => Promise<any>;
+    setSkills: (skills: SettingsState['skills']) => void;
+    onPickSkillFolder: () => Promise<any>;
     onRestore?: () => void;
   };
 }
 
-export function CommandsTab({
+export function SkillsTab({
   state,
   actions
-}: CommandsTabProps) {
-  const { commands, availableCommands } = state;
-  const { setCommands, onPickCommandFolder } = actions;
+}: SkillsTabProps) {
+  const { skills, availableSkills } = state;
+  const { setSkills, onPickSkillFolder } = actions;
   
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
 
   const handleAddFolder = async () => {
-    const res = await onPickCommandFolder();
+    const res = await onPickSkillFolder();
     if (res && res.data) {
-      const folders = commands?.folders || [];
+      const folders = skills?.folders || [];
       const newFolders = [...folders, res.data];
-      setCommands({ folders: Array.from(new Set(newFolders)) });
+      setSkills({ folders: Array.from(new Set(newFolders)) });
     }
   };
 
   const confirmRemoveFolder = () => {
     if (folderToDelete) {
-      const folders = commands?.folders || [];
+      const folders = skills?.folders || [];
       const newFolders = folders.filter(f => f !== folderToDelete);
-      setCommands({ folders: newFolders });
+      setSkills({ folders: newFolders });
       setFolderToDelete(null);
     }
   };
 
   return (
     <SettingsPage
-      title="Commands"
-      description="Manage custom shell commands and automation tasks. You can add folders containing command definitions."
+      title="Skills"
+      description="Extend the assistant's capabilities with custom scripts. You can add folders containing skill definitions that the assistant can execute."
       onRestore={actions.onRestore}
     >
       <Section 
-        title="Command Source Folders" 
-        description="Directories where Aynite looks for command definitions."
+        title="Skill Source Folders" 
+        description="Directories where Aynite looks for skill implementations."
         action={
           <Button 
             variant="ghost"
@@ -67,7 +67,7 @@ export function CommandsTab({
         }
       >
         <div className="space-y-2">
-          {(commands?.folders || []).map((folder) => (
+          {(skills?.folders || []).map((folder) => (
             <div key={folder} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group">
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-medium truncate">{folder.split(/[\/\\]/).pop()}</span>
@@ -83,34 +83,34 @@ export function CommandsTab({
               </Button>
             </div>
           ))}
-          {(!commands?.folders || commands.folders.length === 0) && (
+          {(!skills?.folders || skills.folders.length === 0) && (
             <div className="py-8 text-center text-xs text-muted-foreground italic border border-dashed border-border rounded-lg">
-              No command folders added.
+              No skill folders added.
             </div>
           )}
         </div>
       </Section>
 
-      <Section title="Detected Commands" description="A list of all valid commands found in your folders.">
+      <Section title="Detected Skills" description="A list of all skills found and parsed from your folders.">
         <div className="grid grid-cols-2 gap-4">
-          {availableCommands.map(cmd => (
-            <div key={cmd.path} className={cn("p-4 rounded-xl border bg-accent/5 transition-all", cmd.error ? "border-destructive/30" : "border-border hover:border-border/60")}>
+          {availableSkills.map(skill => (
+            <div key={skill.path} className={cn("p-4 rounded-xl border bg-accent/5 transition-all", skill.error ? "border-destructive/30" : "border-border hover:border-border/60")}>
               <div className="flex items-center gap-2 mb-2">
-                {cmd.error && <AlertCircle size={14} className="text-destructive" />}
-                <span className={cn("text-xs font-bold uppercase tracking-wider", cmd.error && "text-destructive")}>{cmd.name}</span>
+                {skill.error && <AlertCircle size={14} className="text-destructive" />}
+                <span className={cn("text-xs font-bold uppercase tracking-wider", skill.error && "text-destructive")}>{skill.name}</span>
               </div>
-              <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{cmd.description || 'No description available.'}</p>
-              {cmd.error && (
+              <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{skill.description || 'No description available.'}</p>
+              {skill.error && (
                 <div className="p-2 rounded bg-destructive/10 text-[9px] text-destructive font-mono leading-tight whitespace-pre-wrap border border-destructive/20">
-                  {cmd.error}
+                  {skill.error}
                 </div>
               )}
-              {!cmd.error && <div className="text-[9px] text-muted-foreground/40 truncate font-mono">{cmd.path}</div>}
+              {!skill.error && <div className="text-[9px] text-muted-foreground/40 truncate font-mono">{skill.path}</div>}
             </div>
           ))}
-          {availableCommands.length === 0 && (
+          {availableSkills.length === 0 && (
             <div className="col-span-full py-8 text-center text-xs text-muted-foreground italic border border-dashed border-border rounded-lg opacity-50">
-              No commands detected.
+              No skills detected.
             </div>
           )}
         </div>
@@ -119,7 +119,7 @@ export function CommandsTab({
       <Modal
         isOpen={!!folderToDelete}
         onClose={() => setFolderToDelete(null)}
-        title="Remove Command Folder"
+        title="Remove Skill Folder"
         size="md"
         footer={
           <>
@@ -129,7 +129,7 @@ export function CommandsTab({
         }
       >
         <p className="text-sm text-muted-foreground">
-          Are you sure you want to remove the folder <span className="font-bold text-foreground">"{folderToDelete?.split(/[\/\\]/).pop()}"</span>? Commands from this directory will no longer be available.
+          Are you sure you want to remove the folder <span className="font-bold text-foreground">"{folderToDelete?.split(/[\/\\]/).pop()}"</span>? The assistant will no longer be able to use skills from this directory.
         </p>
       </Modal>
     </SettingsPage>

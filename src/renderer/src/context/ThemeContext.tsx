@@ -8,9 +8,8 @@ import React, {
 } from 'react'
 import { WorkspaceConfig, KeybindingConfig, View, Theme } from '../../../lib/constants/types'
 import { ConfigKey } from '../../../lib/constants/config'
-import { ViewRequest } from '../../../lib/constants/view'
 import { ayniteConfig } from '../config'
-import { viewManager } from '../view-manager'
+import { toCSSVar } from '../../shared/lib/utils'
 
 interface ThemeContextType {
   activeTheme: Theme | null
@@ -25,9 +24,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [activeTheme, setActiveTheme] = useState<Theme | null>(null)
   const [themes, setThemes] = useState<Theme[]>([])
 
-  const toCSSVar = (key: string): string => {
-    return '--' + key.replace(/([A-Z])/g, '-$1').toLowerCase()
-  }
+
 
   const applyThemeColors = useCallback((theme: Theme) => {
     const root = document.documentElement
@@ -72,19 +69,9 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   useEffect(() => {
     loadThemes()
+  }, [loadThemes])
 
-    // Listen for theme changes locally via ViewManager (triggered by any tile or host)
-    viewManager.registerListener(ViewRequest.SET_CONFIG, async (payload) => {
-      if (payload.key === ConfigKey.THEME || payload.key === ConfigKey.ACTIVE_THEME) {
-        const themeId = typeof payload.value === 'string' ? payload.value : payload.value.id
-        const theme = await ayniteConfig.getTheme(themeId)
-        if (theme) {
-          setActiveTheme(theme)
-          applyThemeColors(theme)
-        }
-      }
-    })
-  }, [loadThemes, applyThemeColors])
+
 
   // Expose theme context to window for debugging in development
   useEffect(() => {
