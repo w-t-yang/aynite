@@ -137,7 +137,7 @@ export function Settings() {
   }
 
   return (
-    <div className="w-full h-full bg-background flex flex-col text-foreground">
+    <div className="w-full h-full bg-card flex flex-col text-foreground">
       <div className="flex flex-1 overflow-hidden">
         {/* Settings Sidebar */}
         <div className="w-52 border-r border-border bg-sidebar/50 p-4 space-y-1 shrink-0">
@@ -157,7 +157,7 @@ export function Settings() {
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-background">
+        <div className="flex-1 flex flex-col overflow-hidden bg-card">
           <div className="flex-1 overflow-auto custom-scrollbar relative">
 
             {activeTab === 'appearance' && themes && (

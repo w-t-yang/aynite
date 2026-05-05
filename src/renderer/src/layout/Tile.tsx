@@ -1,12 +1,13 @@
 import React from 'react'
-import { useRef } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { LeafNode } from '../../../lib/constants/types'
 import { AppOperation } from '../../../lib/constants/app'
 
 import { Button } from '../../shared/basic/Button'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { useApp } from '../context/AppContext'
-import { cn } from '../../shared/lib/utils'
+import { useTheme } from '../context/ThemeContext'
+import { cn, toCSSVar } from '../../shared/lib/utils'
 
 
 interface TileProps {
@@ -15,6 +16,7 @@ interface TileProps {
 
 const Tile: React.FC<TileProps> = ({ node }) => {
   const { activeTileId, setActiveTileId, executeAppOperation, updateTileView, availableViews, isResizing } = useApp()
+  const { activeTheme } = useTheme()
   const { id, content: title, size, url } = node
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -39,15 +41,94 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     { id: 'close', label: 'Close Tile', className: 'text-destructive' }
   ]
 
+  // ── Theme injection into iframe ──────────────────────────────────
+  const injectThemeIntoIframe = useCallback(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    try {
+      const iframeDoc = iframe.contentDocument
+      if (!iframeDoc || !activeTheme) return
+
+      const cssVars: string[] = []
+      for (const [key, value] of Object.entries(activeTheme.colors)) {
+        const kebabKey = key.replace(/([A-Z])/g, '-$1').toLowerCase()
+        cssVars.push(`--${kebabKey}: ${value} !important;`)
+        cssVars.push(`--color-${kebabKey}: ${value} !important;`)
+      }
+
+      if (activeTheme.fonts) {
+        if (activeTheme.fonts.fontFamily) cssVars.push(`--font-sans: ${activeTheme.fonts.fontFamily} !important;`)
+        if (activeTheme.fonts.fontMono) cssVars.push(`--font-mono: ${activeTheme.fonts.fontMono} !important;`)
+        if (activeTheme.fonts.fontSize) {
+          cssVars.push(`--font-size-base: ${activeTheme.fonts.fontSize} !important;`)
+        }
+      }
+
+      const css = `
+        :root { 
+          ${cssVars.join('\n          ')} 
+        }
+        html, body {
+          background-color: var(--card) !important;
+          color: var(--foreground) !important;
+          color-scheme: ${activeTheme.type} !important;
+        }
+        #root {
+          background-color: transparent !important;
+        }
+      `
+
+      let styleEl = iframeDoc.getElementById('aynite-theme-injection') as HTMLStyleElement
+      if (!styleEl) {
+        styleEl = iframeDoc.createElement('style')
+        styleEl.id = 'aynite-theme-injection'
+        iframeDoc.head.appendChild(styleEl)
+      }
+      styleEl.textContent = css
+
+      // Also set the data-theme attribute for CSS selectors
+      iframeDoc.documentElement.setAttribute('data-theme', activeTheme.type)
+      
+    } catch (e) {
+      console.error('[Tile] Theme injection failed:', e)
+    }
+  }, [activeTheme])
+
+  // Inject theme when iframe loads
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe || !url) return
+
+    const handleLoad = () => injectThemeIntoIframe()
+    
+    // Initial check in case it's already loaded
+    if (iframe.contentDocument?.readyState === 'complete') {
+      handleLoad()
+    }
+    
+    iframe.addEventListener('load', handleLoad)
+    return () => iframe.removeEventListener('load', handleLoad)
+  }, [url, injectThemeIntoIframe])
+
+  // Re-inject theme when activeTheme changes
+  useEffect(() => {
+    if (!url || !iframeRef.current) return
+    // Small delay to ensure parent state is settled
+    const timer = setTimeout(() => injectThemeIntoIframe(), 50)
+    return () => clearTimeout(timer)
+  }, [activeTheme, injectThemeIntoIframe])
+
 
   return (
     <div
       id={id}
-      className={`tile relative group ${
-        isActive 
-          ? 'border-primary ring-2 ring-primary/30 z-10 scale-[0.998] shadow-lg shadow-primary/5' 
-          : 'border-tile-border opacity-60 hover:opacity-90'
-      }`}
+      className={cn(
+        'tile relative group border-2',
+        isActive
+          ? 'border-primary z-10'
+          : 'border-tile-border'
+      )}
       style={{ flex: `${size} 1 0%` }}
       onMouseDown={() => setActiveTileId(id)}
     >
@@ -91,7 +172,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       </div>
 
 
-      <div className="tile-content h-full p-0 relative overflow-hidden bg-tile-bg/50">
+      <div className="tile-content h-full p-0 relative overflow-hidden">
         {url ? (
             <iframe
               ref={iframeRef}

@@ -34,5 +34,9 @@ The Aynite frontend executes a refined, highly functional, and seamless visual e
 - **Minimalist Agent Feeds**: Complex communication interfaces should avoid "social chat" tropes (like heavy speech bubbles or avatars). Instead, prioritize a "log-style" feed using subtle backgrounds for distinction and clear vertical spacing.
 - **Theme-Agnostic Distinction**: Use low-opacity foreground tints (e.g., `bg-foreground/[0.05]`) for distinguishing message types. This ensures perfect visibility and a consistent "muted" feel across both light and dark themes.
 - **Typography & Prose**: Tightly controlled markdown rendering (`prose`) that overrides default grays with theme-aware `--foreground` variables to ensure maximum legibility.
-- **Clean Focus States**: Input elements use floating, glassmorphic containers with deep shadows and subtle scale interactions to feel elevated and unattached from the main workspace.
+### D. Isolated View Theming
+- **Propagation Pattern**: Since views are loaded in isolated iframes, theme state must be manually pushed from the parent `Tile` component using inline style injection.
+- **Unified Backgrounds**: To ensure a seamless look, views should use `bg-card` for their primary container, matching the `Tile` background.
+- **Variable Reliance**: Components must rely exclusively on CSS variables. Hardcoded colors (hex/rgb) are strictly prohibited in views to ensure cross-theme compatibility.
+- **Reference**: For implementation details, see [THEME_PROPAGATION.md](./THEME_PROPAGATION.md).
 

@@ -529,7 +529,7 @@ export function Treeview() {
   }
 
   return (
-    <div className="sidebar-container w-full h-full border-r border-border bg-sidebar flex flex-col shadow-sm shrink-0 overflow-hidden outline-none px-2 py-3" tabIndex={-1}>
+    <div className="sidebar-container w-full h-full bg-card flex flex-col shrink-0 overflow-hidden outline-none px-2 py-3" tabIndex={-1}>
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden outline-none"

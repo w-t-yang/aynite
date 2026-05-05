@@ -766,7 +766,7 @@ export function AIChat() {
   }, [workspaceFolders]);
 
   return (
-    <div className="chat-panel flex flex-col h-full bg-background relative overflow-hidden">
+    <div className="chat-panel flex flex-col h-full bg-card relative overflow-hidden">
       {/* Atmosphere Layer */}
       <div className="absolute inset-0 bg-ambient-gradient z-0 opacity-40" />
 

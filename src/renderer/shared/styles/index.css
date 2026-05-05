@@ -26,9 +26,6 @@
 
 /* iframe scrollbar hiding or styling is limited by cross-origin, 
    but for aynite-resource we can try to inject or just ensure container looks good */
-iframe {
-  color-scheme: dark;
-}
 
 @layer base {
   :root {
@@ -87,6 +84,10 @@ iframe {
 @layer base {
   * {
     border-color: var(--border);
+  }
+  /* Suppress browser focus rings (e.g. yellow circles on Arch Linux when holding Super key) */
+  *:focus {
+    outline: none;
   }
   body {
     background-color: var(--background);
@@ -208,20 +209,14 @@ iframe {
     @apply bg-tile-bg border border-tile-border flex flex-col relative overflow-hidden m-[1px] rounded-[4px] transition-colors duration-200;
   }
 
-  .tile.is-active {
-    @apply border-accent ring-1 ring-accent/30;
-  }
 
-  .tile:hover:not(.is-active) {
-    @apply border-accent/50;
-  }
 
   .tile-title {
     @apply px-3 py-2 bg-sidebar/50 text-muted-foreground text-[12px] font-semibold uppercase tracking-wider border-b border-tile-border;
   }
 
   .tile-content {
-    @apply flex-1 p-0 relative overflow-hidden bg-black/5;
+    @apply flex-1 p-0 relative overflow-hidden;
   }
 
   .splitter {
