@@ -8,6 +8,7 @@ import { SelectionMenu } from '../../shared/featured/SelectionMenu';
 import { Modal } from '../../shared/basic/Modal';
 import { Input } from '../../shared/basic/Input';
 import { Button } from '../../shared/basic/Button';
+import type { Theme } from '../../../lib/constants/types';
 
 
 const COLOR_LABELS: Record<string, string> = {
@@ -36,12 +37,12 @@ const COLOR_LABELS: Record<string, string> = {
 
 interface AppearanceTabProps {
   state: {
-    list: any[];
+    list: Theme[];
     activeId: string;
     systemFonts: string[];
   };
   actions: {
-    setThemes: (payload: { list: any[], activeId: string }) => void;
+    setThemes: (payload: { list: Theme[], activeId: string }) => void;
     onRestore?: () => void;
   };
 }

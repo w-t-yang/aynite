@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Sun, Keyboard, Bot, FileText, Wrench, Zap, Terminal, Info, X, RotateCcw
 } from 'lucide-react';
+import type { Theme } from '../../../lib/constants/types';
 import { SettingsState } from '../../shared/lib/types';
 import { cn } from '../../shared/lib/utils';
 
@@ -27,7 +28,7 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState('appearance');
 
   // Broken down settings state
-  const [themes, setThemes] = useState<{ list: any[], activeId: string, systemFonts: string[] } | null>(null);
+  const [themes, setThemes] = useState<{ list: Theme[], activeId: string, systemFonts: string[] } | null>(null);
   const [ai, setAI] = useState<SettingsState['ai'] | null>(null);
   const [agents, setAgents] = useState<SettingsState['agents'] | null>(null);
   const [prompts, setPrompts] = useState<SettingsState['prompts'] | null>(null);
@@ -38,7 +39,7 @@ export function Settings() {
 
   // Other shared state
   const [appVersion, setAppVersion] = useState<string>('');
-  const [availableTools, setAvailableTools] = useState<any[]>([]);
+  const [availableTools, setAvailableTools] = useState<{ id: string; name: string; description: string }[]>([]);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   useEffect(() => {
@@ -90,7 +91,7 @@ export function Settings() {
 
   // ─── Tab Set Handlers ──────────────────────────────────────────────
 
-  const handleSetThemes = async (newThemes: { list: any[], activeId: string }) => {
+  const handleSetThemes = async (newThemes: { list: Theme[], activeId: string }) => {
     setThemes(prev => prev ? { ...newThemes, systemFonts: prev.systemFonts } : null);
     // Save the active theme ID specifically
     if (newThemes.activeId) {

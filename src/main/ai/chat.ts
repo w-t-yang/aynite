@@ -41,7 +41,7 @@ export async function loadSession(sessionId: string, date: string) {
  */
 export async function listSessions() {
   const logsBaseDir = getAyniteSessionsDir();
-  const allLogs: any[] = [];
+  const allLogs: { id: string; date: string; lastModified: Date; size: number; preview: string }[] = [];
 
   try {
     const dates = await readdir(logsBaseDir);

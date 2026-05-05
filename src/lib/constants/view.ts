@@ -55,18 +55,18 @@ export interface ViewRequestDTO {
   type: typeof AYNITE_VIEW_REQUEST
   id: string
   method: ViewRequest
-  payload?: any
+  payload?: unknown
 }
 
 export interface ViewResponseDTO {
   type: typeof AYNITE_VIEW_RESPONSE
   id: string
-  result?: any
+  result?: unknown
   error?: string
 }
 
 export interface ViewOperationDTO {
   type: typeof AYNITE_VIEW_OPERATION
   operation: string
-  params?: any
+  params?: unknown
 }

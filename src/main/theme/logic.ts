@@ -1,16 +1,17 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { DEFAULT_THEMES } from '../../lib/constants/themes';
-import { 
-  getThemesDir, 
-  getThemePath, 
-  writeJson, 
-  exists, 
-  readJson, 
-  getBasename, 
-  readdir, 
-  unlink, 
-  ensureDir 
+import type { Theme } from '../../lib/constants/types';
+import {
+  getThemesDir,
+  getThemePath,
+  writeJson,
+  exists,
+  readJson,
+  getBasename,
+  readdir,
+  unlink,
+  ensureDir
 } from '../../lib/path';
 
 const execAsync = promisify(exec);
@@ -27,9 +28,9 @@ export async function initThemes() {
   }
 }
 
-export async function getThemesList(): Promise<any[]> {
+export async function getThemesList(): Promise<Theme[]> {
   const themesDir = getThemesDir();
-  const themes: any[] = [];
+  const themes: Theme[] = [];
   try {
     const files = (await readdir(themesDir)).filter(f => f.name.endsWith('.json'));
     for (const file of files) {
@@ -46,7 +47,7 @@ export async function getThemesList(): Promise<any[]> {
   return themes;
 }
 
-export async function getTheme(name: string): Promise<any> {
+export async function getTheme(name: string): Promise<Theme> {
   const themePath = getThemePath(name);
   try {
     return await readJson(themePath);

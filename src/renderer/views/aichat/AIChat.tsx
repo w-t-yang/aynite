@@ -162,7 +162,7 @@ function SessionsModal({
   onSelect,
   onClose
 }: {
-  sessions: any[];
+  sessions: { id: string; date: string; lastModified: string; preview: string }[];
   onSelect: (id: string, date: string) => void;
   onClose: () => void;
 }) {
@@ -246,7 +246,7 @@ export function AIChat() {
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<{ id: string; date: string; lastModified: string; preview: string }[]>([]);
 
   const loadSessions = async () => {
     const res = await window.aynite.listChatLogs();

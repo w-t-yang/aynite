@@ -93,7 +93,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(WorkspaceChannels.FILE_SCAN, async () => {
     const folders = await getWorkspaceFolders();
-    const allFiles: any[] = [];
+    const allFiles: { name: string; path: string; isDirectory: boolean }[] = [];
     const ignorePatterns = await getIgnorePatterns();
 
     async function scan(dir: string) {

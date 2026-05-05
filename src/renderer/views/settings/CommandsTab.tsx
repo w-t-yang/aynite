@@ -10,7 +10,7 @@ import { cn } from '../../shared/lib/utils';
 interface CommandsTabProps {
   state: {
     commands: SettingsState['commands'];
-    availableCommands: any[];
+    availableCommands: { name: string; description: string; path: string; error: string | null }[];
   };
   actions: {
     setCommands: (commands: SettingsState['commands']) => void;

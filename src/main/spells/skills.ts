@@ -58,7 +58,7 @@ export async function restoreDefaultSkills() {
 
 export async function listAvailableSkills() {
   const config = await getSkillsConfig();
-  const skills: any[] = [];
+  const skills: { name: string; description: string; path: string; error: string | null }[] = [];
   const seenNames = new Map<string, string>();
 
   for (const folder of config.folders) {

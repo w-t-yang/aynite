@@ -16,10 +16,10 @@ export const DEFAULT_PROVIDER_URLS: Record<string, string> = {
   others: ''
 };
 
-export const TOOL_METADATA: Record<string, { 
-  name: string, 
+export const TOOL_METADATA: Record<string, {
+  name: string,
   description: string,
-  inputSchema: any
+  inputSchema: Record<string, unknown>
 }> = {
   read_file: {
     name: 'Read File',

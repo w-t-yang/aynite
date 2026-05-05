@@ -10,7 +10,7 @@ import { cn } from '../../shared/lib/utils';
 interface SkillsTabProps {
   state: {
     skills: SettingsState['skills'];
-    availableSkills: any[];
+    availableSkills: { name: string; description: string; path: string; error: string | null }[];
   };
   actions: {
     setSkills: (skills: SettingsState['skills']) => void;

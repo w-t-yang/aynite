@@ -34,7 +34,7 @@ export async function saveCommandsConfig(config: any) {
 
 export async function listAvailableCommands() {
   const config = await getCommandsConfig();
-  const commands: any[] = [];
+  const commands: { name: string; description: string; parameters: any[]; example: string; path: string; error: string | null }[] = [];
   const seenNames = new Map<string, string>();
 
   for (const folder of config.folders) {

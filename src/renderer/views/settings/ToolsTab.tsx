@@ -9,7 +9,7 @@ import { SettingsState } from '../../shared/lib/types';
 interface ToolsTabProps {
   state: {
     aiTools: SettingsState['aiTools'];
-    availableTools: any[];
+    availableTools: { id: string; name: string; description: string }[];
   };
   actions: {
     setTools: (tools: SettingsState['aiTools']) => void;
