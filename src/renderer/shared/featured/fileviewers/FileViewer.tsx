@@ -482,7 +482,7 @@ function FileViewer({
             )}>
               {/* External Change Banner */}
               {externalChangeDetected && (
-                <div className="absolute top-0 left-0 right-0 z-30 bg-primary/10 border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-4 py-2 text-xs text-primary animate-in fade-in slide-in-from-top-1 duration-300">
+                <div className="absolute top-0 left-0 right-0 z-50 bg-primary/10 border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-4 py-2 text-xs text-primary animate-in fade-in slide-in-from-top-1 duration-300">
                   <div className="flex items-center gap-2">
                     <AlertCircle size={14} />
                     <span>This file has been modified externally.</span>
@@ -549,7 +549,7 @@ function FileViewer({
 
             {/* Specialized Viewer */}
             {(!isEditing && (effectiveCategory === 'markdown' || effectiveCategory === 'html' || effectiveCategory === 'pdf' || effectiveCategory === 'image' || effectiveCategory === 'video' || effectiveCategory === 'audio' || effectiveCategory === 'unsupported')) && (
-              <div className="absolute inset-0 z-20 bg-background">
+              <div className="absolute inset-0 z-1 bg-background">
                 <Handler 
                   file={fileInfo!} 
                   content={localContent} 

@@ -32,9 +32,9 @@ export const MarkdownViewer: React.FC<{ file: FileInfo; content?: string }> = ({
               <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
               Skill Configuration
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+            <div className="grid grid-cols-2 gap-x-12 gap-y-6">
               {Object.entries(frontmatter).map(([key, value]) => (
-                <div key={key} className={`flex flex-col gap-1.5 ${key === 'description' || String(value).length > 50 ? 'md:col-span-2' : ''}`}>
+                <div key={key} className={`flex flex-col gap-1.5 ${key === 'description' || String(value).length > 50 ? 'col-span-2' : ''}`}>
                   <span className="text-[10px] font-bold text-primary/80 uppercase tracking-wide">{key}</span>
                   <span className="text-[13px] text-foreground/80 leading-relaxed font-medium">
                     {typeof value === 'object' ? JSON.stringify(value) : String(value)}

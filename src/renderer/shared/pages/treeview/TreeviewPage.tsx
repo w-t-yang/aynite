@@ -462,7 +462,7 @@ export function TreeviewPage({ activeTabPath, dirtyFiles = [], onWorkspaceChange
           }
         }
       },
-      confirm: () => {
+      submit: () => {
         if (showNewWorkspaceModal) {
           handleCreateWorkspace();
         } else if (promptModal?.isOpen && promptValue.trim()) {

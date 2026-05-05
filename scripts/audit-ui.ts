@@ -85,6 +85,12 @@ const VIOLATIONS: Record<string, ViolationRule> = {
     name: 'Z-Index Hierarchy Violation',
     regex: /\bz-\[?(\d+)\]?|\bzIndex\s*:\s*(\d+)/g,
     description: 'Enforce standardized z-index layers: Splitters (100), Menus (2000-3000), Notifications (4000), Modals (5000), Context Menus (6000).'
+  },
+  ANIMATION_EFFECTS: {
+    key: 'animation',
+    name: 'Animation/Transition Effects',
+    regex: /\b(transition|duration)-[a-z0-9]+/g,
+    description: 'Avoid manual transition or duration classes. Use standardized animation primitives or maintain a static UI for consistency.'
   }
 };
 
@@ -95,8 +101,9 @@ if (process.argv.includes('-h') || process.argv.includes('--help')) {
   console.log('\nAynite UI Architecture Auditor');
   console.log('Usage: npm run audit:ui -- [options]\n');
   console.log('Options:');
-  console.log('  --focus=[type]    Only run specific checks (import, types, strings, tags, styles, system)');
+  console.log('  --focus=[type]    Only run specific checks (import, types, strings, tags, styles, system, animation)');
   console.log('  --folder=[path]   Audit a specific folder or file');
+  console.log('  --thorough        Run extra intensive checks (e.g. animation effects)');
   console.log('  -h, --help        Show this help message\n');
   console.log('Examples:');
   console.log('  npm run audit:ui -- --focus=import');
@@ -106,10 +113,11 @@ if (process.argv.includes('-h') || process.argv.includes('--help')) {
 
 const focusArg = process.argv.find(arg => arg.startsWith('--focus='))?.split('=')[1];
 const folderArg = process.argv.find(arg => arg.startsWith('--folder='))?.split('=')[1];
+const thoroughArg = process.argv.includes('--thorough');
 
 const activeViolations = focusArg
   ? Object.values(VIOLATIONS).filter(v => v.key === focusArg || v.name.toLowerCase().includes(focusArg))
-  : Object.values(VIOLATIONS);
+  : Object.values(VIOLATIONS).filter(v => thoroughArg || v.key !== 'animation');
 
 const targetFolders = folderArg 
   ? [path.resolve(ROOT_DIR, folderArg)] 
@@ -425,6 +433,21 @@ const auditFile = (filepath: string) => {
       }
     }
   }
+
+  // 10. Animation Effects (Thorough)
+  if (activeViolations.some(v => v.key === 'animation')) {
+    let animMatch;
+    while ((animMatch = VIOLATIONS.ANIMATION_EFFECTS.regex!.exec(content)) !== null) {
+      const lineNum = content.substring(0, animMatch.index).split('\n').length;
+      report.push({
+        type: VIOLATIONS.ANIMATION_EFFECTS.name,
+        file: relativePath,
+        line: lineNum,
+        snippet: lines[lineNum - 1].trim(),
+        message: VIOLATIONS.ANIMATION_EFFECTS.description
+      });
+    }
+  }
 };
 
 
@@ -445,7 +468,8 @@ const DISPLAY_ORDER = [
   VIOLATIONS.SYSTEM_CALLS.name,
   VIOLATIONS.DIRECT_PATH_IMPORT.name,
   VIOLATIONS.FORBIDDEN_PATH_FUNCTIONS.name,
-  VIOLATIONS.Z_INDEX_HIERARCHY.name
+  VIOLATIONS.Z_INDEX_HIERARCHY.name,
+  VIOLATIONS.ANIMATION_EFFECTS.name
 ];
 
 

@@ -20,13 +20,13 @@ export interface TabSwitcherAPI {
 
 export interface SettingsAPI {
   close: () => void;
-  confirm: () => void;
+  submit: () => void;
 }
 
 export interface SidebarAPI {
   copy: () => void;
   paste: () => void;
-  confirm: () => void;
+  submit: () => void;
 }
 
 export interface ChatAPI {
@@ -241,7 +241,7 @@ export class KeyManager {
       }
       if (e.key === 'Enter' && el.tagName === 'INPUT') {
         e.preventDefault();
-        this.settingsApi.confirm();
+        this.settingsApi.submit();
         return;
       }
     }
@@ -259,7 +259,7 @@ export class KeyManager {
       }
       if (e.key === 'Enter' && el.tagName === 'INPUT') {
         e.preventDefault();
-        this.sidebarApi.confirm();
+        this.sidebarApi.submit();
         return;
       }
     }

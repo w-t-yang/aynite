@@ -169,7 +169,7 @@ export async function runAgentLoop(
     return [...fullHistory, userMsg, errorMsg];
   }
 
-  return new Promise((resolve) => {
+  return new Promise((fulfill) => {
     const loopMessages: ChatMessage[] = [];
     let currentAssistantMsg: ChatMessage | null = null;
     const currentToolCalls: any[] = [];
@@ -217,7 +217,7 @@ export async function runAgentLoop(
         removeApprovalListener();
         onEvent({ type: 'error', content: 'Request aborted.' });
         finalizeAssistantMsg();
-        resolve([...fullHistory, userMsg, ...loopMessages]);
+        fulfill([...fullHistory, userMsg, ...loopMessages]);
         return;
       }
 
@@ -299,14 +299,14 @@ export async function runAgentLoop(
             role: 'assistant',
             content: `❌ **AI Stream Error**: ${part.error || part.message || 'Unknown stream error'}`
           };
-          resolve([...fullHistory, userMsg, ...loopMessages, errorMsg]);
+          fulfill([...fullHistory, userMsg, ...loopMessages, errorMsg]);
           break;
 
         case 'finish':
           removeDeltaListener();
           removeApprovalListener();
           finalizeAssistantMsg();
-          resolve([...fullHistory, userMsg, ...loopMessages]);
+          fulfill([...fullHistory, userMsg, ...loopMessages]);
           break;
       }
     });
