@@ -78,7 +78,7 @@ const TitleBar: React.FC = () => {
               <Button
                 variant="ghost"
                 onClick={() => setShowAddWorkspaceModal(true)}
-                className="w-full justify-start px-3 py-2 text-xs text-primary hover:bg-primary/10 rounded-md transition-colors gap-2"
+                className="w-full justify-start px-3 py-2 text-xs text-primary hover:bg-primary/10 rounded-md gap-2"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

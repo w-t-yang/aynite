@@ -1,6 +1,6 @@
 import React from 'react'
-import TileNode from './components/TileNode'
-import TitleBar from './components/TitleBar'
+import TileNode from './layout/TileNode'
+import TitleBar from './layout/TitleBar'
 import { AppProvider, useApp } from './context/AppContext'
 import { ThemeProvider } from './context/ThemeContext'
 

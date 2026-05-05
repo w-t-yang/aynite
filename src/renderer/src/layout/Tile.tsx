@@ -43,7 +43,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
   return (
     <div
       id={id}
-      className={`tile relative group transition-all duration-200 ${
+      className={`tile relative group ${
         isActive 
           ? 'border-primary ring-2 ring-primary/30 z-10 scale-[0.998] shadow-lg shadow-primary/5' 
           : 'border-tile-border opacity-60 hover:opacity-90'
@@ -53,7 +53,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     >
 
       <div 
-        className="absolute top-2 right-2 z-50 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+        className="absolute top-2 right-2 z-50 opacity-0 group-hover:opacity-100 hover:opacity-100"
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
