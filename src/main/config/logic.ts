@@ -31,6 +31,7 @@ import {
   writeText,
 } from '../../lib/path'
 import { getDefaultGlobalPrompts, restoreDefaultPrompts } from '../ai'
+import { getIgnorePatterns } from './ignore'
 import {
   getCommandsConfig,
   getSkillsConfig,
@@ -224,8 +225,6 @@ export async function loadConfig() {
     ...restConfig,
   }
 }
-
-export { getIgnorePatterns } from './ignore'
 
 export async function saveConfig(settings: any) {
   const {
