@@ -6,6 +6,21 @@ export const getAllLeafIds = (node: LayoutNode): string[] => {
   return node.children.flatMap(getAllLeafIds)
 }
 
+function findTileInSplit(
+  n: LayoutNode,
+  activeTileId: string,
+): { targetIndex: number; children: LayoutNode[] } | null {
+  if (n.type !== 'split') return null
+  const targetIndex = n.children.findIndex(
+    (child) =>
+      child.id === activeTileId ||
+      (child.type === 'split' &&
+        getAllLeafIds(child).includes(activeTileId)),
+  )
+  if (targetIndex === -1) return null
+  return { targetIndex, children: n.children }
+}
+
 export const splitActiveTile = (
   node: LayoutNode,
   activeTileId: string,
@@ -13,19 +28,14 @@ export const splitActiveTile = (
 ): LayoutNode => {
   const transform = (n: LayoutNode): LayoutNode => {
     if (n.type === 'split') {
-      const targetIndex = n.children.findIndex(
-        (child) =>
-          child.id === activeTileId ||
-          (child.type === 'split' &&
-            getAllLeafIds(child).includes(activeTileId)),
-      )
-
-      if (targetIndex !== -1) {
-        const updatedChildren = [...n.children]
+      const found = findTileInSplit(n, activeTileId)
+      if (found) {
+        const { targetIndex, children } = found
+        const updatedChildren = [...children]
 
         if (
           n.direction === direction &&
-          n.children[targetIndex].id === activeTileId
+          children[targetIndex].id === activeTileId
         ) {
           const newId = `tile-${Math.random().toString(36).substr(2, 9)}`
           const activeChild = n.children[targetIndex]
@@ -107,19 +117,14 @@ export const resizeActiveTile = (
 
   const transform = (n: LayoutNode): LayoutNode => {
     if (n.type === 'split') {
-      const targetIndex = n.children.findIndex(
-        (child) =>
-          child.id === activeTileId ||
-          (child.type === 'split' &&
-            getAllLeafIds(child).includes(activeTileId)),
-      )
-
-      if (targetIndex !== -1) {
-        const updatedChildren = [...n.children]
+      const found = findTileInSplit(n, activeTileId)
+      if (found) {
+        const { targetIndex, children } = found
+        const updatedChildren = [...children]
         let handledDeeply = false
 
-        updatedChildren[targetIndex] = transform(n.children[targetIndex])
-        if (updatedChildren[targetIndex] !== n.children[targetIndex]) {
+        updatedChildren[targetIndex] = transform(children[targetIndex])
+        if (updatedChildren[targetIndex] !== children[targetIndex]) {
           handledDeeply = true
         }
 
