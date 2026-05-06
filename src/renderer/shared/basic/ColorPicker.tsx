@@ -13,6 +13,10 @@ export function ColorPicker({
   ...props
 }: ColorPickerProps) {
   const inputId = id || 'color-picker-input'
+  const value = props.value as string
+  const sanitizedValue =
+    typeof value === 'string' && value.startsWith('#') ? value : '#000000'
+
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
@@ -25,6 +29,7 @@ export function ColorPicker({
         type="color"
         className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent transition-all hover:scale-105 active:scale-95"
         {...props}
+        value={sanitizedValue}
       />
     </div>
   )
