@@ -1,16 +1,21 @@
 import { AlertCircle, Download, RefreshCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { FLEX_CENTER_GAP_3 } from '../lib/styles'
 import { cn } from '../../shared/lib/utils'
+import { FLEX_CENTER_GAP_3 } from '../lib/styles'
 
-function UpdateNotification() {
+function _UpdateNotification() {
+  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   const [updateStatus, setUpdateStatus] = useState<
     'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
   >('idle')
+  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   const [updateInfo, setUpdateInfo] = useState<any>(null)
+  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   const [updateProgress, setUpdateProgress] = useState<number>(0)
+  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   const [updateError, setUpdateError] = useState<string | null>(null)
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   useEffect(() => {
     if (!window.aynite) return
 
@@ -52,6 +57,7 @@ function UpdateNotification() {
     }
   }, [])
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   useEffect(() => {
     if (updateStatus === 'error') {
       const timer = setTimeout(() => {
@@ -110,6 +116,7 @@ function UpdateNotification() {
           </div>
 
           <button
+            type="button"
             onClick={() => {
               setUpdateStatus('idle')
               setUpdateError(null)
@@ -148,6 +155,7 @@ function UpdateNotification() {
 
         {updateStatus === 'downloaded' && (
           <button
+            type="button"
             onClick={() => window.aynite.installUpdate()}
             className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 mt-1"
           >

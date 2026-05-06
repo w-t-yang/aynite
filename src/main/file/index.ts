@@ -1,7 +1,10 @@
 import { type FSWatcher, watch } from 'chokidar'
 import type { BrowserWindow } from 'electron'
 import { ipcMain } from 'electron'
-import { FileChannels, FileEventChannels } from '../../lib/constants/ipc-channels'
+import {
+  FileChannels,
+  FileEventChannels,
+} from '../../lib/constants/ipc-channels'
 import {
   checkIsTextFile,
   copy,

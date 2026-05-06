@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  Bot,
   Calendar,
   Check,
   Clock,
@@ -11,13 +10,13 @@ import {
   XCircle,
 } from 'lucide-react'
 import { Collapsible } from '../../shared/basic/Collapsible'
-import { cn } from '../../shared/lib/utils'
-import { FLEX_CENTER_GAP_2, FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
 import {
   isErrorMessage,
   ThoughtBlock,
   ToolCallItem,
 } from '../../shared/featured/advanced/ChatMessage'
+import { FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
+import { cn } from '../../shared/lib/utils'
 
 export { isErrorMessage, ThoughtBlock, ToolCallItem }
 
@@ -99,6 +98,7 @@ export function ApprovalModal({
 
         <div className="flex gap-2 pt-1">
           <button
+            type="button"
             onClick={onApprove}
             className="flex-1 h-8 rounded bg-warning text-warning-foreground hover:bg-warning/90 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest shadow shadow-warning/10 flex items-center justify-center gap-1.5 group/btn"
           >
@@ -109,6 +109,7 @@ export function ApprovalModal({
             Approve
           </button>
           <button
+            type="button"
             onClick={onReject}
             className="flex-1 h-8 rounded bg-muted/30 border border-border/20 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 group/btn"
           >
@@ -158,6 +159,7 @@ export function SessionsModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
           >
@@ -176,6 +178,7 @@ export function SessionsModal({
           ) : (
             sessions.map((s) => (
               <button
+                type="button"
                 key={s.id}
                 onClick={() => {
                   onSelect(s.id, s.date)

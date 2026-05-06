@@ -10,7 +10,11 @@ import {
   readText,
   writeJson,
 } from '../../lib/path'
-import { findFilesRecursively, getBundledResourcesPath, notifyError } from './common'
+import {
+  findFilesRecursively,
+  getBundledResourcesPath,
+  notifyError,
+} from './common'
 
 interface SpellMeta {
   name?: string

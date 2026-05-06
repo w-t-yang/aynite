@@ -3,8 +3,12 @@ import { useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
-import { ADD_ITEM_BUTTON, FLEX_COL_MIN, GRID_2_COL } from '../../shared/lib/styles'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
+import {
+  ADD_ITEM_BUTTON,
+  FLEX_COL_MIN,
+  GRID_2_COL,
+} from '../../shared/lib/styles'
 import { cn } from '../../shared/lib/utils'
 
 interface SpellItem {
@@ -66,7 +70,11 @@ export function SettingsFolderTab({
   }
 
   return (
-    <SettingsPage title={labels.title} description={labels.pageDescription} onRestore={onRestore}>
+    <SettingsPage
+      title={labels.title}
+      description={labels.pageDescription}
+      onRestore={onRestore}
+    >
       <Section
         title={labels.folderSectionTitle}
         description={labels.folderSectionDescription}

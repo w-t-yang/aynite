@@ -35,8 +35,7 @@ export function SkillsTab({ state, actions }: SkillsTabProps) {
         noFoldersLabel: 'No skill folders added.',
         noItemsLabel: 'No skills detected.',
         removeModalTitle: 'Remove Skill Folder',
-        removeModalBody:
-          'Are you sure you want to remove the folder',
+        removeModalBody: 'Are you sure you want to remove the folder',
       }}
       folders={state.skills}
       setFolders={actions.setSkills}

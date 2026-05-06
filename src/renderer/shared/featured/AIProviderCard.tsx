@@ -1,8 +1,12 @@
 import { useState } from 'react'
-import type { AIProviderInstance } from '../lib/types'
 import { Input } from '../basic/Input'
 import { DESCRIPTION_TEXT } from '../lib/styles'
-import { EditableCardFrame, EditableCardHeader, DeleteItemModal } from './EditableCard'
+import type { AIProviderInstance } from '../lib/types'
+import {
+  DeleteItemModal,
+  EditableCardFrame,
+  EditableCardHeader,
+} from './EditableCard'
 import { SelectionMenu } from './SelectionMenu'
 
 interface AIProviderCardProps {

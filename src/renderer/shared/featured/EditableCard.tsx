@@ -4,7 +4,11 @@ import { Button } from '../basic/Button'
 import { Input } from '../basic/Input'
 import { Modal } from '../basic/Modal'
 import { Radio } from '../basic/Radio'
-import { DESCRIPTION_TEXT, FLEX_CENTER_BETWEEN, FLEX_CENTER_GAP_3 } from '../lib/styles'
+import {
+  DESCRIPTION_TEXT,
+  FLEX_CENTER_BETWEEN,
+  FLEX_CENTER_GAP_3,
+} from '../lib/styles'
 import { cn } from '../lib/utils'
 
 export function EditableCardFrame({
@@ -48,11 +52,7 @@ export function EditableCardHeader({
   return (
     <div className={FLEX_CENTER_BETWEEN}>
       <div className={FLEX_CENTER_GAP_3}>
-        <Radio
-          name={radioName}
-          checked={isActive}
-          onChange={onSetActive}
-        />
+        <Radio name={radioName} checked={isActive} onChange={onSetActive} />
         <Input
           unstyled
           className="font-bold w-64"

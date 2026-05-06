@@ -35,8 +35,7 @@ export function CommandsTab({ state, actions }: CommandsTabProps) {
         noFoldersLabel: 'No command folders added.',
         noItemsLabel: 'No commands detected.',
         removeModalTitle: 'Remove Command Folder',
-        removeModalBody:
-          'Are you sure you want to remove the folder',
+        removeModalBody: 'Are you sure you want to remove the folder',
       }}
       folders={state.commands}
       setFolders={actions.setCommands}

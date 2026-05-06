@@ -1,7 +1,7 @@
 import {
   AGENT_PROMPTS,
-  GLOBAL_PROMPTS,
   createDefaultAgentConfig,
+  GLOBAL_PROMPTS,
 } from '../../lib/constants/ai'
 import {
   ensureDir,

@@ -1,7 +1,6 @@
-import { app } from 'electron'
 import {
-  DEFAULT_AI_CONFIG,
   createDefaultAgentConfig,
+  DEFAULT_AI_CONFIG,
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import {
@@ -25,13 +24,11 @@ import {
   getWorkspacesConfigPath,
   joinPaths,
   readJson,
-  readText,
   unlink,
   writeJson,
   writeText,
 } from '../../lib/path'
 import { getDefaultGlobalPrompts, restoreDefaultPrompts } from '../ai'
-import { getIgnorePatterns } from './ignore'
 import {
   getCommandsConfig,
   getSkillsConfig,
@@ -40,8 +37,9 @@ import {
   restoreSpell,
   setSpellsNotificationCallback,
 } from '../spells'
-import { initThemes } from '../theme'
 import { getBundledResourcesPath } from '../spells/common'
+import { initThemes } from '../theme'
+import { getIgnorePatterns } from './ignore'
 
 let notificationCallback:
   | ((data: { type: 'skill' | 'command'; path: string; error: string }) => void)

@@ -2,31 +2,9 @@ import type { Keybinding, KeybindingConfig } from '../../../lib/constants/types'
 
 export type { Keybinding, KeybindingConfig }
 
-export interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant' | 'model' | 'tool' | 'system'
-  content: string
-  tool_calls?: any[]
-  tool_call_id?: string
-  name?: string
-  thinking?: string
-}
+import type { ChatMessage, StreamPart } from '../../../lib/constants/chat'
 
-export interface AgentStepEvent {
-  type:
-    | 'thinking'
-    | 'tool_call'
-    | 'tool_result'
-    | 'text_delta'
-    | 'text_done'
-    | 'error'
-    | 'approval_request'
-  content: string
-  toolName?: string
-  toolArgs?: Record<string, any>
-  toolCallId?: string
-  approvalId?: string
-}
+export type { ChatMessage, StreamPart }
 
 export interface AIProviderInstance {
   id: string

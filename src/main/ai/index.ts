@@ -1,4 +1,5 @@
 import { type BrowserWindow, dialog, ipcMain } from 'electron'
+import type { ChatMessage } from '../../lib/constants/chat'
 import { AiChannels } from '../../lib/constants/ipc-channels'
 import { handleAiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
@@ -6,7 +7,7 @@ import { getToolsMetadata } from './tools'
 
 // ─── Payload types ─────────────────────────────────────────────────────────
 interface AiChatPayload {
-  messages: any[]
+  messages: ChatMessage[]
   config: any
   workspaceFolders: string[]
   activeFile?: string
@@ -14,7 +15,7 @@ interface AiChatPayload {
 
 interface SessionSavePayload {
   sessionId: string
-  messages: any[]
+  messages: ChatMessage[]
 }
 
 interface SessionLoadPayload {

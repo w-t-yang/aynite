@@ -10,9 +10,7 @@ export async function expandPathIteratively(
 ): Promise<void> {
   if (!treeData.length) return
 
-  const root = treeData
-    .map((n) => n.id)
-    .find((r) => targetPath.startsWith(r))
+  const root = treeData.map((n) => n.id).find((r) => targetPath.startsWith(r))
   if (!root) return
 
   const separator = targetPath.includes('\\') ? '\\' : '/'

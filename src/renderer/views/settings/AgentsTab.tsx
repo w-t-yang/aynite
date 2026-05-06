@@ -3,10 +3,10 @@ import { useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Collapsible } from '../../shared/basic/Collapsible'
 import { Modal } from '../../shared/basic/Modal'
-import { ADD_ITEM_BUTTON } from '../../shared/lib/styles'
 import { Section } from '../../shared/basic/Section'
 import { AgentCard, PromptFileRow } from '../../shared/featured/AgentCard'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
+import { ADD_ITEM_BUTTON } from '../../shared/lib/styles'
 import type { Agent, SettingsState } from '../../shared/lib/types'
 
 interface AgentsTabProps {

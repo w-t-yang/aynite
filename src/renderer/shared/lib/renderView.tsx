@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ThemeAwareView } from './useTheme'
 import { VIEW_CONTAINER } from './styles'
+import { ThemeAwareView } from './useTheme'
 import '../styles/index.css'
 
 export function renderView(Component: React.ComponentType) {

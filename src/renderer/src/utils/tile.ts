@@ -14,8 +14,7 @@ function findTileInSplit(
   const targetIndex = n.children.findIndex(
     (child) =>
       child.id === activeTileId ||
-      (child.type === 'split' &&
-        getAllLeafIds(child).includes(activeTileId)),
+      (child.type === 'split' && getAllLeafIds(child).includes(activeTileId)),
   )
   if (targetIndex === -1) return null
   return { targetIndex, children: n.children }

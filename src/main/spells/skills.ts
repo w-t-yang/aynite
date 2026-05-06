@@ -1,12 +1,9 @@
-import {
-  getSkillPath,
-  getSkillsDir,
-} from '../../lib/path'
+import { getSkillPath, getSkillsDir } from '../../lib/path'
 import {
   getSpellConfig,
   listAvailableSpells,
-  restoreDefaultSpells,
   restoreSpell as restoreBundledSpell,
+  restoreDefaultSpells,
   saveSpellConfig,
 } from './spell-installer'
 

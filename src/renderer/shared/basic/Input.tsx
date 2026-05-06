@@ -7,15 +7,23 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 import { SECTION_LABEL } from '../lib/styles'
-export function Input({ className, label, unstyled, ...props }: InputProps) {
+export function Input({
+  className,
+  label,
+  id,
+  unstyled,
+  ...props
+}: InputProps) {
+  const inputId = id || 'input-field'
   return (
     <div className={cn('flex flex-col gap-1.5', unstyled ? '' : 'w-full')}>
       {label && (
-        <label className={SECTION_LABEL}>
+        <label htmlFor={inputId} className={SECTION_LABEL}>
           {label}
         </label>
       )}
       <input
+        id={inputId}
         className={cn(
           unstyled
             ? 'bg-transparent border-none p-0 focus:outline-none focus:ring-0'

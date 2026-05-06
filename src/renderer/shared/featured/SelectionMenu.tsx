@@ -1,10 +1,10 @@
 import { ChevronDown, Search } from 'lucide-react'
 import type React from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '../basic/Input'
 import { type SelectionItem, SelectionList } from '../basic/SelectionList'
-import { cn } from '../lib/utils'
 import { SECTION_LABEL } from '../lib/styles'
+import { cn } from '../lib/utils'
 
 export interface SelectionMenuProps {
   items: SelectionItem[]
@@ -68,11 +68,11 @@ export function SelectionMenu({
   const isControlled = typeof x === 'number' && typeof y === 'number'
   const isOpen = isControlled ? true : internalIsOpen
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setInternalIsOpen(false)
     setSearch('')
     onClose?.()
-  }
+  }, [onClose])
 
   const handleSelect = (id: string) => {
     onSelect(id)
@@ -153,23 +153,26 @@ export function SelectionMenu({
 
   return (
     <div className={cn('flex flex-col gap-1.5', className)} ref={containerRef}>
-      {label && (
-        <label className={SECTION_LABEL}>
-          {label}
-        </label>
-      )}
+      {label && <span className={SECTION_LABEL}>{label}</span>}
 
-      <div className="relative">
+      <div
+        className="relative"
+        role="combobox"
+        aria-expanded={isOpen}
+        tabIndex={0}
+      >
         {trigger ? (
-          <div
+          <button
+            type="button"
+            disabled={disabled}
             onClick={(e) => {
               e.stopPropagation()
-              !disabled && setInternalIsOpen(!internalIsOpen)
+              setInternalIsOpen(!internalIsOpen)
             }}
             className="cursor-pointer"
           >
             {trigger}
-          </div>
+          </button>
         ) : (
           <button
             type="button"
@@ -202,6 +205,7 @@ export function SelectionMenu({
           <div
             ref={menuRef}
             style={menuStyle}
+            role="listbox"
             className={cn(
               'bg-sidebar border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col ring-1 ring-black/5 min-w-[200px]',
               !isControlled && 'absolute top-full mt-2 z-[2000]',
@@ -209,6 +213,9 @@ export function SelectionMenu({
               menuClassName,
             )}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === 'Escape') handleClose()
+            }}
           >
             {title && (
               <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 bg-muted/5 shrink-0">

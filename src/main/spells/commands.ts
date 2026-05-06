@@ -1,12 +1,9 @@
-import {
-  getCommandPath,
-  getCommandsDir,
-} from '../../lib/path'
+import { getCommandPath, getCommandsDir } from '../../lib/path'
 import {
   getSpellConfig,
   listAvailableSpells,
-  restoreDefaultSpells,
   restoreSpell as restoreBundledSpell,
+  restoreDefaultSpells,
   saveSpellConfig,
 } from './spell-installer'
 
@@ -23,13 +20,15 @@ export async function listAvailableCommands() {
 }
 
 export async function restoreDefaultCommands() {
-  return restoreDefaultSpells(
-    'commands',
-    ['hello-command'],
-    (name) => getCommandPath(name),
+  return restoreDefaultSpells('commands', ['hello-command'], (name) =>
+    getCommandPath(name),
   )
 }
 
 export async function restoreCommand(commandName: string) {
-  return restoreBundledSpell('commands', commandName, getCommandPath(commandName))
+  return restoreBundledSpell(
+    'commands',
+    commandName,
+    getCommandPath(commandName),
+  )
 }

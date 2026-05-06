@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 interface ComponentEntry {
@@ -18,7 +18,9 @@ function scanExports(filePath: string): string[] {
     const content = readFileSync(filePath, 'utf-8')
     const exports: string[] = []
     for (const line of content.split('\n')) {
-      const exportMatch = line.match(/^export\s+(?:default\s+)?(?:function|const|class)\s+(\w+)/)
+      const exportMatch = line.match(
+        /^export\s+(?:default\s+)?(?:function|const|class)\s+(\w+)/,
+      )
       if (exportMatch) exports.push(exportMatch[1])
       const interfaceMatch = line.match(/^export\s+(?:interface|type)\s+(\w+)/)
       if (interfaceMatch) exports.push(interfaceMatch[1])
@@ -29,17 +31,25 @@ function scanExports(filePath: string): string[] {
   }
 }
 
-function findPropsInterface(filePath: string, componentName: string): string | null {
+function findPropsInterface(
+  filePath: string,
+  componentName: string,
+): string | null {
   try {
     const content = readFileSync(filePath, 'utf-8')
-    const propsPattern = new RegExp(`(?:interface|type)\\s+${componentName}Props\\b`, 'i')
+    const propsPattern = new RegExp(
+      `(?:interface|type)\\s+${componentName}Props\\b`,
+      'i',
+    )
     return propsPattern.test(content) ? `${componentName}Props` : null
   } catch {
     return null
   }
 }
 
-function categorizeExport(name: string): 'component' | 'hook' | 'utility' | 'type' {
+function categorizeExport(
+  name: string,
+): 'component' | 'hook' | 'utility' | 'type' {
   if (name.startsWith('use')) return 'hook'
   if (name.endsWith('Props') || name.endsWith('Type')) return 'type'
   if (/^[A-Z]/.test(name)) return 'component'
@@ -69,7 +79,7 @@ function buildInventory(): ComponentEntry[] {
 
         const name = entry.replace(/\.(tsx|ts)$/, '')
         const exports = scanExports(fullPath)
-        const mainExport = exports.find(e => /^[A-Z]/.test(e)) || name
+        const mainExport = exports.find((e) => /^[A-Z]/.test(e)) || name
         const propsInterface = findPropsInterface(fullPath, mainExport)
 
         inventory.push({
@@ -101,9 +111,9 @@ if (process.argv.includes('--json')) {
 console.log('=== Component Inventory ===\n')
 
 const grouped = {
-  components: inventory.filter(e => e.type === 'component'),
-  hooks: inventory.filter(e => e.type === 'hook'),
-  utilities: inventory.filter(e => e.type === 'utility' || e.type === 'type'),
+  components: inventory.filter((e) => e.type === 'component'),
+  hooks: inventory.filter((e) => e.type === 'hook'),
+  utilities: inventory.filter((e) => e.type === 'utility' || e.type === 'type'),
 }
 
 for (const [group, items] of Object.entries(grouped)) {
@@ -111,10 +121,17 @@ for (const [group, items] of Object.entries(grouped)) {
   console.log(`--- ${group.toUpperCase()} (${items.length}) ---`)
   for (const item of items) {
     const props = item.propsInterface ? ` [props: ${item.propsInterface}]` : ''
-    const exports = item.exports.length > 1 ? ` (also exports: ${item.exports.filter(e => e !== item.name && !e.includes('Props')).join(', ')})` : ''
-    console.log(`  ${item.name.padEnd(25)} ${item.layer.padEnd(10)} ${item.path}${props}${exports}`)
+    const exports =
+      item.exports.length > 1
+        ? ` (also exports: ${item.exports.filter((e) => e !== item.name && !e.includes('Props')).join(', ')})`
+        : ''
+    console.log(
+      `  ${item.name.padEnd(25)} ${item.layer.padEnd(10)} ${item.path}${props}${exports}`,
+    )
   }
   console.log()
 }
 
-console.log(`Total: ${inventory.length} exports (${grouped.components.length} components, ${grouped.hooks.length} hooks, ${grouped.utilities.length} utilities)`)
+console.log(
+  `Total: ${inventory.length} exports (${grouped.components.length} components, ${grouped.hooks.length} hooks, ${grouped.utilities.length} utilities)`,
+)

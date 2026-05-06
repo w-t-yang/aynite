@@ -32,12 +32,12 @@ interface FileViewerProps {
 }
 
 function FileViewer({
-  filename,
+  _filename,
   content,
   onChange,
   onSave,
   isDirty,
-  keybindings,
+  _keybindings,
   initialCursorPos,
   onCursorChange,
   onRefresh,
@@ -258,6 +258,7 @@ function FileViewer({
         el.setSelectionRange(0, 0)
       }
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: updateCursor is a stable function declaration
   }, [updateCursor, initialCursorPos])
 
   useEffect(() => {
@@ -372,6 +373,7 @@ function FileViewer({
   }
 
   // Register with KeyManager
+  // biome-ignore lint/correctness/useExhaustiveDependencies: functions used in api object are intentionally listed
   useEffect(() => {
     const api = {
       isEditing: () => isEditing,
@@ -476,9 +478,10 @@ function FileViewer({
     nextSearch,
     updateCursor,
     moveCursor,
+    applyEdit,
   ])
 
-  const updateCursor = () => {
+  function updateCursor() {
     if (textareaRef.current) {
       const pos = textareaRef.current.selectionStart
       const textToCursor = localContent.substring(0, pos)
@@ -579,6 +582,7 @@ function FileViewer({
                       </span>
                     )}
                     <button
+                      type="button"
                       onClick={handleRefresh}
                       className={cn(
                         'px-3 py-1 rounded-sm transition-all font-medium',
@@ -669,7 +673,7 @@ function FileViewer({
                 effectiveCategory === 'unsupported') && (
                 <div className="absolute inset-0 z-1 bg-background">
                   <Handler
-                    file={fileInfo!}
+                    file={fileInfo as FileInfo}
                     content={localContent}
                     reason={handlerReason}
                   />
@@ -694,6 +698,7 @@ function FileViewer({
                 : '0/0'}
             </span>
             <button
+              type="button"
               onClick={() => setShowSearch(false)}
               className="text-muted-foreground hover:text-foreground"
             >
@@ -710,6 +715,7 @@ function FileViewer({
             <div className={FLEX_CENTER_GAP_2}>
               {isDirty && (
                 <button
+                  type="button"
                   onClick={onSave}
                   className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors mr-2"
                   title="Save File (Cmd/Ctrl + S)"
@@ -719,6 +725,7 @@ function FileViewer({
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => setIsEditing(!isEditing)}
                 className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors"
                 title={

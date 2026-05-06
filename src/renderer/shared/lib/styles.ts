@@ -1,17 +1,20 @@
 /** Small uppercase section heading label */
-export const SECTION_LABEL = 'text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60'
+export const SECTION_LABEL =
+  'text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60'
 
 /** View-level container occupying full screen, content clipped */
 export const VIEW_CONTAINER = 'h-screen w-screen overflow-hidden'
 
 /** File viewer empty state — centered column layout */
-export const VIEWER_CENTERED_COL = 'flex flex-col items-center justify-center min-h-full gap-8'
+export const VIEWER_CENTERED_COL =
+  'flex flex-col items-center justify-center min-h-full gap-8'
 
 /** File viewer empty state — centered row layout */
 export const VIEWER_CENTERED_ROW = 'flex items-center justify-center min-h-full'
 
 /** Action button inside a settings tab (add item, etc.) */
-export const ADD_ITEM_BUTTON = 'flex items-center gap-1.5 text-primary hover:bg-primary/10'
+export const ADD_ITEM_BUTTON =
+  'flex items-center gap-1.5 text-primary hover:bg-primary/10'
 
 /** Modal/panel description paragraph */
 export const DESCRIPTION_TEXT = 'text-sm text-muted-foreground leading-relaxed'

@@ -1,11 +1,11 @@
 import { FileText, Search, Settings as SettingsIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { FLEX_CENTER_GAP_1 } from '../lib/styles'
 import {
   type SelectionItem,
   SelectionList,
 } from '../../shared/basic/SelectionList'
 import { KeyManager } from '../lib/key-handlers'
+import { FLEX_CENTER_GAP_1 } from '../lib/styles'
 
 interface TabItem {
   id: string
@@ -25,7 +25,7 @@ interface TabSwitcherProps {
   onClose: () => void
 }
 
-function TabSwitcher({
+function TabSwitcherWIP({
   tabs,
   activeTabId,
   onSelect,
@@ -112,7 +112,8 @@ function TabSwitcher({
 
     KeyManager.registerTabSwitcher(api)
     return () => KeyManager.unregisterTabSwitcher()
-  }, [filtered, selectedIndex, onClose, onSelect, onOpenFile])
+    // biome-ignore lint/correctness/useExhaustiveDependencies: WIP unused component
+  }, [filtered, selectedIndex, handleSelectItem])
 
   const selectionItems: SelectionItem[] = filtered.map((item) => ({
     id: item.id,
@@ -129,6 +130,8 @@ function TabSwitcher({
   }))
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: WIP unused
+    // biome-ignore lint/a11y/noStaticElementInteractions: WIP unused
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]"
       onClick={(e) => {
@@ -136,8 +139,10 @@ function TabSwitcher({
       }}
     >
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+      <button
+        type="button"
+        aria-label="Close"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default"
         onClick={onClose}
       />
 

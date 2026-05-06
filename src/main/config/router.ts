@@ -23,7 +23,7 @@ import {
   loadSession,
   saveSession,
 } from '../ai'
-import { getTheme, getThemesList, saveTheme, deleteTheme } from '../theme'
+import { deleteTheme, getTheme, getThemesList, saveTheme } from '../theme'
 import {
   getWorkspaceState,
   getWorkspacesList,

@@ -1,10 +1,10 @@
+import { Moon, Sun } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
 import { Button } from '../../shared/basic/Button'
 import { FormModal } from '../../shared/featured/FormModal'
-import { FLEX_CENTER_GAP_1 } from '../../shared/lib/styles'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
+import { FLEX_CENTER_GAP_1 } from '../../shared/lib/styles'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 
@@ -76,18 +76,16 @@ const TitleBar: React.FC = () => {
             divided={false}
             align="center"
             trigger={
-              <Button
-                variant="ghost"
-                size="sm"
-                className={FLEX_CENTER_GAP_1}
-              >
+              <Button variant="ghost" size="sm" className={FLEX_CENTER_GAP_1}>
                 <span>{workspaceConfig.id}</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-3.5 w-3.5 text-muted-foreground"
                   viewBox="0 0 20 20"
                   fill="currentColor"
+                  aria-hidden="true"
                 >
+                  <title>Chevron down</title>
                   <path
                     fillRule="evenodd"
                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -108,7 +106,9 @@ const TitleBar: React.FC = () => {
                   className="h-4 w-4"
                   viewBox="0 0 20 20"
                   fill="currentColor"
+                  aria-hidden="true"
                 >
+                  <title>Add</title>
                   <path
                     fillRule="evenodd"
                     d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
