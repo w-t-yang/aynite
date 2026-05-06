@@ -14,7 +14,6 @@ import {
   copy,
   ensureDir,
   exists,
-  expandHome,
   getAIConfigPath,
   getAppearanceConfigPath,
   getAyniteDir,
@@ -51,9 +50,7 @@ export function setConfigNotificationCallback(cb: typeof notificationCallback) {
   setSpellsNotificationCallback(cb)
 }
 
-export { expandHome, getAyniteDir }
-
-export function getBundledResourcesPath(): string {
+function getBundledResourcesPath(): string {
   if (app.isPackaged) {
     return process.resourcesPath
   } else {
@@ -253,19 +250,7 @@ export async function loadConfig() {
   }
 }
 
-export async function getIgnorePatterns(): Promise<string[]> {
-  const ignorePath = getIgnoreConfigPath()
-  try {
-    if (!(await exists(ignorePath))) return ['.git', 'node_modules']
-    const data = await readText(ignorePath)
-    return data
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith('#'))
-  } catch {
-    return ['.git', 'node_modules']
-  }
-}
+export { getIgnorePatterns } from './ignore'
 
 export async function saveConfig(settings: any) {
   const {
@@ -289,7 +274,7 @@ export async function saveConfig(settings: any) {
   return true
 }
 
-export async function restoreAynitePlaybook() {
+async function restoreAynitePlaybook() {
   const destDir = getPlaybookPath()
   if (await exists(joinPaths(destDir, 'Welcome.md'))) return true
 

@@ -16,7 +16,7 @@ import {
 
 const execAsync = promisify(exec)
 
-export interface ToolContext {
+interface ToolContext {
   mainWindow: BrowserWindow
   workspaceFolders: string[]
   activeFile?: string
@@ -29,7 +29,7 @@ export function getToolsMetadata() {
   }))
 }
 
-export function createTools(context: ToolContext) {
+function createTools(context: ToolContext) {
   const { mainWindow, workspaceFolders, activeFile } = context
 
   const tools: any = {

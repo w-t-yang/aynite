@@ -537,6 +537,10 @@ function FileViewer({
   const lineCount = localContent.split('\n').length
   const lines = Array.from({ length: Math.max(1, lineCount) }, (_, i) => i + 1)
 
+  let handlerReason: string | undefined
+  if (isTooLarge) handlerReason = 'too_large'
+  else if (effectiveCategory === 'unsupported') handlerReason = 'binary'
+
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden relative">
       <div className="flex-1 flex overflow-hidden relative">
@@ -672,13 +676,7 @@ function FileViewer({
                   <Handler
                     file={fileInfo!}
                     content={localContent}
-                    reason={
-                      isTooLarge
-                        ? 'too_large'
-                        : effectiveCategory === 'unsupported'
-                          ? 'binary'
-                          : undefined
-                    }
+                    reason={handlerReason}
                   />
                 </div>
               )}

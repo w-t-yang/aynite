@@ -7,12 +7,12 @@ import {
 import { loadConfig, saveConfig } from './logic'
 import { routeGetConfig, routeSetConfig } from './router'
 
-export interface ConfigGetPayload {
+interface ConfigGetPayload {
   key: string
   payload?: any
 }
 
-export interface ConfigSetPayload {
+interface ConfigSetPayload {
   key: string
   payload: any
 }

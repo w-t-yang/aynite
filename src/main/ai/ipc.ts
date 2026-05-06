@@ -5,42 +5,21 @@ import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
 
 // ─── Payload types ─────────────────────────────────────────────────────────
-export interface AiChatPayload {
+interface AiChatPayload {
   messages: any[]
   config: any
   workspaceFolders: string[]
   activeFile?: string
 }
 
-export interface AiChatResult {
-  requestId?: string
-  error?: string
-}
-
-export interface AiApprovalRequest {
-  id: string
-  command: string
-  cwd: string
-}
-
-export interface AiApprovalResponse {
-  id: string
-  approved: boolean
-}
-
-export interface SessionSavePayload {
+interface SessionSavePayload {
   sessionId: string
   messages: any[]
 }
 
-export interface SessionLoadPayload {
+interface SessionLoadPayload {
   sessionId: string
   date: string
-}
-
-export interface SystemPromptPayload {
-  globalFiles?: string[]
-  agentFiles?: string[]
 }
 
 export function setupAiIpc(mainWindow: BrowserWindow) {

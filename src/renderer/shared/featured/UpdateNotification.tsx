@@ -2,7 +2,7 @@ import { AlertCircle, Download, RefreshCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '../../shared/lib/utils'
 
-export default function UpdateNotification() {
+function UpdateNotification() {
   const [updateStatus, setUpdateStatus] = useState<
     'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
   >('idle')

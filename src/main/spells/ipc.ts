@@ -10,18 +10,18 @@ const execAsync = promisify(exec)
 
 import { SpellChannels } from '../../lib/constants/ipc-channels'
 
-export interface CommandRunPayload {
+interface CommandRunPayload {
   command: string
   cwd?: string
 }
 
-export interface DirectCommandRunPayload {
+interface DirectCommandRunPayload {
   commandPath: string
   params: string[]
   currentFile?: string
 }
 
-export interface CommandResult {
+interface CommandResult {
   stdout: string
   stderr: string
 }

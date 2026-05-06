@@ -59,8 +59,8 @@ export const SuggestionList = forwardRef<
     },
   }))
 
-  const triggerLabel =
-    triggerChar === '@' ? 'Files' : triggerChar === '/' ? 'Skills' : 'Commands'
+  const TRIGGER_LABELS: Record<string, string> = { '@': 'Files', '/': 'Skills', '>': 'Commands' }
+  const triggerLabel = TRIGGER_LABELS[triggerChar] ?? 'Commands'
 
   const selectionItems: SelectionItem[] = items.map((item) => {
     let icon = <FileText size={14} />

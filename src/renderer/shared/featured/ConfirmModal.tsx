@@ -8,7 +8,7 @@ interface ConfirmModalProps {
   title?: string
 }
 
-export function ConfirmModal({
+function ConfirmModal({
   message,
   onConfirm,
   onCancel,

@@ -15,52 +15,33 @@ import {
   stat,
   writeText,
 } from '../../lib/path'
-import { getIgnorePatterns } from '../config'
-import { removeWorkspaceFolder, renameWorkspaceFolder } from '../workspace'
+import { getIgnorePatterns } from '../config/ignore'
 
 // ─── Payload types ─────────────────────────────────────────────────────────
-export interface FileEntry {
-  name: string
-  isDirectory: boolean
-  path: string
-}
-
-export interface FileInfoResult {
-  size: number
-  createdAt: Date
-  modifiedAt: Date
-  isDirectory: boolean
-  path: string
-  extension: string
-  isText: boolean
-}
-
-export interface FileCreatePayload {
+interface FileCreatePayload {
   path: string
   isDirectory: boolean
 }
 
-export interface FileRenamePayload {
+interface FileRenamePayload {
   oldPath: string
   newPath: string
 }
 
-export interface FileCopyPayload {
+interface FileCopyPayload {
   srcPath: string
   destPath: string
 }
 
-export interface FileSavePayload {
+interface FileSavePayload {
   path: string
   content: string
 }
 
-export interface FsChangeEvent {
-  event: string
-  path: string
-}
-
-export function setupFileIpc() {
+export function setupFileIpc(opts?: {
+  onRename?: (oldPath: string, newPath: string) => Promise<void>
+  onDelete?: (path: string) => Promise<void>
+}) {
   ipcMain.handle(FileChannels.LIST, async (_event, dirPath: string = '.') => {
     try {
       const resolvedPath = getAbsolutePath(expandHome(dirPath))
@@ -133,7 +114,7 @@ export function setupFileIpc() {
     FileChannels.RENAME,
     async (_event, { oldPath, newPath }: FileRenamePayload) => {
       await rename(oldPath, newPath)
-      await renameWorkspaceFolder(oldPath, newPath)
+      await opts?.onRename?.(oldPath, newPath)
       return true
     },
   )
@@ -148,7 +129,7 @@ export function setupFileIpc() {
 
   ipcMain.handle(FileChannels.DELETE, async (_event, filePath: string) => {
     await remove(filePath, { recursive: true, force: true })
-    await removeWorkspaceFolder(filePath)
+    await opts?.onDelete?.(filePath)
     return true
   })
 

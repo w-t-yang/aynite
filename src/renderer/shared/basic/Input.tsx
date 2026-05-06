@@ -6,11 +6,12 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   unstyled?: boolean
 }
 
+import { SECTION_LABEL } from '../lib/styles'
 export function Input({ className, label, unstyled, ...props }: InputProps) {
   return (
     <div className={cn('flex flex-col gap-1.5', unstyled ? '' : 'w-full')}>
       {label && (
-        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+        <label className={SECTION_LABEL}>
           {label}
         </label>
       )}

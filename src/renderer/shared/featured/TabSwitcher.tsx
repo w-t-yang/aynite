@@ -24,7 +24,7 @@ interface TabSwitcherProps {
   onClose: () => void
 }
 
-export default function TabSwitcher({
+function TabSwitcher({
   tabs,
   activeTabId,
   onSelect,
@@ -40,11 +40,10 @@ export default function TabSwitcher({
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    window.aynite.workspaceAllFiles().then((res) => {
-      if (res?.data) {
-        setWorkspaceFiles(res.data)
-      }
-    })
+    ;(async () => {
+      const res = await window.aynite.workspaceAllFiles()
+      if (res?.data) setWorkspaceFiles(res.data)
+    })()
   }, [])
 
   const openTabPaths = new Set(tabs.map((t) => t.filepath?.replace(/\\/g, '/')))
@@ -89,24 +88,23 @@ export default function TabSwitcher({
             filtered.length,
         )
       },
-      confirmSelection: () => {
+      confirmSelection: async () => {
         const item = filtered[selectedIndex]
         if (item) {
           if (item.isTab) {
             onSelect(item.id)
-          } else {
-            window.aynite.readFile(item.filepath).then((res) => {
-              if (res?.data) {
-                onOpenFile(
-                  {
-                    name: item.title,
-                    path: item.filepath!,
-                    isDirectory: false,
-                  },
-                  res.data,
-                )
-              }
-            })
+          } else if (item.filepath) {
+            const res = await window.aynite.readFile(item.filepath)
+            if (res?.data) {
+              onOpenFile(
+                {
+                  name: item.title,
+                  path: item.filepath,
+                  isDirectory: false,
+                },
+                res.data,
+              )
+            }
           }
           onClose()
         }
@@ -163,24 +161,23 @@ export default function TabSwitcher({
         <SelectionList
           items={selectionItems}
           selectedIndex={selectedIndex}
-          onSelect={(selection) => {
+          onSelect={async (selection) => {
             const item = filtered.find((f) => f.id === selection.id)
             if (item) {
               if (item.isTab) {
                 onSelect(item.id)
-              } else {
-                window.aynite.readFile(item.filepath).then((res) => {
-                  if (res?.data) {
-                    onOpenFile(
-                      {
-                        name: item.title,
-                        path: item.filepath!,
-                        isDirectory: false,
-                      },
-                      res.data,
-                    )
-                  }
-                })
+              } else if (item.filepath) {
+                const res = await window.aynite.readFile(item.filepath)
+                if (res?.data) {
+                  onOpenFile(
+                    {
+                      name: item.title,
+                      path: item.filepath,
+                      isDirectory: false,
+                    },
+                    res.data,
+                  )
+                }
               }
               onClose()
             }

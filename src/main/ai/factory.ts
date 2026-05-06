@@ -4,7 +4,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
 
-export interface AIProvider {
+interface AIProvider {
   provider: string
   apiKey?: string
   baseUrl?: string
@@ -12,7 +12,7 @@ export interface AIProvider {
   compatibility?: 'openai' | 'anthropic' | 'google'
 }
 
-export function getAIModel(config: AIProvider): LanguageModel {
+function getAIModel(config: AIProvider): LanguageModel {
   const { provider, apiKey, baseUrl, model, compatibility } = config
 
   switch (provider.toLowerCase()) {
@@ -43,13 +43,8 @@ export function getAIModel(config: AIProvider): LanguageModel {
     case 'ollama':
     case 'others':
     case 'openai-compatible': {
-      // If it's "others", we check the compatibility field
       const actualCompatibility =
-        provider === 'others'
-          ? compatibility
-          : provider === 'ollama'
-            ? 'openai'
-            : 'openai'
+        provider === 'others' ? compatibility : 'openai'
 
       if (actualCompatibility === 'anthropic') {
         return createAnthropic({

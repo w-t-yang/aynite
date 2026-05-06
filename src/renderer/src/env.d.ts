@@ -45,7 +45,7 @@ interface DirectCommandPayload {
   currentFile?: string
 }
 
-export interface AyniteWindow {
+interface AyniteWindow {
   // Config
   getConfig: (key: string, payload?: any) => Promise<any>
   setConfig: (key: string, payload: any) => Promise<boolean>

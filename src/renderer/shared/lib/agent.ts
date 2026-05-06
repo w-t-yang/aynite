@@ -1,4 +1,5 @@
 import type { AgentStepEvent, ChatMessage } from './types'
+import { prepareMessagesForApi } from './prepare-messages'
 
 export interface AgentConfig {
   provider: string
@@ -46,120 +47,7 @@ export async function runAgentLoop(
     fullHistory.unshift(sysMsg)
   }
 
-  // Helper to check for reasoning content
-  const hasReasoning = (m: ChatMessage) =>
-    m.thinking ||
-    m.content.includes('<thought>') ||
-    m.content.includes('<think>')
-
-  /**
-   * AI SDK v6 turns are very strict:
-   * Assistant [calls] -> Tool Results [all matching] -> (Next turn)
-   * We must ensure no other messages (user/assistant) interleave between calls and results.
-   */
-  const cleanMessages: any[] = []
-
-  for (let i = 0; i < fullHistory.length; i++) {
-    const m = fullHistory[i]
-
-    // --- CASE A: USER / SYSTEM / TOOL (orphaned) ---
-    if (m.role === 'user' || m.role === 'system') {
-      cleanMessages.push({ role: m.role, content: m.content || '' })
-      continue
-    }
-
-    if (m.role === 'tool') {
-      // Orphaned tool results (not immediately following an assistant call) are generally invalid for the SDK
-      // We'll skip them to keep the history clean, or map to user if they have important content
-      continue
-    }
-
-    // --- CASE B: ASSISTANT ---
-    if (m.role === 'assistant') {
-      const parts: any[] = []
-
-      // 1. Thinking / Text
-      if (hasReasoning(m)) {
-        parts.push({
-          type: 'reasoning',
-          text:
-            m.thinking ||
-            m.content.match(
-              /<(?:thought|think)>([\s\S]*?)<\/(?:thought|think)>/,
-            )?.[1] ||
-            '',
-        })
-      }
-      const cleanContent = m.content
-        .replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/g, '')
-        .trim()
-      if (cleanContent) {
-        parts.push({ type: 'text', text: cleanContent })
-      }
-
-      // 2. Identify available results that IMMEDIATELY follow this message
-      const availableResults = new Map<string, ChatMessage>()
-      let j = i + 1
-      while (j < fullHistory.length && fullHistory[j].role === 'tool') {
-        const toolMsg = fullHistory[j]
-        if (toolMsg.tool_call_id) {
-          availableResults.set(toolMsg.tool_call_id, toolMsg)
-        }
-        j++
-      }
-
-      // 3. Filter tool calls: only keep those that have a matching result in the immediate next block
-      const validCalls: any[] = []
-      if (m.tool_calls && m.tool_calls.length > 0) {
-        for (const c of m.tool_calls) {
-          if (c.toolCallId && availableResults.has(c.toolCallId)) {
-            validCalls.push(c)
-            parts.push({
-              type: 'tool-call',
-              toolCallId: c.toolCallId,
-              toolName: c.toolName,
-              input: typeof c.args === 'string' ? JSON.parse(c.args) : c.args,
-            })
-          }
-        }
-      }
-
-      // 4. Map the assistant message
-      if (parts.length > 0) {
-        cleanMessages.push({
-          role: 'assistant',
-          content:
-            parts.length === 1 && parts[0].type === 'text'
-              ? parts[0].text
-              : parts,
-        })
-
-        // 5. Append the matching tool results immediately after
-        for (const c of validCalls) {
-          const res = availableResults.get(c.toolCallId)!
-          cleanMessages.push({
-            role: 'tool',
-            content: [
-              {
-                type: 'tool-result',
-                toolCallId: c.toolCallId,
-                toolName: c.toolName,
-                output: { type: 'text', value: res.content || '' },
-              },
-            ],
-          })
-        }
-      } else {
-        // Fallback for interrupted assistant messages with no content and no valid calls
-        cleanMessages.push({ role: 'assistant', content: '(Interrupted)' })
-      }
-
-      // Skip the tool results we just processed
-      i = j - 1
-    }
-  }
-
-  const apiMessages = cleanMessages
+  const apiMessages = prepareMessagesForApi(fullHistory)
   const userMsg: ChatMessage = {
     id: genId(),
     role: 'user',

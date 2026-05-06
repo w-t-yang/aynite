@@ -8,7 +8,7 @@ import {
   saveTheme,
 } from './logic'
 
-export interface ThemeSavePayload {
+interface ThemeSavePayload {
   name: string
   data: any
 }

@@ -6,6 +6,7 @@ import { Input } from '../basic/Input'
 import { Modal } from '../basic/Modal'
 import { Radio } from '../basic/Radio'
 import { cn } from '../lib/utils'
+import { SECTION_LABEL } from '../lib/styles'
 
 interface PromptFileRowProps {
   filePath: string
@@ -91,7 +92,7 @@ export function AgentCard({
 
         <div className="ml-7 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+            <h4 className={SECTION_LABEL}>
               Agent Prompt Files
             </h4>
             <Button

@@ -1,12 +1,7 @@
 import {
-  ChevronDown,
-  ChevronRight,
   Copy,
   Edit2,
-  File,
   FilePlus,
-  Folder,
-  FolderOpen,
   FolderPlus,
   Trash2,
   X,
@@ -15,7 +10,6 @@ import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   type MoveHandler,
-  type NodeRendererProps,
   Tree,
   type TreeApi,
 } from 'react-arborist'
@@ -24,15 +18,13 @@ import { Input } from '../../shared/basic/Input'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
-import { cn } from '../../shared/lib/utils'
-
-interface FileNode {
-  id: string // Absolute path
-  name: string
-  isDirectory: boolean
-  isLoaded?: boolean
-  children?: FileNode[]
-}
+import {
+  type FileNode,
+  ConfirmModal,
+  NodeRenderer,
+  PromptModal,
+} from './components'
+import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
 
 export function Treeview() {
   const [activeTabPath, _setActiveTabPath] = useState<string>('')
@@ -96,7 +88,6 @@ export function Treeview() {
     if (!contextMenu) return []
     const { file } = contextMenu
 
-    // Empty space context menu
     if (!file) {
       return [
         {
@@ -195,20 +186,6 @@ export function Treeview() {
     }
   }, [workspaces, rootFilesPaths.includes, loadWorkspaceData])
 
-  const findNodeData = (
-    nodes: FileNode[],
-    targetId: string,
-  ): FileNode | null => {
-    for (const node of nodes) {
-      if (node.id === targetId) return node
-      if (node.children) {
-        const found = findNodeData(node.children, targetId)
-        if (found) return found
-      }
-    }
-    return null
-  }
-
   useEffect(() => {
     const expandPathIteratively = async (targetPath: string) => {
       if (!treeData.length) return
@@ -251,7 +228,6 @@ export function Treeview() {
           for (const p of pathsToOpen) {
             treeRef.current.open(p)
           }
-          // Use scrollTo and select with focus:false to highlight without stealing focus
           treeRef.current.scrollTo(targetPath)
           treeRef.current.select(targetPath, { focus: false })
         },
@@ -266,9 +242,6 @@ export function Treeview() {
     activeTabPath,
     treeData.length,
     treeData,
-    findNodeData,
-    fetchFiles,
-    updateNodeChildren,
   ])
 
   useEffect(() => {
@@ -282,43 +255,7 @@ export function Treeview() {
     }
     window.addEventListener('reload-folder', handleReload)
     return () => window.removeEventListener('reload-folder', handleReload)
-  }, [updateNodeChildren, fetchFiles])
-
-  const updateNodeChildren = (
-    nodes: FileNode[],
-    targetId: string,
-    children: FileNode[],
-  ): FileNode[] => {
-    return nodes.map((node) => {
-      if (node.id === targetId) {
-        return { ...node, children, isLoaded: true }
-      }
-      if (node.children) {
-        return {
-          ...node,
-          children: updateNodeChildren(node.children, targetId, children),
-        }
-      }
-      return node
-    })
-  }
-
-  const fetchFiles = async (dirPath: string): Promise<FileNode[]> => {
-    try {
-      const res = await window.aynite.getFiles(dirPath)
-      return res.map((f: any) => ({
-        id: f.path,
-
-        name: f.name,
-        isDirectory: f.isDirectory,
-        isLoaded: !f.isDirectory,
-        children: f.isDirectory ? [] : undefined,
-      }))
-    } catch (e) {
-      console.error(e)
-      return []
-    }
-  }
+  }, [])
 
   const loadWorkspaceData = async () => {
     try {
@@ -329,11 +266,7 @@ export function Treeview() {
       }
 
       const folders = await window.aynite.getWorkspaceFolders()
-      console.log('Sidebar: loaded folders from backend', folders)
       if (folders && Array.isArray(folders)) {
-        if (folders.length === 0) {
-          console.warn('Sidebar: Workspace has NO folders.')
-        }
         const rootNodes = folders.map((f: string) => ({
           id: f,
           name: f.split(/[/\\]/).pop() || f,
@@ -341,10 +274,7 @@ export function Treeview() {
           isLoaded: false,
           children: [],
         }))
-        console.log('Sidebar: setting tree data', rootNodes)
         setTreeData(rootNodes)
-      } else {
-        console.error('Sidebar: failed to load folders', folders)
       }
     } catch (e) {
       console.error(e)
@@ -378,7 +308,6 @@ export function Treeview() {
     if (!name) return
     if (workspaces.includes(name)) {
       ;(window as any).showToast('Workspace already exists', 'error')
-
       return
     }
     await window.aynite.createWorkspace(name)
@@ -407,7 +336,6 @@ export function Treeview() {
           'Cannot move subfolders to the workspace root.',
           'error',
         )
-
         return
       }
       const newOrder = rootFilesPaths.filter((id) => !dragIds.includes(id))
@@ -421,7 +349,6 @@ export function Treeview() {
           'Cannot move a workspace folder into a subfolder.',
           'error',
         )
-
         return
       }
 
@@ -475,13 +402,9 @@ export function Treeview() {
     }
 
     const dirname = await window.aynite.dirname(file.id)
-    const reloadPath =
-      (action === 'new-file' ||
-        action === 'new-folder' ||
-        action === 'paste') &&
-      file.isDirectory
-        ? file.id
-        : dirname
+    const isCreateOrPaste =
+      action === 'new-file' || action === 'new-folder' || action === 'paste'
+    const reloadPath = isCreateOrPaste && file.isDirectory ? file.id : dirname
     const parentDirForPaste = file.isDirectory ? file.id : dirname
 
     const executeAction = async (payloadVal?: string) => {
@@ -609,73 +532,6 @@ export function Treeview() {
     handleCreateWorkspace,
   ])
 
-  function NodeRenderer({
-    node,
-    style,
-    dragHandle,
-  }: NodeRendererProps<FileNode>) {
-    const { name, isDirectory, id } = node.data
-    const isSelected = node.isSelected
-    const isDirty = dirtyFiles.includes(id)
-
-    return (
-      <div
-        style={style}
-        ref={dragHandle}
-        className={cn(
-          'flex items-center cursor-pointer hover:bg-accent text-sm select-none px-0.5 py-0.5',
-          isSelected
-            ? 'bg-primary/10 text-primary font-medium hover:bg-primary/20'
-            : 'text-muted-foreground',
-        )}
-        onClick={(e: React.MouseEvent) => {
-          node.handleClick(e)
-          if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
-            if (isDirectory) {
-              node.toggle()
-            } else {
-              onSelectFile?.({ name, isDirectory, path: id })
-            }
-          }
-        }}
-        onContextMenu={(e: React.MouseEvent) => {
-          e.preventDefault()
-          e.stopPropagation()
-          node.select()
-          setContextMenu({ x: e.clientX, y: e.clientY, file: node.data })
-        }}
-      >
-        <span className="w-6 h-6 mr-1 flex items-center justify-center">
-          {isDirectory ? (
-            node.isOpen ? (
-              <ChevronDown size={14} />
-            ) : (
-              <ChevronRight size={14} />
-            )
-          ) : null}
-        </span>
-        {isDirectory ? (
-          node.isOpen ? (
-            <FolderOpen size={14} className="mr-1.5 text-primary" />
-          ) : (
-            <Folder size={14} className="mr-1.5 text-primary" />
-          )
-        ) : (
-          <File size={14} className="mr-1.5" />
-        )}
-        <span
-          className={cn(
-            'truncate text-foreground font-medium',
-            isDirty && 'italic text-primary',
-          )}
-        >
-          {name}
-          {isDirty && ' •'}
-        </span>
-      </div>
-    )
-  }
-
   return (
     <div
       className="sidebar-container w-full h-full bg-card flex flex-col shrink-0 overflow-hidden outline-none px-2 py-3"
@@ -703,7 +559,14 @@ export function Treeview() {
               return !parentNode.data?.isDirectory
             }}
           >
-            {NodeRenderer}
+            {(props) => (
+              <NodeRenderer
+                {...props}
+                onSelectFile={onSelectFile}
+                setContextMenu={setContextMenu}
+                dirtyFiles={dirtyFiles}
+              />
+            )}
           </Tree>
         ) : (
           <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
@@ -790,93 +653,6 @@ export function Treeview() {
           divided
         />
       )}
-    </div>
-  )
-}
-
-function PromptModal({
-  title,
-  placeholder,
-  value,
-  onChange,
-  onConfirm,
-  onCancel,
-}: {
-  title: string
-  placeholder: string
-  value: string
-  onChange: (v: string) => void
-  onConfirm: (v: string) => void
-  onCancel: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-      <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
-        <h3 className="text-lg font-medium mb-4 text-foreground">{title}</h3>
-        <Input
-          autoFocus
-          type="text"
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-background text-foreground border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4"
-        />
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => value.trim() && onConfirm(value.trim())}
-            className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium"
-          >
-            Confirm
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ConfirmModal({
-  message,
-  onConfirm,
-  onCancel,
-}: {
-  message: string
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-      <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
-        <h3 className="text-lg font-medium mb-4 text-foreground">
-          Confirm Deletion
-        </h3>
-        <p className="text-sm text-muted-foreground mb-6 break-words">
-          {message}
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm text-foreground hover:bg-accent rounded-md transition-colors"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={onConfirm}
-            className="px-4 py-2 text-sm bg-destructive text-destructive-foreground hover:opacity-90 rounded-md transition-colors font-medium"
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }

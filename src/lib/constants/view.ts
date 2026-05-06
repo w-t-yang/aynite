@@ -2,7 +2,7 @@
  * View Management Protocol
  */
 
-export enum ViewRequest {
+enum ViewRequest {
   // Navigation & State
   GET_WORKSPACE_STATE = 'get-workspace-state',
   SET_WORKSPACE_STATE = 'set-workspace-state',
@@ -39,35 +39,11 @@ export enum ViewRequest {
 }
 
 // Protocol Identifiers
-export const AYNITE_VIEW_REQUEST = 'aynite-view-request'
-export const AYNITE_VIEW_RESPONSE = 'aynite-view-response'
-export const AYNITE_VIEW_OPERATION = 'aynite-view-operation'
+const AYNITE_VIEW_REQUEST = 'aynite-view-request'
+const AYNITE_VIEW_RESPONSE = 'aynite-view-response'
+const AYNITE_VIEW_OPERATION = 'aynite-view-operation'
 
 // Operation Keys
-export const AYNITE_EVENT_ACTIVE_FILE_CHANGED =
+const AYNITE_EVENT_ACTIVE_FILE_CHANGED =
   'aynite:event-active-file-changed'
-export const AYNITE_EVENT_THEME_CHANGED = 'aynite:event-theme-changed'
-
-/**
- * Data Transfer Objects (DTO)
- */
-
-export interface ViewRequestDTO {
-  type: typeof AYNITE_VIEW_REQUEST
-  id: string
-  method: ViewRequest
-  payload?: unknown
-}
-
-export interface ViewResponseDTO {
-  type: typeof AYNITE_VIEW_RESPONSE
-  id: string
-  result?: unknown
-  error?: string
-}
-
-export interface ViewOperationDTO {
-  type: typeof AYNITE_VIEW_OPERATION
-  operation: string
-  params?: unknown
-}
+const AYNITE_EVENT_THEME_CHANGED = 'aynite:event-theme-changed'

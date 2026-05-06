@@ -13,7 +13,12 @@ import { setupSpellsIpc } from './spells/index'
 import { setupProtocol, setupSystemIpc } from './system/index'
 import { setupThemeIpc } from './theme/index'
 import { setupUpdater } from './updater'
-import { getWorkspaceFolders, setupWorkspaceIpc } from './workspace/index'
+import {
+  getWorkspaceFolders,
+  removeWorkspaceFolder,
+  renameWorkspaceFolder,
+  setupWorkspaceIpc,
+} from './workspace/index'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -120,11 +125,18 @@ app.whenReady().then(async () => {
 
   if (mainWindow) {
     setupAiIpc(mainWindow)
-    setupWorkspaceIpc(mainWindow)
+    setupWorkspaceIpc(mainWindow, {
+      onFoldersChanged: async (folders) => {
+        setupWatcher(mainWindow, folders)
+      },
+    })
     setupUpdater(mainWindow)
     setupConfigIpc()
     setupThemeIpc()
-    setupFileIpc()
+    setupFileIpc({
+      onRename: renameWorkspaceFolder,
+      onDelete: removeWorkspaceFolder,
+    })
     setupSpellsIpc(mainWindow)
     setupSystemIpc(mainWindow)
 

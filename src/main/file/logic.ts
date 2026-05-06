@@ -2,7 +2,7 @@ import { type FSWatcher, watch } from 'chokidar'
 import type { BrowserWindow } from 'electron'
 import { FileEventChannels } from '../../lib/constants/ipc-channels'
 import { getBasename } from '../../lib/path'
-import { getIgnorePatterns } from '../config'
+import { getIgnorePatterns } from '../config/ignore'
 
 let watcher: FSWatcher | null = null
 
@@ -13,8 +13,9 @@ export function setupWatcher(mainWindow: BrowserWindow, folders: string[]) {
 
   if (folders.length === 0) return
 
-  getIgnorePatterns()
-    .then((ignorePatterns) => {
+  ;(async () => {
+    try {
+      const ignorePatterns = await getIgnorePatterns()
       watcher = watch(folders, {
         ignored: (p) => {
           const basename = getBasename(p)
@@ -36,8 +37,8 @@ export function setupWatcher(mainWindow: BrowserWindow, folders: string[]) {
           })
         }
       })
-    })
-    .catch((e) => {
+    } catch (e) {
       console.error('Error in setupWatcher ignore patterns:', e)
-    })
+    }
+  })()
 }

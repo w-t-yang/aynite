@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '../basic/Input'
 import { type SelectionItem, SelectionList } from '../basic/SelectionList'
 import { cn } from '../lib/utils'
+import { SECTION_LABEL } from '../lib/styles'
 
 export interface SelectionMenuProps {
   items: SelectionItem[]
@@ -153,7 +154,7 @@ export function SelectionMenu({
   return (
     <div className={cn('flex flex-col gap-1.5', className)} ref={containerRef}>
       {label && (
-        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+        <label className={SECTION_LABEL}>
           {label}
         </label>
       )}

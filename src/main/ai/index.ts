@@ -1,5 +1,4 @@
 export { listSessions, loadSession, saveSession } from './chat'
-export type { AIProvider } from './factory'
 export { setupAiIpc } from './ipc'
 export {
   getDefaultGlobalPrompts,

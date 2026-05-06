@@ -3,8 +3,7 @@ import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import type { WorkspaceTab } from '../../lib/types/workspace'
-import { getIgnorePatterns } from '../config'
-import { setupWatcher } from '../file'
+import { getIgnorePatterns } from '../config/ignore'
 import {
   addWorkspaceFolder,
   createWorkspace,
@@ -17,13 +16,16 @@ import {
   switchWorkspace,
 } from './logic'
 
-export interface WorkspaceStatePayload {
+interface WorkspaceStatePayload {
   workspaceName: string
   tabs: WorkspaceTab[]
   activeTabId: string
 }
 
-export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
+export function setupWorkspaceIpc(
+  mainWindow: BrowserWindow,
+  opts?: { onFoldersChanged?: (folders: string[]) => Promise<void> | void },
+): void {
   ipcMain.handle(WorkspaceChannels.LIST, async () => {
     return await getWorkspacesList()
   })
@@ -36,7 +38,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
     const success = await switchWorkspace(name)
     if (success) {
       const folders = await getWorkspaceFolders()
-      setupWatcher(mainWindow, folders)
+      await opts?.onFoldersChanged?.(folders)
     }
     return success
   })
@@ -50,7 +52,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
     const success = await addWorkspaceFolder(folderPath)
     if (success) {
       const folders = await getWorkspaceFolders()
-      setupWatcher(mainWindow, folders)
+      await opts?.onFoldersChanged?.(folders)
     }
     return folderPath
   })
@@ -79,7 +81,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
     async (_event, folders: string[]) => {
       const success = await reorderWorkspaceFolders(folders)
       if (success) {
-        setupWatcher(mainWindow, folders)
+        await opts?.onFoldersChanged?.(folders)
       }
       return success
     },
@@ -91,7 +93,7 @@ export function setupWorkspaceIpc(mainWindow: BrowserWindow): void {
       const success = await removeWorkspaceFolder(folderPath)
       if (success) {
         const folders = await getWorkspaceFolders()
-        setupWatcher(mainWindow, folders)
+        await opts?.onFoldersChanged?.(folders)
       }
       return success
     },

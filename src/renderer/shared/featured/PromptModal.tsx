@@ -11,7 +11,7 @@ interface PromptModalProps {
   onCancel: () => void
 }
 
-export function PromptModal({
+function PromptModal({
   title,
   placeholder,
   value,
