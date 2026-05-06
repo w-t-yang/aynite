@@ -1,9 +1,7 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import { ConfigKey } from '../../lib/constants/config'
-import {
-  ConfigChannels,
-  ConfigEventChannels,
-} from '../../lib/constants/ipc-channels'
+import { ConfigChannels } from '../../lib/constants/ipc-channels'
+import { broadcastAppEvent } from '../broadcast'
 import { loadConfig, saveConfig } from './logic'
 import { routeGetConfig, routeSetConfig } from './router'
 
@@ -38,17 +36,12 @@ export function setupConfigIpc() {
     ConfigChannels.SET,
     async (_event, { key, payload }: ConfigSetPayload) => {
       const result = await routeSetConfig(key, payload)
-      // Broadcast theme changes to all windows (main renderer + iframe views)
-      // Handle both switching themes and editing the current theme
+      // Broadcast theme changes via the unified app event channel
       if (key === ConfigKey.ACTIVE_THEME) {
-        BrowserWindow.getAllWindows().forEach((win) => {
-          win.webContents.send(ConfigEventChannels.THEME_CHANGED, payload)
-        })
+        broadcastAppEvent('theme-changed', { themeId: payload })
       } else if (key === ConfigKey.THEME) {
         const themeId = (payload as { id: string }).id
-        BrowserWindow.getAllWindows().forEach((win) => {
-          win.webContents.send(ConfigEventChannels.THEME_CHANGED, themeId)
-        })
+        broadcastAppEvent('theme-changed', { themeId })
       }
       return result
     },

@@ -1,20 +1,21 @@
 import type React from 'react'
 import { useCallback, useEffect } from 'react'
 import type { Theme } from '../../../lib/constants/types'
+import { useAppEvent } from './appEvents'
 import { applyThemeColors } from './utils'
 
 /**
  * Hook for iframe views to self-apply the active theme.
- * Loads the theme on mount and listens for theme changes via IPC.
- * Theme is applied fire-and-forget — CSS defaults cover the initial render.
+ * Loads the theme on mount and listens for theme changes via
+ * the unified app event channel (relayed from the main renderer).
  */
 export function useViewTheme() {
-  const loadTheme = useCallback(async (themeId?: string) => {
+  const loadTheme = useCallback(async (_data?: unknown) => {
     const w = window as any
     if (!w.aynite) return
 
     try {
-      const id = themeId || (await w.aynite.getConfig('activeTheme'))
+      const id = await w.aynite.getConfig('activeTheme')
       const themeData = await w.aynite.getConfig('theme', id)
       if (themeData) {
         applyThemeColors(themeData as Theme)
@@ -26,26 +27,9 @@ export function useViewTheme() {
 
   useEffect(() => {
     loadTheme()
-
-    const w = window as any
-    if (w.aynite?.onThemeChanged) {
-      const unsub = w.aynite.onThemeChanged((newId: string) => {
-        loadTheme(newId)
-      })
-      // Also listen for postMessage relay from the main renderer
-      // (Electron's webContents.send doesn't reach subframe preloads)
-      const handleMessage = (event: MessageEvent) => {
-        if (event.data?.type === 'aynite-theme-changed') {
-          loadTheme()
-        }
-      }
-      window.addEventListener('message', handleMessage)
-      return () => {
-        unsub()
-        window.removeEventListener('message', handleMessage)
-      }
-    }
   }, [loadTheme])
+
+  useAppEvent('theme-changed', loadTheme)
 }
 
 /**

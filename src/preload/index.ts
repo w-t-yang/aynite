@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import {
   AiChannels,
   AiEventChannels,
+  AppEventChannels,
   aiChatDeltaChannel,
   ConfigChannels,
   ConfigEventChannels,
@@ -140,6 +141,15 @@ const aynite = {
     ipcRenderer.on(ConfigEventChannels.APP_OPERATION, listener)
     return () =>
       ipcRenderer.removeListener(ConfigEventChannels.APP_OPERATION, listener)
+  },
+
+  /** Unified app event bus — receives typed events broadcast from the main process */
+  onAppEvent: (callback: (event: { type: string; data: unknown }) => void) => {
+    const listener = (_: any, event: { type: string; data: unknown }) =>
+      callback(event)
+    ipcRenderer.on(AppEventChannels.BROADCAST, listener)
+    return () =>
+      ipcRenderer.removeListener(AppEventChannels.BROADCAST, listener)
   },
 
   // ── Theme operations ────────────────────────────────────────────────────

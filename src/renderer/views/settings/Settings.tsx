@@ -13,6 +13,7 @@ import type { Theme } from '../../../lib/constants/types'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { TabButton } from '../../shared/basic/TabButton'
+import { useAppEvent } from '../../shared/lib/appEvents'
 import type { SettingsState } from '../../shared/lib/types'
 import { AboutTab } from './AboutTab'
 import { AgentsTab } from './AgentsTab'
@@ -104,6 +105,9 @@ export function Settings() {
     loadSettings()
     loadVersion()
   }, [loadVersion, loadSettings])
+
+  // Reload settings when theme changes externally (e.g. from title bar)
+  useAppEvent('theme-changed', loadSettings)
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)

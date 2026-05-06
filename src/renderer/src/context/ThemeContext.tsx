@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { ConfigKey } from '../../../lib/constants/config'
 import type { Theme } from '../../../lib/constants/types'
+import { AppEventRelay } from '../../shared/lib/appEvents'
 import { applyThemeColors as applySharedThemeColors } from '../../shared/lib/utils'
 import { ayniteConfig } from '../config'
 
@@ -42,15 +43,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
       setActiveTheme(theme)
       applyThemeColors(theme)
     }
-
-    // Relay theme changes to iframe views via postMessage
-    // Electron's webContents.send() does not reach subframe preloads,
-    // so we use cross-frame messaging instead.
-    for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
-      'iframe',
-    )) {
-      iframe.contentWindow?.postMessage({ type: 'aynite-theme-changed' }, '*')
-    }
   }, [applyThemeColors])
 
   const setTheme = async (themeId: string) => {
@@ -62,11 +54,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     loadThemes()
 
-    // Listen for theme changes broadcast from any window (e.g. settings iframe)
+    // Listen for theme changes via the unified app event channel
     const w = window as any
-    if (w.aynite?.onThemeChanged) {
-      const unsub = w.aynite.onThemeChanged(() => {
-        loadThemes()
+    if (w.aynite?.onAppEvent) {
+      const unsub = w.aynite.onAppEvent((event: { type: string }) => {
+        if (event.type === 'theme-changed') loadThemes()
       })
       return () => unsub()
     }
@@ -89,6 +81,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
     <ThemeContext.Provider
       value={{ activeTheme, themes, setTheme, loadThemes }}
     >
+      <AppEventRelay />
       {children}
     </ThemeContext.Provider>
   )

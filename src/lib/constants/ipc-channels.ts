@@ -112,3 +112,12 @@ export const ThemeChannels = {
   RESTORE: 'aynite:theme-restore',
   DELETE: 'aynite:theme-delete',
 } as const
+
+/**
+ * Unified app-level event broadcast channel.
+ * Main process sends typed events here; the main renderer receives them
+ * and relays to iframe views via postMessage.
+ */
+export const AppEventChannels = {
+  BROADCAST: 'aynite:app-event',
+} as const
