@@ -16,7 +16,7 @@ import {
 
 const execAsync = promisify(exec)
 
-interface ToolContext {
+export interface ToolContext {
   mainWindow: BrowserWindow
   workspaceFolders: string[]
   activeFile?: string
@@ -30,14 +30,12 @@ export function getToolsMetadata() {
 }
 
 export function createTools(context: ToolContext) {
-  const { mainWindow, workspaceFolders, activeFile } = context
-
   const tools: any = {
     read_file: {
       description: TOOL_METADATA.read_file.description,
       inputSchema: jsonSchema(TOOL_METADATA.read_file.inputSchema),
       execute: async ({ path: filePath }: { path: string }) => {
-        return await secureReadText(filePath, workspaceFolders)
+        return await secureReadText(filePath, context.workspaceFolders)
       },
     },
     write_file: {
@@ -50,24 +48,28 @@ export function createTools(context: ToolContext) {
         path: string
         content: string
       }) => {
-        return await secureWriteText(filePath, content, workspaceFolders)
+        return await secureWriteText(
+          filePath,
+          content,
+          context.workspaceFolders,
+        )
       },
     },
     list_files: {
       description: TOOL_METADATA.list_files.description,
       inputSchema: jsonSchema(TOOL_METADATA.list_files.inputSchema),
       execute: async ({ path: dirPath }: { path: string }) => {
-        return await secureListDir(dirPath, workspaceFolders)
+        return await secureListDir(dirPath, context.workspaceFolders)
       },
     },
     run_command: {
       description: TOOL_METADATA.run_command.description,
       inputSchema: jsonSchema(TOOL_METADATA.run_command.inputSchema),
       execute: async ({ command, cwd }: { command: string; cwd?: string }) => {
-        const runCwd = cwd || workspaceFolders[0] || '.'
+        const runCwd = cwd || context.workspaceFolders[0] || '.'
 
         const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-        mainWindow.webContents.send(AiEventChannels.APPROVAL_REQUEST, {
+        context.mainWindow.webContents.send(AiEventChannels.APPROVAL_REQUEST, {
           id: approvalId,
           command,
           cwd: runCwd,
@@ -131,7 +133,11 @@ export function createTools(context: ToolContext) {
         pattern: string
         folderPath: string
       }) => {
-        return await secureGrepSearch(folderPath, pattern, workspaceFolders)
+        return await secureGrepSearch(
+          folderPath,
+          pattern,
+          context.workspaceFolders,
+        )
       },
     },
     read_url: {
@@ -172,14 +178,18 @@ export function createTools(context: ToolContext) {
         depth?: number
       }) => {
         if (dirPath) {
-          return await secureGetFileTree(dirPath, workspaceFolders, depth)
+          return await secureGetFileTree(
+            dirPath,
+            context.workspaceFolders,
+            depth,
+          )
         } else {
           let fullOutput = ''
-          for (const folder of workspaceFolders) {
+          for (const folder of context.workspaceFolders) {
             fullOutput += `Workspace Folder: ${folder}\n`
             fullOutput += await secureGetFileTree(
               folder,
-              workspaceFolders,
+              context.workspaceFolders,
               depth,
             )
             fullOutput += '\n'
@@ -193,9 +203,9 @@ export function createTools(context: ToolContext) {
       inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),
       execute: async () => {
         return {
-          workspaceFolders,
+          workspaceFolders: context.workspaceFolders,
           configDir: getAyniteDir(),
-          activeFile: activeFile || null,
+          activeFile: context.activeFile || null,
         }
       },
     },

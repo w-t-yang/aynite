@@ -1,59 +1,35 @@
-import type { AgentStepEvent, ChatMessage } from '../../lib/types'
-
-export function normalizeAndHealMessages(msgs: any[]): ChatMessage[] {
-  const normalized = msgs.map((m: any) => ({
-    ...m,
-    id: m.id || Math.random().toString(36).slice(2, 11),
-    content: m.content || m.text || '',
-  }))
-
-  const healed: ChatMessage[] = []
-  for (let i = 0; i < normalized.length; i++) {
-    const m = normalized[i]
-    healed.push(m)
-
-    if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
-      const existingResultIds = new Set<string>()
-      let j = i + 1
-      while (j < normalized.length && normalized[j].role === 'tool') {
-        if (normalized[j].tool_call_id) {
-          existingResultIds.add(normalized[j].tool_call_id)
-        }
-        j++
-      }
-
-      for (const call of m.tool_calls) {
-        const callId = call.toolCallId || call.id
-        if (callId && !existingResultIds.has(callId)) {
-          healed.push({
-            id: Math.random().toString(36).slice(2, 11),
-            role: 'tool',
-            content: 'Task interrupted before completion.',
-            tool_call_id: callId,
-            name: call.toolName || call.function?.name,
-          })
-        }
-      }
-    }
-  }
-  return healed
-}
+import type { ChatMessage } from '../../../../lib/constants/chat'
 
 export function genId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+/** Append text to the last assistant message, or create a new one. */
 export function appendToAssistant(
   prev: ChatMessage[],
-  update: Partial<ChatMessage>,
+  text: string,
 ): ChatMessage[] {
   const last = prev[prev.length - 1]
   if (last && last.role === 'assistant') {
-    return [...prev.slice(0, -1), { ...last, ...update }]
+    const existingContent = typeof last.content === 'string' ? last.content : ''
+    return [
+      ...prev.slice(0, -1),
+      {
+        id: last.id,
+        role: 'assistant',
+        content: existingContent + text,
+        createdAt: last.createdAt,
+      },
+    ]
   }
   return [
     ...prev,
-    { id: genId(), role: 'assistant', content: '', ...update },
+    {
+      id: genId(),
+      role: 'assistant',
+      content: text,
+      createdAt: Date.now(),
+    },
   ]
 }
 
@@ -88,25 +64,34 @@ export async function executeCommandOnly(
       currentFile: activeTabPath,
     })
     const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim()
+    const output = content || '(No output)'
     setMessages([
       ...messages,
-      { id: genId(), role: 'user', content: text },
+      { id: genId(), role: 'user', content: text, createdAt: Date.now() },
       {
         id: genId(),
         role: 'tool',
-        name,
-        content: content || '(No output)',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: '',
+            toolName: name,
+            output,
+          },
+        ],
+        createdAt: Date.now(),
       },
     ])
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : String(e)
     setMessages([
       ...messages,
-      { id: genId(), role: 'user', content: text },
+      { id: genId(), role: 'user', content: text, createdAt: Date.now() },
       {
         id: genId(),
         role: 'assistant',
-        content: `❌ **Execution Error**: ${errorMsg}`,
+        content: `**Execution Error**: ${errorMsg}`,
+        createdAt: Date.now(),
       },
     ])
   } finally {

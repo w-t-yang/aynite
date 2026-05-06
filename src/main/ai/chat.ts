@@ -1,5 +1,6 @@
-import { stepCountIs, streamText } from 'ai'
+import { type ModelMessage, stepCountIs, streamText } from 'ai'
 import { app, type BrowserWindow } from 'electron'
+import type { ChatMessage, StreamPart } from '../../lib/constants/chat'
 import { aiChatDeltaChannel } from '../../lib/constants/ipc-channels'
 import {
   appendText,
@@ -16,26 +17,34 @@ import {
 import { type AIProvider, getAIModel } from './factory'
 import { createTools } from './tools'
 
-/**
- * Saves a chat session history as a JSON file.
- */
-export async function saveSession(sessionId: string, messages: any[]) {
+// ─── Cached tools with mutable context ───────────────────────────────
+// tools.ts functions reference `context.*` instead of destructuring,
+// so mutating this object before each request updates the tool closures.
+
+const toolContext = {
+  mainWindow: null as unknown as BrowserWindow,
+  workspaceFolders: [] as string[],
+  activeFile: undefined as string | undefined,
+}
+const cachedTools = createTools(toolContext)
+
+// ─── Session persistence ─────────────────────────────────────────────
+
+export async function saveSession(sessionId: string, messages: ChatMessage[]) {
   const dateStr = new Date().toISOString().split('T')[0]
   const logPath = getSessionPath(sessionId, dateStr)
   await writeJson(logPath, messages)
 }
 
-/**
- * Loads a specific chat session history.
- */
-export async function loadSession(sessionId: string, date: string) {
-  const logPath = getSessionPath(sessionId, date)
-  return await readJson(logPath)
+export async function loadSession(
+  sessionId: string,
+  date: string,
+): Promise<ChatMessage[]> {
+  const raw = await readJson(getSessionPath(sessionId, date))
+  if (!raw || !Array.isArray(raw)) return []
+  return raw as ChatMessage[]
 }
 
-/**
- * Lists all saved chat sessions.
- */
 export async function listSessions() {
   const logsBaseDir = getAyniteSessionsDir()
   const allLogs: {
@@ -56,29 +65,29 @@ export async function listSessions() {
       const sessions = await readdir(dateDir)
       for (const sessionEntry of sessions) {
         if (!sessionEntry.name.endsWith('.json')) continue
-        const session = sessionEntry.name
-        const sessionPath = getSessionPath(session.replace('.json', ''), date)
+        const sessionId = sessionEntry.name.replace('.json', '')
+        const sessionPath = getSessionPath(sessionId, date)
         try {
           const sessionStats = await stat(sessionPath)
-          const messages = await readJson(sessionPath)
-          if (messages && Array.isArray(messages)) {
+          const messages: ChatMessage[] = await loadSession(sessionId, date)
+          if (messages.length > 0) {
             const firstMsg =
-              messages.find((m: any) => m.role === 'user')?.content ||
-              messages[0]?.content ||
-              ''
+              messages.find((m) => m.role === 'user')?.content || ''
             const preview =
-              firstMsg.slice(0, 60) + (firstMsg.length > 60 ? '...' : '')
+              typeof firstMsg === 'string'
+                ? firstMsg.slice(0, 60) + (firstMsg.length > 60 ? '...' : '')
+                : '(complex message)'
 
             allLogs.push({
-              id: session.replace('.json', ''),
-              date: date,
+              id: sessionId,
+              date,
               lastModified: sessionStats.mtime,
               size: sessionStats.size,
-              preview: preview,
+              preview,
             })
           }
         } catch (e) {
-          console.error(`Error reading session ${session}`, e)
+          console.error(`Error reading session ${sessionEntry.name}`, e)
         }
       }
     }
@@ -91,26 +100,22 @@ export async function listSessions() {
   )
 }
 
-/**
- * Helper for logging raw AI events to dev.log (Dev environment only)
- */
+// ─── Logging ─────────────────────────────────────────────────────────
+
 async function logEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
   if (app.isPackaged) return
-
   try {
     const logFile = getLogPath('dev.log')
     const timestamp = new Date().toISOString()
     const logEntry = `[${timestamp}] [${type}] ${JSON.stringify(payload, null, 2)}\n${'-'.repeat(80)}\n`
-
     await appendText(logFile, logEntry)
   } catch (err) {
     console.error('Failed to log AI event:', err)
   }
 }
 
-/**
- * Main handler for AI chat streaming.
- */
+// ─── Main handler ────────────────────────────────────────────────────
+
 export async function handleAiChat(
   mainWindow: BrowserWindow,
   {
@@ -119,88 +124,119 @@ export async function handleAiChat(
     workspaceFolders,
     activeFile,
   }: {
-    messages: any[]
+    messages: ChatMessage[]
     config: AIProvider & { enabledTools?: { [key: string]: boolean } }
     workspaceFolders: string[]
     activeFile?: string
   },
 ) {
   const ayniteDir = getAyniteDir()
-  // We'll keep this simple check as it doesn't involve complex path assembly
   if (!workspaceFolders.some((f) => f === ayniteDir)) {
     workspaceFolders = [...workspaceFolders, ayniteDir]
   }
 
-  logEvent('REQUEST', { config, messages })
+  logEvent('REQUEST', { config, messages: messages.length })
 
   try {
     const model = getAIModel(config)
     const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
-    const allTools = createTools({
-      mainWindow,
-      workspaceFolders,
-      activeFile,
-    })
+    // Update mutable tool context
+    toolContext.mainWindow = mainWindow
+    toolContext.workspaceFolders = workspaceFolders
+    toolContext.activeFile = activeFile
 
-    const enabledTools: any = {}
+    const enabledTools: Record<string, any> = {}
     const toolSettings = config.enabledTools || {}
 
-    Object.keys(allTools).forEach((toolName) => {
+    Object.keys(cachedTools).forEach((toolName) => {
       if (toolSettings[toolName] !== false) {
-        enabledTools[toolName] = allTools[toolName]
+        enabledTools[toolName] = cachedTools[toolName]
       }
     })
 
+    const emit = (part: StreamPart) => {
+      mainWindow.webContents.send(aiChatDeltaChannel(requestId), part)
+    }
+
     ;(async () => {
       try {
-        const result = await streamText({
+        const result = streamText({
           model,
-          messages,
+          messages: messages as Array<ModelMessage>,
           tools: enabledTools,
-          stopWhen: (stepCountIs as any)(10),
-        } as any)
+          stopWhen: stepCountIs(10),
+        })
 
         let fullResponseText = ''
         let fullReasoningText = ''
-        const fullToolCalls: any[] = []
-        const fullToolResults: any[] = []
+        const fullToolCalls: {
+          toolCallId: string
+          toolName: string
+          args: string
+        }[] = []
 
         for await (const part of result.fullStream) {
           if (part.type === 'text-delta') {
             fullResponseText += part.text
+            emit({ type: 'text-delta', content: part.text })
           } else if (part.type === 'reasoning-delta') {
             fullReasoningText += part.text
+            emit({ type: 'reasoning-delta', content: part.text })
           } else if (part.type === 'tool-call') {
             fullToolCalls.push({
-              toolName: part.toolName,
-              args: part.input,
               toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              args: JSON.stringify(part.input),
+            })
+            emit({
+              type: 'tool-call',
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              args: JSON.stringify(part.input),
             })
           } else if (part.type === 'tool-result') {
-            fullToolResults.push({
-              toolName: part.toolName,
+            const content =
+              typeof part.output === 'string'
+                ? part.output
+                : JSON.stringify(part.output)
+            emit({
+              type: 'tool-result',
               toolCallId: part.toolCallId,
-              result: part.output,
+              toolName: part.toolName,
+              content,
             })
+          } else if (part.type === 'finish-step') {
+            emit({
+              type: 'step-finish',
+              finishReason: part.finishReason,
+              usage: part.usage
+                ? {
+                    promptTokens: part.usage.inputTokens,
+                    completionTokens: part.usage.outputTokens,
+                  }
+                : undefined,
+            })
+          } else if (part.type === 'error') {
+            const errorMessage =
+              part.error instanceof Error
+                ? part.error.message
+                : String(part.error)
+            emit({ type: 'error', error: errorMessage })
+          } else if (part.type === 'finish') {
+            emit({ type: 'finish' })
           }
-
-          mainWindow.webContents.send(aiChatDeltaChannel(requestId), part)
         }
 
         logEvent('RESPONSE', {
           text: fullResponseText,
           reasoning: fullReasoningText,
           toolCalls: fullToolCalls,
-          toolResults: fullToolResults,
         })
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e)
         logEvent('ERROR', { error: message })
-        mainWindow.webContents.send(aiChatDeltaChannel(requestId), {
-          type: 'error',
-          error: message,
-        })
+        emit({ type: 'error', error: message })
       }
     })()
 

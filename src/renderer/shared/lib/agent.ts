@@ -1,5 +1,11 @@
-import type { AgentStepEvent, ChatMessage } from './types'
-import { prepareMessagesForApi } from './prepare-messages'
+import type {
+  ChatMessage,
+  ReasoningPart,
+  StreamPart,
+  TextPart,
+  ToolCallPart,
+  ToolResultPart,
+} from '../../../lib/constants/chat'
 
 export interface AgentConfig {
   provider: string
@@ -11,14 +17,15 @@ export interface AgentConfig {
   agentPromptFiles?: string[]
 }
 
-const genId = () => Math.random().toString(36).slice(2, 11)
+const genId = () =>
+  `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
 
 export async function runAgentLoop(
   userMessage: string,
   history: ChatMessage[],
   config: AgentConfig,
   workspaceFolders: string[],
-  onEvent: (event: AgentStepEvent) => void,
+  onEvent: (event: StreamPart) => void,
   requestApproval: (command: string, cwd: string) => Promise<boolean>,
   activeFile?: string,
   abortSignal?: AbortSignal,
@@ -27,40 +34,29 @@ export async function runAgentLoop(
 
   const hasSystem = fullHistory.some((m) => m.role === 'system')
   if (!hasSystem) {
-    console.log(
-      '[Agent] No system prompt found in history, fetching merged prompt for agent files:',
-      config.agentPromptFiles,
-    )
     const sysPrompt = await window.aynite.getMergedSystemPrompt(
       undefined,
       config.agentPromptFiles,
     )
-    console.log(
-      '[Agent] Injected system prompt length:',
-      (sysPrompt || '').length,
-    )
-    const sysMsg: ChatMessage = {
+    fullHistory.unshift({
       id: genId(),
       role: 'system',
       content: sysPrompt,
-    }
-    fullHistory.unshift(sysMsg)
+      createdAt: Date.now(),
+    })
   }
 
-  const apiMessages = prepareMessagesForApi(fullHistory)
   const userMsg: ChatMessage = {
     id: genId(),
     role: 'user',
     content: userMessage,
+    createdAt: Date.now(),
   }
-  apiMessages.push({ role: 'user', content: userMsg.content })
-
-  console.log('[Agent] Sending messages to backend:', apiMessages.length)
 
   let requestId
   try {
     const res = await window.aynite.aiChat({
-      messages: apiMessages,
+      messages: [...fullHistory, userMsg],
       config: {
         provider: config.provider,
         apiKey: config.apiKey,
@@ -78,47 +74,52 @@ export async function runAgentLoop(
     const errorMsg: ChatMessage = {
       id: genId(),
       role: 'assistant',
-      content: `❌ **AI Error**: ${message}`,
+      content: `**AI Error**: ${message}`,
+      createdAt: Date.now(),
     }
-    onEvent({ type: 'error', content: `AI Error: ${message}` })
+    onEvent({ type: 'error', error: message })
     return [...fullHistory, userMsg, errorMsg]
   }
 
   return new Promise((fulfill) => {
     const loopMessages: ChatMessage[] = []
-    let currentAssistantMsg: ChatMessage | null = null
-    const currentToolCalls: any[] = []
 
-    const finalizeAssistantMsg = () => {
-      if (currentAssistantMsg) {
-        currentAssistantMsg.tool_calls = [...currentToolCalls]
-        loopMessages.push(currentAssistantMsg)
-        currentAssistantMsg = null
-        currentToolCalls.length = 0
-      }
-    }
+    // Accumulators for the current step
+    let textAccum = ''
+    let reasoningAccum = ''
+    let toolCalls: ToolCallPart[] = []
 
-    const ensureAssistantMsg = () => {
-      if (!currentAssistantMsg) {
-        currentAssistantMsg = {
+    function flushAssistant() {
+      const parts: Array<TextPart | ReasoningPart | ToolCallPart> = []
+      if (textAccum) parts.push({ type: 'text', text: textAccum })
+      if (reasoningAccum)
+        parts.push({ type: 'reasoning', text: reasoningAccum })
+      parts.push(...toolCalls)
+
+      if (parts.length > 0) {
+        const content =
+          parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts
+
+        loopMessages.push({
           id: genId(),
-          role: 'assistant',
-          content: '',
-          thinking: '',
-          tool_calls: [],
-        }
+          role: 'assistant' as const,
+          content,
+          createdAt: Date.now(),
+        })
       }
+
+      textAccum = ''
+      reasoningAccum = ''
+      toolCalls = []
     }
 
-    // Listen for approval requests
     const removeApprovalListener = window.aynite.onAiApprovalRequest(
       async (data: { id: string; command: string; cwd: string }) => {
         onEvent({
-          type: 'approval_request',
-          content: `Run command: ${data.command}`,
+          type: 'tool-call',
+          toolCallId: data.id,
           toolName: 'run_command',
-          toolArgs: { command: data.command, cwd: data.cwd },
-          approvalId: data.id,
+          args: JSON.stringify({ command: data.command, cwd: data.cwd }),
         })
         const approved = await requestApproval(data.command, data.cwd)
         window.aynite.respondToAiApproval(data.id, approved)
@@ -127,98 +128,77 @@ export async function runAgentLoop(
 
     const removeDeltaListener = window.aynite.onAiChatDelta(
       requestId,
-      (part: any) => {
+      (part: StreamPart) => {
         if (abortSignal?.aborted) {
           removeDeltaListener()
           removeApprovalListener()
-          onEvent({ type: 'error', content: 'Request aborted.' })
-          finalizeAssistantMsg()
+          flushAssistant()
           fulfill([...fullHistory, userMsg, ...loopMessages])
           return
         }
 
         switch (part.type) {
           case 'text-delta':
-            ensureAssistantMsg()
-            currentAssistantMsg!.content += part.text || ''
-            onEvent({ type: 'text_delta', content: part.text || '' })
+            textAccum += part.content
+            onEvent(part)
             break
 
-          case 'reasoning-delta': {
-            ensureAssistantMsg()
-            const reasoning = part.text || '' // TextStreamPart 'reasoning-delta' uses the 'text' field
-            currentAssistantMsg!.thinking += reasoning
-            onEvent({ type: 'thinking', content: reasoning })
+          case 'reasoning-delta':
+            reasoningAccum += part.content
+            onEvent(part)
             break
-          }
 
           case 'tool-call': {
-            ensureAssistantMsg()
-            const call = {
-              toolName: part.toolName,
-              args: part.input || part.args,
-              toolCallId: part.toolCallId,
+            let input: unknown = part.args
+            try {
+              input = JSON.parse(part.args)
+            } catch {
+              // use raw string if not valid JSON
             }
-            currentToolCalls.push(call)
-            onEvent({
-              type: 'tool_call',
-              content: `Calling ${part.toolName}`,
-              toolName: part.toolName,
-              toolArgs: call.args,
+            toolCalls.push({
+              type: 'tool-call',
               toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              input,
             })
+            onEvent(part)
             break
           }
 
           case 'tool-result': {
-            // Extract the actual result string from the output object (v6) or result field
-            let resultValue = ''
-            if (typeof part.output === 'string') {
-              resultValue = part.output
-            } else if (part.output && typeof part.output === 'object') {
-              resultValue = part.output.value || JSON.stringify(part.output)
-            } else {
-              resultValue = part.result || JSON.stringify(part || '')
+            // Flush the assistant message that contains the tool calls
+            flushAssistant()
+            // Add a tool message with the result
+            const resultPart: ToolResultPart = {
+              type: 'tool-result',
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              output: part.content,
             }
-
-            // Tool results are separate messages in the history
-            const resultMsg: ChatMessage = {
+            loopMessages.push({
               id: genId(),
               role: 'tool',
-              content: resultValue,
-              tool_call_id: part.toolCallId,
-              name: part.toolName,
-            }
-
-            // Before adding a tool result, we should finalize the preceding assistant message
-            finalizeAssistantMsg()
-            loopMessages.push(resultMsg)
-
-            onEvent({
-              type: 'tool_result',
-              content: resultValue,
-              toolName: part.toolName,
-              toolCallId: part.toolCallId,
+              content: [resultPart],
+              createdAt: Date.now(),
             })
+            onEvent(part)
             break
           }
 
           case 'step-finish':
-            finalizeAssistantMsg()
+            onEvent(part)
             break
 
           case 'error': {
             removeDeltaListener()
             removeApprovalListener()
-            onEvent({
-              type: 'error',
-              content: part.error || part.message || 'Unknown stream error',
-            })
-            finalizeAssistantMsg()
+            flushAssistant()
+            onEvent(part)
             const errorMsg: ChatMessage = {
               id: genId(),
               role: 'assistant',
-              content: `❌ **AI Stream Error**: ${part.error || part.message || 'Unknown stream error'}`,
+              content: `**AI Stream Error**: ${part.error}`,
+              createdAt: Date.now(),
             }
             fulfill([...fullHistory, userMsg, ...loopMessages, errorMsg])
             break
@@ -227,7 +207,7 @@ export async function runAgentLoop(
           case 'finish':
             removeDeltaListener()
             removeApprovalListener()
-            finalizeAssistantMsg()
+            flushAssistant()
             fulfill([...fullHistory, userMsg, ...loopMessages])
             break
         }

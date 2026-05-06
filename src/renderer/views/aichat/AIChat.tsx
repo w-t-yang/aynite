@@ -1,32 +1,22 @@
 import { Check, Copy, History } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { StreamPart } from '../../../lib/constants/chat'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
+import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
 import {
   appendToAssistant,
   executeCommandOnly,
   genId,
-  normalizeAndHealMessages,
 } from '../../shared/featured/advanced/chat-helpers'
-import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
 import {
   ChatInput,
   type ChatInputHandle,
 } from '../../shared/featured/ChatInput'
 import { type AgentConfig, runAgentLoop } from '../../shared/lib/agent'
-import type {
-  AgentStepEvent,
-  ChatMessage,
-  SettingsState,
-} from '../../shared/lib/types'
-import { cn } from '../../shared/lib/utils'
 import { FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
-import {
-  ApprovalModal,
-  SessionsModal,
-  ToolCallItem,
-  ToolResultMessage,
-  ThoughtBlock,
-} from './components'
+import type { ChatMessage, SettingsState } from '../../shared/lib/types'
+import { cn } from '../../shared/lib/utils'
+import { ApprovalModal, SessionsModal } from './components'
 
 export function AIChat() {
   const [settings, _setSettings] = useState<SettingsState>(
@@ -55,37 +45,12 @@ export function AIChat() {
     { id: string; date: string; lastModified: string; preview: string }[]
   >([])
 
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     const res = await window.aynite.listChatLogs()
     if (res) {
       setSessions(res)
     }
-  }
-
-  const _currentFileInfo = useMemo(() => {
-    if (!activeTabPath || activeTabPath === 'Settings') return null
-
-    const parts = activeTabPath.split(/[/\\]/)
-    const fileName = parts.pop() || ''
-    const wsFolder = workspaceFolders.find((f) => activeTabPath.startsWith(f))
-    let folderDisplay = ''
-    let hasSubfolders = false
-
-    if (wsFolder) {
-      folderDisplay =
-        wsFolder.split(/[/\\]/).filter(Boolean).pop() || 'workspace'
-      const relPath = activeTabPath.slice(wsFolder.length).replace(/^[/\\]/, '')
-      const relParts = relPath.split(/[/\\]/)
-      relParts.pop() // remove filename
-      if (relParts.length > 0) {
-        hasSubfolders = true
-      }
-    } else {
-      folderDisplay = parts.pop() || 'external'
-    }
-
-    return { fileName, folderDisplay, hasSubfolders }
-  }, [activeTabPath, workspaceFolders])
+  }, [])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -100,7 +65,7 @@ export function AIChat() {
         const { id, date } = JSON.parse(lastSession)
         window.aynite.loadChatLog(id, date).then((res: any) => {
           if (res) {
-            setMessages(normalizeAndHealMessages(res))
+            setMessages(res)
             setSessionId(id || null)
           }
         })
@@ -144,13 +109,12 @@ export function AIChat() {
       const dateStr = date || new Date().toISOString().split('T')[0]
       window.aynite.loadChatLog(id, dateStr).then((res: any) => {
         if (res) {
-          setMessages(normalizeAndHealMessages(res))
+          setMessages(res)
           setSessionId(id)
           localStorage.setItem(
             'lastSession',
             JSON.stringify({ id, date: dateStr }),
           )
-          console.log(`[Chat] Switched and healed session: ${id} (${dateStr})`)
         } else {
           setSessionId(id)
           setMessages([])
@@ -158,7 +122,6 @@ export function AIChat() {
             'lastSession',
             JSON.stringify({ id, date: dateStr }),
           )
-          console.log(`[Chat] Started new session with ID: ${id}`)
         }
         setTimeout(() => inputRef.current?.focus(), 100)
       })
@@ -176,20 +139,6 @@ export function AIChat() {
       delete (window as any).copyChat
     }
   }, [loadSessions])
-
-  const _handleOpenFileInternal = async (filepath: string) => {
-    if (!onOpenFile) return
-    try {
-      const res = await window.aynite.readFile(filepath)
-      if (res) {
-        const name = filepath.split(/[/\\]/).pop() || filepath
-        // Ensure we pass the exactly same structure as Sidebar
-        onOpenFile({ name, path: filepath, isDirectory: false }, res)
-      }
-    } catch (e) {
-      console.error('Failed to open file', e)
-    }
-  }
 
   const requestApproval = useCallback(
     (command: string, cwd: string): Promise<boolean> => {
@@ -220,10 +169,18 @@ export function AIChat() {
       const commandMentionRegex = />cmd\[(.*?)\]\((.*?)\)/g
       const skillMentionRegex = /\/skill\[(.*?)\]\((.*?)\)/g
 
-      if (await executeCommandOnly(text, activeTabPath, messages, setMessages, setLoading)) return
+      if (
+        await executeCommandOnly(
+          text,
+          activeTabPath,
+          messages,
+          setMessages,
+          setLoading,
+        )
+      )
+        return
 
-      // Normal Mode (AI involved)
-      const currentMatches = [...text.matchAll(skillMentionRegex)]
+      // Run embedded commands before AI
       const commandMatches = [...text.matchAll(commandMentionRegex)]
       const commandResults: {
         name: string
@@ -247,7 +204,7 @@ export function AIChat() {
               stdout: res.stdout || '',
               stderr: res.stderr || '',
             })
-          } catch (e: Error | unknown) {
+          } catch (e: unknown) {
             const errorMsg = e instanceof Error ? e.message : String(e)
             commandResults.push({
               name,
@@ -257,6 +214,7 @@ export function AIChat() {
             })
           }
         }
+        setLoading(false)
       }
 
       const activeId = settings.ai?.activeId
@@ -276,50 +234,50 @@ export function AIChat() {
         model: activeProvider?.model || '',
         compatibility: activeProvider?.compatibility,
         enabledTools: settings.aiTools,
-        agentPromptFiles, // Add this to AgentConfig interface if needed, or pass separately
+        agentPromptFiles,
       }
 
-      // 2. Add User Message
-      const userMsg: ChatMessage = { id: genId(), role: 'user', content: text }
+      // Build messages
+      const userMsg: ChatMessage = {
+        id: genId(),
+        role: 'user',
+        content: text,
+        createdAt: Date.now(),
+      }
       const updatedMessages = [...messages, userMsg]
 
-      // 3. Add Command Result Messages (if any)
-      if (commandResults.length > 0) {
-        for (const res of commandResults) {
-          const content = [res.stdout, res.stderr]
-            .filter(Boolean)
-            .join('\n')
-            .trim()
-          const cmdMsg: ChatMessage = {
-            id: genId(),
-            role: 'tool',
-            name: res.name,
-            content:
-              content || (res.error ? `Error: ${res.error}` : '(No output)'),
-          }
-          updatedMessages.push(cmdMsg)
+      for (const res of commandResults) {
+        const content = [res.stdout, res.stderr]
+          .filter(Boolean)
+          .join('\n')
+          .trim()
+        const output =
+          content || (res.error ? `Error: ${res.error}` : '(No output)')
+        const cmdMsg: ChatMessage = {
+          id: genId(),
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: `cmd_${Date.now()}`,
+              toolName: res.name,
+              output,
+            },
+          ],
+          createdAt: Date.now(),
         }
+        updatedMessages.push(cmdMsg)
       }
 
       setMessages(updatedMessages)
       setLoading(true)
-
-      const history: ChatMessage[] = updatedMessages.map((m) => ({
-        ...m,
-        content: m.content,
-      }))
 
       const cleanText = text
         .replace(skillMentionRegex, '')
         .replace(commandMentionRegex, '')
         .trim()
 
-      // If message only contained commands and no actual text/skills, don't trigger AI
-      if (
-        !cleanText &&
-        commandMatches.length > 0 &&
-        currentMatches.length === 0
-      ) {
+      if (!cleanText && commandMatches.length > 0) {
         setLoading(false)
         return
       }
@@ -331,97 +289,22 @@ export function AIChat() {
         const promptText = text
         const resultHistory = await runAgentLoop(
           promptText,
-          history.slice(0, -1),
+          updatedMessages.slice(0, -1),
           agentConfig,
           workspaceFolders,
-          (event: AgentStepEvent) => {
-            if (event.type === 'text_delta') {
-              setMessages((prev) => {
-                const lastContent = prev[prev.length - 1]?.content || ''
-                return appendToAssistant(prev, {
-                  content: lastContent + event.content,
-                })
-              })
-            } else if (event.type === 'thinking') {
-              setMessages((prev) => {
-                const lastThinking = prev[prev.length - 1]?.thinking || ''
-                return appendToAssistant(prev, {
-                  thinking: lastThinking + event.content,
-                })
-              })
-            } else if (event.type === 'tool_call') {
-              const call = {
-                toolName: event.toolName,
-                args: event.toolArgs,
-                toolCallId: event.toolCallId,
-              }
-              setMessages((prev) => {
-                const lastCalls = prev[prev.length - 1]?.tool_calls || []
-                return appendToAssistant(prev, {
-                  tool_calls: [...lastCalls, call],
-                })
-              })
-            } else if (event.type === 'tool_result') {
-              setMessages((prev) => {
-                // 1. Update the tool call result in the preceding assistant message for UI consistency
-                const newMessages = [...prev]
-                for (let i = newMessages.length - 1; i >= 0; i--) {
-                  if (
-                    newMessages[i].role === 'assistant' &&
-                    newMessages[i].tool_calls
-                  ) {
-                    const callIdx = newMessages[i].tool_calls?.findIndex(
-                      (c) => c.toolCallId === event.toolCallId,
-                    )
-                    if (callIdx !== -1) {
-                      newMessages[i] = {
-                        ...newMessages[i],
-                        tool_calls: newMessages[i].tool_calls?.map((c, idx) =>
-                          idx === callIdx ? { ...c, result: event.content } : c,
-                        ),
-                      }
-                      break
-                    }
-                  }
-                }
-
-                // 2. Append the tool result as a separate message for the history
-                return [
-                  ...newMessages,
-                  {
-                    id: genId(),
-                    role: 'tool',
-                    content: event.content,
-                    tool_call_id: event.toolCallId,
-                    name: event.toolName,
-                  },
-                ]
-              })
-            } else if (event.type === 'approval_request') {
-              setPendingApproval({
-                command: event.toolArgs?.command || '',
-                cwd: event.toolArgs?.cwd || '',
-              })
+          (event: StreamPart) => {
+            if (event.type === 'text-delta') {
+              setMessages((prev) => appendToAssistant(prev, event.content))
             } else if (event.type === 'error') {
-              setMessages((prev) => {
-                const last = prev[prev.length - 1]
-                if (
-                  last &&
-                  last.role === 'assistant' &&
-                  last.content.includes('❌')
-                ) {
-                  // Avoid duplicate error messages if already handled
-                  return prev
-                }
-                return [
-                  ...prev,
-                  {
-                    id: genId(),
-                    role: 'assistant',
-                    content: `❌ **Error**: ${event.content}`,
-                  },
-                ]
-              })
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: genId(),
+                  role: 'assistant',
+                  content: `**Error**: ${event.error}`,
+                  createdAt: Date.now(),
+                },
+              ])
             }
           },
           requestApproval,
@@ -429,13 +312,14 @@ export function AIChat() {
           abort.signal,
         )
         setMessages(resultHistory)
-      } catch (e: Error | unknown) {
+      } catch (e: unknown) {
         setMessages((prev) => [
           ...prev,
           {
             id: genId(),
             role: 'assistant',
             content: `❌ **System Error**: ${e instanceof Error ? e.message : String(e)}`,
+            createdAt: Date.now(),
           },
         ])
       } finally {
@@ -462,7 +346,7 @@ export function AIChat() {
   const clearHistory = useCallback(() => {
     if (!showClearConfirm) {
       setShowClearConfirm(true)
-      setTimeout(() => setShowClearConfirm(false), 3000) // Reset after 3 seconds
+      setTimeout(() => setShowClearConfirm(false), 3000)
       return
     }
 
@@ -472,6 +356,7 @@ export function AIChat() {
     abortRef.current?.abort()
     setShowClearConfirm(false)
   }, [showClearConfirm])
+
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard
       .writeText(text)
@@ -495,11 +380,10 @@ export function AIChat() {
     }
     ;(window as any).copyChat = copyHistoryAsJson
   }, [copyHistoryAsJson])
-  const saveMessageToFile = useCallback(
+
+  const _saveMessageToFile = useCallback(
     async (text: string) => {
       const filename = `ai-message-${Date.now()}.md`
-
-      // Use first workspace folder as base if available
       const baseDir = workspaceFolders.length > 0 ? workspaceFolders[0] : ''
       const fullPath = baseDir
         ? await window.aynite.joinPath(baseDir, filename)
@@ -561,28 +445,12 @@ export function AIChat() {
         {messages.map((m, idx) => (
           <ChatMessageItem
             key={m.id || idx}
-            message={m}
+            msg={m}
+            idx={idx}
+            total={messages.length}
+            onOpenFile={() => {}}
             onCopy={copyToClipboard}
-            onSave={saveMessageToFile}
-            renderThought={(thought) => (
-              <ThoughtBlock
-                content={thought}
-                defaultExpanded={idx === messages.length - 1}
-              />
-            )}
-            renderToolCall={(call) => (
-              <ToolCallItem
-                call={call}
-                defaultExpanded={idx === messages.length - 1}
-              />
-            )}
-            renderToolResult={(name, content) => (
-              <ToolResultMessage
-                name={name}
-                content={content}
-                defaultExpanded={idx === messages.length - 1}
-              />
-            )}
+            settings={settings as any}
           />
         ))}
 
@@ -626,6 +494,7 @@ export function AIChat() {
           {/* Micro Action Bar */}
           <div className="absolute -top-8 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <button
+              type="button"
               onClick={copyHistoryAsJson}
               className={cn(
                 'p-1.5 rounded bg-muted/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5',
@@ -637,6 +506,7 @@ export function AIChat() {
               <span className="text-[9px] font-bold uppercase">JSON</span>
             </button>
             <button
+              type="button"
               onClick={() => {
                 loadSessions()
                 setShowHistory(true)
