@@ -8,7 +8,7 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Theme } from '../../../lib/constants/types'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
@@ -23,8 +23,6 @@ import { CommandsTab } from './CommandsTab'
 import { KeybindingsTab } from './KeybindingsTab'
 import { SkillsTab } from './SkillsTab'
 import { ToolsTab } from './ToolsTab'
-
-type SettingsProps = {}
 
 export function Settings() {
   const [activeTab, setActiveTab] = useState('appearance')
@@ -52,12 +50,7 @@ export function Settings() {
   >([])
   const [showRestoreModal, setShowRestoreModal] = useState(false)
 
-  useEffect(() => {
-    loadSettings()
-    loadVersion()
-  }, [loadVersion, loadSettings])
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     // Parallel load all decoupled resources
     const [
       resAI,
@@ -100,12 +93,17 @@ export function Settings() {
         systemFonts: systemFonts || [],
       })
     }
-  }
+  }, [])
 
-  const loadVersion = async () => {
+  const loadVersion = useCallback(async () => {
     const version = await window.aynite.getConfig('version')
     setAppVersion(version)
-  }
+  }, [])
+
+  useEffect(() => {
+    loadSettings()
+    loadVersion()
+  }, [loadVersion, loadSettings])
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)

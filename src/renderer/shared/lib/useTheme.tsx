@@ -32,7 +32,18 @@ export function useViewTheme() {
       const unsub = w.aynite.onThemeChanged((newId: string) => {
         loadTheme(newId)
       })
-      return () => unsub()
+      // Also listen for postMessage relay from the main renderer
+      // (Electron's webContents.send doesn't reach subframe preloads)
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'aynite-theme-changed') {
+          loadTheme()
+        }
+      }
+      window.addEventListener('message', handleMessage)
+      return () => {
+        unsub()
+        window.removeEventListener('message', handleMessage)
+      }
     }
   }, [loadTheme])
 }

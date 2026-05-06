@@ -39,9 +39,15 @@ export function setupConfigIpc() {
     async (_event, { key, payload }: ConfigSetPayload) => {
       const result = await routeSetConfig(key, payload)
       // Broadcast theme changes to all windows (main renderer + iframe views)
+      // Handle both switching themes and editing the current theme
       if (key === ConfigKey.ACTIVE_THEME) {
         BrowserWindow.getAllWindows().forEach((win) => {
           win.webContents.send(ConfigEventChannels.THEME_CHANGED, payload)
+        })
+      } else if (key === ConfigKey.THEME) {
+        const themeId = (payload as { id: string }).id
+        BrowserWindow.getAllWindows().forEach((win) => {
+          win.webContents.send(ConfigEventChannels.THEME_CHANGED, themeId)
         })
       }
       return result
