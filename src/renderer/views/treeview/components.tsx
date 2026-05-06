@@ -1,4 +1,3 @@
-import type React from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -6,6 +5,7 @@ import {
   Folder,
   FolderOpen,
 } from 'lucide-react'
+import type React from 'react'
 import type { NodeRendererProps } from 'react-arborist'
 import { Button } from '../../shared/basic/Button'
 import { Input } from '../../shared/basic/Input'
@@ -34,11 +34,13 @@ export function NodeRenderer({
     isDirectory: boolean
     path: string
   }) => void
-  setContextMenu: (menu: {
-    x: number
-    y: number
-    file: FileNode
-  } | null) => void
+  setContextMenu: (
+    menu: {
+      x: number
+      y: number
+      file: FileNode
+    } | null,
+  ) => void
   dirtyFiles: string[]
 }) {
   const { name, isDirectory, id } = node.data
@@ -50,14 +52,26 @@ export function NodeRenderer({
       style={style}
       ref={dragHandle}
       className={cn(
-        'flex items-center cursor-pointer hover:bg-accent text-sm select-none px-0.5 py-0.5',
+        'flex items-center cursor-pointer hover:bg-accent text-sm select-none px-0.5 py-0.5 bg-card',
         isSelected
           ? 'bg-primary/10 text-primary font-medium hover:bg-primary/20'
           : 'text-muted-foreground',
       )}
+      role="treeitem"
+      tabIndex={-1}
       onClick={(e: React.MouseEvent) => {
         node.handleClick(e)
         if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
+          if (isDirectory) {
+            node.toggle()
+          } else {
+            onSelectFile?.({ name, isDirectory, path: id })
+          }
+        }
+      }}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
           if (isDirectory) {
             node.toggle()
           } else {

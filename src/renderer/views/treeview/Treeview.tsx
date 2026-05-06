@@ -490,6 +490,7 @@ export function Treeview() {
             openByDefault={false}
             onMove={onMove}
             onToggle={handleToggle}
+            className="scrollbar-gutter-stable"
             disableDrop={({ parentNode }) => {
               if (
                 !parentNode ||

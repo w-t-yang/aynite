@@ -13,7 +13,7 @@ import type {
   WorkspaceConfig,
 } from '../../../lib/constants/types'
 import { ayniteConfig } from '../config'
-import { executeLayoutOperation } from '../utils/tile'
+import { executeLayoutOperation, getAllLeafIds } from '../utils/tile'
 
 function updateLayoutInConfig(
   prev: WorkspaceConfig,
@@ -74,6 +74,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const activeWorkspace = workspaceList.find((w) => w.id === activeId)
       if (activeWorkspace) {
         setWorkspaceConfig(activeWorkspace)
+        const activeLayout = activeWorkspace.layouts.find(
+          (l) => l.id === activeWorkspace.activeLayoutId,
+        )
+        if (activeLayout) {
+          const leafIds = getAllLeafIds(activeLayout.layout)
+          if (leafIds.length > 0) {
+            setActiveTileId((prev) => prev || leafIds[0])
+          }
+        }
       }
       setWorkspaces(workspaceList.map((w) => w.id))
     })

@@ -166,6 +166,10 @@
   .will-change-width {
     will-change: width;
   }
+
+  .scrollbar-gutter-stable {
+    scrollbar-gutter: stable;
+  }
 }
 
 @theme {
