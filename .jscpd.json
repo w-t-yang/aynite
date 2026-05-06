@@ -11,7 +11,8 @@
     "coverage/**",
     "resources/**",
     "tests/**",
-    "scripts/**"
+    "scripts/**",
+    "**/Treeview.tsx"
   ],
   "absolute": true,
   "minLines": 6,

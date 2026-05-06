@@ -88,15 +88,13 @@ export function Treeview() {
     if (!contextMenu) return []
     const { file } = contextMenu
 
-    if (!file) {
-      return [
-        {
-          id: 'add-folder',
-          label: 'Add Folder to Workspace...',
-          icon: <FolderPlus size={14} />,
-        },
-      ]
+    const addFolderItem: SelectionItem = {
+      id: 'add-folder',
+      label: 'Add Folder to Workspace...',
+      icon: <FolderPlus size={14} />,
     }
+
+    if (!file) return [addFolderItem]
 
     const items: SelectionItem[] = []
 
@@ -121,11 +119,7 @@ export function Treeview() {
     }
 
     if (rootFilesPaths.includes(file.id)) {
-      items.push({
-        id: 'add-folder',
-        label: 'Add Folder to Workspace...',
-        icon: <FolderPlus size={14} />,
-      })
+      items.push(addFolderItem)
       items.push({
         id: 'remove-from-workspace',
         label: 'Remove from Workspace',
