@@ -8,6 +8,7 @@ import {
   executeCommandOnly,
   genId,
 } from '../../shared/featured/advanced/chat-helpers'
+import { MOCK_MESSAGES } from '../../shared/featured/advanced/chat-mock'
 import {
   ChatInput,
   type ChatInputHandle,
@@ -130,11 +131,16 @@ export function AIChat() {
       loadSessions()
       setShowHistory(true)
     }
+    ;(window as any).showMockMessages = () => {
+      setMessages(MOCK_MESSAGES)
+      setSessionId('mock-session')
+    }
 
     return () => {
       delete (window as any).focusChatInput
       delete (window as any).setChatSession
       delete (window as any).showChatHistory
+      delete (window as any).showMockMessages
       delete (window as any).clearChat
       delete (window as any).copyChat
     }
