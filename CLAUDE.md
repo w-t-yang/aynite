@@ -190,4 +190,11 @@ User-installable skills and commands live under `~/.aynite/skills/` and `~/.ayni
    - Iframe views self-apply themes via `ThemeAwareView` from `shared/lib/useTheme.tsx`, which listens for `onThemeChanged` and loads/applies the theme independently
    - Views use `shared/lib/useTheme.tsx` (`useViewTheme` hook / `ThemeAwareView` wrapper) — no parent-injected CSS in iframes
    - The audit rule `VIEW_THEME_USAGE` ensures view entry files import the theme module
-10. **Keybinding dispatch**: Main process caches keybinding config and matches `before-input-event` against it. On match, sends `aynite:app-operation` to the renderer. The renderer's `AppContext.executeAppOperation()` calls `executeLayoutOperation()` from `utils/tile`.
+10. **Cross-frame communication (IPC → Main Renderer → Iframes)**: `webContents.send()` in Electron delivers IPC to the main frame only — subframe iframe preloads do not receive it. A unified event channel solves this:
+    - **Main process** sends typed events via `broadcastAppEvent(type, data)` from `src/main/broadcast.ts`
+    - **Main renderer** receives via the unified IPC channel `aynite:app-event`. The `AppEventRelay` component (mounted in ThemeProvider) relays events to iframes via `postMessage`. Components listen via `window.aynite.onAppEvent()` directly.
+    - **Iframe views** subscribe via `useAppEvent(type, handler)` from `shared/lib/appEvents.ts`, which listens for `postMessage` events relayed from the main renderer.
+    - Message types use the `aynite:*` naming convention (e.g. `aynite:theme-changed`).
+    - Example: Theme changes flow as `broadcastAppEvent('theme-changed', { themeId })` → IPC → main renderer ThemeContext reloads + AppEventRelay relays → iframes receive via `useAppEvent('theme-changed', handler)` → re-fetch and apply theme.
+    - For new push notifications from main to views, add a new event type and use `broadcastAppEvent()` — no new IPC channels needed.
+11. **Keybinding dispatch**: Main process caches keybinding config and matches `before-input-event` against it. On match, sends `aynite:app-operation` to the renderer. The renderer's `AppContext.executeAppOperation()` calls `executeLayoutOperation()` from `utils/tile`.
