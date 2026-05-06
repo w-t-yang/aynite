@@ -1,30 +1,18 @@
-import {
-  Copy,
-  Edit2,
-  FilePlus,
-  FolderPlus,
-  Trash2,
-  X,
-} from 'lucide-react'
-import type React from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  type MoveHandler,
-  Tree,
-  type TreeApi,
-} from 'react-arborist'
+import { Copy, Edit2, FilePlus, FolderPlus, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type MoveHandler, Tree, type TreeApi } from 'react-arborist'
 import { Button } from '../../shared/basic/Button'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
 import {
-  type FileNode,
   ConfirmModal,
+  type FileNode,
   NodeRenderer,
   PromptModal,
 } from './components'
-import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
 import { expandPathIteratively } from './tree-expand'
+import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
 
 export function Treeview() {
   const [activeTabPath, _setActiveTabPath] = useState<string>('')
@@ -59,6 +47,8 @@ export function Treeview() {
   const [treeHeight, setTreeHeight] = useState(800)
 
   const rootFilesPaths = treeData.map((node) => node.id)
+  const rootFilesPathsRef = useRef(rootFilesPaths)
+  rootFilesPathsRef.current = rootFilesPaths
 
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean
@@ -148,39 +138,7 @@ export function Treeview() {
     return () => observer.disconnect()
   }, [])
 
-  useEffect(() => {
-    const unsubscribe = window.aynite.onFileSystemChange(
-      async ({ event, path }) => {
-        const dirname = await window.aynite.dirname(path)
-        window.dispatchEvent(
-          new CustomEvent('reload-folder', { detail: dirname }),
-        )
-
-        if (event === 'addDir' || event === 'unlinkDir') {
-          window.dispatchEvent(
-            new CustomEvent('reload-folder', { detail: path }),
-          )
-        }
-
-        if (workspaces.length > 0) {
-          const isRootChange =
-            rootFilesPaths.includes(path) || rootFilesPaths.includes(dirname)
-          if (isRootChange) loadWorkspaceData()
-        }
-      },
-    )
-
-    const closeMenu = () => setContextMenu(null)
-    window.addEventListener('click', closeMenu)
-    window.addEventListener('contextmenu', closeMenu)
-    return () => {
-      unsubscribe()
-      window.removeEventListener('click', closeMenu)
-      window.removeEventListener('contextmenu', closeMenu)
-    }
-  }, [workspaces])
-
-  const loadWorkspaceData = async () => {
+  const loadWorkspaceData = useCallback(async () => {
     try {
       const wsConfig = await window.aynite.getWorkspacesList()
       if (wsConfig) {
@@ -202,7 +160,43 @@ export function Treeview() {
     } catch (e) {
       console.error(e)
     }
-  }
+  }, [])
+
+  const loadWorkspaceDataRef = useRef(loadWorkspaceData)
+  loadWorkspaceDataRef.current = loadWorkspaceData
+
+  useEffect(() => {
+    const unsubscribe = window.aynite.onFileSystemChange(
+      async ({ event, path }) => {
+        const dirname = await window.aynite.dirname(path)
+        window.dispatchEvent(
+          new CustomEvent('reload-folder', { detail: dirname }),
+        )
+
+        if (event === 'addDir' || event === 'unlinkDir') {
+          window.dispatchEvent(
+            new CustomEvent('reload-folder', { detail: path }),
+          )
+        }
+
+        if (workspaces.length > 0) {
+          const isRootChange =
+            rootFilesPathsRef.current.includes(path) ||
+            rootFilesPathsRef.current.includes(dirname)
+          if (isRootChange) loadWorkspaceDataRef.current()
+        }
+      },
+    )
+
+    const closeMenu = () => setContextMenu(null)
+    window.addEventListener('click', closeMenu)
+    window.addEventListener('contextmenu', closeMenu)
+    return () => {
+      unsubscribe()
+      window.removeEventListener('click', closeMenu)
+      window.removeEventListener('contextmenu', closeMenu)
+    }
+  }, [workspaces])
 
   useEffect(() => {
     loadWorkspaceData()
@@ -212,11 +206,7 @@ export function Treeview() {
     if (activeTabPath && treeRef.current) {
       expandPathIteratively(activeTabPath, treeData, setTreeData, treeRef)
     }
-  }, [
-    activeTabPath,
-    treeData.length,
-    treeData,
-  ])
+  }, [activeTabPath, treeData.length, treeData])
 
   useEffect(() => {
     const handleReload = async (e: any) => {
@@ -236,7 +226,9 @@ export function Treeview() {
     if (node && !node.isLoaded && node.isDirectory) {
       try {
         const children = await fetchFiles(id)
-        setTreeData((prev: FileNode[]) => updateNodeChildren(prev, id, children))
+        setTreeData((prev: FileNode[]) =>
+          updateNodeChildren(prev, id, children),
+        )
       } catch (e) {
         console.error('Failed to load tree children:', e)
       }
@@ -355,9 +347,9 @@ export function Treeview() {
     const isCreateOrPaste =
       action === 'new-file' || action === 'new-folder' || action === 'paste'
     const shouldReloadHere = file.isDirectory && isCreateOrPaste
-    const reloadPath = shouldReloadHere ? file.id : dirname;
+    const reloadPath = shouldReloadHere ? file.id : dirname
 
-    const parentDirForPaste = file.isDirectory ? file.id : dirname;
+    const parentDirForPaste = file.isDirectory ? file.id : dirname
 
     const executeAction = async (payloadVal?: string) => {
       try {
@@ -444,6 +436,11 @@ export function Treeview() {
     }
   }
 
+  const handleCtxActionRef = useRef(handleCtxAction)
+  handleCtxActionRef.current = handleCtxAction
+  const handleCreateWorkspaceRef = useRef(handleCreateWorkspace)
+  handleCreateWorkspaceRef.current = handleCreateWorkspace
+
   useEffect(() => {
     const api = {
       copy: () => {
@@ -458,13 +455,13 @@ export function Treeview() {
           const node = treeRef.current?.get(selected[0])
           if (node) {
             setContextMenu({ x: 0, y: 0, file: node.data })
-            setTimeout(() => handleCtxAction('paste'), 0)
+            setTimeout(() => handleCtxActionRef.current('paste'), 0)
           }
         }
       },
       submit: () => {
         if (showNewWorkspaceModal) {
-          handleCreateWorkspace()
+          handleCreateWorkspaceRef.current()
         } else if (promptModal?.isOpen && promptValue.trim()) {
           promptModal.onConfirm(promptValue.trim())
         } else if (confirmModal?.isOpen) {
@@ -474,15 +471,7 @@ export function Treeview() {
     }
     KeyManager.registerSidebar(api)
     return () => KeyManager.unregisterSidebar()
-  }, [
-    clipboard,
-    showNewWorkspaceModal,
-    promptModal,
-    promptValue,
-    confirmModal,
-    handleCtxAction,
-    handleCreateWorkspace,
-  ])
+  }, [clipboard, showNewWorkspaceModal, promptModal, promptValue, confirmModal])
 
   return (
     <div

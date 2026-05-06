@@ -156,6 +156,8 @@ const aynite = {
   deleteTheme: (name: string) => ipcRenderer.invoke(ThemeChannels.DELETE, name),
 
   // ── Theme events ────────────────────────────────────────────────────────
+  // @deprecated - Dead code: this listener is currently unused in the renderer.
+  // Theme changes are now handled via the unified onAppEvent bus.
   onThemeChanged: (callback: (themeId: string) => void) => {
     const listener = (_: any, themeId: string) => callback(themeId)
     ipcRenderer.on(ConfigEventChannels.THEME_CHANGED, listener)
@@ -165,6 +167,8 @@ const aynite = {
 
   // ── Update ──────────────────────────────────────────────────────────────
   installUpdate: () => ipcRenderer.invoke(UpdateChannels.INSTALL),
+  // @deprecated - Dead code: update listeners are currently unused because the
+  // UpdateNotification component is not rendered in the current UI.
   onUpdateChecking: (callback: () => void) => {
     const listener = () => callback()
     ipcRenderer.on(UpdateChannels.CHECKING, listener)
