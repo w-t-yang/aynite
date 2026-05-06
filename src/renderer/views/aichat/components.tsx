@@ -19,6 +19,8 @@ import {
   ToolCallItem,
 } from '../../shared/featured/advanced/ChatMessage'
 
+export { isErrorMessage, ThoughtBlock, ToolCallItem }
+
 // ─── Tool Result Message Component ──────────────────────────────────────────
 
 export function ToolResultMessage({
