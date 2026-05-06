@@ -25,6 +25,7 @@ interface TabSwitcherProps {
   onClose: () => void
 }
 
+// biome-ignore lint/correctness/noUnusedVariables: WIP component for future use
 function TabSwitcherWIP({
   tabs,
   activeTabId,

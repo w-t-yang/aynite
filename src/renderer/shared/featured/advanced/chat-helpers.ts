@@ -1,3 +1,4 @@
+import React from 'react'
 import type { ChatMessage } from '../../../../lib/constants/chat'
 
 export function genId(): string {

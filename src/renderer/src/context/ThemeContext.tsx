@@ -45,11 +45,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [applyThemeColors])
 
-  const setTheme = async (themeId: string) => {
+  const setTheme = useCallback(async (themeId: string) => {
     await window.aynite.setConfig(ConfigKey.ACTIVE_THEME, themeId)
     // Immediately reload to update local state and broadcast to all views
     await loadThemes()
-  }
+  }, [loadThemes])
 
   useEffect(() => {
     loadThemes()
@@ -74,7 +74,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
         loadThemes,
       }
     }
-    // biome-ignore lint/correctness/useExhaustiveDependencies: dev-only debug hook
   }, [activeTheme, themes, setTheme, loadThemes])
 
   return (

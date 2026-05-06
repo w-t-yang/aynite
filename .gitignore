@@ -8,6 +8,6 @@ out
 .DS_Store
 tmp/
 .vscode
-dist-standalone
+dist-*/
 coverage/
 .jscpd-output

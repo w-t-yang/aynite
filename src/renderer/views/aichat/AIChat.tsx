@@ -1,5 +1,5 @@
 import { Check, Copy, History } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { StreamPart } from '../../../lib/constants/chat'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
 import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
@@ -88,15 +88,62 @@ export function AIChat() {
     }
   }, [messages, sessionId])
 
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch((err) => console.error('Failed to copy', err))
+  }, [])
+
+  const copyHistoryAsJson = useCallback(() => {
+    copyToClipboard(JSON.stringify(messages, null, 2))
+  }, [messages, copyToClipboard])
+
   useEffect(() => {
     if (sessionId && messages.length > 0) {
-      const timer = setTimeout(() => {
-        window.aynite.saveChatLog(sessionId, messages)
+      const timer = setTimeout(async () => {
+        try {
+          await window.aynite.saveChatLog(sessionId, messages)
+        } catch (err) {
+          console.error('[AIChat] Failed to auto-save chat log:', err)
+        }
       }, 1000)
       return () => clearTimeout(timer)
     }
     return undefined
   }, [messages, sessionId])
+
+  const settingsRef = useRef(settings)
+  useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
+
+  const messagesRef = useRef(messages)
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
+  const sessionIdRef = useRef(sessionId)
+  useEffect(() => {
+    sessionIdRef.current = sessionId
+  }, [sessionId])
+
+  const handleOpenFile = useCallback((_path: string) => {}, [])
+  const handleGetFiles = useCallback(
+    (path: string) => window.aynite.getFiles(path),
+    [],
+  )
+  const handleGetAvailableSkills = useCallback(
+    () => window.aynite.getAvailableSkills(),
+    [],
+  )
+  const handleGetAvailableCommands = useCallback(
+    () => window.aynite.getAvailableCommands(),
+    [],
+  )
 
   useEffect(() => {
     ;(window as any).focusChatInput = (prefix?: string) => {
@@ -135,6 +182,15 @@ export function AIChat() {
       setMessages(MOCK_MESSAGES)
       setSessionId('mock-session')
     }
+    ;(window as any).clearChat = () => {
+      setMessages([])
+      setSessionId(null)
+      localStorage.removeItem('lastSession')
+      abortRef.current?.abort()
+    }
+    ;(window as any).copyChat = () => {
+      copyToClipboard(JSON.stringify(messagesRef.current, null, 2))
+    }
 
     return () => {
       delete (window as any).focusChatInput
@@ -144,7 +200,7 @@ export function AIChat() {
       delete (window as any).clearChat
       delete (window as any).copyChat
     }
-  }, [loadSessions])
+  }, [loadSessions, copyToClipboard])
 
   const requestApproval = useCallback(
     (command: string, cwd: string): Promise<boolean> => {
@@ -179,7 +235,7 @@ export function AIChat() {
         await executeCommandOnly(
           text,
           activeTabPath,
-          messages,
+          messagesRef.current,
           setMessages,
           setLoading,
         )
@@ -223,13 +279,13 @@ export function AIChat() {
         setLoading(false)
       }
 
-      const activeId = settings.ai?.activeId
+      const activeId = settingsRef.current.ai?.activeId
       const activeProvider =
-        settings.ai?.providers?.find((p) => p.id === activeId) ||
-        settings.ai?.providers?.[0]
+        settingsRef.current.ai?.providers?.find((p) => p.id === activeId) ||
+        settingsRef.current.ai?.providers?.[0]
 
-      const activeAgent = settings.agents?.list?.find(
-        (a) => a.id === settings.agents?.activeId,
+      const activeAgent = settingsRef.current.agents?.list?.find(
+        (a) => a.id === settingsRef.current.agents?.activeId,
       )
       const agentPromptFiles = activeAgent?.promptFiles || []
 
@@ -239,7 +295,7 @@ export function AIChat() {
         baseUrl: activeProvider?.url || '',
         model: activeProvider?.model || '',
         compatibility: activeProvider?.compatibility,
-        enabledTools: settings.aiTools,
+        enabledTools: settingsRef.current.aiTools,
         agentPromptFiles,
       }
 
@@ -250,7 +306,7 @@ export function AIChat() {
         content: text,
         createdAt: Date.now(),
       }
-      const updatedMessages = [...messages, userMsg]
+      const updatedMessages = [...messagesRef.current, userMsg]
 
       for (const res of commandResults) {
         const content = [res.stdout, res.stderr]
@@ -339,14 +395,7 @@ export function AIChat() {
         }
       }
     },
-    [
-      settings,
-      messages,
-      workspaceFolders,
-      requestApproval,
-      activeTabPath,
-      loading,
-    ],
+    [workspaceFolders, requestApproval, activeTabPath, loading],
   )
 
   const clearHistory = useCallback(() => {
@@ -363,29 +412,6 @@ export function AIChat() {
     setShowClearConfirm(false)
   }, [showClearConfirm])
 
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      })
-      .catch((err) => console.error('Failed to copy', err))
-  }, [])
-
-  const copyHistoryAsJson = useCallback(() => {
-    copyToClipboard(JSON.stringify(messages, null, 2))
-  }, [messages, copyToClipboard])
-
-  useEffect(() => {
-    ;(window as any).clearChat = () => {
-      setMessages([])
-      setSessionId(null)
-      localStorage.removeItem('lastSession')
-      abortRef.current?.abort()
-    }
-    ;(window as any).copyChat = copyHistoryAsJson
-  }, [copyHistoryAsJson])
 
   const _saveMessageToFile = useCallback(
     async (text: string) => {
@@ -454,7 +480,7 @@ export function AIChat() {
             msg={m}
             idx={idx}
             total={messages.length}
-            onOpenFile={() => {}}
+            onOpenFile={handleOpenFile}
             onCopy={copyToClipboard}
             settings={settings as any}
           />
@@ -495,9 +521,9 @@ export function AIChat() {
               loadSessions()
               setShowHistory(true)
             }}
-            getFiles={(path) => window.aynite.getFiles(path)}
-            getAvailableSkills={() => window.aynite.getAvailableSkills()}
-            getAvailableCommands={() => window.aynite.getAvailableCommands()}
+            getFiles={handleGetFiles}
+            getAvailableSkills={handleGetAvailableSkills}
+            getAvailableCommands={handleGetAvailableCommands}
           />
 
           {/* Micro Action Bar */}

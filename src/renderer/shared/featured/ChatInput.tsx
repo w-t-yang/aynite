@@ -45,14 +45,14 @@ interface ChatInputProps {
 
 // ─── Main ChatInput Component ────────────────────────────────────────
 
-export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
+const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
   (
     {
       onSubmit,
       disabled,
       workspaceFolders = [],
-      focusKeybinding,
-      submitKeybinding,
+      focusKeybinding: _focusKeybinding,
+      submitKeybinding: _submitKeybinding,
       getFiles,
       getAvailableSkills,
       getAvailableCommands,
@@ -66,6 +66,89 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const fileItemsRef = React.useRef<SuggestionItem[]>([])
     const skillItemsRef = React.useRef<SuggestionItem[]>([])
     const commandItemsRef = React.useRef<SuggestionItem[]>([])
+
+    const BaseMention = React.useMemo(
+      () =>
+        Mention.extend({
+          addAttributes() {
+            return {
+              ...this.parent?.(),
+              isDirectory: {
+                default: false,
+                parseHTML: (element) =>
+                  element.getAttribute('data-is-directory') === 'true',
+                renderHTML: (attributes) => ({
+                  'data-is-directory': attributes.isDirectory,
+                }),
+              },
+            }
+          },
+        }),
+      [],
+    )
+
+    const extensions = React.useMemo(
+      () => [
+        StarterKit.configure({
+          heading: false,
+          codeBlock: false,
+          bulletList: false,
+          orderedList: false,
+          blockquote: false,
+          horizontalRule: false,
+        }),
+        Placeholder.configure({
+          placeholder: `Message assistant... (Ctrl + Enter to send message)`,
+        }),
+        BaseMention.configure({
+          HTMLAttributes: { class: 'mention mention-file' },
+          suggestion: createSuggestion('@', (query) => {
+            const q = query.toLowerCase()
+            return fileItemsRef.current
+              .filter((item) => (item.label || '').toLowerCase().includes(q))
+              .sort((a, b) => {
+                const aName = (a.name || '').toLowerCase()
+                const bName = (b.name || '').toLowerCase()
+                const aLabel = (a.label || '').toLowerCase()
+                const bLabel = (b.label || '').toLowerCase()
+
+                // 1. Exact name match
+                if (aName === q && bName !== q) return -1
+                if (bName === q && aName !== q) return 1
+
+                // 2. Name starts with
+                if (aName.startsWith(q) && !bName.startsWith(q)) return -1
+                if (bName.startsWith(q) && !aName.startsWith(q)) return 1
+
+                // 3. Label starts with (root match)
+                if (aLabel.startsWith(q) && !bLabel.startsWith(q)) return -1
+                if (bLabel.startsWith(q) && !aLabel.startsWith(q)) return 1
+
+                // 4. Shorter label (closer to root)
+                return aLabel.length - bLabel.length
+              })
+              .slice(0, 20)
+          }),
+        }),
+        BaseMention.extend({ name: 'skillMention' }).configure({
+          HTMLAttributes: { class: 'mention mention-skill' },
+          suggestion: createSuggestion('/', (query) =>
+            skillItemsRef.current.filter((item) =>
+              (item.label || '').toLowerCase().includes(query),
+            ),
+          ),
+        }),
+        BaseMention.extend({ name: 'commandMention' }).configure({
+          HTMLAttributes: { class: 'mention mention-command' },
+          suggestion: createSuggestion('>', (query) =>
+            commandItemsRef.current.filter((item) =>
+              (item.label || '').toLowerCase().includes(query),
+            ),
+          ),
+        }),
+      ],
+      [BaseMention],
+    )
 
     // Unified effect for indexing workspace files, skills, and commands
     useEffect(() => {
@@ -136,88 +219,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return () => {
         isMounted = false
       }
-    }, [workspaceFolders, getFiles, getAvailableSkills, getAvailableCommands])
+    }, [workspaceFolders])
 
-    const BaseMention = Mention.extend({
-      addAttributes() {
-        return {
-          ...this.parent?.(),
-          isDirectory: {
-            default: false,
-            parseHTML: (element) =>
-              element.getAttribute('data-is-directory') === 'true',
-            renderHTML: (attributes) => ({
-              'data-is-directory': attributes.isDirectory,
-            }),
-          },
-        }
-      },
-    })
-
-    const extensions = React.useMemo(
-      () => [
-        StarterKit.configure({
-          heading: false,
-          codeBlock: false,
-          bulletList: false,
-          orderedList: false,
-          blockquote: false,
-          horizontalRule: false,
-        }),
-        Placeholder.configure({
-          placeholder: `Message assistant... (Ctrl + Enter to send message)`,
-        }),
-        BaseMention.configure({
-          HTMLAttributes: { class: 'mention mention-file' },
-          suggestion: createSuggestion('@', (query) => {
-            const q = query.toLowerCase()
-            return fileItemsRef.current
-              .filter((item) => (item.label || '').toLowerCase().includes(q))
-              .sort((a, b) => {
-                const aName = (a.name || '').toLowerCase()
-                const bName = (b.name || '').toLowerCase()
-                const aLabel = (a.label || '').toLowerCase()
-                const bLabel = (b.label || '').toLowerCase()
-
-                // 1. Exact name match
-                if (aName === q && bName !== q) return -1
-                if (bName === q && aName !== q) return 1
-
-                // 2. Name starts with
-                if (aName.startsWith(q) && !bName.startsWith(q)) return -1
-                if (bName.startsWith(q) && !aName.startsWith(q)) return 1
-
-                // 3. Label starts with (root match)
-                if (aLabel.startsWith(q) && !bLabel.startsWith(q)) return -1
-                if (bLabel.startsWith(q) && !aLabel.startsWith(q)) return 1
-
-                // 4. Shorter label (closer to root)
-                return aLabel.length - bLabel.length
-              })
-              .slice(0, 20)
-          }),
-        }),
-        BaseMention.extend({ name: 'skillMention' }).configure({
-          HTMLAttributes: { class: 'mention mention-skill' },
-          suggestion: createSuggestion('/', (query) =>
-            skillItemsRef.current.filter((item) =>
-              (item.label || '').toLowerCase().includes(query),
-            ),
-          ),
-        }),
-        BaseMention.extend({ name: 'commandMention' }).configure({
-          HTMLAttributes: { class: 'mention mention-command' },
-          suggestion: createSuggestion('>', (query) =>
-            commandItemsRef.current.filter((item) =>
-              (item.label || '').toLowerCase().includes(query),
-            ),
-          ),
-        }),
-      ],
-      [BaseMention.extend, BaseMention.configure],
-    )
-
-    const checkMatch = (e: KeyboardEvent, kb?: Keybinding) => {
+    const checkMatch = useCallback((e: KeyboardEvent, kb?: Keybinding) => {
       if (!kb) return false
       const isDarwin =
         window.navigator.platform.toUpperCase().indexOf('MAC') >= 0
@@ -228,7 +232,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         !!kb.alt === e.altKey &&
         e.key.toUpperCase() === kb.key.toUpperCase()
       )
-    }
+    }, [])
 
     const editor = useEditor(
       {
@@ -297,6 +301,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     return (
       <div
+        role="group"
         onClick={() => {
           if (editor) {
             editor.commands.focus('end')
@@ -322,5 +327,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     )
   },
 )
+
+export const ChatInput = React.memo(ChatInputComponent)
 
 ChatInput.displayName = 'ChatInput'

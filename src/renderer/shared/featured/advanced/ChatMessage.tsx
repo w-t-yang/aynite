@@ -7,7 +7,7 @@ import {
   Save,
   Terminal,
 } from 'lucide-react'
-import { useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState, memo } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type {
@@ -56,7 +56,7 @@ interface ThoughtBlockProps {
   defaultExpanded?: boolean
 }
 
-export function ThoughtBlock({
+function ThoughtBlockComponent({
   content,
   defaultExpanded = false,
 }: ThoughtBlockProps) {
@@ -74,6 +74,8 @@ export function ThoughtBlock({
     </Collapsible>
   )
 }
+
+export const ThoughtBlock = memo(ThoughtBlockComponent)
 
 interface ThinkingProcessProps {
   content: string
@@ -445,7 +447,7 @@ interface ChatMessageItemProps {
   settings: SettingsState
 }
 
-export function ChatMessageItem({
+function ChatMessageItemComponent({
   msg,
   idx,
   total,
@@ -482,3 +484,5 @@ export function ChatMessageItem({
     </div>
   )
 }
+
+export const ChatMessageItem = React.memo(ChatMessageItemComponent)
