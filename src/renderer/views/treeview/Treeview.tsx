@@ -24,7 +24,8 @@ import {
   NodeRenderer,
   PromptModal,
 } from './components'
-import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
+import { fetchFiles, updateNodeChildren } from './utils'
+import { expandPathIteratively } from './tree-expand'
 
 export function Treeview() {
   const [activeTabPath, _setActiveTabPath] = useState<string>('')
@@ -181,56 +182,8 @@ export function Treeview() {
   }, [workspaces, rootFilesPaths.includes, loadWorkspaceData])
 
   useEffect(() => {
-    const expandPathIteratively = async (targetPath: string) => {
-      if (!treeData.length) return
-      const root = treeData
-        .map((n) => n.id)
-        .find((r) => targetPath.startsWith(r))
-
-      if (!root) return
-
-      const separator = targetPath.includes('\\') ? '\\' : '/'
-      const rootParts = root.split(separator)
-      const activeParts = targetPath.split(separator)
-
-      let current = root
-      const pathsToOpen = [current]
-      for (let i = rootParts.length; i < activeParts.length - 1; i++) {
-        current += separator + activeParts[i]
-        pathsToOpen.push(current)
-      }
-
-      let newData = [...treeData]
-      let changed = false
-
-      for (const p of pathsToOpen) {
-        const nodeData = findNodeData(newData, p)
-        if (nodeData && !nodeData.isLoaded) {
-          const children = await fetchFiles(p)
-          newData = updateNodeChildren(newData, p, children)
-          changed = true
-        }
-      }
-
-      if (changed) {
-        setTreeData(newData)
-      }
-
-      setTimeout(
-        () => {
-          if (!treeRef.current) return
-          for (const p of pathsToOpen) {
-            treeRef.current.open(p)
-          }
-          treeRef.current.scrollTo(targetPath)
-          treeRef.current.select(targetPath, { focus: false })
-        },
-        changed ? 100 : 0,
-      )
-    }
-
     if (activeTabPath && treeRef.current) {
-      expandPathIteratively(activeTabPath)
+      expandPathIteratively(activeTabPath, treeData, setTreeData, treeRef)
     }
   }, [
     activeTabPath,
