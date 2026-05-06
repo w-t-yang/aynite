@@ -1,5 +1,6 @@
 import { FileText, Search, Settings as SettingsIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { FLEX_CENTER_GAP_1 } from '../lib/styles'
 import {
   type SelectionItem,
   SelectionList,
@@ -168,19 +169,19 @@ function TabSwitcher({
 
         {/* Footer hint */}
         <div className="px-4 py-2 border-t border-border/30 flex items-center gap-4 text-[10px] text-muted-foreground/40 bg-muted/5">
-          <div className="flex items-center gap-1.5">
+          <div className={FLEX_CENTER_GAP_1}>
             <span className="px-1 py-0.5 rounded border border-border bg-accent/20">
               ↑↓
             </span>{' '}
             navigate
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className={FLEX_CENTER_GAP_1}>
             <span className="px-1 py-0.5 rounded border border-border bg-accent/20">
               Enter
             </span>{' '}
             select
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className={FLEX_CENTER_GAP_1}>
             <span className="px-1 py-0.5 rounded border border-border bg-accent/20">
               Esc
             </span>{' '}

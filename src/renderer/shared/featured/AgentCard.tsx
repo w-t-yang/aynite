@@ -2,8 +2,13 @@ import { Plus, Trash2 } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 import { Button } from '../basic/Button'
-import { SECTION_LABEL } from '../lib/styles'
+import { DESCRIPTION_TEXT, FLEX_CENTER_BETWEEN, FLEX_COL_MIN, SECTION_LABEL } from '../lib/styles'
 import { EditableCardFrame, EditableCardHeader, DeleteItemModal } from './EditableCard'
+
+const FILE_NAME_CLASS = 'text-xs font-medium truncate'
+const FILE_PATH_CLASS = 'text-[10px] text-muted-foreground truncate'
+const DELETE_BTN_CLASS = 'p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100'
+const ROW_CLASS = 'flex items-center justify-between p-2.5 rounded-lg border border-border bg-accent/5 group'
 
 interface PromptFileRowProps {
   filePath: string
@@ -12,12 +17,12 @@ interface PromptFileRowProps {
 
 export function PromptFileRow({ filePath, onDelete }: PromptFileRowProps) {
   return (
-    <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-accent/5 group">
-      <div className="flex flex-col min-w-0">
-        <span className="text-xs font-medium truncate">
+    <div className={ROW_CLASS}>
+      <div className={FLEX_COL_MIN}>
+        <span className={FILE_NAME_CLASS}>
           {filePath.split(/[/\\]/).pop()}
         </span>
-        <span className="text-[10px] text-muted-foreground truncate">
+        <span className={FILE_PATH_CLASS}>
           {filePath}
         </span>
       </div>
@@ -25,7 +30,7 @@ export function PromptFileRow({ filePath, onDelete }: PromptFileRowProps) {
         variant="ghost"
         size="icon"
         onClick={onDelete}
-        className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"
+        className={DELETE_BTN_CLASS}
       >
         <Trash2 size={14} />
       </Button>
@@ -68,7 +73,7 @@ export function AgentCard({
         />
 
         <div className="ml-7 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className={FLEX_CENTER_BETWEEN}>
             <h4 className={SECTION_LABEL}>
               Agent Prompt Files
             </h4>
@@ -114,7 +119,7 @@ export function AgentCard({
         itemName={agent.name}
         deleteLabel="Delete Agent"
       >
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className={DESCRIPTION_TEXT}>
           All agent-specific configurations will be lost.
         </p>
       </DeleteItemModal>

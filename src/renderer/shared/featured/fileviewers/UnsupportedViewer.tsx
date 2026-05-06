@@ -1,6 +1,7 @@
 import { Info } from 'lucide-react'
 import type React from 'react'
 import { type FileInfo, formatFileSize } from '../../lib/file-handlers'
+import { VIEWER_CENTERED_ROW } from '../../lib/styles'
 import { UnifiedViewer } from './UnifiedViewer'
 
 export const UnsupportedViewer: React.FC<{
@@ -8,7 +9,7 @@ export const UnsupportedViewer: React.FC<{
   reason?: 'too_large' | 'binary' | 'other'
 }> = ({ file, reason }) => (
   <UnifiedViewer padding="p-8">
-    <div className="flex items-center justify-center min-h-full">
+    <div className={VIEWER_CENTERED_ROW}>
       <div className="max-w-md w-full bg-sidebar border border-border p-8 rounded-2xl shadow-xl flex flex-col items-center text-center gap-6">
         <div className="w-16 h-16 bg-muted/50 rounded-2xl flex items-center justify-center">
           <Info size={32} className="text-muted-foreground" />

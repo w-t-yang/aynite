@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { AIProviderInstance } from '../lib/types'
 import { Input } from '../basic/Input'
+import { DESCRIPTION_TEXT } from '../lib/styles'
 import { EditableCardFrame, EditableCardHeader, DeleteItemModal } from './EditableCard'
 import { SelectionMenu } from './SelectionMenu'
 
@@ -117,7 +118,7 @@ export function AIProviderCard({
         itemName={provider.name}
         deleteLabel="Delete Provider"
       >
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className={DESCRIPTION_TEXT}>
           This action will permanently remove this provider configuration.
         </p>
       </DeleteItemModal>

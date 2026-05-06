@@ -2,6 +2,7 @@ import { Bot, Bug, CloudDownload, Github, RefreshCw } from 'lucide-react'
 import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
+import { FLEX_CENTER_GAP_2 } from '../../shared/lib/styles'
 
 interface AboutTabProps {
   state: {
@@ -27,7 +28,7 @@ export function AboutTab({ state, actions }: AboutTabProps) {
   const { onCheckUpdates, onInstallUpdate, onOpenExternal } = actions
 
   const updateButton = (
-    <div className="flex items-center gap-2">
+    <div className={FLEX_CENTER_GAP_2}>
       {(updateStatus === 'idle' || updateStatus === 'error') && (
         <Button
           variant="secondary"

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import Editor from 'react-simple-code-editor'
 import { type FileInfo, getFileCategory } from '../../lib/file-handlers'
 import { KeyManager } from '../../lib/key-handlers'
+import { FLEX_CENTER_GAP_2 } from '../../lib/styles'
 import { cn } from '../../lib/utils'
 import { FileHandlerComponents } from './index'
 import 'prismjs/components/prism-typescript'
@@ -567,11 +568,11 @@ function FileViewer({
               {/* External Change Banner */}
               {externalChangeDetected && (
                 <div className="absolute top-0 left-0 right-0 z-50 bg-primary/10 border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-4 py-2 text-xs text-primary animate-in fade-in slide-in-from-top-1 duration-300">
-                  <div className="flex items-center gap-2">
+                  <div className={FLEX_CENTER_GAP_2}>
                     <AlertCircle size={14} />
                     <span>This file has been modified externally.</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className={FLEX_CENTER_GAP_2}>
                     {showRefreshConfirm && (
                       <span className="text-[10px] font-bold uppercase tracking-tighter mr-1 animate-pulse">
                         Discard changes?
@@ -706,7 +707,7 @@ function FileViewer({
       <div className="h-7 shrink-0 bg-muted/50 border-t border-border text-muted-foreground flex items-center px-4 justify-between text-xs font-sans">
         <div className="flex items-center gap-4">
           {!loading && !error && canEdit && (
-            <div className="flex items-center gap-2">
+            <div className={FLEX_CENTER_GAP_2}>
               {isDirty && (
                 <button
                   onClick={onSave}

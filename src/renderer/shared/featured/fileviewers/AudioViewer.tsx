@@ -1,11 +1,12 @@
 import { Music } from 'lucide-react'
 import type React from 'react'
 import { type FileInfo, formatFileSize } from '../../lib/file-handlers'
+import { VIEWER_CENTERED_ROW } from '../../lib/styles'
 import { UnifiedViewer } from './UnifiedViewer'
 
 export const AudioViewer: React.FC<{ file: FileInfo }> = ({ file }) => (
   <UnifiedViewer padding="p-8">
-    <div className="flex items-center justify-center min-h-full">
+    <div className={VIEWER_CENTERED_ROW}>
       <div className="bg-sidebar border border-border p-8 rounded-2xl shadow-xl flex flex-col items-center gap-6 w-96">
         <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center animate-pulse">
           <Music size={32} className="text-primary" />

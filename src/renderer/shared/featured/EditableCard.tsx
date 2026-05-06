@@ -4,6 +4,7 @@ import { Button } from '../basic/Button'
 import { Input } from '../basic/Input'
 import { Modal } from '../basic/Modal'
 import { Radio } from '../basic/Radio'
+import { DESCRIPTION_TEXT, FLEX_CENTER_BETWEEN, FLEX_CENTER_GAP_3 } from '../lib/styles'
 import { cn } from '../lib/utils'
 
 export function EditableCardFrame({
@@ -45,8 +46,8 @@ export function EditableCardHeader({
   onDeleteRequest,
 }: EditableCardHeaderProps) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
+    <div className={FLEX_CENTER_BETWEEN}>
+      <div className={FLEX_CENTER_GAP_3}>
         <Radio
           name={radioName}
           checked={isActive}
@@ -115,7 +116,7 @@ export function DeleteItemModal({
       }
     >
       {children || (
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className={DESCRIPTION_TEXT}>
           Are you sure you want to delete{' '}
           <span className="font-bold text-foreground">"{itemName}"</span>?
         </p>

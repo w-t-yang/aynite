@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Collapsible } from '../../shared/basic/Collapsible'
 import { cn } from '../../shared/lib/utils'
+import { FLEX_CENTER_GAP_2, FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
 import {
   isErrorMessage,
   ThoughtBlock,
@@ -141,7 +142,7 @@ export function SessionsModal({
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
       <div className="w-full max-w-3xl bg-background border border-border/50 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
         <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
-          <div className="flex items-center gap-3">
+          <div className={FLEX_CENTER_GAP_3}>
             <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
               <History size={18} />
             </div>

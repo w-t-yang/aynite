@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { Button } from '../../shared/basic/Button'
 import { FormModal } from '../../shared/featured/FormModal'
+import { FLEX_CENTER_GAP_1 } from '../../shared/lib/styles'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
@@ -78,7 +79,7 @@ const TitleBar: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center gap-1.5"
+                className={FLEX_CENTER_GAP_1}
               >
                 <span>{workspaceConfig.id}</span>
                 <svg

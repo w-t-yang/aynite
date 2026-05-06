@@ -1,5 +1,6 @@
 import { AlertCircle, Download, RefreshCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { FLEX_CENTER_GAP_3 } from '../lib/styles'
 import { cn } from '../../shared/lib/utils'
 
 function UpdateNotification() {
@@ -75,7 +76,7 @@ function UpdateNotification() {
         )}
       >
         {/* Header Row: Icon, Title, Close Button */}
-        <div className="flex items-center gap-3">
+        <div className={FLEX_CENTER_GAP_3}>
           <div
             className={cn(
               'p-2 rounded-lg shrink-0',

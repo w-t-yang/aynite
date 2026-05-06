@@ -1,6 +1,7 @@
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
+import { GRID_2_COL } from '../../shared/lib/styles'
 import type { SettingsState } from '../../shared/lib/types'
 
 interface ToolsTabProps {
@@ -33,7 +34,7 @@ export function ToolsTab({ state, actions }: ToolsTabProps) {
         title="System Capabilities"
         description="Toggle individual tools to control what the assistant can do."
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className={GRID_2_COL}>
           {availableTools.map((tool) => (
             <div
               key={tool.id}

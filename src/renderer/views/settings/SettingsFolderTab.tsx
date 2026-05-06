@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
+import { ADD_ITEM_BUTTON, FLEX_COL_MIN, GRID_2_COL } from '../../shared/lib/styles'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import { cn } from '../../shared/lib/utils'
 
@@ -74,7 +75,7 @@ export function SettingsFolderTab({
             variant="ghost"
             size="sm"
             onClick={handleAddFolder}
-            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
+            className={ADD_ITEM_BUTTON}
           >
             <Plus size={14} /> {labels.addFolderLabel}
           </Button>
@@ -86,7 +87,7 @@ export function SettingsFolderTab({
               key={folder}
               className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/10 group"
             >
-              <div className="flex flex-col min-w-0">
+              <div className={FLEX_COL_MIN}>
                 <span className="text-xs font-medium truncate">
                   {folder.split(/[/\\]/).pop()}
                 </span>
@@ -116,7 +117,7 @@ export function SettingsFolderTab({
         title={labels.detectedSectionTitle}
         description={labels.detectedSectionDescription}
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className={GRID_2_COL}>
           {items.map((item) => (
             <div
               key={item.path}

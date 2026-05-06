@@ -19,6 +19,7 @@ import type {
   SettingsState,
 } from '../../shared/lib/types'
 import { cn } from '../../shared/lib/utils'
+import { FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
 import {
   ApprovalModal,
   SessionsModal,
@@ -526,27 +527,27 @@ export function AIChat() {
         {messages.length === 0 && (
           <div className="text-muted-foreground flex flex-col items-center justify-center h-full space-y-6">
             <div className="space-y-3 text-sm opacity-80">
-              <p className="flex items-center gap-3">
+              <p className={FLEX_CENTER_GAP_3}>
                 <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">
                   Aa
                 </span>
                 Type any text to talk to AI
               </p>
-              <p className="flex items-center gap-3">
+              <p className={FLEX_CENTER_GAP_3}>
                 <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">
                   /
                 </span>
                 Use <code className="text-primary font-bold">/skill</code> to
                 mention AI skills
               </p>
-              <p className="flex items-center gap-3">
+              <p className={FLEX_CENTER_GAP_3}>
                 <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">
                   @
                 </span>
                 Use <code className="text-primary font-bold">@file</code> to
                 reference files
               </p>
-              <p className="flex items-center gap-3">
+              <p className={FLEX_CENTER_GAP_3}>
                 <span className="w-6 h-6 rounded bg-accent shrink-0 flex items-center justify-center text-xs font-mono font-bold">
                   &gt;
                 </span>

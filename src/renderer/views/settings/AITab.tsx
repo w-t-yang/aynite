@@ -7,6 +7,7 @@ import {
   DEFAULT_PROVIDER_MODELS,
   DEFAULT_PROVIDER_URLS,
 } from '../../shared/lib/constants'
+import { ADD_ITEM_BUTTON } from '../../shared/lib/styles'
 import type { AIProviderInstance, SettingsState } from '../../shared/lib/types'
 
 interface AITabProps {
@@ -99,7 +100,7 @@ export function AITab({ state, actions }: AITabProps) {
           variant="ghost"
           size="sm"
           onClick={handleAddProvider}
-          className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
+          className={ADD_ITEM_BUTTON}
         >
           <Plus size={14} /> Add Provider
         </Button>

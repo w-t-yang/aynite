@@ -1,5 +1,6 @@
 import { ColorPicker } from '../basic/ColorPicker'
 import { Input } from '../basic/Input'
+import { FLEX_CENTER_GAP_2 } from '../lib/styles'
 
 interface ColorInputProps {
   label: string
@@ -23,7 +24,7 @@ export function ColorInput({
       <label className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
         {label}
       </label>
-      <div className="flex items-center gap-2">
+      <div className={FLEX_CENTER_GAP_2}>
         <ColorPicker
           value={value}
           onChange={(e) => {

@@ -1,4 +1,5 @@
 import { Input } from '../basic/Input'
+import { FLEX_CENTER_GAP_2 } from '../lib/styles'
 
 interface KeybindingRowProps {
   label: string
@@ -12,7 +13,7 @@ export function KeybindingRow({ label, value, onChange }: KeybindingRowProps) {
       <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
         {label}
       </span>
-      <div className="flex items-center gap-2">
+      <div className={FLEX_CENTER_GAP_2}>
         <Input
           unstyled
           type="text"

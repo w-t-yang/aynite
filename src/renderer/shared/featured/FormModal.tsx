@@ -32,7 +32,7 @@ export function FormModal({
   }
 
   return (
-    <Modal isOpen={true} onClose={onClose} title={title} size="sm">
+    <Modal isOpen onClose={onClose} title={title} size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           autoFocus

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Collapsible } from '../../shared/basic/Collapsible'
 import { Modal } from '../../shared/basic/Modal'
+import { ADD_ITEM_BUTTON } from '../../shared/lib/styles'
 import { Section } from '../../shared/basic/Section'
 import { AgentCard, PromptFileRow } from '../../shared/featured/AgentCard'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
@@ -82,7 +83,7 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
                 })
               }
             }}
-            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
+            className={ADD_ITEM_BUTTON}
           >
             <Plus size={14} /> Add File
           </Button>
@@ -113,7 +114,7 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
             variant="ghost"
             size="sm"
             onClick={handleAddAgent}
-            className="flex items-center gap-1.5 text-primary hover:bg-primary/10"
+            className={ADD_ITEM_BUTTON}
           >
             <Plus size={14} /> Add Agent
           </Button>

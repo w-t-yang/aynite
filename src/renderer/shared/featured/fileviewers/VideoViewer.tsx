@@ -1,11 +1,12 @@
 import { Video } from 'lucide-react'
 import type React from 'react'
 import { type FileInfo, formatFileSize } from '../../lib/file-handlers'
+import { VIEWER_CENTERED_COL } from '../../lib/styles'
 import { UnifiedViewer } from './UnifiedViewer'
 
 export const VideoViewer: React.FC<{ file: FileInfo }> = ({ file }) => (
   <UnifiedViewer padding="p-8">
-    <div className="flex flex-col items-center justify-center min-h-full gap-8">
+    <div className={VIEWER_CENTERED_COL}>
       <video
         controls
         className="max-w-full max-h-[70vh] rounded-lg shadow-2xl border border-white/10"
