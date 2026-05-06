@@ -1,8 +1,7 @@
 import { app } from 'electron'
 import {
-  AGENT_PROMPTS,
-  DEFAULT_AGENTS,
   DEFAULT_AI_CONFIG,
+  createDefaultAgentConfig,
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import {
@@ -37,9 +36,11 @@ import {
   getSkillsConfig,
   restoreCommand,
   restoreSkill,
+  restoreSpell,
   setSpellsNotificationCallback,
 } from '../spells'
 import { initThemes } from '../theme'
+import { getBundledResourcesPath } from '../spells/common'
 
 let notificationCallback:
   | ((data: { type: 'skill' | 'command'; path: string; error: string }) => void)
@@ -48,14 +49,6 @@ let notificationCallback:
 export function setConfigNotificationCallback(cb: typeof notificationCallback) {
   notificationCallback = cb
   setSpellsNotificationCallback(cb)
-}
-
-function getBundledResourcesPath(): string {
-  if (app.isPackaged) {
-    return process.resourcesPath
-  } else {
-    return joinPaths(process.cwd(), 'resources')
-  }
 }
 
 export async function initAppFolders() {
@@ -74,16 +67,7 @@ export async function initAppFolders() {
     skills: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS)] },
     commands: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.COMMANDS)] },
     prompts: { files: getDefaultGlobalPrompts() },
-    agents: {
-      activeId: 'aynite',
-      list: DEFAULT_AGENTS.map((agent) => ({
-        id: agent.id,
-        name: agent.name,
-        promptFiles: [
-          getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename),
-        ],
-      })),
-    },
+    agents: createDefaultAgentConfig(getAynitePromptPath),
   }
   const ignoreDefault = [
     'node_modules',
@@ -218,16 +202,7 @@ export async function loadConfig() {
     )
   }
   if (!mainConfig.agents) {
-    mainConfig.agents = {
-      activeId: 'aynite',
-      list: DEFAULT_AGENTS.map((agent) => ({
-        id: agent.id,
-        name: agent.name,
-        promptFiles: [
-          getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename),
-        ],
-      })),
-    }
+    mainConfig.agents = createDefaultAgentConfig(getAynitePromptPath)
   }
 
   const appearancePath = getAppearanceConfigPath()
@@ -275,18 +250,5 @@ export async function saveConfig(settings: any) {
 }
 
 async function restoreAynitePlaybook() {
-  const destDir = getPlaybookPath()
-  if (await exists(joinPaths(destDir, 'Welcome.md'))) return true
-
-  const srcDir = joinPaths(getBundledResourcesPath(), 'aynite-playbook')
-  if (await exists(srcDir)) {
-    try {
-      await copy(srcDir, destDir, { recursive: true })
-      return true
-    } catch (e) {
-      console.error(`[Restore] Error copying aynite-playbook:`, e)
-      return false
-    }
-  }
-  return false
+  return restoreSpell('', 'aynite-playbook', getPlaybookPath(), 'Welcome.md')
 }

@@ -1,21 +1,10 @@
-export const DEFAULT_PROVIDER_MODELS: Record<string, string> = {
-  ollama: 'gemma4:e4b',
-  openai: 'gpt-4o',
-  anthropic: 'claude-3-5-sonnet-latest',
-  gemini: 'gemini-3-flash-preview',
-  deepseek: 'deepseek-v4-flash',
-  others: 'gpt-4o',
-}
+export {
+  DEFAULT_PROVIDER_MODELS,
+  DEFAULT_PROVIDER_URLS,
+} from '../../../../lib/constants/ai'
 
-export const DEFAULT_PROVIDER_URLS: Record<string, string> = {
-  ollama: 'http://localhost:11434',
-  openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com',
-  gemini: 'https://generativelanguage.googleapis.com/v1beta',
-  deepseek: 'https://api.deepseek.com',
-  others: '',
-}
-
+// Note: TOOL_METADATA here is intentionally a subset of the lib version
+// (omits inputSchema) since the renderer only needs display metadata.
 export const TOOL_METADATA: Record<
   string,
   { name: string; description: string }

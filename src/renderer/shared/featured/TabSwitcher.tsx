@@ -69,6 +69,21 @@ function TabSwitcher({
     )
     .slice(0, 30)
 
+  const handleSelectItem = async (item: (typeof filtered)[0]) => {
+    if (item.isTab) {
+      onSelect(item.id)
+    } else if (item.filepath) {
+      const res = await window.aynite.readFile(item.filepath)
+      if (res?.data) {
+        onOpenFile(
+          { name: item.title, path: item.filepath, isDirectory: false },
+          res.data,
+        )
+      }
+    }
+    onClose()
+  }
+
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
@@ -90,24 +105,7 @@ function TabSwitcher({
       },
       confirmSelection: async () => {
         const item = filtered[selectedIndex]
-        if (item) {
-          if (item.isTab) {
-            onSelect(item.id)
-          } else if (item.filepath) {
-            const res = await window.aynite.readFile(item.filepath)
-            if (res?.data) {
-              onOpenFile(
-                {
-                  name: item.title,
-                  path: item.filepath,
-                  isDirectory: false,
-                },
-                res.data,
-              )
-            }
-          }
-          onClose()
-        }
+        if (item) handleSelectItem(item)
       },
     }
 
@@ -161,26 +159,9 @@ function TabSwitcher({
         <SelectionList
           items={selectionItems}
           selectedIndex={selectedIndex}
-          onSelect={async (selection) => {
+          onSelect={(selection) => {
             const item = filtered.find((f) => f.id === selection.id)
-            if (item) {
-              if (item.isTab) {
-                onSelect(item.id)
-              } else if (item.filepath) {
-                const res = await window.aynite.readFile(item.filepath)
-                if (res?.data) {
-                  onOpenFile(
-                    {
-                      name: item.title,
-                      path: item.filepath,
-                      isDirectory: false,
-                    },
-                    res.data,
-                  )
-                }
-              }
-              onClose()
-            }
+            if (item) handleSelectItem(item)
           }}
           className="max-h-[50vh]"
         />

@@ -15,6 +15,18 @@ import type {
 import { ayniteConfig } from '../config'
 import { executeLayoutOperation } from '../utils/tile'
 
+function updateLayoutInConfig(
+  prev: WorkspaceConfig,
+  newLayout: LayoutNode,
+): WorkspaceConfig {
+  return {
+    ...prev,
+    layouts: prev.layouts.map((l) =>
+      l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l,
+    ),
+  }
+}
+
 interface AppContextType {
   workspaceConfig: WorkspaceConfig | null
   workspaces: string[]
@@ -106,12 +118,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     (newLayout: LayoutNode) => {
       setWorkspaceConfig((prev) => {
         if (!prev) return null
-        const newConfig = {
-          ...prev,
-          layouts: prev.layouts.map((l) =>
-            l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l,
-          ),
-        }
+        const newConfig = updateLayoutInConfig(prev, newLayout)
         if (!isResizing) ayniteConfig.saveWorkspace(newConfig)
         return newConfig
       })
@@ -137,12 +144,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         )
         if (!activeLayout) return prev
         const newLayout = updateNodeTree(activeLayout.layout)
-        const newConfig = {
-          ...prev,
-          layouts: prev.layouts.map((l) =>
-            l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l,
-          ),
-        }
+        const newConfig = updateLayoutInConfig(prev, newLayout)
         // ayniteConfig.saveWorkspace(newConfig)
         return newConfig
       })

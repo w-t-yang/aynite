@@ -4,133 +4,19 @@ import {
   Calendar,
   Check,
   Clock,
-  FileText,
   Folder,
-  FolderOpen,
   History,
-  Save,
   Terminal,
   X,
   XCircle,
 } from 'lucide-react'
 import { Collapsible } from '../../shared/basic/Collapsible'
 import { cn } from '../../shared/lib/utils'
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-export const isErrorMessage = (content: any) => {
-  if (!content) return false
-  const c =
-    typeof content === 'string' ? content.trim() : JSON.stringify(content)
-  return (
-    c.startsWith('Error:') ||
-    c.startsWith('Execution Error:') ||
-    c.startsWith('❌') ||
-    c.includes('"status": "error"')
-  )
-}
-
-// ─── Tool Call Component ────────────────────────────────────────────────────
-
-export function ToolCallItem({
-  call,
-  defaultExpanded = false,
-}: {
-  call: any
-  defaultExpanded?: boolean
-}) {
-  const toolName = call.toolName || call.function?.name
-  const toolArgs =
-    call.args ||
-    (typeof call.function?.arguments === 'string'
-      ? JSON.parse(call.function.arguments)
-      : call.function?.arguments)
-
-  let Icon = Bot
-  let colorClass = 'border-primary/40'
-
-  switch (toolName) {
-    case 'read_file':
-      Icon = FileText
-      colorClass = 'border-cyan-500/40'
-      break
-    case 'write_file':
-      Icon = Save
-      colorClass = 'border-green-500/40'
-      break
-    case 'list_files':
-      Icon = FolderOpen
-      colorClass = 'border-orange-500/40'
-      break
-    case 'run_command':
-      Icon = Terminal
-      colorClass = 'border-red-500/40'
-      break
-  }
-
-  return (
-    <Collapsible
-      title={toolName}
-      icon={Icon}
-      colorClass={colorClass}
-      defaultExpanded={defaultExpanded}
-    >
-      <pre className="text-[10px] font-mono text-muted-foreground/70 whitespace-pre-wrap overflow-auto max-h-60">
-        {JSON.stringify(toolArgs, null, 2)}
-      </pre>
-      {call.result && (
-        <div className="mt-2 border-t border-border/5 pt-2">
-          <div
-            className={cn(
-              'text-[9px] font-bold mb-1 uppercase tracking-wider',
-              isErrorMessage(call.result)
-                ? 'text-destructive/60'
-                : 'text-green-500/60',
-            )}
-          >
-            {isErrorMessage(call.result) ? 'Error' : 'Result'}
-          </div>
-          <pre
-            className={cn(
-              'text-[10px] font-mono whitespace-pre-wrap max-h-96 overflow-auto opacity-90',
-              isErrorMessage(call.result)
-                ? 'text-destructive/80'
-                : 'text-muted-foreground/60',
-            )}
-          >
-            {typeof call.result === 'string'
-              ? call.result
-              : JSON.stringify(call.result, null, 2)}
-          </pre>
-        </div>
-      )}
-    </Collapsible>
-  )
-}
-
-// ─── Thought Block Component ────────────────────────────────────────────────
-
-export function ThoughtBlock({
-  content,
-  defaultExpanded = false,
-}: {
-  content: string
-  defaultExpanded?: boolean
-}) {
-  if (!content?.trim()) return null
-  return (
-    <Collapsible
-      title="Thinking Process"
-      icon={Bot}
-      colorClass="border-primary/40"
-      defaultExpanded={defaultExpanded}
-    >
-      <div className="text-[11px] leading-relaxed text-muted-foreground/80 italic whitespace-pre-wrap">
-        {content}
-      </div>
-    </Collapsible>
-  )
-}
+import {
+  isErrorMessage,
+  ThoughtBlock,
+  ToolCallItem,
+} from '../../shared/featured/advanced/ChatMessage'
 
 // ─── Tool Result Message Component ──────────────────────────────────────────
 

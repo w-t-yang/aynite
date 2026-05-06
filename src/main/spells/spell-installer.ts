@@ -100,7 +100,9 @@ export async function restoreSpell(
   resourceDir: string,
   spellName: string,
   destDir: string,
+  markerFile?: string,
 ) {
+  if (markerFile && (await exists(joinPaths(destDir, markerFile)))) return true
   const srcDir = joinPaths(getBundledResourcesPath(), resourceDir, spellName)
   if (await exists(srcDir)) {
     try {

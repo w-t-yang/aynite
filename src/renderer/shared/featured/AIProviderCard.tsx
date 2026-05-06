@@ -1,11 +1,7 @@
-import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from '../basic/Button'
-import { Input } from '../basic/Input'
-import { Modal } from '../basic/Modal'
-import { Radio } from '../basic/Radio'
 import type { AIProviderInstance } from '../lib/types'
-import { cn } from '../lib/utils'
+import { Input } from '../basic/Input'
+import { EditableCardFrame, EditableCardHeader, DeleteItemModal } from './EditableCard'
 import { SelectionMenu } from './SelectionMenu'
 
 interface AIProviderCardProps {
@@ -27,36 +23,16 @@ export function AIProviderCard({
 
   return (
     <>
-      <div
-        className={cn(
-          'p-5 rounded-xl border transition-all space-y-4',
-          isActive ? 'border-primary bg-accent/5' : 'border-border bg-accent/5',
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Radio
-              name="active-ai-provider"
-              checked={isActive}
-              onChange={() => onSetActive(provider.id)}
-            />
-            <Input
-              unstyled
-              className="font-bold w-64"
-              value={provider.name}
-              onChange={(e) => onUpdate(provider.id, 'name', e.target.value)}
-              placeholder="Config Name"
-            />
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowDeleteModal(true)}
-            className="hover:text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 size={16} />
-          </Button>
-        </div>
+      <EditableCardFrame isActive={isActive}>
+        <EditableCardHeader
+          radioName="active-ai-provider"
+          isActive={isActive}
+          onSetActive={() => onSetActive(provider.id)}
+          itemName={provider.name}
+          onNameChange={(v) => onUpdate(provider.id, 'name', v)}
+          placeholder="Config Name"
+          onDeleteRequest={() => setShowDeleteModal(true)}
+        />
 
         <div className="grid grid-cols-2 gap-4 ml-7">
           <SelectionMenu
@@ -131,36 +107,20 @@ export function AIProviderCard({
             />
           )}
         </div>
-      </div>
+      </EditableCardFrame>
 
-      <Modal
+      <DeleteItemModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        onDelete={() => onDelete(provider.id)}
         title="Delete AI Provider"
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                onDelete(provider.id)
-                setShowDeleteModal(false)
-              }}
-            >
-              Delete Provider
-            </Button>
-          </>
-        }
+        itemName={provider.name}
+        deleteLabel="Delete Provider"
       >
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Are you sure you want to delete{' '}
-          <span className="font-bold text-foreground">"{provider.name}"</span>?
           This action will permanently remove this provider configuration.
         </p>
-      </Modal>
+      </DeleteItemModal>
     </>
   )
 }

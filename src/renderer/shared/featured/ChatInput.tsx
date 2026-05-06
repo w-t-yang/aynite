@@ -23,7 +23,7 @@ import { type SelectionItem, SelectionList } from '../basic/SelectionList'
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-export interface SuggestionItem extends SelectionItem {
+interface SuggestionItem extends SelectionItem {
   name?: string
   isDirectory?: boolean
 }
@@ -34,7 +34,7 @@ interface SuggestionListProps {
   triggerChar: string
 }
 
-export interface SuggestionListHandle {
+interface SuggestionListHandle {
   onKeyDown: (props: { event: KeyboardEvent }) => boolean
 }
 
@@ -546,7 +546,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 )
 
 ChatInput.displayName = 'ChatInput'
-export default ChatInput
 
 // ─── Serializer ──────────────────────────────────────────────────────
 

@@ -90,6 +90,25 @@ function FileViewer({
   const undoStack = useRef<string[]>([])
   const isLocalChange = useRef(false)
 
+  const applyEdit = (start: number, end: number) => {
+    undoStack.current.push(localContent)
+    const newContent =
+      localContent.substring(0, start) + localContent.substring(end)
+    setLocalContent(newContent)
+    if (onChange) {
+      isLocalChange.current = true
+      onChange(newContent)
+    }
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = textareaRef.current.selectionEnd =
+          start
+        textareaRef.current.focus()
+        updateCursor()
+      }
+    }, 0)
+  }
+
   useEffect(() => {
     // Only sync from parent if it's not our own change propagating back
     if (!isLocalChange.current) {
@@ -426,35 +445,10 @@ function FileViewer({
           const end = textarea.selectionEnd
           if (start === end) {
             if (start < localContent.length) {
-              undoStack.current.push(localContent)
-              const newContent =
-                localContent.substring(0, start) +
-                localContent.substring(start + 1)
-              setLocalContent(newContent)
-              if (onChange) {
-                isLocalChange.current = true
-                onChange(newContent)
-              }
-              setTimeout(() => {
-                textarea.selectionStart = textarea.selectionEnd = start
-                textarea.focus()
-                updateCursor()
-              }, 0)
+              applyEdit(start, start + 1)
             }
           } else {
-            undoStack.current.push(localContent)
-            const newContent =
-              localContent.substring(0, start) + localContent.substring(end)
-            setLocalContent(newContent)
-            if (onChange) {
-              isLocalChange.current = true
-              onChange(newContent)
-            }
-            setTimeout(() => {
-              textarea.selectionStart = textarea.selectionEnd = start
-              textarea.focus()
-              updateCursor()
-            }, 0)
+            applyEdit(start, end)
           }
         }
       },

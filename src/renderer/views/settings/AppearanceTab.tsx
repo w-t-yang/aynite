@@ -206,25 +206,22 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
             {/* Colors */}
             <div className="grid grid-cols-2 gap-x-16 gap-y-4">
               {Object.entries(editingTheme.colors).map(
-                ([key, value]: [string, any]) => (
-                  <ColorInput
-                    key={key}
-                    label={COLOR_LABELS[key] || key}
-                    value={value}
-                    onPickerChange={(v) =>
-                      handleUpdateTheme({
-                        ...editingTheme,
-                        colors: { ...editingTheme.colors, [key]: v },
-                      })
-                    }
-                    onTextChange={(v) =>
-                      handleUpdateTheme({
-                        ...editingTheme,
-                        colors: { ...editingTheme.colors, [key]: v },
-                      })
-                    }
-                  />
-                ),
+                ([key, value]: [string, any]) => {
+                  const handleColorChange = (v: string) =>
+                    handleUpdateTheme({
+                      ...editingTheme,
+                      colors: { ...editingTheme.colors, [key]: v },
+                    })
+                  return (
+                    <ColorInput
+                      key={key}
+                      label={COLOR_LABELS[key] || key}
+                      value={value}
+                      onPickerChange={handleColorChange}
+                      onTextChange={handleColorChange}
+                    />
+                  )
+                },
               )}
             </div>
           </div>

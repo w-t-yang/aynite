@@ -1,40 +1,12 @@
-import { FileText, Plus, Trash2 } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Collapsible } from '../../shared/basic/Collapsible'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
-import { AgentCard } from '../../shared/featured/AgentCard'
+import { AgentCard, PromptFileRow } from '../../shared/featured/AgentCard'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import type { Agent, SettingsState } from '../../shared/lib/types'
-
-interface PromptFileRowProps {
-  filePath: string
-  onDelete: () => void
-}
-
-function PromptFileRow({ filePath, onDelete }: PromptFileRowProps) {
-  return (
-    <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-accent/5 group">
-      <div className="flex flex-col min-w-0">
-        <span className="text-xs font-medium truncate">
-          {filePath.split(/[/\\]/).pop()}
-        </span>
-        <span className="text-[10px] text-muted-foreground truncate">
-          {filePath}
-        </span>
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onDelete}
-        className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all opacity-0 group-hover:opacity-100"
-      >
-        <Trash2 size={14} />
-      </Button>
-    </div>
-  )
-}
 
 interface AgentsTabProps {
   state: {

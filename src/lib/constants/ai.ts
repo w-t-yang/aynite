@@ -327,3 +327,16 @@ export const DEFAULT_AGENTS = [
   { id: 'ghost', name: 'Ghost Writer', promptKey: 'GHOST' },
   { id: 'prism', name: 'Prism Photographer', promptKey: 'PRISM' },
 ]
+
+export function createDefaultAgentConfig(
+  getPromptPath: (filename: string) => string,
+) {
+  return {
+    activeId: 'aynite',
+    list: DEFAULT_AGENTS.map((agent) => ({
+      id: agent.id,
+      name: agent.name,
+      promptFiles: [getPromptPath(AGENT_PROMPTS[agent.promptKey].filename)],
+    })),
+  }
+}

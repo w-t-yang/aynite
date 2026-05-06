@@ -1,7 +1,7 @@
 import {
   AGENT_PROMPTS,
-  DEFAULT_AGENTS,
   GLOBAL_PROMPTS,
+  createDefaultAgentConfig,
 } from '../../lib/constants/ai'
 import {
   ensureDir,
@@ -61,16 +61,7 @@ export async function restoreDefaultPrompts() {
 
   const promptFiles = getDefaultGlobalPrompts()
 
-  const agents = {
-    activeId: 'aynite',
-    list: DEFAULT_AGENTS.map((agent) => ({
-      id: agent.id,
-      name: agent.name,
-      promptFiles: [
-        getAynitePromptPath(AGENT_PROMPTS[agent.promptKey].filename),
-      ],
-    })),
-  }
+  const agents = createDefaultAgentConfig(getAynitePromptPath)
 
   // Save to config.json
   const mainConfigPath = getMainConfigPath()

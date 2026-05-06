@@ -22,7 +22,7 @@ interface ThoughtBlockProps {
   defaultExpanded?: boolean
 }
 
-function ThoughtBlock({ content, defaultExpanded = false }: ThoughtBlockProps) {
+export function ThoughtBlock({ content, defaultExpanded = false }: ThoughtBlockProps) {
   if (!content?.trim()) return null
   return (
     <Collapsible
@@ -188,7 +188,7 @@ function MessageContent({
   return <div className="whitespace-pre-wrap">{parts}</div>
 }
 
-const isErrorMessage = (content: any) => {
+export const isErrorMessage = (content: any) => {
   if (!content) return false
   const c =
     typeof content === 'string' ? content.trim() : JSON.stringify(content)
@@ -205,7 +205,7 @@ interface ToolCallItemProps {
   defaultExpanded?: boolean
 }
 
-function ToolCallItem({ call, defaultExpanded = false }: ToolCallItemProps) {
+export function ToolCallItem({ call, defaultExpanded = false }: ToolCallItemProps) {
   const toolName = call.toolName || call.function?.name
   const toolArgs =
     call.args ||

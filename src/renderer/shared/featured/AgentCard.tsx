@@ -2,18 +2,15 @@ import { Plus, Trash2 } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 import { Button } from '../basic/Button'
-import { Input } from '../basic/Input'
-import { Modal } from '../basic/Modal'
-import { Radio } from '../basic/Radio'
-import { cn } from '../lib/utils'
 import { SECTION_LABEL } from '../lib/styles'
+import { EditableCardFrame, EditableCardHeader, DeleteItemModal } from './EditableCard'
 
 interface PromptFileRowProps {
   filePath: string
   onDelete: () => void
 }
 
-function PromptFileRow({ filePath, onDelete }: PromptFileRowProps) {
+export function PromptFileRow({ filePath, onDelete }: PromptFileRowProps) {
   return (
     <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-accent/5 group">
       <div className="flex flex-col min-w-0">
@@ -59,36 +56,16 @@ export function AgentCard({
 
   return (
     <>
-      <div
-        className={cn(
-          'p-5 rounded-xl border transition-all space-y-4',
-          isActive ? 'border-primary bg-accent/5' : 'border-border bg-accent/5',
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Radio
-              name="active-agent"
-              checked={isActive}
-              onChange={() => onSetActive(agent.id)}
-            />
-            <Input
-              unstyled
-              className="font-bold w-64"
-              value={agent.name}
-              onChange={(e) => onUpdate(agent.id, 'name', e.target.value)}
-              placeholder="Agent Name"
-            />
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowDeleteModal(true)}
-            className="hover:text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 size={16} />
-          </Button>
-        </div>
+      <EditableCardFrame isActive={isActive}>
+        <EditableCardHeader
+          radioName="active-agent"
+          isActive={isActive}
+          onSetActive={() => onSetActive(agent.id)}
+          itemName={agent.name}
+          onNameChange={(v) => onUpdate(agent.id, 'name', v)}
+          placeholder="Agent Name"
+          onDeleteRequest={() => setShowDeleteModal(true)}
+        />
 
         <div className="ml-7 space-y-4">
           <div className="flex items-center justify-between">
@@ -127,36 +104,20 @@ export function AgentCard({
           {/* Integrated Preview or other children */}
           {children}
         </div>
-      </div>
+      </EditableCardFrame>
 
-      <Modal
+      <DeleteItemModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        onDelete={() => onDelete(agent.id)}
         title="Delete Agent Profile"
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                onDelete(agent.id)
-                setShowDeleteModal(false)
-              }}
-            >
-              Delete Agent
-            </Button>
-          </>
-        }
+        itemName={agent.name}
+        deleteLabel="Delete Agent"
       >
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Are you sure you want to delete the agent{' '}
-          <span className="font-bold text-foreground">"{agent.name}"</span>? All
-          agent-specific configurations will be lost.
+          All agent-specific configurations will be lost.
         </p>
-      </Modal>
+      </DeleteItemModal>
     </>
   )
 }

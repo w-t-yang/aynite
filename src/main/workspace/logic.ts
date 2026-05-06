@@ -71,13 +71,18 @@ export async function saveWorkspaceState(
   await writeJson(workspacePath, updated)
 }
 
+async function resolveWorkspace(workspaceName?: string) {
+  const wsConfig = await getWorkspacesConfig()
+  const targetWs = workspaceName || wsConfig.active
+  const data = await getWorkspaceData(targetWs)
+  return { targetWs, data }
+}
+
 export async function addWorkspaceFolder(
   folderPath: string,
   workspaceName?: string,
 ): Promise<boolean> {
-  const wsConfig = await getWorkspacesConfig()
-  const targetWs = workspaceName || wsConfig.active
-  const data = await getWorkspaceData(targetWs)
+  const { targetWs, data } = await resolveWorkspace(workspaceName)
   if (!data.folders.includes(folderPath)) {
     data.folders.push(folderPath)
     await writeJson(getWorkspaceDataPath(targetWs), data)
@@ -89,9 +94,7 @@ export async function removeWorkspaceFolder(
   folderPath: string,
   workspaceName?: string,
 ): Promise<boolean> {
-  const wsConfig = await getWorkspacesConfig()
-  const targetWs = workspaceName || wsConfig.active
-  const data = await getWorkspaceData(targetWs)
+  const { targetWs, data } = await resolveWorkspace(workspaceName)
   data.folders = data.folders.filter((f: string) => f !== folderPath)
   await writeJson(getWorkspaceDataPath(targetWs), data)
   return true
@@ -101,9 +104,7 @@ export async function reorderWorkspaceFolders(
   folders: string[],
   workspaceName?: string,
 ): Promise<boolean> {
-  const wsConfig = await getWorkspacesConfig()
-  const targetWs = workspaceName || wsConfig.active
-  const data = await getWorkspaceData(targetWs)
+  const { targetWs, data } = await resolveWorkspace(workspaceName)
   data.folders = folders
   await writeJson(getWorkspaceDataPath(targetWs), data)
   return true
@@ -112,9 +113,7 @@ export async function reorderWorkspaceFolders(
 export async function getWorkspaceFolders(
   workspaceName?: string,
 ): Promise<string[]> {
-  const wsConfig = await getWorkspacesConfig()
-  const targetWs = workspaceName || wsConfig.active
-  const data = await getWorkspaceData(targetWs)
+  const { data } = await resolveWorkspace(workspaceName)
   return data.folders || []
 }
 

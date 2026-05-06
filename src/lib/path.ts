@@ -292,19 +292,33 @@ export async function checkIsTextFile(filePath: string): Promise<boolean> {
 
 // --- Secure Helpers (with Domain Validation) ---
 
-export async function secureReadText(
+async function secureFileOp(
   filePath: string,
   domainFolders: string[],
+  op: () => Promise<string>,
+  errorMsg: (msg: string) => string,
 ): Promise<string> {
   if (!isPathWithinDomain(filePath, domainFolders)) {
     return ERROR_MESSAGES.ACCESS_DENIED(filePath)
   }
   try {
-    return await readText(filePath)
+    return await op()
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e)
-    return ERROR_MESSAGES.FILE_READ_ERROR(message)
+    return errorMsg(message)
   }
+}
+
+export async function secureReadText(
+  filePath: string,
+  domainFolders: string[],
+): Promise<string> {
+  return secureFileOp(
+    filePath,
+    domainFolders,
+    () => readText(filePath),
+    ERROR_MESSAGES.FILE_READ_ERROR,
+  )
 }
 
 export async function secureWriteText(
@@ -312,16 +326,15 @@ export async function secureWriteText(
   content: string,
   domainFolders: string[],
 ): Promise<string> {
-  if (!isPathWithinDomain(filePath, domainFolders)) {
-    return ERROR_MESSAGES.ACCESS_DENIED(filePath)
-  }
-  try {
-    await writeText(filePath, content)
-    return ERROR_MESSAGES.FILE_WRITE_SUCCESS(filePath)
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e)
-    return ERROR_MESSAGES.FILE_WRITE_ERROR(message)
-  }
+  return secureFileOp(
+    filePath,
+    domainFolders,
+    async () => {
+      await writeText(filePath, content)
+      return ERROR_MESSAGES.FILE_WRITE_SUCCESS(filePath)
+    },
+    ERROR_MESSAGES.FILE_WRITE_ERROR,
+  )
 }
 
 export async function secureListDir(

@@ -2,7 +2,8 @@ import { Check, Copy, History } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
 import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
-import ChatInput, {
+import {
+  ChatInput,
   type ChatInputHandle,
 } from '../../shared/featured/ChatInput'
 import { type AgentConfig, runAgentLoop } from '../../shared/lib/agent'
@@ -229,6 +230,20 @@ export function AIChat() {
   const genId = () =>
     `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
+  const appendToAssistant = (
+    prev: ChatMessage[],
+    update: Partial<ChatMessage>,
+  ): ChatMessage[] => {
+    const last = prev[prev.length - 1]
+    if (last && last.role === 'assistant') {
+      return [...prev.slice(0, -1), { ...last, ...update }]
+    }
+    return [
+      ...prev,
+      { id: genId(), role: 'assistant', content: '', ...update },
+    ]
+  }
+
   const requestApproval = useCallback(
     (command: string, cwd: string): Promise<boolean> => {
       return new Promise((resolve) => {
@@ -435,63 +450,29 @@ export function AIChat() {
           (event: AgentStepEvent) => {
             if (event.type === 'text_delta') {
               setMessages((prev) => {
-                const last = prev[prev.length - 1]
-                if (last && last.role === 'assistant') {
-                  const newLast = {
-                    ...last,
-                    content: last.content + event.content,
-                  }
-                  return [...prev.slice(0, -1), newLast]
-                }
-                return [
-                  ...prev,
-                  { id: genId(), role: 'assistant', content: event.content },
-                ]
+                const lastContent = prev[prev.length - 1]?.content || ''
+                return appendToAssistant(prev, {
+                  content: lastContent + event.content,
+                })
               })
             } else if (event.type === 'thinking') {
               setMessages((prev) => {
-                const last = prev[prev.length - 1]
-                if (last && last.role === 'assistant') {
-                  const newLast = {
-                    ...last,
-                    thinking: (last.thinking || '') + event.content,
-                  }
-                  return [...prev.slice(0, -1), newLast]
-                }
-                return [
-                  ...prev,
-                  {
-                    id: genId(),
-                    role: 'assistant',
-                    content: '',
-                    thinking: event.content,
-                  },
-                ]
+                const lastThinking = prev[prev.length - 1]?.thinking || ''
+                return appendToAssistant(prev, {
+                  thinking: lastThinking + event.content,
+                })
               })
             } else if (event.type === 'tool_call') {
+              const call = {
+                toolName: event.toolName,
+                args: event.toolArgs,
+                toolCallId: event.toolCallId,
+              }
               setMessages((prev) => {
-                const last = prev[prev.length - 1]
-                const call = {
-                  toolName: event.toolName,
-                  args: event.toolArgs,
-                  toolCallId: event.toolCallId,
-                }
-                if (last && last.role === 'assistant') {
-                  const newLast = {
-                    ...last,
-                    tool_calls: [...(last.tool_calls || []), call],
-                  }
-                  return [...prev.slice(0, -1), newLast]
-                }
-                return [
-                  ...prev,
-                  {
-                    id: genId(),
-                    role: 'assistant',
-                    content: '',
-                    tool_calls: [call],
-                  },
-                ]
+                const lastCalls = prev[prev.length - 1]?.tool_calls || []
+                return appendToAssistant(prev, {
+                  tool_calls: [...lastCalls, call],
+                })
               })
             } else if (event.type === 'tool_result') {
               setMessages((prev) => {
@@ -605,26 +586,6 @@ export function AIChat() {
     abortRef.current?.abort()
     setShowClearConfirm(false)
   }, [showClearConfirm])
-  const copyHistoryAsJson = useCallback(() => {
-    const jsonStr = JSON.stringify(messages, null, 2)
-    navigator.clipboard
-      .writeText(jsonStr)
-      .then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      })
-      .catch((err) => console.error('Failed to copy', err))
-  }, [messages])
-
-  useEffect(() => {
-    ;(window as any).clearChat = () => {
-      setMessages([])
-      setSessionId(null)
-      localStorage.removeItem('lastSession')
-      abortRef.current?.abort()
-    }
-    ;(window as any).copyChat = copyHistoryAsJson
-  }, [copyHistoryAsJson])
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard
       .writeText(text)
@@ -635,6 +596,19 @@ export function AIChat() {
       .catch((err) => console.error('Failed to copy', err))
   }, [])
 
+  const copyHistoryAsJson = useCallback(() => {
+    copyToClipboard(JSON.stringify(messages, null, 2))
+  }, [messages, copyToClipboard])
+
+  useEffect(() => {
+    ;(window as any).clearChat = () => {
+      setMessages([])
+      setSessionId(null)
+      localStorage.removeItem('lastSession')
+      abortRef.current?.abort()
+    }
+    ;(window as any).copyChat = copyHistoryAsJson
+  }, [copyHistoryAsJson])
   const saveMessageToFile = useCallback(
     async (text: string) => {
       const filename = `ai-message-${Date.now()}.md`
