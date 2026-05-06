@@ -55,15 +55,12 @@ const Tile: React.FC<TileProps> = ({ node }) => {
         isActive ? 'border-primary z-10' : 'border-tile-border',
       )}
       style={{ flex: `${size} 1 0%` }}
-      onMouseDown={() => setActiveTileId(id)}
     >
       <div
         className={cn(
           'absolute top-2 right-2 z-50 transition-opacity',
           url ? 'opacity-0 hover:opacity-100' : 'opacity-100',
         )}
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
       >
         <SelectionMenu
           items={menuItems}
@@ -84,6 +81,8 @@ const Tile: React.FC<TileProps> = ({ node }) => {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2}
+                role="img"
+                aria-label="Tile options"
               >
                 <circle cx="12" cy="12" r="1" />
                 <circle cx="12" cy="5" r="1" />
@@ -113,6 +112,8 @@ const Tile: React.FC<TileProps> = ({ node }) => {
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              role="img"
+              aria-label="Empty tile"
             >
               <path
                 strokeLinecap="round"
@@ -124,6 +125,13 @@ const Tile: React.FC<TileProps> = ({ node }) => {
             <div className="text-[13px] font-medium opacity-10">Empty Tile</div>
           </div>
         )}
+        <button
+          type="button"
+          className="absolute inset-0 appearance-none border-none bg-transparent p-0 m-0 cursor-pointer"
+          style={{ pointerEvents: isActive ? 'none' : 'auto' }}
+          tabIndex={-1}
+          onMouseDown={() => setActiveTileId(id)}
+        />
       </div>
     </div>
   )
