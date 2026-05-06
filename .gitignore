@@ -10,3 +10,4 @@ tmp/
 .vscode
 dist-standalone
 coverage/
+.jscpd-output

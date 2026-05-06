@@ -12,8 +12,9 @@
     "dev:standalone": "vite --config vite.standalone.config.ts",
     "audit:ui": "tsx scripts/audit-ui.ts",
     "audit:main": "tsx scripts/audit-main.ts",
-    "audit": "npm run audit:ui && npm run audit:main",
-    "audit:check": "tsx scripts/audit-ui.ts --check && tsx scripts/audit-main.ts --check",
+    "audit:bridge": "tsx scripts/audit-ipc-bridge.ts",
+    "audit": "npm run audit:ui && npm run audit:main && npm run audit:bridge",
+    "audit:check": "tsx scripts/audit-ui.ts --check && tsx scripts/audit-main.ts --check && tsx scripts/audit-ipc-bridge.ts --check",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -23,6 +24,12 @@
     "lint:audit": "ast-grep scan",
     "lint:deadcode": "knip",
     "inventory": "tsx scripts/component-inventory.ts",
+    "simplify:complexity": "tsx scripts/audit-complexity.ts",
+    "simplify:exports": "tsx scripts/audit-exports.ts",
+    "simplify:duplication": "jscpd --config .jscpd.json",
+    "simplify:circular": "madge --warning --circular --extensions ts,tsx src/",
+    "simplify:patterns": "tsx scripts/audit-patterns.ts",
+    "simplify": "npm run simplify:complexity ; npm run simplify:exports ; npm run simplify:duplication ; npm run simplify:circular ; npm run simplify:patterns",
     "build:standalone": "npm run audit && vite build --config vite.standalone.config.ts && mkdir -p ~/.aynite && cp -rv dist-standalone/* ~/.aynite/",
     "serve:standalone": "npm run build:standalone && npx serve dist-standalone",
     "patch-tag": "npm version patch && git push && git push --tags",
@@ -32,7 +39,17 @@
     "build:deb": "electron-vite build && electron-builder --linux deb",
     "build:pacman": "electron-vite build && electron-builder --linux pacman",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:win": "electron-vite build && electron-builder --win"
+    "build:win": "electron-vite build && electron-builder --win",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "biome check --write --unsafe"
+    ],
+    "*.{json,md,css}": [
+      "biome check --write"
+    ]
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.72",
@@ -83,7 +100,11 @@
     "electron": "^34.0.2",
     "electron-builder": "^25.1.8",
     "electron-vite": "^3.0.0",
+    "husky": "^9.1.7",
+    "jscpd": "^4.0.9",
     "knip": "^6.11.0",
+    "lint-staged": "^16.4.0",
+    "madge": "^8.0.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.19.0",
     "typescript": "~5.8.2",

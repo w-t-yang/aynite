@@ -1,0 +1,10 @@
+id: no-ts-ignore
+message: Avoid @ts-ignore and @ts-expect-error comments
+note: Fix the underlying type error instead of suppressing type checks.
+severity: warning
+language: tsx
+rule:
+  kind: program
+  any:
+    - regex: '@ts-ignore'
+    - regex: '@ts-expect-error'

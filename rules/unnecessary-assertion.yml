@@ -1,0 +1,7 @@
+id: unnecessary-type-assertion
+message: Unnecessary type assertion
+note: as Type assertions suggest potential dead code or incomplete refactoring.
+severity: warning
+language: tsx
+rule:
+  kind: as_expression

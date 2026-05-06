@@ -13,7 +13,9 @@ npm run preview            # Preview production build
 # Audit (architecture rule enforcement)
 npm run audit:main         # Audit main process for rule violations
 npm run audit:ui           # Audit renderer code for rule violations
-npm run audit              # Run both audits
+npm run audit:bridge       # Audit IPC bridge contract (preload vs main handlers)
+npm run audit              # Run all audits (ui + main + bridge)
+npm run audit:check        # Run all audits in CI mode (exit 1 on breaches)
 npm run test:ai            # Test AI provider configurations
 
 # Test
@@ -26,10 +28,21 @@ npm run test:unit       # Core logic tests only (lib + main)
 npm run lint            # Check for issues
 npm run lint:fix        # Auto-fix what it can
 
+# Type check (TypeScript compiler)
+npm run typecheck       # tsc --noEmit — find type errors (baseline: 46)
+
 # Audit (custom rules)
-npm run lint:audit      # ast-grep structural rules (button types, inline styles, etc.)
+npm run lint:audit      # ast-grep structural rules (button types, inline styles, any usage, as assertions, ts-ignore)
 npm run lint:deadcode   # Knip — find unused files, exports, and dependencies
 npm run inventory       # Generate component inventory report
+
+# Simplify — structural refactoring radar (run these to find what to improve)
+npm run simplify:complexity    # Functions exceeding complexity/line/param thresholds
+npm run simplify:exports       # Exports that could be made private
+npm run simplify:duplication   # jscpd — copy-pasted code blocks
+npm run simplify:circular      # madge — circular dependency detection
+npm run simplify:patterns      # Micro-patterns (nested ternary, .then chains, boolean props, etc.)
+npm run simplify               # Run all five simplify checks in sequence
 
 # Standalone (browser-only, no Electron)
 npm run dev:standalone     # Vite dev server for standalone mode
@@ -50,7 +63,7 @@ npm run patch-beta         # Bump prerelease beta, push + tags
 
 No TypeScript compiler — `tsconfig.json` uses `noEmit: true`; electron-vite handles bundling.
 
-Test runner is Vitest. Linter is Biome. Audit scripts (`scripts/audit-main.ts`, `scripts/audit-ui.ts`) enforce architecture rules via `tsx`. Structural pattern rules via ast-grep (`rules/`). Dead code detection via Knip (`knip.json`). Component inventory via `scripts/component-inventory.ts`.
+Test runner is Vitest. Linter is Biome. Audit scripts (`scripts/audit-main.ts`, `scripts/audit-ui.ts`, `scripts/audit-ipc-bridge.ts`) enforce architecture rules via `tsx`. Structural pattern rules via ast-grep (`rules/`). Dead code detection via Knip (`knip.json`). Component inventory via `scripts/component-inventory.ts`.
 
 ## Architecture
 

@@ -1,0 +1,22 @@
+{
+  "output": ".jscpd-output",
+  "threshold": 15,
+  "reporters": ["console", "silent"],
+  "ignore": [
+    "node_modules/**",
+    ".git/**",
+    "out/**",
+    "dist/**",
+    "dist-standalone/**",
+    "coverage/**",
+    "resources/**",
+    "tests/**",
+    "scripts/**"
+  ],
+  "absolute": true,
+  "minLines": 6,
+  "minTokens": 30,
+  "pattern": "src/**/*.{ts,tsx}",
+  "blame": false,
+  "gitignore": true
+}

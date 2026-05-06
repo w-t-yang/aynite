@@ -1,0 +1,10 @@
+id: no-inline-any
+message: Use a specific type instead of `any`
+note: Replace any type annotations and as any assertions with specific types.
+severity: warning
+language: tsx
+rule:
+  kind: program
+  any:
+    - regex: '\bas any\b'
+    - regex: ':\s*any'
