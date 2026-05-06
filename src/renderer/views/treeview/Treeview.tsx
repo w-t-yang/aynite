@@ -178,30 +178,7 @@ export function Treeview() {
       window.removeEventListener('click', closeMenu)
       window.removeEventListener('contextmenu', closeMenu)
     }
-  }, [workspaces, rootFilesPaths.includes, loadWorkspaceData])
-
-  useEffect(() => {
-    if (activeTabPath && treeRef.current) {
-      expandPathIteratively(activeTabPath, treeData, setTreeData, treeRef)
-    }
-  }, [
-    activeTabPath,
-    treeData.length,
-    treeData,
-  ])
-
-  useEffect(() => {
-    const handleReload = async (e: any) => {
-      const folderPath = e.detail
-
-      const children = await fetchFiles(folderPath)
-      setTreeData((prev: FileNode[]) =>
-        updateNodeChildren(prev, folderPath, children),
-      )
-    }
-    window.addEventListener('reload-folder', handleReload)
-    return () => window.removeEventListener('reload-folder', handleReload)
-  }, [])
+  }, [workspaces])
 
   const loadWorkspaceData = async () => {
     try {
@@ -230,6 +207,29 @@ export function Treeview() {
   useEffect(() => {
     loadWorkspaceData()
   }, [loadWorkspaceData])
+
+  useEffect(() => {
+    if (activeTabPath && treeRef.current) {
+      expandPathIteratively(activeTabPath, treeData, setTreeData, treeRef)
+    }
+  }, [
+    activeTabPath,
+    treeData.length,
+    treeData,
+  ])
+
+  useEffect(() => {
+    const handleReload = async (e: any) => {
+      const folderPath = e.detail
+
+      const children = await fetchFiles(folderPath)
+      setTreeData((prev: FileNode[]) =>
+        updateNodeChildren(prev, folderPath, children),
+      )
+    }
+    window.addEventListener('reload-folder', handleReload)
+    return () => window.removeEventListener('reload-folder', handleReload)
+  }, [])
 
   const handleToggle = async (id: string) => {
     const node = treeRef.current?.get(id)
