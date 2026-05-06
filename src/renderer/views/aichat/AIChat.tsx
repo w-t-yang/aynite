@@ -495,6 +495,9 @@ export function AIChat() {
               loadSessions()
               setShowHistory(true)
             }}
+            getFiles={(path) => window.aynite.getFiles(path)}
+            getAvailableSkills={() => window.aynite.getAvailableSkills()}
+            getAvailableCommands={() => window.aynite.getAvailableCommands()}
           />
 
           {/* Micro Action Bar */}
