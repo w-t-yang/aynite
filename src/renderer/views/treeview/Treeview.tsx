@@ -23,7 +23,7 @@ import {
   NodeRenderer,
   PromptModal,
 } from './components'
-import { fetchFiles, updateNodeChildren } from './utils'
+import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
 import { expandPathIteratively } from './tree-expand'
 
 export function Treeview() {
@@ -232,10 +232,14 @@ export function Treeview() {
   }, [])
 
   const handleToggle = async (id: string) => {
-    const node = treeRef.current?.get(id)
-    if (node?.isOpen && !node.data.isLoaded && node.data.isDirectory) {
-      const children = await fetchFiles(id)
-      setTreeData((prev: FileNode[]) => updateNodeChildren(prev, id, children))
+    const node = findNodeData(treeData, id)
+    if (node && !node.isLoaded && node.isDirectory) {
+      try {
+        const children = await fetchFiles(id)
+        setTreeData((prev: FileNode[]) => updateNodeChildren(prev, id, children))
+      } catch (e) {
+        console.error('Failed to load tree children:', e)
+      }
     }
   }
 
