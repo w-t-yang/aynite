@@ -42,6 +42,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
       setActiveTheme(theme)
       applyThemeColors(theme)
     }
+
+    // Relay theme changes to iframe views via postMessage
+    // Electron's webContents.send() does not reach subframe preloads,
+    // so we use cross-frame messaging instead.
+    for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
+      'iframe',
+    )) {
+      iframe.contentWindow?.postMessage({ type: 'aynite-theme-changed' }, '*')
+    }
   }, [applyThemeColors])
 
   const setTheme = async (themeId: string) => {
@@ -62,16 +71,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
       return () => unsub()
     }
   }, [loadThemes])
-
-  // Relay theme changes to iframe views via postMessage
-  // Electron's webContents.send() does not reach subframe preloads,
-  // so we use postMessage cross-frame communication instead.
-  useEffect(() => {
-    const iframes = document.querySelectorAll<HTMLIFrameElement>('iframe')
-    for (const iframe of iframes) {
-      iframe.contentWindow?.postMessage({ type: 'aynite-theme-changed' }, '*')
-    }
-  }, [])
 
   // Expose theme context to window for debugging in development
   useEffect(() => {
