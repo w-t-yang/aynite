@@ -24,6 +24,7 @@ npm run audit:patterns     # Micro-patterns (nested ternary, .then chains, boole
 npm run audit:simplify     # Run complexity + exports + duplication + circular + patterns
 npm run audit:ast-grep     # ast-grep structural rules
 npm run audit:deadcode     # Knip — find unused files, exports, and dependencies
+npm run audit:communication # Communication architecture rules
 npm run test:ai            # Test AI provider configurations
 
 # Test

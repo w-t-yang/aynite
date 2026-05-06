@@ -20,6 +20,7 @@
     "audit:duplication": "jscpd --config .jscpd.json",
     "audit:circular": "madge --warning --circular --extensions ts,tsx src/",
     "audit:patterns": "tsx scripts/audit-patterns.ts",
+    "audit:communication": "tsx scripts/audit-communication.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

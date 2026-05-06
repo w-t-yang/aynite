@@ -123,6 +123,14 @@ const CHECKS: CheckDef[] = [
       return { issues: Number(m?.[1] ?? 1) }
     },
   },
+  {
+    label: 'Communication',
+    cmd: 'tsx scripts/audit-communication.ts',
+    parse: (output) => {
+      const m = output.match(/Total:\s*(\d+)\s+issue/)
+      return { issues: Number(m?.[1] ?? 0) }
+    },
+  },
 ]
 
 function run(
@@ -167,6 +175,8 @@ function formatMetrics(label: string, m: Metrics): string {
       return m.violations === 0 ? 'clean' : `${m.violations} violations`
     case 'Dead Code':
       return m.issues === 0 ? 'clean' : `${m.issues} issues`
+    case 'Communication':
+      return m.issues === 0 ? 'clean' : `${m.issues} violations`
     default:
       return ''
   }
