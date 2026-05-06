@@ -10,12 +10,20 @@ npm run dev                # Start electron-vite dev server with hot reload
 npm run build              # Production build (electron-vite)
 npm run preview            # Preview production build
 
-# Audit (architecture rule enforcement)
-npm run audit:main         # Audit main process for rule violations
-npm run audit:ui           # Audit renderer code for rule violations
-npm run audit:bridge       # Audit IPC bridge contract (preload vs main handlers)
-npm run audit              # Run all audits (ui + main + bridge)
-npm run audit:check        # Run all audits in CI mode (exit 1 on breaches)
+# Audit — comprehensive structural analysis (run these to find what to improve)
+npm run audit              # Run all audit checks with summary report
+npm run audit:ui           # Renderer import layer rules
+npm run audit:main         # Main process rule enforcement
+npm run audit:bridge       # IPC bridge contract (preload vs main handlers)
+npm run audit:check        # CI mode: exit 1 on any breach
+npm run audit:complexity   # Functions exceeding complexity/line/param thresholds
+npm run audit:exports      # Exports that could be made private
+npm run audit:duplication  # jscpd — copy-pasted code blocks
+npm run audit:circular     # madge — circular dependency detection
+npm run audit:patterns     # Micro-patterns (nested ternary, .then chains, boolean props, etc.)
+npm run audit:simplify     # Run complexity + exports + duplication + circular + patterns
+npm run audit:ast-grep     # ast-grep structural rules
+npm run audit:deadcode     # Knip — find unused files, exports, and dependencies
 npm run test:ai            # Test AI provider configurations
 
 # Test
@@ -31,18 +39,7 @@ npm run lint:fix        # Auto-fix what it can
 # Type check (TypeScript compiler)
 npm run typecheck       # tsc --noEmit — find type errors (baseline: 46)
 
-# Audit (custom rules)
-npm run lint:audit      # ast-grep structural rules (button types, inline styles, any usage, as assertions, ts-ignore)
-npm run lint:deadcode   # Knip — find unused files, exports, and dependencies
 npm run inventory       # Generate component inventory report
-
-# Simplify — structural refactoring radar (run these to find what to improve)
-npm run simplify:complexity    # Functions exceeding complexity/line/param thresholds
-npm run simplify:exports       # Exports that could be made private
-npm run simplify:duplication   # jscpd — copy-pasted code blocks
-npm run simplify:circular      # madge — circular dependency detection
-npm run simplify:patterns      # Micro-patterns (nested ternary, .then chains, boolean props, etc.)
-npm run simplify               # Run all five simplify checks in sequence
 
 # Standalone (browser-only, no Electron)
 npm run dev:standalone     # Vite dev server for standalone mode

@@ -10,13 +10,43 @@ interface CheckDef {
 
 const CHECKS: CheckDef[] = [
   {
+    label: 'UI Architecture',
+    cmd: 'tsx scripts/audit-ui.ts',
+    parse: (output, status) => {
+      if (status === 0) return { violations: 0 }
+      const m = output.match(/🚨 TYPING.*\((\d+)/)
+      return { violations: Number(m?.[1] ?? 1) }
+    },
+  },
+  {
+    label: 'Main Architecture',
+    cmd: 'tsx scripts/audit-main.ts',
+    parse: (_output, status) => {
+      if (status === 0) return { violations: 0 }
+      return { violations: 1 }
+    },
+  },
+  {
+    label: 'Bridge',
+    cmd: 'tsx scripts/audit-ipc-bridge.ts',
+    parse: (_output, status) => {
+      if (status === 0) return { violations: 0 }
+      return { violations: 1 }
+    },
+  },
+  {
     label: 'Complexity',
     cmd: 'tsx scripts/audit-complexity.ts',
     parse: (output) => {
       const m = output.match(
         /Total:\s*(\d+)\s+functions flagged\s*\((\d+)\s+high,\s*(\d+)\s+medium\)/,
       )
-      if (m) return { flagged: Number(m[1]), high: Number(m[2]), medium: Number(m[3]) }
+      if (m)
+        return {
+          flagged: Number(m[1]),
+          high: Number(m[2]),
+          medium: Number(m[3]),
+        }
       return { flagged: 0, high: 0, medium: 0 }
     },
   },
@@ -27,7 +57,12 @@ const CHECKS: CheckDef[] = [
       const m = output.match(
         /Total:\s*(\d+)\s+dead,\s*(\d+)\s+internal-only,\s*(\d+)\s+unnecessary barrels/,
       )
-      if (m) return { dead: Number(m[1]), internal: Number(m[2]), barrels: Number(m[3]) }
+      if (m)
+        return {
+          dead: Number(m[1]),
+          internal: Number(m[2]),
+          barrels: Number(m[3]),
+        }
       return { dead: 0, internal: 0, barrels: 0 }
     },
   },
@@ -47,9 +82,9 @@ const CHECKS: CheckDef[] = [
       const clean = output.includes('No circular dependency found')
       if (clean) return { circular: 0 }
       // Count lines mentioning circular deps
-      const lines = output.split('\n').filter(
-        (l) => l.includes('->') || l.includes('→'),
-      ).length
+      const lines = output
+        .split('\n')
+        .filter((l) => l.includes('->') || l.includes('→')).length
       return { circular: lines || 1 }
     },
   },
@@ -60,16 +95,47 @@ const CHECKS: CheckDef[] = [
       const m = output.match(
         /Total:\s*(\d+)\s+patterns\s*\((\d+)\s+high,\s*(\d+)\s+medium,\s*(\d+)\s+info\)/,
       )
-      if (m) return { patterns: Number(m[1]), high: Number(m[2]), medium: Number(m[3]), info: Number(m[4]) }
+      if (m)
+        return {
+          patterns: Number(m[1]),
+          high: Number(m[2]),
+          medium: Number(m[3]),
+          info: Number(m[4]),
+        }
       return { patterns: 0, high: 0, medium: 0, info: 0 }
+    },
+  },
+  {
+    label: 'AST-Grep',
+    cmd: 'ast-grep scan',
+    parse: (output, status) => {
+      if (status === 0) return { violations: 0 }
+      const m = output.match(/Found\s+(\d+)\s+matches/)
+      return { violations: Number(m?.[1] ?? 1) }
+    },
+  },
+  {
+    label: 'Dead Code',
+    cmd: 'knip',
+    parse: (output, status) => {
+      if (status === 0) return { issues: 0 }
+      const m = output.match(/(\d+)\s+files?/)
+      return { issues: Number(m?.[1] ?? 1) }
     },
   },
 ]
 
-function run(label: string, cmd: string): { status: number | null; duration: number; output: string } {
+function run(
+  label: string,
+  cmd: string,
+): { status: number | null; duration: number; output: string } {
   const start = Date.now()
   console.log(`\n  ── ${label} ${'─'.repeat(Math.max(2, 59 - label.length))}\n`)
-  const result = spawnSync(cmd, { stdio: 'pipe', shell: true, timeout: 120_000 })
+  const result = spawnSync(cmd, {
+    stdio: 'pipe',
+    shell: true,
+    timeout: 120_000,
+  })
   const stdout = result.stdout?.toString() ?? ''
   const stderr = result.stderr?.toString() ?? ''
   const output = stdout + stderr
@@ -81,6 +147,10 @@ function run(label: string, cmd: string): { status: number | null; duration: num
 
 function formatMetrics(label: string, m: Metrics): string {
   switch (label) {
+    case 'UI Architecture':
+    case 'Main Architecture':
+    case 'Bridge':
+      return m.violations === 0 ? 'clean' : `${m.violations} violations`
     case 'Complexity':
       return `${m.flagged} flagged (${m.high} high, ${m.medium} medium)`
     case 'Exports':
@@ -88,9 +158,15 @@ function formatMetrics(label: string, m: Metrics): string {
     case 'Duplication':
       return `${m.clones} clones`
     case 'Circular':
-      return m.circular === 0 ? 'no circular deps' : `${m.circular} circular deps`
+      return m.circular === 0
+        ? 'no circular deps'
+        : `${m.circular} circular deps`
     case 'Patterns':
       return `${m.patterns} patterns (${m.high} high, ${m.medium} medium, ${m.info} info)`
+    case 'AST-Grep':
+      return m.violations === 0 ? 'clean' : `${m.violations} violations`
+    case 'Dead Code':
+      return m.issues === 0 ? 'clean' : `${m.issues} issues`
     default:
       return ''
   }
@@ -102,13 +178,13 @@ const results = CHECKS.map((c) => {
 })
 
 console.log(`\n\n  ╔══════════════════════════════════════════════════════╗`)
-console.log(`  ║              Simplify — Summary Report              ║`)
+console.log(`  ║                 Audit — Summary Report              ║`)
 console.log(`  ╚══════════════════════════════════════════════════════╝`)
 console.log()
 
 for (const r of results) {
   const icon = r.status === 0 ? ' ✓' : ' ✗'
-  const label = r.label.padEnd(12)
+  const label = r.label.padEnd(18)
   const time = `${(r.duration / 1000).toFixed(1)}s`.padStart(7)
   const summary = formatMetrics(r.label, r.metrics)
   console.log(`   ${icon}  ${label} ${time}  ${summary}`)
