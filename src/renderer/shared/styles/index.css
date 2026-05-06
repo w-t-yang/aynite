@@ -124,6 +124,26 @@
     scrollbar-width: none; /* Firefox */
   }
 
+  .custom-scrollbar {
+    overflow-y: auto;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background-clip: content-box;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
   .num-scrollbar::-webkit-scrollbar {
     height: 4px;
     width: 4px;
