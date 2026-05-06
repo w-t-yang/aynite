@@ -124,6 +124,9 @@ interface AyniteWindow {
   selectFolder: () => Promise<string[] | null>
 
   onAppOperation: (callback: (operation: string) => void) => () => void
+  onAppEvent: (
+    callback: (event: { type: string; data: unknown }) => void,
+  ) => () => void
   onThemeChanged: (callback: (themeId: string) => void) => () => void
 
   // Update
