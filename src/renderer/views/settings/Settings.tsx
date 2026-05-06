@@ -237,8 +237,8 @@ export function Settings() {
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-card">
-          <div className="flex-1 overflow-auto custom-scrollbar relative">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col custom-scrollbar relative">
             {activeTab === 'appearance' && themes && (
               <AppearanceTab
                 state={{

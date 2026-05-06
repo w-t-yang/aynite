@@ -74,25 +74,29 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
     persist(localThemes, id)
   }
 
-  const handleUpdateTheme = (updatedTheme: any) => {
+  const handleUpdateTheme = async (updatedTheme: any) => {
     const newThemes = localThemes.map((t) =>
       t.id === updatedTheme.id ? updatedTheme : t,
     )
     setLocalThemes(newThemes)
     persist(newThemes, localActiveId)
+    // Persist theme data to disk so iframes can load it
+    await window.aynite.setConfig('theme', { id: updatedTheme.id, theme: updatedTheme })
   }
 
-  const handleDeleteTheme = () => {
+  const handleDeleteTheme = async () => {
     if (!editingTheme || editingTheme.isSystem) return
     const newThemes = localThemes.filter((t) => t.id !== editingTheme.id)
     const newActiveId = 'nord' // Fallback
     setLocalThemes(newThemes)
     setLocalActiveId(newActiveId)
     persist(newThemes, newActiveId)
+    // Delete theme file from disk
+    await window.aynite.deleteTheme(editingTheme.id)
     setShowDeleteModal(false)
   }
 
-  const handleDuplicate = () => {
+  const handleDuplicate = async () => {
     if (duplicateName.trim() && editingTheme) {
       const name = duplicateName.trim()
       const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
@@ -118,6 +122,8 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
       setLocalThemes(newThemes)
       setLocalActiveId(id)
       persist(newThemes, id)
+      // Persist theme data to disk so it survives reload
+      await window.aynite.setConfig('theme', { id, theme: newTheme })
       setShowDuplicateModal(false)
       setDuplicateName('')
       setDuplicateError('')
@@ -180,24 +186,43 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
               <SelectionMenu
                 label="Interface Font"
                 searchable
-                activeId={editingTheme.fonts?.sans || 'Inter'}
+                activeId={editingTheme.fonts?.fontFamily || 'Inter'}
                 items={systemFonts.map((f) => ({ id: f, label: f }))}
                 onSelect={(v) =>
                   handleUpdateTheme({
                     ...editingTheme,
-                    fonts: { ...(editingTheme.fonts || {}), sans: v },
+                    fonts: { ...(editingTheme.fonts || {}), fontFamily: v },
                   })
                 }
               />
               <SelectionMenu
                 label="Monospace Font"
                 searchable
-                activeId={editingTheme.fonts?.mono || 'JetBrains Mono'}
+                activeId={editingTheme.fonts?.fontMono || 'JetBrains Mono'}
                 items={systemFonts.map((f) => ({ id: f, label: f }))}
                 onSelect={(v) =>
                   handleUpdateTheme({
                     ...editingTheme,
-                    fonts: { ...(editingTheme.fonts || {}), mono: v },
+                    fonts: { ...(editingTheme.fonts || {}), fontMono: v },
+                  })
+                }
+              />
+              <SelectionMenu
+                label="Font Size"
+                activeId={editingTheme.fonts?.fontSize || '14px'}
+                items={[
+                  { id: '12px', label: '12px — Small' },
+                  { id: '13px', label: '13px' },
+                  { id: '14px', label: '14px — Default' },
+                  { id: '15px', label: '15px' },
+                  { id: '16px', label: '16px — Large' },
+                  { id: '18px', label: '18px' },
+                  { id: '20px', label: '20px' },
+                ]}
+                onSelect={(v) =>
+                  handleUpdateTheme({
+                    ...editingTheme,
+                    fonts: { ...(editingTheme.fonts || {}), fontSize: v },
                   })
                 }
               />

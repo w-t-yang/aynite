@@ -23,7 +23,7 @@ import {
   loadSession,
   saveSession,
 } from '../ai'
-import { getTheme, getThemesList, saveTheme } from '../theme'
+import { getTheme, getThemesList, saveTheme, deleteTheme } from '../theme'
 import {
   getWorkspaceState,
   getWorkspacesList,
@@ -181,6 +181,11 @@ export async function routeSetConfig(
       }
       await saveTheme(id, theme)
       return true
+    }
+
+    case ConfigKey.THEME_DELETE: {
+      const id = payload as string
+      return await deleteTheme(id)
     }
 
     case ConfigKey.SAVE_CHAT_LOG: {

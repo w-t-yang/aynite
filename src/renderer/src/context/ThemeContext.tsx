@@ -52,6 +52,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
 
   useEffect(() => {
     loadThemes()
+
+    // Listen for theme changes broadcast from any window (e.g. settings iframe)
+    const w = window as any
+    if (w.aynite?.onThemeChanged) {
+      const unsub = w.aynite.onThemeChanged(() => {
+        loadThemes()
+      })
+      return () => unsub()
+    }
   }, [loadThemes])
 
   // Expose theme context to window for debugging in development

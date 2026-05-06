@@ -17,5 +17,6 @@ export enum ConfigKey {
   SKILLS = 'skills',
   COMMANDS = 'commands',
   TOOLS = 'tools',
+  THEME_DELETE = 'theme-delete',
   VERSION = 'version',
 }

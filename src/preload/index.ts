@@ -9,6 +9,7 @@ import {
   FileEventChannels,
   SpellChannels,
   SystemChannels,
+  ThemeChannels,
   UpdateChannels,
   WorkspaceChannels,
 } from '../lib/constants/ipc-channels'
@@ -140,6 +141,9 @@ const aynite = {
     return () =>
       ipcRenderer.removeListener(ConfigEventChannels.APP_OPERATION, listener)
   },
+
+  // ── Theme operations ────────────────────────────────────────────────────
+  deleteTheme: (name: string) => ipcRenderer.invoke(ThemeChannels.DELETE, name),
 
   // ── Theme events ────────────────────────────────────────────────────────
   onThemeChanged: (callback: (themeId: string) => void) => {
