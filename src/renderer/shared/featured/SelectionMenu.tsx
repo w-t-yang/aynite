@@ -68,6 +68,17 @@ export function SelectionMenu({
   const isControlled = typeof x === 'number' && typeof y === 'number'
   const isOpen = isControlled ? true : internalIsOpen
 
+  const handleClose = () => {
+    setInternalIsOpen(false)
+    setSearch('')
+    onClose?.()
+  }
+
+  const handleSelect = (id: string) => {
+    onSelect(id)
+    handleClose()
+  }
+
   useEffect(() => {
     if (!isOpen) return
 
@@ -90,17 +101,6 @@ export function SelectionMenu({
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen, handleClose])
-
-  const handleClose = () => {
-    setInternalIsOpen(false)
-    setSearch('')
-    onClose?.()
-  }
-
-  const handleSelect = (id: string) => {
-    onSelect(id)
-    handleClose()
-  }
 
   const filteredItems = useMemo(
     () =>
