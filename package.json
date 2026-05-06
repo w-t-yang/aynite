@@ -29,7 +29,7 @@
     "simplify:duplication": "jscpd --config .jscpd.json",
     "simplify:circular": "madge --warning --circular --extensions ts,tsx src/",
     "simplify:patterns": "tsx scripts/audit-patterns.ts",
-    "simplify": "npm run simplify:complexity ; npm run simplify:exports ; npm run simplify:duplication ; npm run simplify:circular ; npm run simplify:patterns",
+    "simplify": "tsx scripts/audit-simplify.ts",
     "build:standalone": "npm run audit && vite build --config vite.standalone.config.ts && mkdir -p ~/.aynite && cp -rv dist-standalone/* ~/.aynite/",
     "serve:standalone": "npm run build:standalone && npx serve dist-standalone",
     "patch-tag": "npm version patch && git push && git push --tags",
