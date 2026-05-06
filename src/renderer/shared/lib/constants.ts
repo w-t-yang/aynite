@@ -1,7 +1,7 @@
 export {
   DEFAULT_PROVIDER_MODELS,
   DEFAULT_PROVIDER_URLS,
-} from '../../../../lib/constants/ai'
+} from '../../../lib/constants/ai'
 
 // Note: TOOL_METADATA here is intentionally a subset of the lib version
 // (omits inputSchema) since the renderer only needs display metadata.
