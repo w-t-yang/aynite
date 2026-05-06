@@ -1,6 +1,12 @@
 import { Check, Copy, History } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
+import {
+  appendToAssistant,
+  executeCommandOnly,
+  genId,
+  normalizeAndHealMessages,
+} from '../../shared/featured/advanced/chat-helpers'
 import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
 import {
   ChatInput,
@@ -86,49 +92,6 @@ export function AIChat() {
     }
   }, [])
 
-  const normalizeAndHealMessages = (msgs: any[]): ChatMessage[] => {
-    // 1. Basic normalization (handle legacy logs with 'text' instead of 'content')
-    const normalized = msgs.map((m: any) => ({
-      ...m,
-      id: m.id || Math.random().toString(36).slice(2, 11),
-      content: m.content || m.text || '',
-    }))
-
-    const healed: ChatMessage[] = []
-    for (let i = 0; i < normalized.length; i++) {
-      const m = normalized[i]
-      healed.push(m)
-
-      // If it's an assistant message with tool calls, ensure they have results
-      if (m.role === 'assistant' && m.tool_calls && m.tool_calls.length > 0) {
-        const existingResultIds = new Set<string>()
-        let j = i + 1
-        // Scan forward for following tool results
-        while (j < normalized.length && normalized[j].role === 'tool') {
-          if (normalized[j].tool_call_id) {
-            existingResultIds.add(normalized[j].tool_call_id)
-          }
-          j++
-        }
-
-        // Add placeholder results for any missing tool call IDs
-        for (const call of m.tool_calls) {
-          const callId = call.toolCallId || call.id
-          if (callId && !existingResultIds.has(callId)) {
-            healed.push({
-              id: Math.random().toString(36).slice(2, 11),
-              role: 'tool',
-              content: 'Task interrupted before completion.',
-              tool_call_id: callId,
-              name: call.toolName || call.function?.name,
-            })
-          }
-        }
-      }
-    }
-    return healed
-  }
-
   useEffect(() => {
     const lastSession = localStorage.getItem('lastSession')
     if (lastSession) {
@@ -144,7 +107,7 @@ export function AIChat() {
         console.error('Failed to load last session from localStorage', e)
       }
     }
-  }, [normalizeAndHealMessages])
+  }, [])
 
   useEffect(() => {
     if (messages.length > 0 && !sessionId) {
@@ -211,7 +174,7 @@ export function AIChat() {
       delete (window as any).clearChat
       delete (window as any).copyChat
     }
-  }, [normalizeAndHealMessages, loadSessions])
+  }, [loadSessions])
 
   const _handleOpenFileInternal = async (filepath: string) => {
     if (!onOpenFile) return
@@ -225,23 +188,6 @@ export function AIChat() {
     } catch (e) {
       console.error('Failed to open file', e)
     }
-  }
-
-  const genId = () =>
-    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-
-  const appendToAssistant = (
-    prev: ChatMessage[],
-    update: Partial<ChatMessage>,
-  ): ChatMessage[] => {
-    const last = prev[prev.length - 1]
-    if (last && last.role === 'assistant') {
-      return [...prev.slice(0, -1), { ...last, ...update }]
-    }
-    return [
-      ...prev,
-      { id: genId(), role: 'assistant', content: '', ...update },
-    ]
   }
 
   const requestApproval = useCallback(
@@ -272,68 +218,8 @@ export function AIChat() {
 
       const commandMentionRegex = />cmd\[(.*?)\]\((.*?)\)/g
       const skillMentionRegex = /\/skill\[(.*?)\]\((.*?)\)/g
-      const fileMentionRegex = /@(?:file|dir)\[(.*?)\]\((.*?)\)/g
 
-      // Check if it's a Command-Only Mode (starts with a command)
-      const trimmedText = text.trim()
-      const firstCmdMatch = trimmedText.match(/^>cmd\[(.*?)\]\((.*?)\)/)
-
-      if (firstCmdMatch) {
-        const [fullMatch, name, path] = firstCmdMatch
-        const remainingText = trimmedText.slice(fullMatch.length).trim()
-
-        // Resolve all mentions in the parameters to absolute paths
-        // Format: @file[name](path) -> path, /skill[name](path) -> path
-        const resolvedParamsText = remainingText
-          .replace(fileMentionRegex, '$2')
-          .replace(skillMentionRegex, '$2')
-          .replace(commandMentionRegex, '$2')
-
-        // Split by spaces but preserve quoted strings if needed?
-        // For now, simple split is likely enough for basic usage.
-        const params = resolvedParamsText.split(/\s+/).filter(Boolean)
-
-        setLoading(true)
-        try {
-          const res = await window.aynite.runDirectCommand({
-            commandPath: path,
-            params: params,
-            currentFile: activeTabPath,
-          })
-
-          const content = [res.stdout, res.stderr]
-            .filter(Boolean)
-            .join('\n')
-            .trim()
-          const userMsg: ChatMessage = {
-            id: genId(),
-            role: 'user',
-            content: text,
-          }
-          const cmdMsg: ChatMessage = {
-            id: genId(),
-            role: 'tool',
-            name: name,
-            content: content || '(No output)',
-          }
-
-          setMessages([...messages, userMsg, cmdMsg])
-        } catch (e: Error | unknown) {
-          const errorMsg = e instanceof Error ? e.message : String(e)
-          setMessages([
-            ...messages,
-            { id: genId(), role: 'user', content: text },
-            {
-              id: genId(),
-              role: 'assistant',
-              content: `❌ **Execution Error**: ${errorMsg}`,
-            },
-          ])
-        } finally {
-          setLoading(false)
-        }
-        return
-      }
+      if (await executeCommandOnly(text, activeTabPath, messages, setMessages, setLoading)) return
 
       // Normal Mode (AI involved)
       const currentMatches = [...text.matchAll(skillMentionRegex)]
@@ -569,7 +455,6 @@ export function AIChat() {
       requestApproval,
       activeTabPath,
       loading,
-      genId,
     ],
   )
 
