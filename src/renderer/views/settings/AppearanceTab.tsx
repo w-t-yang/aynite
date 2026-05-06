@@ -81,7 +81,10 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
     setLocalThemes(newThemes)
     persist(newThemes, localActiveId)
     // Persist theme data to disk so iframes can load it
-    await window.aynite.setConfig('theme', { id: updatedTheme.id, theme: updatedTheme })
+    await window.aynite.setConfig('theme', {
+      id: updatedTheme.id,
+      theme: updatedTheme,
+    })
   }
 
   const handleDeleteTheme = async () => {
@@ -150,7 +153,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
           </Button>
         }
       >
-        <div className="grid grid-cols-6 gap-12">
+        <div className="grid grid-cols-6 gap-6">
           {localThemes.map((theme) => (
             <ThemePreview
               key={theme.id}

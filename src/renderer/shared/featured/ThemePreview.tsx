@@ -13,7 +13,7 @@ export function ThemePreview({ theme, isActive, onClick }: ThemePreviewProps) {
       variant="ghost"
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-[120px] h-auto',
+        'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-[100px] h-auto',
         isActive
           ? 'border-primary bg-primary/10'
           : 'border-border hover:border-primary/40',
