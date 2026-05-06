@@ -29,7 +29,7 @@ export function getToolsMetadata() {
   }))
 }
 
-function createTools(context: ToolContext) {
+export function createTools(context: ToolContext) {
   const { mainWindow, workspaceFolders, activeFile } = context
 
   const tools: any = {
