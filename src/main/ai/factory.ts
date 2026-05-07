@@ -4,13 +4,9 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
 
-export interface AIProvider {
-  provider: string
-  apiKey?: string
-  baseUrl?: string
-  model: string
-  compatibility?: 'openai' | 'anthropic' | 'google'
-}
+import type { AIProvider } from '../../lib/types/ai'
+
+export type { AIProvider }
 
 export function getAIModel(config: AIProvider): LanguageModel {
   const { provider, apiKey, baseUrl, model, compatibility } = config

@@ -1,21 +1,6 @@
-export interface FileInfo {
-  size: number
-  createdAt: Date
-  modifiedAt: Date
-  path: string
-  extension: string
-  isText?: boolean
-}
+import type { FileCategory, FileInfo } from '../../../lib/types/files'
 
-export type FileCategory =
-  | 'text'
-  | 'image'
-  | 'video'
-  | 'audio'
-  | 'pdf'
-  | 'markdown'
-  | 'html'
-  | 'unsupported'
+export type { FileCategory, FileInfo }
 
 /**
  * Purely behavior-driven file detection. No whitelists or blacklists for text files.

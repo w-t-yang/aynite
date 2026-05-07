@@ -153,10 +153,9 @@ export const DEFAULT_AI_CONFIG = {
   ],
 }
 
-export interface PromptDefinition {
-  content: string
-  filename: string
-}
+import type { PromptDefinition } from '../types/ai'
+
+export type { PromptDefinition }
 
 export const GLOBAL_PROMPTS: Record<string, PromptDefinition> = {
   ME: {

@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../../../lib/constants/chat'
+import type { ChatMessage } from '../../../../lib/types/chat'
 
 export const MOCK_MESSAGES: ChatMessage[] = [
   {

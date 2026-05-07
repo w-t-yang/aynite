@@ -24,14 +24,9 @@ interface SpellMeta {
   [key: string]: any
 }
 
-export interface SpellItem {
-  name: string
-  description: string
-  path: string
-  error: string | null
-  parameters?: any[]
-  example?: string
-}
+import type { SpellItem } from '../../lib/types/spells'
+
+export type { SpellItem }
 
 export async function getSpellConfig(configKey: string, defaultDir: string) {
   const mainConfigPath = getMainConfigPath()

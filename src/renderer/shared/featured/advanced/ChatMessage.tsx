@@ -16,7 +16,7 @@ import type {
   TextPart,
   ToolCallPart,
   ToolResultPart,
-} from '../../../../lib/constants/chat'
+} from '../../../../lib/types/chat'
 import { Button } from '../../basic/Button'
 import { Collapsible } from '../../basic/Collapsible'
 import type { SettingsState } from '../../lib/types'

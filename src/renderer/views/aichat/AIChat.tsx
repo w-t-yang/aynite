@@ -1,7 +1,7 @@
 import { Check, Copy, History } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { StreamPart } from '../../../lib/constants/chat'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
+import type { StreamPart } from '../../../lib/types/chat'
 import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
 import {
   appendToAssistant,

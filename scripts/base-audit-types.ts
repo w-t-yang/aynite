@@ -60,13 +60,7 @@ walk(
     }
   },
   {
-    excludeDirs: [
-      'node_modules',
-      'dist',
-      '.git',
-      'src/lib/types',
-      'src/lib/constants',
-    ],
+    excludeDirs: ['node_modules', 'dist', '.git', 'src/lib/types'],
   },
 )
 

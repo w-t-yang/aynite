@@ -15,10 +15,9 @@ import { requestAiApproval } from '../window'
 
 const execAsync = promisify(exec)
 
-export interface ToolContext {
-  workspaceFolders: string[]
-  activeFile?: string
-}
+import type { ToolContext } from '../../lib/types/ai'
+
+export type { ToolContext }
 
 export function getToolsMetadata() {
   return Object.entries(TOOL_METADATA).map(([id, meta]) => ({

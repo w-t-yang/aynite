@@ -1,7 +1,6 @@
 import { type ModelMessage, stepCountIs, streamText } from 'ai'
 import { app } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
-import type { ChatMessage, StreamPart } from '../../lib/constants/chat'
 import {
   appendText,
   getAyniteDir,
@@ -14,6 +13,7 @@ import {
   stat,
   writeJson,
 } from '../../lib/path'
+import type { ChatMessage, StreamPart } from '../../lib/types/chat'
 import { sendAppEvent } from '../window'
 import type { AIProvider } from './factory'
 import { getAIModel } from './factory'

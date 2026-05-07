@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
-import type { ChatMessage } from '../../lib/constants/chat'
 import { AiChannels } from '../../lib/constants/ipc-channels'
+import type { ChatMessage } from '../../lib/types/chat'
 import { showOpenDialog } from '../window'
 import { handleAiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'

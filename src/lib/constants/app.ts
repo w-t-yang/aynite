@@ -64,6 +64,3 @@ export const ViewOperation = {
   KEYBOARD_QUIT: 'KEYBOARD_QUIT',
   REFRESH: 'REFRESH',
 } as const
-
-export type AppOperationType = keyof typeof AppOperation
-export type ViewOperationType = keyof typeof ViewOperation

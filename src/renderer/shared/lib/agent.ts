@@ -1,3 +1,4 @@
+import type { AgentConfig } from '../../../lib/types/ai'
 import type {
   ChatMessage,
   ReasoningPart,
@@ -5,17 +6,9 @@ import type {
   TextPart,
   ToolCallPart,
   ToolResultPart,
-} from '../../../lib/constants/chat'
+} from '../../../lib/types/chat'
 
-export interface AgentConfig {
-  provider: string
-  apiKey: string
-  baseUrl: string
-  model: string
-  compatibility?: 'openai' | 'anthropic' | 'google'
-  enabledTools?: { [key: string]: boolean }
-  agentPromptFiles?: string[]
-}
+export type { AgentConfig }
 
 const genId = () =>
   `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`

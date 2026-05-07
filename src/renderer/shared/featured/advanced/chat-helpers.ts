@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { ChatMessage } from '../../../../lib/constants/chat'
+import type { ChatMessage } from '../../../../lib/types/chat'
 
 export function genId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
