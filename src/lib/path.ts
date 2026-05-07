@@ -6,17 +6,9 @@ import { ERROR_MESSAGES } from './constants/messages'
 
 const AYNITE_DIR = path.join(homedir(), '.aynite')
 
-export const AYNITE_SUBDIRS = {
-  CONFIG: 'config',
-  LOGS: 'logs',
-  PROMPTS: 'prompts',
-  THEMES: 'themes',
-  SKILLS: 'skills',
-  COMMANDS: 'commands',
-  VIEWS: 'views',
-  WORKSPACES: 'workspaces',
-  SESSIONS: 'sessions',
-}
+import { AYNITE_SUBDIRS } from './constants/path'
+
+export { AYNITE_SUBDIRS }
 
 /**
  * Ensures the aynite directory and its subdirectories exist.

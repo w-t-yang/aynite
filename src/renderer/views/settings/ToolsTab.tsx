@@ -1,7 +1,7 @@
+import { GRID_2_COL } from '../../../lib/constants/renderer/styles'
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
-import { GRID_2_COL } from '../../shared/lib/styles'
 import type { SettingsState } from '../../shared/lib/types'
 
 interface ToolsTabProps {

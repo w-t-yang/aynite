@@ -1,9 +1,10 @@
 import { app } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
+import { reportedErrors } from '../../lib/constants/spells'
 import { getAbsolutePath, joinPaths, readdir } from '../../lib/path'
 import { sendAppEvent } from '../window'
 
-export const reportedErrors = new Map<string, string>()
+export { reportedErrors }
 
 export function notifyError(
   type: 'skill' | 'command',

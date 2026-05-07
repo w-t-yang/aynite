@@ -1,13 +1,13 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
-import { Button } from '../basic/Button'
 import {
   DESCRIPTION_TEXT,
   FLEX_CENTER_BETWEEN,
   FLEX_COL_MIN,
   SECTION_LABEL,
-} from '../lib/styles'
+} from '../../../lib/constants/renderer/styles'
+import { Button } from '../basic/Button'
 import {
   DeleteItemModal,
   EditableCardFrame,

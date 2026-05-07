@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { DESCRIPTION_TEXT } from '../../../lib/constants/renderer/styles'
 import { Input } from '../basic/Input'
-import { DESCRIPTION_TEXT } from '../lib/styles'
 import type { AIProviderInstance } from '../lib/types'
 import {
   DeleteItemModal,

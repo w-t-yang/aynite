@@ -1,0 +1,11 @@
+export const AYNITE_SUBDIRS = {
+  CONFIG: 'config',
+  LOGS: 'logs',
+  PROMPTS: 'prompts',
+  THEMES: 'themes',
+  SKILLS: 'skills',
+  COMMANDS: 'commands',
+  VIEWS: 'views',
+  WORKSPACES: 'workspaces',
+  SESSIONS: 'sessions',
+}

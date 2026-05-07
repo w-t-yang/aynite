@@ -1,8 +1,5 @@
-import { ConfigKey } from '../../lib/constants/config'
-import type {
-  KeybindingConfig,
-  WorkspaceConfig,
-} from '../../lib/constants/types'
+import { ConfigKey } from '../config'
+import type { KeybindingConfig, WorkspaceConfig } from '../types'
 
 class AyniteConfig {
   // Workspace Config

@@ -9,13 +9,13 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
+import { FLEX_CENTER_GAP_3 } from '../../../lib/constants/renderer/styles'
 import { Collapsible } from '../../shared/basic/Collapsible'
 import {
   isErrorMessage,
   ThoughtBlock,
   ToolCallItem,
 } from '../../shared/featured/advanced/ChatMessage'
-import { FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
 import { cn } from '../../shared/lib/utils'
 
 export { isErrorMessage, ThoughtBlock, ToolCallItem }

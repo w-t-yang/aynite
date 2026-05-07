@@ -1,8 +1,8 @@
 import { Bot, Bug, CloudDownload, Github, RefreshCw } from 'lucide-react'
+import { FLEX_CENTER_GAP_2 } from '../../../lib/constants/renderer/styles'
 import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
-import { FLEX_CENTER_GAP_2 } from '../../shared/lib/styles'
 
 interface AboutTabProps {
   state: {

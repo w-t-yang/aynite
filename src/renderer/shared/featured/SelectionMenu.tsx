@@ -1,9 +1,9 @@
 import { ChevronDown, Search } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { SECTION_LABEL } from '../../../lib/constants/renderer/styles'
 import { Input } from '../basic/Input'
 import { type SelectionItem, SelectionList } from '../basic/SelectionList'
-import { SECTION_LABEL } from '../lib/styles'
 import { cn } from '../lib/utils'
 
 export interface SelectionMenuProps {

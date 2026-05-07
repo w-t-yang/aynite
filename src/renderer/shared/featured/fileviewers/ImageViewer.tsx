@@ -1,6 +1,6 @@
 import type React from 'react'
+import { VIEWER_CENTERED_COL } from '../../../../lib/constants/renderer/styles'
 import { type FileInfo, formatFileSize } from '../../lib/file-handlers'
-import { VIEWER_CENTERED_COL } from '../../lib/styles'
 import { UnifiedViewer } from './UnifiedViewer'
 
 export const ImageViewer: React.FC<{ file: FileInfo }> = ({ file }) => (

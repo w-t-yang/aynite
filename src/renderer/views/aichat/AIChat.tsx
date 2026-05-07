@@ -1,5 +1,7 @@
 import { Check, Copy, History } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { MOCK_MESSAGES } from '../../../lib/constants/renderer/mocks'
+import { FLEX_CENTER_GAP_3 } from '../../../lib/constants/renderer/styles'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
 import type { StreamPart } from '../../../lib/types/chat'
 import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
@@ -8,13 +10,11 @@ import {
   executeCommandOnly,
   genId,
 } from '../../shared/featured/advanced/chat-helpers'
-import { MOCK_MESSAGES } from '../../shared/featured/advanced/chat-mock'
 import {
   ChatInput,
   type ChatInputHandle,
 } from '../../shared/featured/ChatInput'
 import { type AgentConfig, runAgentLoop } from '../../shared/lib/agent'
-import { FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
 import type { ChatMessage, SettingsState } from '../../shared/lib/types'
 import { cn } from '../../shared/lib/utils'
 import { useApp } from '../../src/context/AppContext'

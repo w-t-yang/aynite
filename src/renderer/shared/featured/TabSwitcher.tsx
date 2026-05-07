@@ -1,11 +1,11 @@
 import { FileText, Search, Settings as SettingsIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import {
   type SelectionItem,
   SelectionList,
 } from '../../shared/basic/SelectionList'
 import { KeyManager } from '../lib/key-handlers'
-import { FLEX_CENTER_GAP_1 } from '../lib/styles'
 
 interface TabItem {
   id: string

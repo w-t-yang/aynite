@@ -1,10 +1,10 @@
 import { Moon, Sun } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
+import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import { Button } from '../../shared/basic/Button'
 import { FormModal } from '../../shared/featured/FormModal'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
-import { FLEX_CENTER_GAP_1 } from '../../shared/lib/styles'
 import { useApp } from '../context/AppContext'
 
 const TitleBar: React.FC = () => {

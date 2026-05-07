@@ -6,8 +6,8 @@ import React, {
   useState,
 } from 'react'
 import ReactDOM from 'react-dom/client'
+import { VIEW_CONTAINER } from '../../lib/constants/renderer/styles'
 import type { Theme } from '../../lib/constants/types'
-import { VIEW_CONTAINER } from '../shared/lib/styles'
 import { applyThemeColors } from '../shared/lib/utils'
 import '../shared/styles/index.css'
 

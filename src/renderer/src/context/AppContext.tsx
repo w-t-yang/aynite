@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
+import { ayniteConfig } from '../../../lib/constants/renderer/config'
 import type {
   LayoutNode,
   LeafNode,
@@ -16,7 +17,6 @@ import type {
   WorkspaceConfig,
 } from '../../../lib/constants/types'
 import { applyThemeColors } from '../../shared/lib/utils'
-import { ayniteConfig } from '../config'
 import { executeLayoutOperation, getAllLeafIds } from '../utils/tile'
 
 function updateLayoutInConfig(

@@ -5,7 +5,7 @@ interface ColorPickerProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
 }
 
-import { SECTION_LABEL } from '../lib/styles'
+import { SECTION_LABEL } from '../../../lib/constants/renderer/styles'
 export function ColorPicker({
   className,
   label,

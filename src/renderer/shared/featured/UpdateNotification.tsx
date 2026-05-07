@@ -1,9 +1,9 @@
 import { AlertCircle, Download, RefreshCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
+import { FLEX_CENTER_GAP_3 } from '../../../lib/constants/renderer/styles'
 import { cn } from '../../shared/lib/utils'
 import { useApp } from '../../src/context/AppContext'
-import { FLEX_CENTER_GAP_3 } from '../lib/styles'
 
 export function UpdateNotification() {
   const [updateStatus, setUpdateStatus] = useState<

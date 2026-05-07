@@ -6,7 +6,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   unstyled?: boolean
 }
 
-import { SECTION_LABEL } from '../lib/styles'
+import { SECTION_LABEL } from '../../../lib/constants/renderer/styles'
 export function Input({
   className,
   label,

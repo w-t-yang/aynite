@@ -1,7 +1,7 @@
 import { Music } from 'lucide-react'
 import type React from 'react'
+import { VIEWER_CENTERED_ROW } from '../../../../lib/constants/renderer/styles'
 import { type FileInfo, formatFileSize } from '../../lib/file-handlers'
-import { VIEWER_CENTERED_ROW } from '../../lib/styles'
 import { UnifiedViewer } from './UnifiedViewer'
 
 export const AudioViewer: React.FC<{ file: FileInfo }> = ({ file }) => (

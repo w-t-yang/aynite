@@ -1,7 +1,7 @@
 import { useId } from 'react'
+import { FLEX_CENTER_GAP_2 } from '../../../lib/constants/renderer/styles'
 import { ColorPicker } from '../basic/ColorPicker'
 import { Input } from '../basic/Input'
-import { FLEX_CENTER_GAP_2 } from '../lib/styles'
 
 interface ColorInputProps {
   label: string

@@ -1,14 +1,14 @@
 import { Trash2 } from 'lucide-react'
 import type React from 'react'
-import { Button } from '../basic/Button'
-import { Input } from '../basic/Input'
-import { Modal } from '../basic/Modal'
-import { Radio } from '../basic/Radio'
 import {
   DESCRIPTION_TEXT,
   FLEX_CENTER_BETWEEN,
   FLEX_CENTER_GAP_3,
-} from '../lib/styles'
+} from '../../../lib/constants/renderer/styles'
+import { Button } from '../basic/Button'
+import { Input } from '../basic/Input'
+import { Modal } from '../basic/Modal'
+import { Radio } from '../basic/Radio'
 import { cn } from '../lib/utils'
 
 export function EditableCardFrame({

@@ -1,5 +1,5 @@
+import { FLEX_CENTER_GAP_2 } from '../../../lib/constants/renderer/styles'
 import { Input } from '../basic/Input'
-import { FLEX_CENTER_GAP_2 } from '../lib/styles'
 
 interface KeybindingRowProps {
   label: string
