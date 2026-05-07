@@ -36,7 +36,7 @@ const CHECKS: CheckDef[] = [
   },
   {
     label: 'Preload Isolation',
-    cmd: 'tsx scripts/audit-preload.ts',
+    cmd: 'tsx scripts/base-audit-preload.ts',
     parse: (_output, status) => {
       if (status === 0) return { violations: 0 }
       return { violations: 1 }
@@ -44,7 +44,7 @@ const CHECKS: CheckDef[] = [
   },
   {
     label: 'Constants Isolation',
-    cmd: 'tsx scripts/audit-constants.ts',
+    cmd: 'tsx scripts/base-audit-constants.ts',
     parse: (output) => {
       const m = output.match(/TOTAL VIOLATIONS: (\d+)/)
       return { violations: Number(m?.[1] ?? 0) }
@@ -52,7 +52,23 @@ const CHECKS: CheckDef[] = [
   },
   {
     label: 'Types Isolation',
-    cmd: 'tsx scripts/audit-types.ts',
+    cmd: 'tsx scripts/base-audit-types.ts',
+    parse: (output) => {
+      const m = output.match(/TOTAL VIOLATIONS: (\d+)/)
+      return { violations: Number(m?.[1] ?? 0) }
+    },
+  },
+  {
+    label: 'Window Architecture',
+    cmd: 'tsx scripts/base-audit-window.ts',
+    parse: (_output, status) => {
+      if (status === 0) return { violations: 0 }
+      return { violations: 1 }
+    },
+  },
+  {
+    label: 'Path Isolation',
+    cmd: 'tsx scripts/base-audit-path.ts',
     parse: (output) => {
       const m = output.match(/TOTAL VIOLATIONS: (\d+)/)
       return { violations: Number(m?.[1] ?? 0) }
@@ -185,6 +201,8 @@ function formatMetrics(label: string, m: Metrics): string {
     case 'Preload Isolation':
     case 'Constants Isolation':
     case 'Types Isolation':
+    case 'Window Architecture':
+    case 'Path Isolation':
       return m.violations === 0 ? 'clean' : `${m.violations} violations`
     case 'Complexity':
       return `${m.flagged} flagged (${m.high} high, ${m.medium} medium)`
