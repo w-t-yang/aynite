@@ -1,14 +1,16 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import fs from 'node:fs'
+import path from 'node:path'
+import { ROOT_DIR, report, walk } from './audit-utils'
 
-const MAIN_DIR = 'src/main'
+const checkMode = process.argv.includes('--check')
+const MAIN_DIR = path.join(ROOT_DIR, 'src/main')
 const WINDOW_FILE = 'window.ts'
+const violations: any[] = []
 
-const VIOLATIONS: string[] = []
-
-function checkFile(filePath: string) {
-  const content = readFileSync(filePath, 'utf-8')
-  const fileName = basename(filePath)
+walk(MAIN_DIR, (fullPath) => {
+  const relPath = path.relative(ROOT_DIR, fullPath)
+  const fileName = path.basename(fullPath)
+  const content = fs.readFileSync(fullPath, 'utf-8')
 
   if (fileName === WINDOW_FILE) return
 
@@ -17,23 +19,29 @@ function checkFile(filePath: string) {
     content.includes('new BrowserWindow') ||
     content.includes('import { BrowserWindow }')
   ) {
-    VIOLATIONS.push(
-      `[${filePath}] Illegal usage/import of BrowserWindow. Only ${WINDOW_FILE} can manage windows.`,
-    )
+    violations.push({
+      file: relPath,
+      message: `Illegal usage/import of BrowserWindow. Only ${WINDOW_FILE} can manage windows.`,
+      snippet: 'BrowserWindow usage detected',
+    })
   }
 
   // 2. Check for webContents usage
   if (content.includes('.webContents')) {
-    VIOLATIONS.push(
-      `[${filePath}] Illegal usage of .webContents. Use helpers in ${WINDOW_FILE} instead.`,
-    )
+    violations.push({
+      file: relPath,
+      message: `Illegal usage of .webContents. Use helpers in ${WINDOW_FILE} instead.`,
+      snippet: '.webContents usage detected',
+    })
   }
 
   // 3. Check for illegal listeners (strictly no ipcMain.on)
   if (content.includes('ipcMain.on')) {
-    VIOLATIONS.push(
-      `[${filePath}] Illegal usage of ipcMain.on. Use ipcMain.handle for service-oriented patterns.`,
-    )
+    violations.push({
+      file: relPath,
+      message: `Illegal usage of ipcMain.on. Use ipcMain.handle for service-oriented patterns.`,
+      snippet: 'ipcMain.on detected',
+    })
   }
 
   // 4. Check for other potential illegal listeners (.on)
@@ -47,14 +55,16 @@ function checkFile(filePath: string) {
         !line.includes('app.on') &&
         !line.includes('process.on') &&
         !line.includes('watcher.on') &&
-        !line.includes('emitter.on') && // Allow generic internal emitters if they exist, but audit carefully
-        !line.includes('ipcMain.on') // Already handled above
+        !line.includes('emitter.on') &&
+        !line.includes('ipcMain.on')
       ) {
-        // Narrow check for Electron-specific event emitters
         if (line.includes('window.on') || line.includes('updater.on')) {
-          VIOLATIONS.push(
-            `[${filePath}:${i + 1}] Illegal Electron listener registration (.on). Use ${WINDOW_FILE} helpers.`,
-          )
+          violations.push({
+            file: relPath,
+            line: i + 1,
+            snippet: line.trim(),
+            message: `Illegal Electron listener registration (.on). Use ${WINDOW_FILE} helpers.`,
+          })
         }
       }
     }
@@ -65,31 +75,12 @@ function checkFile(filePath: string) {
     content.includes('export function getMainWindow') ||
     content.includes('export const getMainWindow')
   ) {
-    VIOLATIONS.push(`[${filePath}] getMainWindow must NOT be exported.`)
+    violations.push({
+      file: relPath,
+      message: 'getMainWindow must NOT be exported.',
+      snippet: 'export getMainWindow detected',
+    })
   }
-}
+})
 
-function walk(dir: string) {
-  const files = readdirSync(dir)
-  for (const file of files) {
-    const fullPath = join(dir, file)
-    if (statSync(fullPath).isDirectory()) {
-      walk(fullPath)
-    } else if (file.endsWith('.ts')) {
-      checkFile(fullPath)
-    }
-  }
-}
-
-console.log('--- Starting Window Architecture Audit ---')
-walk(MAIN_DIR)
-
-if (VIOLATIONS.length === 0) {
-  console.log('✅ Audit passed! All window management is centralized.')
-} else {
-  console.error('❌ Audit failed! Found the following violations:')
-  for (const v of VIOLATIONS) {
-    console.error(v)
-  }
-  process.exit(1)
-}
+report('Aynite Window Architecture Audit', violations, checkMode)

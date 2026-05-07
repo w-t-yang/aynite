@@ -43,6 +43,22 @@ const CHECKS: CheckDef[] = [
     },
   },
   {
+    label: 'Constants Isolation',
+    cmd: 'tsx scripts/audit-constants.ts',
+    parse: (output) => {
+      const m = output.match(/TOTAL VIOLATIONS: (\d+)/)
+      return { violations: Number(m?.[1] ?? 0) }
+    },
+  },
+  {
+    label: 'Types Isolation',
+    cmd: 'tsx scripts/audit-types.ts',
+    parse: (output) => {
+      const m = output.match(/TOTAL VIOLATIONS: (\d+)/)
+      return { violations: Number(m?.[1] ?? 0) }
+    },
+  },
+  {
     label: 'Complexity',
     cmd: 'tsx scripts/audit-complexity.ts',
     parse: (output) => {
@@ -167,6 +183,8 @@ function formatMetrics(label: string, m: Metrics): string {
     case 'Main Architecture':
     case 'Bridge':
     case 'Preload Isolation':
+    case 'Constants Isolation':
+    case 'Types Isolation':
       return m.violations === 0 ? 'clean' : `${m.violations} violations`
     case 'Complexity':
       return `${m.flagged} flagged (${m.high} high, ${m.medium} medium)`
