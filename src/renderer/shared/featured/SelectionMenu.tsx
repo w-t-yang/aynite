@@ -2,37 +2,10 @@ import { ChevronDown, Search } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SECTION_LABEL } from '../../../lib/constants/renderer/styles'
+import type { SelectionMenuProps } from '../../../lib/types/ui'
 import { Input } from '../basic/Input'
 import { type SelectionItem, SelectionList } from '../basic/SelectionList'
 import { cn } from '../lib/utils'
-
-export interface SelectionMenuProps {
-  items: SelectionItem[]
-  onSelect: (id: string) => void
-  onClose?: () => void
-
-  // Trigger-based (Dropdown/Select style)
-  trigger?: React.ReactNode
-  activeId?: string // To show active state in trigger if it's a default Select style
-  placeholder?: string
-  disabled?: boolean
-  align?: 'left' | 'center' | 'right'
-
-  // Position-based (Context Menu style)
-  x?: number
-  y?: number
-
-  // Customization
-  title?: string
-  footer?: React.ReactNode
-  searchable?: boolean
-  searchPlaceholder?: string
-  className?: string
-  menuClassName?: string
-  divided?: boolean
-  size?: 'sm' | 'md' | 'lg'
-  label?: string
-}
 
 /**
  * A unified component that handles Selects, Dropdowns, and Context Menus.

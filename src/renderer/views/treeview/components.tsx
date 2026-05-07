@@ -13,13 +13,9 @@ import { cn } from '../../shared/lib/utils'
 
 // ─── File Tree Node ────────────────────────────────────────────────
 
-export interface FileNode {
-  id: string
-  name: string
-  isDirectory: boolean
-  isLoaded?: boolean
-  children?: FileNode[]
-}
+import type { FileNode } from '../../../lib/types/files'
+
+export type { FileNode }
 
 export function NodeRenderer({
   node,

@@ -59,6 +59,7 @@ interface AyniteWindow {
   copyFile: (srcPath: string, destPath: string) => Promise<boolean>
   deleteFile: (path: string) => Promise<boolean>
   getFileInfo: (path: string) => Promise<{
+    name: string
     size: number
     createdAt: string
     modifiedAt: string

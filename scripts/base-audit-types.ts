@@ -5,10 +5,8 @@ import { ROOT_DIR, report, SRC_DIR, walk } from './audit-utils'
 const checkMode = process.argv.includes('--check')
 const violations: any[] = []
 
-function isInternalType(name: string, _snippet: string, file: string) {
+function isInternalType(_name: string, _snippet: string, _file: string) {
   // Common internal type patterns
-  if (name.endsWith('Props') || name.endsWith('State')) return true
-  if (file.endsWith('.tsx')) return true // Most types in .tsx are component-specific
   return false
 }
 

@@ -1,20 +1,17 @@
 import { AlertTriangle, FileText, Folder, Terminal, Zap } from 'lucide-react'
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import type {
+  SuggestionItem,
+  SuggestionListHandle,
+} from '../../../lib/types/ui'
 import { type SelectionItem, SelectionList } from '../basic/SelectionList'
 
-export interface SuggestionItem extends SelectionItem {
-  name?: string
-  isDirectory?: boolean
-}
+export type { SuggestionItem, SuggestionListHandle }
 
 interface SuggestionListProps {
   items: SuggestionItem[]
   command: (item: SuggestionItem) => void
   triggerChar: string
-}
-
-export interface SuggestionListHandle {
-  onKeyDown: (props: { event: KeyboardEvent }) => boolean
 }
 
 export const SuggestionList = forwardRef<

@@ -149,6 +149,7 @@ function FileViewer({
         const res = await window.aynite.getFileInfo(path)
         setFileInfo({
           ...res,
+          name: res.name,
           createdAt: new Date(res.createdAt),
           modifiedAt: new Date(res.modifiedAt),
         })
@@ -257,6 +258,7 @@ function FileViewer({
       const infoRes = await window.aynite.getFileInfo(path)
       setFileInfo({
         ...infoRes,
+        name: infoRes.name,
         createdAt: new Date(infoRes.createdAt),
         modifiedAt: new Date(infoRes.modifiedAt),
       })

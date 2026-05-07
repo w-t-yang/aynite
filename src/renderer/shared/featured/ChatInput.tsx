@@ -10,6 +10,7 @@ import React, {
   useImperativeHandle,
   useState,
 } from 'react'
+import type { ChatInputHandle } from '../../../lib/types/ui'
 import { Button } from '../basic/Button'
 import type { Keybinding } from '../lib/types'
 import {
@@ -19,11 +20,7 @@ import {
 } from './chat-input-utils'
 import type { SuggestionItem } from './SuggestionList'
 
-export interface ChatInputHandle {
-  focus: () => void
-  clear: () => void
-  trigger: (prefix: string) => void
-}
+export type { ChatInputHandle }
 
 interface ChatInputProps {
   onSend: (text: string) => void

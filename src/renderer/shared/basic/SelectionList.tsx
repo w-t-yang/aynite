@@ -1,16 +1,8 @@
 import React, { useEffect, useRef } from 'react'
+import type { SelectionItem } from '../../../lib/types/ui'
 import { cn } from '../lib/utils'
 
-export interface SelectionItem {
-  id: string
-  label?: string
-
-  subtitle?: string
-  icon?: React.ReactNode
-  isActive?: boolean
-  badge?: string
-  [key: string]: any
-}
+export type { SelectionItem }
 
 interface SelectionListProps {
   items: SelectionItem[]

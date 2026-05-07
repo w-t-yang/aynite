@@ -1,8 +1,11 @@
 export interface FileInfo {
-  size: number
-  createdAt: Date
-  modifiedAt: Date
+  name: string
   path: string
+  isDirectory: boolean
+  size: number
+  mtime?: number
+  createdAt: number | Date
+  modifiedAt: number | Date
   extension: string
   isText?: boolean
 }
@@ -16,3 +19,11 @@ export type FileCategory =
   | 'markdown'
   | 'html'
   | 'unsupported'
+
+export interface FileNode {
+  id: string
+  name: string
+  isDirectory: boolean
+  isLoaded?: boolean
+  children?: FileNode[]
+}

@@ -10,25 +10,6 @@ import type { Agent, AIProviderInstance } from '../../../lib/types/ai'
 
 export type { Agent, AIProviderInstance }
 
-export interface SettingsState {
-  activeTheme: string
-  ai: {
-    activeId: string
-    providers: AIProviderInstance[]
-  }
-  agents: {
-    activeId: string
-    list: Agent[]
-  }
-  skills?: {
-    folders: string[]
-  }
-  commands?: {
-    folders: string[]
-  }
-  keybindings: KeybindingConfig
-  prompts: {
-    files: string[]
-  }
-  aiTools: { [key: string]: boolean }
-}
+import type { SettingsState } from '../../../lib/types/settings'
+
+export type { SettingsState }

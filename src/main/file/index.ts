@@ -92,6 +92,7 @@ export function setupFileIpc() {
     const isText = s.isDirectory() ? false : await checkIsTextFile(expandedPath)
 
     return {
+      name: getBasename(expandedPath),
       size: s.size,
       createdAt: s.birthtime,
       modifiedAt: s.mtime,
