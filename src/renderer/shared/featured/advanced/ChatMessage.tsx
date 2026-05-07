@@ -7,7 +7,7 @@ import {
   Save,
   Terminal,
 } from 'lucide-react'
-import React, { useCallback, useEffect, useRef, useState, memo } from 'react'
+import React, { memo, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type {

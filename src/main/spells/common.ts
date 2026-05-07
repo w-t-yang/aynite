@@ -1,14 +1,9 @@
 import { app } from 'electron'
+import { AppEvents } from '../../lib/constants/app'
 import { getAbsolutePath, joinPaths, readdir } from '../../lib/path'
+import { sendAppEvent } from '../window'
 
-export let notificationCallback:
-  | ((data: { type: 'skill' | 'command'; path: string; error: string }) => void)
-  | null = null
 export const reportedErrors = new Map<string, string>()
-
-export function setSpellsNotificationCallback(cb: typeof notificationCallback) {
-  notificationCallback = cb
-}
 
 export function notifyError(
   type: 'skill' | 'command',
@@ -17,7 +12,8 @@ export function notifyError(
 ) {
   if (reportedErrors.get(path) === error) return
   reportedErrors.set(path, error)
-  if (notificationCallback) notificationCallback({ type, path, error })
+
+  sendAppEvent(AppEvents.CONFIG_ERROR, { type, path, error })
 }
 
 export function getBundledResourcesPath(): string {

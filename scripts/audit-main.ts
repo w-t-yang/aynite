@@ -381,7 +381,9 @@ const auditFile = (filepath: string) => {
   }
 }
 
-targetFolders.forEach((folder) => walk(folder, auditFile))
+for (const folder of targetFolders) {
+  walk(folder, auditFile)
+}
 
 const grouped: Record<string, AuditIssue[]> = report.reduce(
   (acc: Record<string, AuditIssue[]>, item) => {

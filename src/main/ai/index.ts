@@ -1,6 +1,7 @@
-import { type BrowserWindow, dialog, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import type { ChatMessage } from '../../lib/constants/chat'
 import { AiChannels } from '../../lib/constants/ipc-channels'
+import { showOpenDialog } from '../window'
 import { handleAiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
@@ -23,7 +24,7 @@ interface SessionLoadPayload {
   date: string
 }
 
-export function setupAiIpc(mainWindow: BrowserWindow) {
+export function setupAiIpc() {
   ipcMain.handle(
     AiChannels.PROMPT_GET_MERGED,
     async (_event, globalFiles?: string[], agentFiles?: string[]) => {
@@ -35,7 +36,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle(AiChannels.CHAT, async (_event, params: AiChatPayload) => {
-    return await handleAiChat(mainWindow, params)
+    return await handleAiChat(params)
   })
 
   ipcMain.handle(
@@ -61,7 +62,7 @@ export function setupAiIpc(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle(AiChannels.PROMPT_PICK_FILE, async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    const { canceled, filePaths } = await showOpenDialog({
       properties: ['openFile'],
       filters: [{ name: 'Markdown', extensions: ['md'] }],
     })

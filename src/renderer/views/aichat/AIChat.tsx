@@ -1,5 +1,5 @@
 import { Check, Copy, History } from 'lucide-react'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { StreamPart } from '../../../lib/constants/chat'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
 import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
@@ -17,9 +17,11 @@ import { type AgentConfig, runAgentLoop } from '../../shared/lib/agent'
 import { FLEX_CENTER_GAP_3 } from '../../shared/lib/styles'
 import type { ChatMessage, SettingsState } from '../../shared/lib/types'
 import { cn } from '../../shared/lib/utils'
+import { useApp } from '../../src/context/AppContext'
 import { ApprovalModal, SessionsModal } from './components'
 
 export function AIChat() {
+  const { subscribeToAppEvents } = useApp()
   const [settings, _setSettings] = useState<SettingsState>(
     DEFAULT_SETTINGS as SettingsState,
   )
@@ -133,7 +135,7 @@ export function AIChat() {
 
   const handleOpenFile = useCallback((_path: string) => {}, [])
   const handleGetFiles = useCallback(
-    (path: string) => window.aynite.getFiles(path),
+    (path: string) => window.aynite.listFolder(path),
     [],
   )
   const handleGetAvailableSkills = useCallback(
@@ -372,6 +374,7 @@ export function AIChat() {
           requestApproval,
           activeTabPath,
           abort.signal,
+          subscribeToAppEvents,
         )
         setMessages(resultHistory)
       } catch (e: unknown) {
@@ -395,7 +398,13 @@ export function AIChat() {
         }
       }
     },
-    [workspaceFolders, requestApproval, activeTabPath, loading],
+    [
+      workspaceFolders,
+      requestApproval,
+      activeTabPath,
+      loading,
+      subscribeToAppEvents,
+    ],
   )
 
   const clearHistory = useCallback(() => {
@@ -411,7 +420,6 @@ export function AIChat() {
     abortRef.current?.abort()
     setShowClearConfirm(false)
   }, [showClearConfirm])
-
 
   const _saveMessageToFile = useCallback(
     async (text: string) => {

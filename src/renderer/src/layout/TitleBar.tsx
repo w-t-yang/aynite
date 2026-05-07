@@ -6,7 +6,6 @@ import { FormModal } from '../../shared/featured/FormModal'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { FLEX_CENTER_GAP_1 } from '../../shared/lib/styles'
 import { useApp } from '../context/AppContext'
-import { useTheme } from '../context/ThemeContext'
 
 const TitleBar: React.FC = () => {
   const {
@@ -15,8 +14,10 @@ const TitleBar: React.FC = () => {
     switchWorkspace,
     addWorkspace,
     switchLayout,
+    themes,
+    activeTheme,
+    setTheme,
   } = useApp()
-  const { themes, activeTheme, setTheme } = useTheme()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
 
   const workspaceOptions = useMemo(

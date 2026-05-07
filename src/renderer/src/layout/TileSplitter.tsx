@@ -52,7 +52,12 @@ const TileSplitter: React.FC<TileSplitterProps> = ({
   }
 
   return (
-    <div className={`splitter ${direction}`} onMouseDown={handleMouseDown} />
+    <hr
+      onMouseDown={handleMouseDown}
+      tabIndex={-1}
+      aria-valuenow={0}
+      className={`splitter ${direction} border-none m-0 p-0`}
+    />
   )
 }
 

@@ -35,7 +35,7 @@ export const updateNodeChildren = (
 
 export const fetchFiles = async (dirPath: string): Promise<FileNode[]> => {
   try {
-    const res = await window.aynite.getFiles(dirPath)
+    const res = await window.aynite.listFolder(dirPath)
     return res.map((f: any) => ({
       id: f.path,
       name: f.name,

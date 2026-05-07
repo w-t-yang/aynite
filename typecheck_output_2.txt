@@ -1,0 +1,32 @@
+src/main/ai/tools.ts(69,50): error TS2345: Argument of type '{ command: string; cwd: string; }' is not assignable to parameter of type 'string'.
+src/main/config/logic.ts(191,23): error TS2532: Object is possibly 'undefined'.
+src/renderer/shared/featured/fileviewers/FileViewer.tsx(700,21): error TS2322: Type 'string | undefined' is not assignable to type '"binary" | "other" | "too_large" | undefined'.
+  Type 'string' is not assignable to type '"binary" | "other" | "too_large" | undefined'.
+src/renderer/shared/lib/agent.ts(72,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/renderer/views/aichat/AIChat.tsx(533,13): error TS2322: Type '() => Promise<SkillEntry[]>' is not assignable to type '() => Promise<{ name: string; path: string; error?: string | undefined; }[]>'.
+  Type 'Promise<SkillEntry[]>' is not assignable to type 'Promise<{ name: string; path: string; error?: string | undefined; }[]>'.
+    Type 'SkillEntry[]' is not assignable to type '{ name: string; path: string; error?: string | undefined; }[]'.
+      Type 'SkillEntry' is not assignable to type '{ name: string; path: string; error?: string | undefined; }'.
+        Types of property 'error' are incompatible.
+          Type 'string | null' is not assignable to type 'string | undefined'.
+            Type 'null' is not assignable to type 'string | undefined'.
+src/renderer/views/aichat/AIChat.tsx(534,13): error TS2322: Type '() => Promise<CommandEntry[]>' is not assignable to type '() => Promise<{ name: string; path: string; error?: string | undefined; }[]>'.
+  Type 'Promise<CommandEntry[]>' is not assignable to type 'Promise<{ name: string; path: string; error?: string | undefined; }[]>'.
+    Type 'CommandEntry[]' is not assignable to type '{ name: string; path: string; error?: string | undefined; }[]'.
+      Type 'CommandEntry' is not assignable to type '{ name: string; path: string; error?: string | undefined; }'.
+        Types of property 'error' are incompatible.
+          Type 'string | null' is not assignable to type 'string | undefined'.
+            Type 'null' is not assignable to type 'string | undefined'.
+src/renderer/views/settings/AppearanceTab.tsx(91,39): error TS2339: Property 'isSystem' does not exist on type 'Theme'.
+src/renderer/views/settings/AppearanceTab.tsx(174,27): error TS2339: Property 'isSystem' does not exist on type 'Theme'.
+src/renderer/views/settings/CommandsTab.tsx(40,7): error TS2322: Type '{ folders: string[]; } | undefined' is not assignable to type '{ folders?: string[] | undefined; }'.
+  Type 'undefined' is not assignable to type '{ folders?: string[] | undefined; }'.
+src/renderer/views/settings/Settings.tsx(108,5): error TS2304: Cannot find name 'setThemes'.
+src/renderer/views/settings/Settings.tsx(108,16): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/renderer/views/settings/SkillsTab.tsx(40,7): error TS2322: Type '{ folders: string[]; } | undefined' is not assignable to type '{ folders?: string[] | undefined; }'.
+  Type 'undefined' is not assignable to type '{ folders?: string[] | undefined; }'.
+src/renderer/views/treeview/Treeview.tsx(269,64): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/renderer/views/treeview/Treeview.tsx(326,74): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.

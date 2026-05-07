@@ -20,7 +20,7 @@ interface SkillEntry {
   name: string
   description: string
   path: string
-  error: string | null
+  error?: string
 }
 
 interface CommandEntry {
@@ -29,7 +29,7 @@ interface CommandEntry {
   parameters: any[]
   example: string
   path: string
-  error: string | null
+  error?: string
 }
 
 interface AiChatPayload {
@@ -67,6 +67,7 @@ interface AyniteWindow {
     extension: string
     isText: boolean
   }>
+  refreshWatcher: () => Promise<void>
   getFiles: (path: string) => Promise<FileEntry[]>
   onFileSystemChange: (
     callback: (data: { event: string; path: string }) => void,
@@ -76,6 +77,7 @@ interface AyniteWindow {
   copy: (path: string) => Promise<boolean>
   paste: (destDir: string) => Promise<boolean>
 
+  deleteTheme: (name: string) => Promise<boolean>
   // Workspace
   getWorkspacesList: () => Promise<WorkspacesConfig>
   createWorkspace: (name: string) => Promise<WorkspacesConfig>

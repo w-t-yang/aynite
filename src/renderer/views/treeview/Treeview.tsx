@@ -166,39 +166,6 @@ export function Treeview() {
   loadWorkspaceDataRef.current = loadWorkspaceData
 
   useEffect(() => {
-    const unsubscribe = window.aynite.onFileSystemChange(
-      async ({ event, path }) => {
-        const dirname = await window.aynite.dirname(path)
-        window.dispatchEvent(
-          new CustomEvent('reload-folder', { detail: dirname }),
-        )
-
-        if (event === 'addDir' || event === 'unlinkDir') {
-          window.dispatchEvent(
-            new CustomEvent('reload-folder', { detail: path }),
-          )
-        }
-
-        if (workspaces.length > 0) {
-          const isRootChange =
-            rootFilesPathsRef.current.includes(path) ||
-            rootFilesPathsRef.current.includes(dirname)
-          if (isRootChange) loadWorkspaceDataRef.current()
-        }
-      },
-    )
-
-    const closeMenu = () => setContextMenu(null)
-    window.addEventListener('click', closeMenu)
-    window.addEventListener('contextmenu', closeMenu)
-    return () => {
-      unsubscribe()
-      window.removeEventListener('click', closeMenu)
-      window.removeEventListener('contextmenu', closeMenu)
-    }
-  }, [workspaces])
-
-  useEffect(() => {
     loadWorkspaceData()
   }, [loadWorkspaceData])
 
@@ -299,6 +266,7 @@ export function Treeview() {
 
       for (const id of dragIds) {
         const name = id.split(/[/\\]/).pop()
+        if (!name) continue
         const newPath = await window.aynite.joinPath(parentId, name)
         if (id !== newPath) {
           await window.aynite.renameFile(id, newPath)
@@ -356,6 +324,7 @@ export function Treeview() {
         if (action === 'paste' && clipboard) {
           for (const src of clipboard.paths) {
             const name = src.split(/[/\\]/).pop()
+            if (!name) continue
             const dest = await window.aynite.joinPath(parentDirForPaste, name)
             await window.aynite.copyFile(src, dest)
           }

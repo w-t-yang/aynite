@@ -5,13 +5,17 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react'
+import { AppEvents } from '../../../lib/constants/app'
 import type {
   LayoutNode,
   LeafNode,
+  Theme,
   WorkspaceConfig,
 } from '../../../lib/constants/types'
+import { applyThemeColors } from '../../shared/lib/utils'
 import { ayniteConfig } from '../config'
 import { executeLayoutOperation, getAllLeafIds } from '../utils/tile'
 
@@ -46,6 +50,12 @@ interface AppContextType {
 
   handleResizeStart: () => void
   handleResizeEnd: () => void
+
+  // Theme support
+  themes: Theme[]
+  activeTheme: Theme | null
+  setTheme: (themeId: string) => Promise<void>
+  subscribeToAppEvents: (callback: (event: any) => void) => () => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -61,6 +71,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const [availableViews, setAvailableViews] = useState<
     { id: string; name: string }[]
   >([])
+
+  const [themes, setThemes] = useState<Theme[]>([])
+  const [activeTheme, setActiveTheme] = useState<Theme | null>(null)
+
+  const eventListenersRef = useRef<Set<(event: any) => void>>(new Set())
+
+  const subscribeToAppEvents = useCallback((callback: (event: any) => void) => {
+    eventListenersRef.current.add(callback)
+    return () => eventListenersRef.current.delete(callback)
+  }, [])
+
+  const loadThemes = useCallback(async () => {
+    const loadedThemes = await ayniteConfig.getThemes()
+    setThemes(loadedThemes)
+
+    const themeId = await ayniteConfig.getActiveThemeId()
+    const theme = await ayniteConfig.getTheme(themeId)
+    if (theme) {
+      setActiveTheme(theme)
+      applyThemeColors(theme)
+    }
+  }, [])
+
+  const setTheme = useCallback(
+    async (themeId: string) => {
+      await window.aynite.setConfig('activeTheme', themeId)
+      await loadThemes()
+    },
+    [loadThemes],
+  )
+
+  const activeTileIdRef = useRef(activeTileId)
+  useEffect(() => {
+    activeTileIdRef.current = activeTileId
+  }, [activeTileId])
 
   const loadData = useCallback(() => {
     if (!window.aynite) {
@@ -90,7 +135,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     if (window.aynite.getAvailableViews) {
       window.aynite.getAvailableViews().then(setAvailableViews)
     }
-  }, [])
+    loadThemes()
+  }, [loadThemes])
 
   useEffect(() => {
     loadData()
@@ -167,43 +213,82 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [workspaceConfig, isResizing])
 
-  const executeAppOperation = useCallback(
-    (operation: string) => {
-      setWorkspaceConfig((prev) => {
-        if (!prev) return null
-        const activeLayout = prev.layouts.find(
-          (l) => l.id === prev.activeLayoutId,
-        )
-        if (!activeLayout) return prev
+  const executeAppOperation = useCallback((operation: string) => {
+    setWorkspaceConfig((prev) => {
+      if (!prev) return null
+      const activeLayout = prev.layouts.find(
+        (l) => l.id === prev.activeLayoutId,
+      )
+      if (!activeLayout) return prev
 
-        const { node: newLayoutNode, newActiveId } = executeLayoutOperation(
-          activeLayout.layout,
-          activeTileId,
-          operation,
-        )
+      const { node: newLayoutNode, newActiveId } = executeLayoutOperation(
+        activeLayout.layout,
+        activeTileIdRef.current,
+        operation,
+      )
 
-        if (newActiveId) setActiveTileId(newActiveId)
-        if (newLayoutNode === activeLayout.layout) return prev
+      if (newActiveId) setActiveTileId(newActiveId)
+      if (newLayoutNode === activeLayout.layout) return prev
 
-        const newConfig = {
-          ...prev,
-          layouts: prev.layouts.map((l) =>
-            l.id === prev.activeLayoutId ? { ...l, layout: newLayoutNode } : l,
-          ),
-        }
+      const newConfig = {
+        ...prev,
+        layouts: prev.layouts.map((l) =>
+          l.id === prev.activeLayoutId ? { ...l, layout: newLayoutNode } : l,
+        ),
+      }
 
-        ayniteConfig.saveWorkspace(newConfig)
-        return newConfig
-      })
-    },
-    [activeTileId],
-  )
+      ayniteConfig.saveWorkspace(newConfig)
+      return newConfig
+    })
+  }, [])
 
   useEffect(() => {
     if (!window.aynite) return
-    const removeListener = window.aynite.onAppOperation(executeAppOperation)
-    return () => removeListener()
+    // Listen for app operations (layout, etc.)
+    return window.aynite.onAppOperation(executeAppOperation)
   }, [executeAppOperation])
+
+  useEffect(() => {
+    if (!window.aynite) return
+
+    // Listen for broadcast events and relay to iframes
+    return window.aynite.onAppEvent(
+      (event: { type: string; data: unknown }) => {
+        // 1. Notify local subscribers
+        for (const listener of eventListenersRef.current) {
+          listener(event)
+        }
+
+        // 2. Relay to all iframes
+        for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
+          'iframe',
+        )) {
+          iframe.contentWindow?.postMessage(
+            { type: `aynite:${event.type}`, data: event.data },
+            '*',
+          )
+        }
+
+        // 3. Local reactions to app events
+        if (event.type === AppEvents.CONFIG_ERROR) {
+          console.error('[App] Config Error:', event.data)
+        } else if (event.type === AppEvents.THEME_CHANGED) {
+          loadThemes()
+        } else if (event.type === AppEvents.WORKSPACE_CHANGED) {
+          window.aynite.refreshWatcher()
+        } else if (event.type === AppEvents.FILE_RENAMED) {
+          const { oldPath: _oldPath, newPath: _newPath } = event.data as {
+            oldPath: string
+            newPath: string
+          }
+          // TODO: Implement workspace folder rename in bridge if needed
+        } else if (event.type === AppEvents.FILE_DELETED) {
+          const { path } = event.data as { path: string }
+          window.aynite.removeWorkspaceFolder(path)
+        }
+      },
+    )
+  }, [loadThemes])
 
   const handleResizeStart = useCallback(() => {
     setIsResizing(true)
@@ -255,6 +340,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         executeAppOperation,
         handleResizeStart,
         handleResizeEnd,
+        themes,
+        activeTheme,
+        setTheme,
       }
     }
   }, [
@@ -271,6 +359,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     executeAppOperation,
     handleResizeStart,
     handleResizeEnd,
+    themes,
+    setTheme,
+    activeTheme,
   ])
 
   return (
@@ -291,6 +382,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         handleResizeStart,
         handleResizeEnd,
         availableViews,
+        subscribeToAppEvents,
+        themes,
+        activeTheme,
+        setTheme,
       }}
     >
       {children}

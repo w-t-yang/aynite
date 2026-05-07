@@ -1,7 +1,7 @@
 import { type ModelMessage, stepCountIs, streamText } from 'ai'
-import { app, type BrowserWindow } from 'electron'
+import { app } from 'electron'
+import { AppEvents } from '../../lib/constants/app'
 import type { ChatMessage, StreamPart } from '../../lib/constants/chat'
-import { aiChatDeltaChannel } from '../../lib/constants/ipc-channels'
 import {
   appendText,
   getAyniteDir,
@@ -14,7 +14,9 @@ import {
   stat,
   writeJson,
 } from '../../lib/path'
-import { type AIProvider, getAIModel } from './factory'
+import { sendAppEvent } from '../window'
+import type { AIProvider } from './factory'
+import { getAIModel } from './factory'
 import { createTools } from './tools'
 
 // ─── Cached tools with mutable context ───────────────────────────────
@@ -22,7 +24,6 @@ import { createTools } from './tools'
 // so mutating this object before each request updates the tool closures.
 
 const toolContext = {
-  mainWindow: null as unknown as BrowserWindow,
   workspaceFolders: [] as string[],
   activeFile: undefined as string | undefined,
 }
@@ -116,20 +117,17 @@ async function logEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
 
 // ─── Main handler ────────────────────────────────────────────────────
 
-export async function handleAiChat(
-  mainWindow: BrowserWindow,
-  {
-    messages,
-    config,
-    workspaceFolders,
-    activeFile,
-  }: {
-    messages: ChatMessage[]
-    config: AIProvider & { enabledTools?: { [key: string]: boolean } }
-    workspaceFolders: string[]
-    activeFile?: string
-  },
-) {
+export async function handleAiChat({
+  messages,
+  config,
+  workspaceFolders,
+  activeFile,
+}: {
+  messages: ChatMessage[]
+  config: AIProvider & { enabledTools?: { [key: string]: boolean } }
+  workspaceFolders: string[]
+  activeFile?: string
+}) {
   const ayniteDir = getAyniteDir()
   if (!workspaceFolders.some((f) => f === ayniteDir)) {
     workspaceFolders = [...workspaceFolders, ayniteDir]
@@ -142,7 +140,6 @@ export async function handleAiChat(
     const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
     // Update mutable tool context
-    toolContext.mainWindow = mainWindow
     toolContext.workspaceFolders = workspaceFolders
     toolContext.activeFile = activeFile
 
@@ -156,7 +153,7 @@ export async function handleAiChat(
     })
 
     const emit = (part: StreamPart) => {
-      mainWindow.webContents.send(aiChatDeltaChannel(requestId), part)
+      sendAppEvent(AppEvents.AI_CHAT_DELTA, { requestId, part })
     }
 
     ;(async () => {

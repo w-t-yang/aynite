@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
-import { resolve } from 'path'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 const isDev = process.env.VITE_VIEWS_DEV === 'true'
 
@@ -38,7 +38,9 @@ export default defineConfig({
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',
         chunkFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',
-        assetFileNames: isDev ? 'assets/[name].[ext]' : 'assets/[name]-[hash].[ext]',
+        assetFileNames: isDev
+          ? 'assets/[name].[ext]'
+          : 'assets/[name]-[hash].[ext]',
         manualChunks(id) {
           if (id.includes('node_modules')) {
             return 'vendor'

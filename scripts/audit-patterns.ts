@@ -371,7 +371,8 @@ function main(): void {
   for (const name of order) {
     const items = grouped.get(name)
     if (!items || items.length === 0) continue
-    const detector = DETECTORS.find((d) => d.name === name)!
+    const detector = DETECTORS.find((d) => d.name === name)
+    if (!detector) continue
     const badge =
       detector.severity === 'high'
         ? '🔴'

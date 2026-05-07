@@ -13,8 +13,8 @@ import type { Theme } from '../../../lib/constants/types'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { TabButton } from '../../shared/basic/TabButton'
-import { useAppEvent } from '../../shared/lib/appEvents'
 import type { SettingsState } from '../../shared/lib/types'
+import { useView } from '../ViewContext'
 import { AboutTab } from './AboutTab'
 import { AgentsTab } from './AgentsTab'
 import { AITab } from './AITab'
@@ -29,11 +29,11 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState('appearance')
 
   // Broken down settings state
-  const [themes, setThemes] = useState<{
-    list: Theme[]
-    activeId: string
-    systemFonts: string[]
-  } | null>(null)
+  const {
+    themes: contextThemes,
+    activeThemeId,
+    setTheme: setContextTheme,
+  } = useView()
   const [ai, setAI] = useState<SettingsState['ai'] | null>(null)
   const [agents, setAgents] = useState<SettingsState['agents'] | null>(null)
   const [prompts, setPrompts] = useState<SettingsState['prompts'] | null>(null)
@@ -42,6 +42,11 @@ export function Settings() {
   >(null)
   const [skills, setSkills] = useState<any | null>(null)
   const [commands, setCommands] = useState<any | null>(null)
+  const [themes, setThemes] = useState<{
+    list: Theme[]
+    activeId: string
+    systemFonts: string[]
+  } | null>(null)
   const [aiTools, setAiTools] = useState<SettingsState['aiTools'] | null>(null)
 
   // Other shared state
@@ -53,25 +58,16 @@ export function Settings() {
 
   const loadSettings = useCallback(async () => {
     // Parallel load all decoupled resources
-    const [
-      resAI,
-      resAgents,
-      resPrompts,
-      resKb,
-      resSkills,
-      resCmds,
-      resTools,
-      resThemes,
-    ] = await Promise.all([
-      window.aynite.getConfig('ai'),
-      window.aynite.getConfig('agents'),
-      window.aynite.getConfig('prompts'),
-      window.aynite.getConfig('keybindings'),
-      window.aynite.getConfig('skills'),
-      window.aynite.getConfig('commands'),
-      window.aynite.getConfig('tools'),
-      window.aynite.getConfig('themes'),
-    ])
+    const [resAI, resAgents, resPrompts, resKb, resSkills, resCmds, resTools] =
+      await Promise.all([
+        window.aynite.getConfig('ai'),
+        window.aynite.getConfig('agents'),
+        window.aynite.getConfig('prompts'),
+        window.aynite.getConfig('keybindings'),
+        window.aynite.getConfig('skills'),
+        window.aynite.getConfig('commands'),
+        window.aynite.getConfig('tools'),
+      ])
 
     if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list })
     if (resAgents)
@@ -85,16 +81,19 @@ export function Settings() {
       setAiTools(resTools.active)
       setAvailableTools(resTools.list)
     }
-    if (resThemes) {
-      const activeThemeId = await window.aynite.getConfig('activeTheme')
-      const systemFonts = await window.aynite.getSystemFonts()
-      setThemes({
-        list: resThemes,
-        activeId: activeThemeId,
-        systemFonts: systemFonts || [],
-      })
+    if (resTools) {
+      setAiTools(resTools.active)
+      setAvailableTools(resTools.list)
     }
-  }, [])
+
+    // Initialize themes state
+    const systemFonts = await window.aynite.getSystemFonts()
+    setThemes({
+      list: contextThemes,
+      activeId: activeThemeId,
+      systemFonts,
+    })
+  }, [contextThemes, activeThemeId])
 
   const loadVersion = useCallback(async () => {
     const version = await window.aynite.getConfig('version')
@@ -107,7 +106,7 @@ export function Settings() {
   }, [loadVersion, loadSettings])
 
   // Reload settings when theme changes externally (e.g. from title bar)
-  useAppEvent('theme-changed', loadSettings)
+  // useAppEvent(AppEvents.THEME_CHANGED, loadSettings)
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
@@ -124,7 +123,7 @@ export function Settings() {
     )
     // Save the active theme ID specifically
     if (newThemes.activeId) {
-      await window.aynite.setConfig('activeTheme', newThemes.activeId)
+      await setContextTheme(newThemes.activeId)
     }
     // Individual theme saving is handled via setThemes logic if needed,
     // but usually themes are static unless customized.
@@ -241,12 +240,12 @@ export function Settings() {
         {/* Settings Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 flex flex-col custom-scrollbar relative">
-            {activeTab === 'appearance' && themes && (
+            {activeTab === 'appearance' && (
               <AppearanceTab
                 state={{
-                  list: themes.list,
-                  activeId: themes.activeId,
-                  systemFonts: themes.systemFonts,
+                  list: themes?.list || contextThemes,
+                  activeId: themes?.activeId || activeThemeId,
+                  systemFonts: themes?.systemFonts || [],
                 }}
                 actions={{
                   setThemes: handleSetThemes,

@@ -1,10 +1,7 @@
 import { type FSWatcher, watch } from 'chokidar'
-import type { BrowserWindow } from 'electron'
 import { ipcMain } from 'electron'
-import {
-  FileChannels,
-  FileEventChannels,
-} from '../../lib/constants/ipc-channels'
+import { AppEvents as AppEventTypes } from '../../lib/constants/app'
+import { FileChannels } from '../../lib/constants/ipc-channels'
 import {
   checkIsTextFile,
   copy,
@@ -22,6 +19,8 @@ import {
   writeText,
 } from '../../lib/path'
 import { getIgnorePatterns } from '../config/ignore'
+import { sendAppEvent } from '../window'
+import { getWorkspaceFolders } from '../workspace/logic'
 
 let watcher: FSWatcher | null = null
 
@@ -46,10 +45,7 @@ interface FileSavePayload {
   content: string
 }
 
-export function setupFileIpc(opts?: {
-  onRename?: (oldPath: string, newPath: string) => Promise<void>
-  onDelete?: (path: string) => Promise<void>
-}) {
+export function setupFileIpc() {
   ipcMain.handle(FileChannels.LIST, async (_event, dirPath: string = '.') => {
     try {
       const resolvedPath = getAbsolutePath(expandHome(dirPath))
@@ -122,7 +118,7 @@ export function setupFileIpc(opts?: {
     FileChannels.RENAME,
     async (_event, { oldPath, newPath }: FileRenamePayload) => {
       await rename(oldPath, newPath)
-      await opts?.onRename?.(oldPath, newPath)
+      sendAppEvent(AppEventTypes.FILE_RENAMED, { oldPath, newPath })
       return true
     },
   )
@@ -137,7 +133,7 @@ export function setupFileIpc(opts?: {
 
   ipcMain.handle(FileChannels.DELETE, async (_event, filePath: string) => {
     await remove(filePath, { recursive: true, force: true })
-    await opts?.onDelete?.(filePath)
+    sendAppEvent(AppEventTypes.FILE_DELETED, { path: filePath })
     return true
   })
 
@@ -148,22 +144,27 @@ export function setupFileIpc(opts?: {
       return true
     },
   )
+
+  ipcMain.handle(FileChannels.WATCHER_REFRESH, async () => {
+    return await setupWatcher()
+  })
 }
 
-export function setupWatcher(mainWindow: BrowserWindow, folders: string[]) {
+export async function setupWatcher(folders?: string[]) {
   if (watcher) {
     watcher.close()
   }
 
-  if (folders.length === 0) return
+  const watchFolders = folders || (await getWorkspaceFolders())
+  if (!watchFolders || watchFolders.length === 0) return
 
   ;(async () => {
     try {
       const ignorePatterns = await getIgnorePatterns()
-      watcher = watch(folders, {
+      watcher = watch(watchFolders, {
         ignored: (p) => {
           const basename = getBasename(p)
-          if (folders.includes(p)) return false
+          if (watchFolders.includes(p)) return false
           return (
             Array.isArray(ignorePatterns) && ignorePatterns.includes(basename)
           )
@@ -174,12 +175,7 @@ export function setupWatcher(mainWindow: BrowserWindow, folders: string[]) {
       })
 
       watcher.on('all', (event, path) => {
-        if (mainWindow) {
-          mainWindow.webContents.send(FileEventChannels.FS_CHANGE, {
-            event,
-            path,
-          })
-        }
+        sendAppEvent(AppEventTypes.FS_CHANGE, { event, path })
       })
     } catch (e) {
       console.error('Error in setupWatcher ignore patterns:', e)

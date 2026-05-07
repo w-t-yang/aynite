@@ -1,7 +1,8 @@
 import { ipcMain } from 'electron'
+import { AppEvents } from '../../lib/constants/app'
 import { ConfigKey } from '../../lib/constants/config'
 import { ConfigChannels } from '../../lib/constants/ipc-channels'
-import { broadcastAppEvent } from '../broadcast'
+import { sendAppEvent } from '../window'
 import { loadConfig, saveConfig } from './logic'
 import { routeGetConfig, routeSetConfig } from './router'
 
@@ -38,10 +39,10 @@ export function setupConfigIpc() {
       const result = await routeSetConfig(key, payload)
       // Broadcast theme changes via the unified app event channel
       if (key === ConfigKey.ACTIVE_THEME) {
-        broadcastAppEvent('theme-changed', { themeId: payload })
+        sendAppEvent(AppEvents.THEME_CHANGED, { themeId: payload })
       } else if (key === ConfigKey.THEME) {
         const themeId = (payload as { id: string }).id
-        broadcastAppEvent('theme-changed', { themeId })
+        sendAppEvent(AppEvents.THEME_CHANGED, { themeId })
       }
       return result
     },

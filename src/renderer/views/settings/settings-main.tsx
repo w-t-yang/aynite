@@ -1,4 +1,4 @@
-import { renderView } from '../../shared/lib/renderView'
+import { renderView } from '../ViewContext'
 import { Settings } from './Settings'
 
 renderView(Settings)

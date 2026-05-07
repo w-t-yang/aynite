@@ -1,63 +1,51 @@
 import { AlertCircle, Download, RefreshCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { AppEvents } from '../../../lib/constants/app'
 import { cn } from '../../shared/lib/utils'
+import { useApp } from '../../src/context/AppContext'
 import { FLEX_CENTER_GAP_3 } from '../lib/styles'
 
-function _UpdateNotification() {
-  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
+export function UpdateNotification() {
   const [updateStatus, setUpdateStatus] = useState<
     'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
   >('idle')
-  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   const [updateInfo, setUpdateInfo] = useState<any>(null)
-  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   const [updateProgress, setUpdateProgress] = useState<number>(0)
-  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   const [updateError, setUpdateError] = useState<string | null>(null)
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
+  const { subscribeToAppEvents } = useApp()
+
   useEffect(() => {
     if (!window.aynite) return
 
-    const unsubChecking = window.aynite.onUpdateChecking(() =>
-      setUpdateStatus('checking'),
-    )
-    const unsubAvailable = (info: any) => {
-      setUpdateStatus('available')
-      setUpdateInfo(info)
-    }
-    const offAvailable = window.aynite.onUpdateAvailable(unsubAvailable)
-
-    const unsubNotAvailable = window.aynite.onUpdateNotAvailable(() =>
-      setUpdateStatus('idle'),
-    )
-    const unsubError = window.aynite.onUpdateError((err: string) => {
-      setUpdateStatus('error')
-      setUpdateError(err)
+    return subscribeToAppEvents((event: { type: string; data: any }) => {
+      switch (event.type) {
+        case AppEvents.UPDATE_CHECKING:
+          setUpdateStatus('checking')
+          break
+        case AppEvents.UPDATE_AVAILABLE:
+          setUpdateStatus('available')
+          setUpdateInfo(event.data)
+          break
+        case AppEvents.UPDATE_NOT_AVAILABLE:
+          setUpdateStatus('idle')
+          break
+        case AppEvents.UPDATE_ERROR:
+          setUpdateStatus('error')
+          setUpdateError(event.data)
+          break
+        case AppEvents.UPDATE_PROGRESS:
+          setUpdateStatus('downloading')
+          setUpdateProgress(event.data.percent)
+          break
+        case AppEvents.UPDATE_DOWNLOADED:
+          setUpdateStatus('downloaded')
+          setUpdateInfo(event.data)
+          break
+      }
     })
-    const unsubProgress = (progress: any) => {
-      setUpdateStatus('downloading')
-      setUpdateProgress(progress.percent)
-    }
-    const offProgress = window.aynite.onUpdateProgress(unsubProgress)
+  }, [subscribeToAppEvents])
 
-    const unsubDownloaded = (info: any) => {
-      setUpdateStatus('downloaded')
-      setUpdateInfo(info)
-    }
-    const offDownloaded = window.aynite.onUpdateDownloaded(unsubDownloaded)
-
-    return () => {
-      unsubChecking?.()
-      offAvailable?.()
-      unsubNotAvailable?.()
-      unsubError?.()
-      offProgress?.()
-      offDownloaded?.()
-    }
-  }, [])
-
-  // biome-ignore lint/correctness/useHookAtTopLevel: intentionally unused (WIP)
   useEffect(() => {
     if (updateStatus === 'error') {
       const timer = setTimeout(() => {

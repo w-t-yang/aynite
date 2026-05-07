@@ -10,15 +10,6 @@ export const ConfigChannels = {
   LOAD: 'aynite:config-load',
   SAVE: 'aynite:config-save',
 } as const
-
-export const ConfigEventChannels = {
-  APP_OPERATION: 'aynite:app-operation',
-  CONFIG_ERROR: 'aynite:config-error',
-  WORKSPACE_CHANGED: 'aynite:workspace-changed',
-  THEME_CHANGED: 'aynite:theme-changed',
-  VIEW_OPERATION: 'aynite:view-operation',
-} as const
-
 export const FileChannels = {
   LIST: 'aynite:file-list',
   READ: 'aynite:file-read',
@@ -28,10 +19,7 @@ export const FileChannels = {
   COPY: 'aynite:file-copy',
   DELETE: 'aynite:file-delete',
   INFO: 'aynite:file-info',
-} as const
-
-export const FileEventChannels = {
-  FS_CHANGE: 'aynite:fs-change',
+  WATCHER_REFRESH: 'aynite:file-watcher-refresh',
 } as const
 
 export const WorkspaceChannels = {
@@ -59,14 +47,9 @@ export const AiChannels = {
 } as const
 
 export const AiEventChannels = {
-  CHAT_DELTA_PREFIX: 'aynite:ai-chat-delta',
   APPROVAL_REQUEST: 'aynite:ai-approval-request',
   APPROVAL_RESPONSE: 'aynite:ai-approval-response',
 } as const
-
-export function aiChatDeltaChannel(requestId: string): string {
-  return `${AiEventChannels.CHAT_DELTA_PREFIX}:${requestId}`
-}
 
 export const SpellChannels = {
   SKILL_ADD_FOLDER: 'aynite:spell-skill-add-folder',
@@ -97,14 +80,7 @@ export const SystemChannels = {
 export const UpdateChannels = {
   CHECK: 'aynite:update-check',
   INSTALL: 'aynite:update-install',
-  CHECKING: 'aynite:update-checking',
-  AVAILABLE: 'aynite:update-available',
-  NOT_AVAILABLE: 'aynite:update-not-available',
-  ERROR: 'aynite:update-error',
-  DOWNLOAD_PROGRESS: 'aynite:update-download-progress',
-  DOWNLOADED: 'aynite:update-downloaded',
 } as const
-
 export const ThemeChannels = {
   LIST: 'aynite:theme-list',
   READ: 'aynite:theme-read',
@@ -114,10 +90,14 @@ export const ThemeChannels = {
 } as const
 
 /**
+ * Unified app-level operation execution channel.
+ * Renderer sends typed operations here for the main process to execute.
+ */
+export const AppOperationChannel = 'aynite:app-operation'
+
+/**
  * Unified app-level event broadcast channel.
  * Main process sends typed events here; the main renderer receives them
  * and relays to iframe views via postMessage.
  */
-export const AppEventChannels = {
-  BROADCAST: 'aynite:app-event',
-} as const
+export const AppEventChannel = 'aynite:app-event'

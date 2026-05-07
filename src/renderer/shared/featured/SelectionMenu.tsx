@@ -1,5 +1,5 @@
 import { ChevronDown, Search } from 'lucide-react'
-import React from 'react'
+import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '../basic/Input'
 import { type SelectionItem, SelectionList } from '../basic/SelectionList'
@@ -162,19 +162,18 @@ export function SelectionMenu({
         tabIndex={0}
       >
         {trigger ? (
-          <div
+          <button
+            type="button"
             onClick={(e) => {
               if (disabled) return
               e.stopPropagation()
               setInternalIsOpen(!internalIsOpen)
             }}
             className={cn(
-              'cursor-pointer inline-flex',
+              'cursor-pointer inline-flex bg-transparent border-none p-0 text-inherit font-inherit focus:outline-none',
               disabled && 'opacity-50 cursor-not-allowed',
             )}
-            // biome-ignore lint/a11y/useSemanticElements: nesting
-            role="button"
-            tabIndex={disabled ? -1 : 0}
+            disabled={disabled}
             onKeyDown={(e) => {
               if (disabled) return
               if (e.key === 'Enter' || e.key === ' ') {
@@ -184,7 +183,7 @@ export function SelectionMenu({
             }}
           >
             {trigger}
-          </div>
+          </button>
         ) : (
           <button
             type="button"

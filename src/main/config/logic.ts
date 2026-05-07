@@ -3,6 +3,7 @@ import {
   DEFAULT_AI_CONFIG,
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
+import type { MainConfig } from '../../lib/constants/types'
 import {
   DEFAULT_WORKSPACE_CONFIG,
   DEFAULT_WORKSPACE_ID,
@@ -35,20 +36,10 @@ import {
   restoreCommand,
   restoreSkill,
   restoreSpell,
-  setSpellsNotificationCallback,
 } from '../spells'
 import { getBundledResourcesPath } from '../spells/common'
 import { initThemes } from '../theme'
 import { getIgnorePatterns } from './ignore'
-
-let notificationCallback:
-  | ((data: { type: 'skill' | 'command'; path: string; error: string }) => void)
-  | null = null
-
-export function setConfigNotificationCallback(cb: typeof notificationCallback) {
-  notificationCallback = cb
-  setSpellsNotificationCallback(cb)
-}
 
 export async function initAppFolders() {
   const baseDir = getAyniteDir()
@@ -196,9 +187,10 @@ export async function loadConfig() {
   if (!mainConfig.skills) mainConfig.skills = await getSkillsConfig()
   if (!mainConfig.commands) mainConfig.commands = await getCommandsConfig()
   if (mainConfig.prompts?.files) {
-    mainConfig.prompts.files = mainConfig.prompts.files.filter(
-      (f: string) => !f.split('/').pop().startsWith('agent-'),
-    )
+    mainConfig.prompts.files = mainConfig.prompts.files.filter((f: string) => {
+      const filename = f.split('/').pop()
+      return filename ? !filename.startsWith('agent-') : true
+    })
   }
   if (!mainConfig.agents) {
     mainConfig.agents = createDefaultAgentConfig(getAynitePromptPath)

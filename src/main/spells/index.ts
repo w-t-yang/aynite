@@ -1,8 +1,9 @@
 import { exec } from 'node:child_process'
 import fs from 'node:fs/promises'
 import { promisify } from 'node:util'
-import { type BrowserWindow, dialog, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import { joinPaths } from '../../lib/path'
+import { showOpenDialog } from '../window'
 import { listAvailableCommands, restoreDefaultCommands } from './commands'
 import { listAvailableSkills, restoreDefaultSkills } from './skills'
 
@@ -21,14 +22,9 @@ interface DirectCommandRunPayload {
   currentFile?: string
 }
 
-interface CommandResult {
-  stdout: string
-  stderr: string
-}
-
-export function setupSpellsIpc(mainWindow: BrowserWindow) {
+export function setupSpellsIpc() {
   const handleAddFolder = async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    const { canceled, filePaths } = await showOpenDialog({
       properties: ['openDirectory'],
     })
     if (canceled || filePaths.length === 0) return null

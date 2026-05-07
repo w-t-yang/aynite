@@ -1,9 +1,11 @@
-import { type BrowserWindow, dialog, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
+import { AppEvents } from '../../lib/constants/app'
 import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import type { WorkspaceTab } from '../../lib/types/workspace'
 import { getIgnorePatterns } from '../config/ignore'
+import { sendAppEvent, showOpenDialog } from '../window'
 import {
   addWorkspaceFolder,
   createWorkspace,
@@ -22,10 +24,11 @@ interface WorkspaceStatePayload {
   activeTabId: string
 }
 
-export function setupWorkspaceIpc(
-  mainWindow: BrowserWindow,
-  opts?: { onFoldersChanged?: (folders: string[]) => Promise<void> | void },
-): void {
+export function setupWorkspaceIpc(): void {
+  const notifyChanged = (folders: string[]) => {
+    sendAppEvent(AppEvents.WORKSPACE_CHANGED, { folders })
+  }
+
   ipcMain.handle(WorkspaceChannels.LIST, async () => {
     return await getWorkspacesList()
   })
@@ -38,13 +41,13 @@ export function setupWorkspaceIpc(
     const success = await switchWorkspace(name)
     if (success) {
       const folders = await getWorkspaceFolders()
-      await opts?.onFoldersChanged?.(folders)
+      notifyChanged(folders)
     }
     return success
   })
 
   ipcMain.handle(WorkspaceChannels.ADD_FOLDER, async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    const { canceled, filePaths } = await showOpenDialog({
       properties: ['openDirectory'],
     })
     if (canceled || filePaths.length === 0) return null
@@ -52,7 +55,7 @@ export function setupWorkspaceIpc(
     const success = await addWorkspaceFolder(folderPath)
     if (success) {
       const folders = await getWorkspaceFolders()
-      await opts?.onFoldersChanged?.(folders)
+      notifyChanged(folders)
     }
     return folderPath
   })
@@ -81,7 +84,7 @@ export function setupWorkspaceIpc(
     async (_event, folders: string[]) => {
       const success = await reorderWorkspaceFolders(folders)
       if (success) {
-        await opts?.onFoldersChanged?.(folders)
+        notifyChanged(folders)
       }
       return success
     },
@@ -93,7 +96,7 @@ export function setupWorkspaceIpc(
       const success = await removeWorkspaceFolder(folderPath)
       if (success) {
         const folders = await getWorkspaceFolders()
-        await opts?.onFoldersChanged?.(folders)
+        notifyChanged(folders)
       }
       return success
     },

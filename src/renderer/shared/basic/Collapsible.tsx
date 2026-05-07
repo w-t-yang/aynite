@@ -30,6 +30,7 @@ export function Collapsible({
     >
       <div className="flex items-center justify-between group">
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
           className="flex-1 flex items-center justify-between"
         >

@@ -2,7 +2,7 @@ import Mention from '@tiptap/extension-mention'
 import Placeholder from '@tiptap/extension-placeholder'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { Send } from 'lucide-react'
+import { Send, Square } from 'lucide-react'
 import React, {
   forwardRef,
   useCallback,
@@ -26,7 +26,12 @@ export interface ChatInputHandle {
 }
 
 interface ChatInputProps {
-  onSubmit: (text: string) => void
+  onSend: (text: string) => void
+  placeholder?: string
+  loading?: boolean
+  onAbort?: () => void
+  onClear?: () => void
+  onShowHistory?: () => void
   disabled?: boolean
   workspaceFolders?: string[]
   focusKeybinding?: Keybinding
@@ -48,11 +53,16 @@ interface ChatInputProps {
 const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
   (
     {
-      onSubmit,
+      onSend,
+      placeholder = 'Message assistant...',
+      loading,
+      onAbort,
+      onClear: _onClear,
+      onShowHistory: _onShowHistory,
       disabled,
       workspaceFolders = [],
       focusKeybinding: _focusKeybinding,
-      submitKeybinding: _submitKeybinding,
+      submitKeybinding,
       getFiles,
       getAvailableSkills,
       getAvailableCommands,
@@ -98,7 +108,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
           horizontalRule: false,
         }),
         Placeholder.configure({
-          placeholder: `Message assistant... (Ctrl + Enter to send message)`,
+          placeholder,
         }),
         BaseMention.configure({
           HTMLAttributes: { class: 'mention mention-file' },
@@ -147,7 +157,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
           ),
         }),
       ],
-      [BaseMention],
+      [BaseMention, placeholder],
     )
 
     // Unified effect for indexing workspace files, skills, and commands
@@ -219,7 +229,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
       return () => {
         isMounted = false
       }
-    }, [workspaceFolders])
+    }, [workspaceFolders, getAvailableCommands, getFiles, getAvailableSkills])
 
     const checkMatch = useCallback((e: KeyboardEvent, kb?: Keybinding) => {
       if (!kb) return false
@@ -256,9 +266,9 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
       const text = serializeTiptapToText(json)
       if (!text.trim()) return
 
-      onSubmit(text)
+      onSend(text)
       editor.commands.clearContent()
-    }, [editor, disabled, onSubmit])
+    }, [editor, disabled, onSend])
 
     // Handle submit keybinding
     useEffect(() => {
@@ -275,7 +285,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
           },
         },
       })
-    }, [editor, submitKeybinding, handleSubmit, checkMatch])
+    }, [editor, handleSubmit, checkMatch, submitKeybinding])
 
     // Update editable when disabled changes
     useEffect(() => {
@@ -300,8 +310,12 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
     }))
 
     return (
-      <div
-        role="group"
+      <fieldset
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            editor?.commands.focus('end')
+          }
+        }}
         onClick={() => {
           if (editor) {
             editor.commands.focus('end')
@@ -309,21 +323,25 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
             setTimeout(() => editor.commands.focus('end'), 5)
           }
         }}
-        className={`chat-input-wrapper flex items-end gap-2 bg-background/60 backdrop-blur-xl border border-border/40 rounded-2xl pl-4 pr-2 py-2.5 shadow-2xl shadow-black/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300 cursor-text ${disabled ? 'opacity-50 grayscale-[0.5]' : ''}`}
+        className={`chat-input-wrapper flex items-end gap-2 bg-background/60 backdrop-blur-xl border border-border/40 rounded-2xl pl-4 pr-2 py-2.5 shadow-2xl shadow-black/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300 cursor-text border-none m-0 p-0 ${disabled ? 'opacity-50 grayscale-[0.5]' : ''}`}
       >
         <div className="flex-1 min-h-[24px] py-1">
           <EditorContent editor={editor} />
         </div>
         <Button
-          onClick={() => handleSubmit()}
-          disabled={disabled}
+          onClick={() => (loading ? onAbort?.() : handleSubmit())}
+          disabled={disabled && !loading}
           variant="ghost"
           className="p-2 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-xl transition-all duration-200 shrink-0 h-auto"
-          title="Send Message (Ctrl+Enter)"
+          title={loading ? 'Stop (Esc)' : 'Send Message (Ctrl+Enter)'}
         >
-          <Send size={18} />
+          {loading ? (
+            <Square size={18} className="fill-primary/20" />
+          ) : (
+            <Send size={18} />
+          )}
         </Button>
-      </div>
+      </fieldset>
     )
   },
 )

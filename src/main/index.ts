@@ -1,111 +1,28 @@
 import { app, BrowserWindow, protocol } from 'electron'
-import { ConfigEventChannels } from '../lib/constants/ipc-channels'
-import { getPreloadPath, getRendererHtmlPath } from '../lib/path'
+
+// IPC & Logic Modules
 import { setupAiIpc } from './ai/index'
-import {
-  initAppFolders,
-  loadConfig,
-  setConfigNotificationCallback,
-  setupConfigIpc,
-} from './config/index'
+import { initAppFolders, setupConfigIpc } from './config/index'
 import { setupFileIpc, setupWatcher } from './file/index'
+import { setupKeybindings } from './keybindings'
 import { setupSpellsIpc } from './spells/index'
 import { setupProtocol, setupSystemIpc } from './system/index'
 import { setupThemeIpc } from './theme/index'
 import { setupUpdater } from './updater'
-import {
-  getWorkspaceFolders,
-  removeWorkspaceFolder,
-  renameWorkspaceFolder,
-  setupWorkspaceIpc,
-} from './workspace/index'
+import { createMainWindow, isWindowActive } from './window'
+import { setupWorkspaceIpc } from './workspace/index'
 
-let mainWindow: BrowserWindow | null = null
+/**
+ * App Lifecycle & Initialization
+ */
 
-// Cached keybinding config for before-input-event matching
-let cachedKeybindings: any = null
-
-interface KeyBinding {
-  ctrl?: boolean
-  shift?: boolean
-  alt?: boolean
-  meta?: boolean
-  key: string
-}
-
-function matchesKeybinding(
-  input: Electron.Input,
-  binding: KeyBinding,
-): boolean {
-  const ctrlMatch = !!binding.ctrl === (input.control || input.meta)
-  const shiftMatch = !!binding.shift === input.shift
-  const altMatch = !!binding.alt === input.alt
-  const keyMatch = input.key.toLowerCase() === binding.key.toLowerCase()
-  return ctrlMatch && shiftMatch && altMatch && keyMatch
-}
-
-function handleKeyboardInput(input: Electron.Input): string | null {
-  if (!cachedKeybindings || input.type !== 'keyDown') return null
-
-  // Check app-level keybindings
-  if (cachedKeybindings.app) {
-    for (const [operation, binding] of Object.entries(cachedKeybindings.app)) {
-      if (matchesKeybinding(input, binding as KeyBinding)) {
-        return operation
-      }
-    }
-  }
-
-  return null
-}
-
-async function refreshKeybindings() {
-  try {
-    const config = await loadConfig()
-    cachedKeybindings = config.keybindings
-  } catch (e) {
-    console.error('Failed to load keybindings:', e)
-  }
-}
-
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    title: 'Aynite',
-    autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
-    webPreferences: {
-      preload: getPreloadPath(__dirname),
-      sandbox: false,
-      contextIsolation: true,
-      nodeIntegrationInSubFrames: true,
-    },
-  })
-
-  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    mainWindow.loadFile(getRendererHtmlPath(__dirname))
-  }
-
-  mainWindow.setMenuBarVisibility(false)
-
-  // Keybinding dispatch via before-input-event
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    const operation = handleKeyboardInput(input)
-    if (operation && mainWindow) {
-      mainWindow.webContents.send(ConfigEventChannels.APP_OPERATION, operation)
-      event.preventDefault()
-    }
-  })
-}
-
+// Linux Specific Optimizations
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('enable-wayland-ime')
   app.commandLine.appendSwitch('wayland-text-input-v3')
 }
 
+// Register Custom Protocols
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'aynite',
@@ -119,45 +36,37 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 app.whenReady().then(async () => {
+  // 1. Essential System Setup
   setupProtocol()
   await initAppFolders()
-  createWindow()
 
-  if (mainWindow) {
-    setupAiIpc(mainWindow)
-    setupWorkspaceIpc(mainWindow, {
-      onFoldersChanged: async (folders) => {
-        setupWatcher(mainWindow, folders)
-      },
-    })
-    setupUpdater(mainWindow)
+  // 2. Window Initialization (Centralized in window.ts)
+  createMainWindow(__dirname)
+
+  if (isWindowActive()) {
+    // 3. Core IPC & Configuration
     setupConfigIpc()
     setupThemeIpc()
-    setupFileIpc({
-      onRename: renameWorkspaceFolder,
-      onDelete: removeWorkspaceFolder,
-    })
-    setupSpellsIpc(mainWindow)
-    setupSystemIpc(mainWindow)
+    setupKeybindings()
 
-    // Set up configuration error notifications
-    setConfigNotificationCallback((data) => {
-      if (mainWindow) {
-        mainWindow.webContents.send(ConfigEventChannels.CONFIG_ERROR, data)
-      }
-    })
+    setupSystemIpc()
+    setupUpdater()
+
+    // 4. Workspace & File Management
+    setupWorkspaceIpc()
+    setupFileIpc()
 
     // Initial watcher setup
-    const folders = await getWorkspaceFolders()
-    setupWatcher(mainWindow, folders)
+    setupWatcher()
 
-    // Cache keybindings for before-input-event dispatch
-    await refreshKeybindings()
+    // 5. Feature Subsystems (AI, Spells)
+    setupAiIpc()
+    setupSpellsIpc()
   }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+      createMainWindow(__dirname)
     }
   })
 })

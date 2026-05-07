@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { ColorPicker } from '../basic/ColorPicker'
 import { Input } from '../basic/Input'
 import { FLEX_CENTER_GAP_2 } from '../lib/styles'
@@ -19,9 +20,14 @@ export function ColorInput({
   onChange,
   onBlur,
 }: ColorInputProps) {
+  const inputId = useId()
+
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border/20 group">
-      <label className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+      <label
+        htmlFor={inputId}
+        className="text-xs text-muted-foreground group-hover:text-foreground transition-colors"
+      >
         {label}
       </label>
       <div className={FLEX_CENTER_GAP_2}>
@@ -34,6 +40,7 @@ export function ColorInput({
           }}
         />
         <Input
+          id={inputId}
           unstyled
           type="text"
           value={value}

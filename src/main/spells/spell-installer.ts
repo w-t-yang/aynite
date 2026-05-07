@@ -78,7 +78,11 @@ export async function listAvailableSpells(
           } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e)
             yamlError = message
-            notifyError(configKey, mdPath, message)
+            notifyError(
+              configKey === 'skills' ? 'skill' : 'command',
+              mdPath,
+              message,
+            )
           }
         }
         const name = meta.name || getBasename(itemPath)

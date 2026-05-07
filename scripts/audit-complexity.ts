@@ -161,7 +161,8 @@ function findFunctions(
 
     // Find the body start — the first `{` after the function declaration
     // Handle cases where the signature spans multiple lines
-    let braceStart = line.indexOf('{', match.index! + match[0].length)
+    const matchIndex = match.index ?? 0
+    let braceStart = line.indexOf('{', matchIndex + match[0].length)
 
     // If no brace on this line, scan forward
     if (braceStart === -1) {

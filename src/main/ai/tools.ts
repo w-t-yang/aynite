@@ -1,9 +1,7 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import { jsonSchema } from '@ai-sdk/provider-utils'
-import { type BrowserWindow, ipcMain } from 'electron'
 import { TOOL_METADATA } from '../../lib/constants/ai'
-import { AiEventChannels } from '../../lib/constants/ipc-channels'
 import { ERROR_MESSAGES } from '../../lib/constants/messages'
 import {
   getAyniteDir,
@@ -13,11 +11,11 @@ import {
   secureReadText,
   secureWriteText,
 } from '../../lib/path'
+import { requestAiApproval } from '../window'
 
 const execAsync = promisify(exec)
 
 export interface ToolContext {
-  mainWindow: BrowserWindow
   workspaceFolders: string[]
   activeFile?: string
 }
@@ -68,27 +66,9 @@ export function createTools(context: ToolContext) {
       execute: async ({ command, cwd }: { command: string; cwd?: string }) => {
         const runCwd = cwd || context.workspaceFolders[0] || '.'
 
-        const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-        context.mainWindow.webContents.send(AiEventChannels.APPROVAL_REQUEST, {
-          id: approvalId,
+        const approved = await requestAiApproval({
           command,
           cwd: runCwd,
-        })
-
-        const approved = await new Promise<boolean>((done) => {
-          const listener = (
-            _: any,
-            response: { id: string; approved: boolean },
-          ) => {
-            if (response.id === approvalId) {
-              ipcMain.removeListener(
-                AiEventChannels.APPROVAL_RESPONSE,
-                listener,
-              )
-              done(response.approved)
-            }
-          }
-          ipcMain.on(AiEventChannels.APPROVAL_RESPONSE, listener)
         })
 
         if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED

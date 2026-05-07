@@ -1,12 +1,4 @@
-import {
-  app,
-  type BrowserWindow,
-  dialog,
-  ipcMain,
-  net,
-  protocol,
-  shell,
-} from 'electron'
+import { app, ipcMain, net, protocol, shell } from 'electron'
 import {
   exists,
   expandHome,
@@ -14,6 +6,12 @@ import {
   getBasename,
   joinPaths,
 } from '../../lib/path'
+import {
+  closeWindow,
+  maximizeWindow,
+  minimizeWindow,
+  showOpenDialog,
+} from '../window'
 import { getAvailableViews, getSystemFonts } from './logic'
 
 let clipboardPath: string | null = null
@@ -21,7 +19,7 @@ let clipboardPath: string | null = null
 // ─── Channel constants ────────────────────────────────────────────────────
 import { SystemChannels } from '../../lib/constants/ipc-channels'
 
-export function setupSystemIpc(mainWindow: BrowserWindow) {
+export function setupSystemIpc() {
   ipcMain.handle(SystemChannels.FONT_LIST, async () => {
     return await getSystemFonts()
   })
@@ -40,7 +38,7 @@ export function setupSystemIpc(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle(SystemChannels.DIALOG_SELECT_FILE, async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    const { canceled, filePaths } = await showOpenDialog({
       properties: ['openFile'],
     })
     if (canceled || filePaths.length === 0) return null
@@ -48,27 +46,26 @@ export function setupSystemIpc(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle(SystemChannels.DIALOG_SELECT_FOLDER, async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    const { canceled, filePaths } = await showOpenDialog({
       properties: ['openDirectory'],
     })
     if (canceled || filePaths.length === 0) return null
     return filePaths
   })
 
-  ipcMain.on(SystemChannels.WINDOW_MINIMIZE, () => {
-    mainWindow.minimize()
+  ipcMain.handle(SystemChannels.WINDOW_MINIMIZE, () => {
+    minimizeWindow()
+    return true
   })
 
-  ipcMain.on(SystemChannels.WINDOW_MAXIMIZE, () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize()
-    } else {
-      mainWindow.maximize()
-    }
+  ipcMain.handle(SystemChannels.WINDOW_MAXIMIZE, () => {
+    maximizeWindow()
+    return true
   })
 
-  ipcMain.on(SystemChannels.WINDOW_CLOSE, () => {
-    mainWindow.close()
+  ipcMain.handle(SystemChannels.WINDOW_CLOSE, () => {
+    closeWindow()
+    return true
   })
 
   ipcMain.handle(
@@ -109,7 +106,9 @@ export function setupProtocol() {
       if (decodedPath.includes('assets/')) {
         // Redirect asset requests to ~/.aynite/assets
         const assetPath = decodedPath.split('assets/').pop()
-        filePath = expandHome(joinPaths('~/.aynite', 'assets', assetPath!))
+        if (assetPath) {
+          filePath = expandHome(joinPaths('~/.aynite', 'assets', assetPath))
+        }
       } else {
         // Standard view request
         filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))

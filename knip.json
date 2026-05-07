@@ -13,16 +13,8 @@
     "vite.standalone.config.ts",
     "vitest.config.ts"
   ],
-  "project": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "scripts/*.ts",
-    "tests/**/*.ts"
-  ],
-  "ignore": [
-    "resources/**",
-    "src/renderer/shared/featured/fileviewers/"
-  ],
+  "project": ["src/**/*.ts", "src/**/*.tsx", "scripts/*.ts", "tests/**/*.ts"],
+  "ignore": ["resources/**", "src/renderer/shared/featured/fileviewers/"],
   "ignoreDependencies": [
     "@tailwindcss/vite",
     "@tailwindcss/typography",

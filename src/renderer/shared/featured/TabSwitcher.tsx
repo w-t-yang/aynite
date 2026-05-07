@@ -44,7 +44,7 @@ function TabSwitcherWIP({
   useEffect(() => {
     ;(async () => {
       const res = await window.aynite.workspaceAllFiles()
-      if (res?.data) setWorkspaceFiles(res.data)
+      if (res) setWorkspaceFiles(res)
     })()
   }, [])
 
@@ -76,10 +76,10 @@ function TabSwitcherWIP({
       onSelect(item.id)
     } else if (item.filepath) {
       const res = await window.aynite.readFile(item.filepath)
-      if (res?.data) {
+      if (res) {
         onOpenFile(
           { name: item.title, path: item.filepath, isDirectory: false },
-          res.data,
+          res,
         )
       }
     }

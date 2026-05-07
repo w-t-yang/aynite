@@ -19,6 +19,7 @@ export const AudioViewer: React.FC<{ file: FileInfo }> = ({ file }) => (
             {file.extension} • {formatFileSize(file.size)}
           </p>
         </div>
+        {/* biome-ignore lint/a11y/useMediaCaption: generic file viewer */}
         <audio
           controls
           className="w-full"

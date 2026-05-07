@@ -1,4 +1,4 @@
-import { renderView } from '../../shared/lib/renderView'
+import { renderView } from '../ViewContext'
 import { AIChat } from './AIChat'
 
 renderView(AIChat)

@@ -1,7 +1,9 @@
 import { AlertCircle, Eye, Pencil, Save } from 'lucide-react'
 import { highlight, languages } from 'prismjs'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Editor from 'react-simple-code-editor'
+import { AppEvents } from '../../../../lib/constants/app'
+import { useApp } from '../../../src/context/AppContext'
 import { type FileInfo, getFileCategory } from '../../lib/file-handlers'
 import { KeyManager } from '../../lib/key-handlers'
 import { FLEX_CENTER_GAP_2 } from '../../lib/styles'
@@ -32,17 +34,18 @@ interface FileViewerProps {
 }
 
 function FileViewer({
-  _filename,
+  filename: _filename,
   content,
   onChange,
   onSave,
   isDirty,
-  _keybindings,
+  keybindings: _keybindings,
   initialCursorPos,
   onCursorChange,
   onRefresh,
   id,
 }: FileViewerProps) {
+  const { subscribeToAppEvents } = useApp()
   const [localContent, setLocalContent] = useState(content)
   const [isEditing, setIsEditing] = useState(false)
   const [cursor, setCursor] = useState({ line: 1, col: 1 })
@@ -90,25 +93,39 @@ function FileViewer({
   const searchInputRef = useRef<HTMLInputElement>(null)
   const undoStack = useRef<string[]>([])
   const isLocalChange = useRef(false)
-
-  const applyEdit = (start: number, end: number) => {
-    undoStack.current.push(localContent)
-    const newContent =
-      localContent.substring(0, start) + localContent.substring(end)
-    setLocalContent(newContent)
-    if (onChange) {
-      isLocalChange.current = true
-      onChange(newContent)
+  const updateCursor = useCallback(() => {
+    if (textareaRef.current) {
+      const pos = textareaRef.current.selectionStart
+      const textToCursor = localContent.substring(0, pos)
+      const lines = textToCursor.split('\n')
+      const line = lines.length
+      const col = lines[lines.length - 1].length + 1
+      setCursor({ line, col })
+      if (onCursorChange) onCursorChange(pos)
     }
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.selectionStart = textareaRef.current.selectionEnd =
-          start
-        textareaRef.current.focus()
-        updateCursor()
+  }, [localContent, onCursorChange])
+
+  const applyEdit = useCallback(
+    (start: number, end: number) => {
+      undoStack.current.push(localContent)
+      const newContent =
+        localContent.substring(0, start) + localContent.substring(end)
+      setLocalContent(newContent)
+      if (onChange) {
+        isLocalChange.current = true
+        onChange(newContent)
       }
-    }, 0)
-  }
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart =
+            textareaRef.current.selectionEnd = start
+          textareaRef.current.focus()
+          updateCursor()
+        }
+      }, 0)
+    },
+    [localContent, onChange, updateCursor],
+  )
 
   useEffect(() => {
     // Only sync from parent if it's not our own change propagating back
@@ -167,10 +184,10 @@ function FileViewer({
   }, [id])
 
   useEffect(() => {
-    // Listen for file system changes
-    const cleanup = window.aynite.onFileSystemChange((data) => {
+    const handleEvent = (type: string, data: any) => {
+      if (type !== AppEvents.FS_CHANGE) return
+
       const currentPath = id.startsWith('file-') ? id.replace('file-', '') : id
-      // We normalize paths to be safe (Chokidar might use different slashes)
       const normalizedChangedPath = data.path.replace(/\\/g, '/')
       const normalizedCurrentPath = currentPath.replace(/\\/g, '/')
 
@@ -179,7 +196,6 @@ function FileViewer({
         (data.event === 'change' || data.event === 'unlink')
       ) {
         // If we just saved the file, ignore the change event
-        // This is a simple debouncing/flag mechanism
         const now = Date.now()
         if (now - lastLocalWriteTime.current < 2000) {
           console.log(
@@ -193,12 +209,30 @@ function FileViewer({
           setExternalChangeDetected(true)
         }
       }
-    })
+    }
 
-    return cleanup
-  }, [id])
+    // 1. Listen for relayed messages (for iframes)
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === `aynite:${AppEvents.FS_CHANGE}`) {
+        handleEvent(AppEvents.FS_CHANGE, event.data.data)
+      }
+    }
+    window.addEventListener('message', handleMessage)
 
-  const handleRefresh = async () => {
+    // 2. Listen for app events via AppContext
+    const unsubscribe = subscribeToAppEvents(
+      (event: { type: string; data: any }) => {
+        handleEvent(event.type, event.data)
+      },
+    )
+
+    return () => {
+      window.removeEventListener('message', handleMessage)
+      unsubscribe()
+    }
+  }, [id, subscribeToAppEvents])
+
+  const handleRefresh = useCallback(async () => {
     if (isDirty && !showRefreshConfirm) {
       setShowRefreshConfirm(true)
       setTimeout(() => setShowRefreshConfirm(false), 3000)
@@ -233,7 +267,7 @@ function FileViewer({
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, isDirty, onChange, onRefresh, showRefreshConfirm])
 
   useEffect(() => {
     const el = document.getElementById(
@@ -258,7 +292,6 @@ function FileViewer({
         el.setSelectionRange(0, 0)
       }
     }
-    // biome-ignore lint/correctness/useExhaustiveDependencies: updateCursor is a stable function declaration
   }, [updateCursor, initialCursorPos])
 
   useEffect(() => {
@@ -278,42 +311,45 @@ function FileViewer({
     updateCursor()
   }
 
-  const moveCursor = (dir: 'up' | 'down' | 'left' | 'right') => {
-    if (!textareaRef.current) return
-    const textarea = textareaRef.current
-    let pos = textarea.selectionStart
-    const lines = localContent.split('\n')
-    const getPosInfo = (p: number) => {
-      const before = localContent.substring(0, p)
-      const l = before.split('\n').length - 1
-      const c = before.split('\n').slice(-1)[0].length
-      return { l, c }
-    }
+  const moveCursor = useCallback(
+    (dir: 'up' | 'down' | 'left' | 'right') => {
+      if (!textareaRef.current) return
+      const textarea = textareaRef.current
+      let pos = textarea.selectionStart
+      const lines = localContent.split('\n')
+      const getPosInfo = (p: number) => {
+        const before = localContent.substring(0, p)
+        const l = before.split('\n').length - 1
+        const c = before.split('\n').slice(-1)[0].length
+        return { l, c }
+      }
 
-    const { l, c } = getPosInfo(pos)
+      const { l, c } = getPosInfo(pos)
 
-    if (dir === 'up' && l > 0) {
-      const prevLineLength = lines[l - 1].length
-      const targetCol = Math.min(c, prevLineLength)
-      let newPos = 0
-      for (let i = 0; i < l - 1; i++) newPos += lines[i].length + 1
-      pos = newPos + targetCol
-    } else if (dir === 'down' && l < lines.length - 1) {
-      const nextLineLength = lines[l + 1].length
-      const targetCol = Math.min(c, nextLineLength)
-      let newPos = 0
-      for (let i = 0; i <= l; i++) newPos += lines[i].length + 1
-      pos = newPos + targetCol
-    } else if (dir === 'left' && pos > 0) {
-      pos--
-    } else if (dir === 'right' && pos < localContent.length) {
-      pos++
-    }
+      if (dir === 'up' && l > 0) {
+        const prevLineLength = lines[l - 1].length
+        const targetCol = Math.min(c, prevLineLength)
+        let newPos = 0
+        for (let i = 0; i < l - 1; i++) newPos += lines[i].length + 1
+        pos = newPos + targetCol
+      } else if (dir === 'down' && l < lines.length - 1) {
+        const nextLineLength = lines[l + 1].length
+        const targetCol = Math.min(c, nextLineLength)
+        let newPos = 0
+        for (let i = 0; i <= l; i++) newPos += lines[i].length + 1
+        pos = newPos + targetCol
+      } else if (dir === 'left' && pos > 0) {
+        pos--
+      } else if (dir === 'right' && pos < localContent.length) {
+        pos++
+      }
 
-    textarea.selectionStart = textarea.selectionEnd = pos
-    textarea.focus()
-    updateCursor()
-  }
+      textarea.selectionStart = textarea.selectionEnd = pos
+      textarea.focus()
+      updateCursor()
+    },
+    [localContent, updateCursor],
+  )
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
@@ -337,43 +373,41 @@ function FileViewer({
     }
   }
 
-  const jumpToSearchResult = (
-    pos: number,
-    shouldFocus = true,
-    forceEdit = false,
-  ) => {
-    // Only switch to edit mode if explicitly requested (e.g., navigating to a result)
-    if (
-      forceEdit &&
-      !isEditing &&
-      (category === 'markdown' || category === 'html' || category === 'pdf')
-    ) {
-      setIsEditing(true)
-    }
+  const jumpToSearchResult = useCallback(
+    (pos: number, shouldFocus = true, forceEdit = false) => {
+      // Only switch to edit mode if explicitly requested (e.g., navigating to a result)
+      if (
+        forceEdit &&
+        !isEditing &&
+        (category === 'markdown' || category === 'html' || category === 'pdf')
+      ) {
+        setIsEditing(true)
+      }
 
-    if (!textareaRef.current) return
-    if (shouldFocus) textareaRef.current.focus()
-    textareaRef.current.setSelectionRange(pos, pos + searchQuery.length)
-    updateCursor()
-    // Scroll into view
-    const textarea = textareaRef.current
-    const lineHeight = 24 // 1.5rem
-    const _charWidth = 8
-    const beforeResults = localContent.substring(0, pos)
-    const line = beforeResults.split('\n').length - 1
-    textarea.scrollTop = line * lineHeight - textarea.clientHeight / 2
-  }
+      if (!textareaRef.current) return
+      if (shouldFocus) textareaRef.current.focus()
+      textareaRef.current.setSelectionRange(pos, pos + searchQuery.length)
+      updateCursor()
+      // Scroll into view
+      const textarea = textareaRef.current
+      const lineHeight = 24 // 1.5rem
+      const _charWidth = 8
+      const beforeResults = localContent.substring(0, pos)
+      const line = beforeResults.split('\n').length - 1
+      textarea.scrollTop = line * lineHeight - textarea.clientHeight / 2
+    },
+    [category, isEditing, localContent, searchQuery, updateCursor],
+  )
 
-  const nextSearch = () => {
+  const nextSearch = useCallback(() => {
     if (searchResults.length > 0) {
       const nextIdx = (currentSearchIndex + 1) % searchResults.length
       setCurrentSearchIndex(nextIdx)
       jumpToSearchResult(searchResults[nextIdx], true, true)
     }
-  }
+  }, [currentSearchIndex, jumpToSearchResult, searchResults])
 
   // Register with KeyManager
-  // biome-ignore lint/correctness/useExhaustiveDependencies: functions used in api object are intentionally listed
   useEffect(() => {
     const api = {
       isEditing: () => isEditing,
@@ -481,18 +515,6 @@ function FileViewer({
     applyEdit,
   ])
 
-  function updateCursor() {
-    if (textareaRef.current) {
-      const pos = textareaRef.current.selectionStart
-      const textToCursor = localContent.substring(0, pos)
-      const lines = textToCursor.split('\n')
-      const line = lines.length
-      const col = lines[lines.length - 1].length + 1
-      setCursor({ line, col })
-      if (onCursorChange) onCursorChange(pos)
-    }
-  }
-
   useEffect(() => {
     // Keep textareaRef in sync with the Editor's internal textarea
     const el = document.getElementById(
@@ -535,7 +557,7 @@ function FileViewer({
   const lineCount = localContent.split('\n').length
   const lines = Array.from({ length: Math.max(1, lineCount) }, (_, i) => i + 1)
 
-  let handlerReason: string | undefined
+  let handlerReason: 'binary' | 'other' | 'too_large' | undefined
   if (isTooLarge) handlerReason = 'too_large'
   else if (effectiveCategory === 'unsupported') handlerReason = 'binary'
 

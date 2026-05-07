@@ -29,6 +29,7 @@ export async function runAgentLoop(
   requestApproval: (command: string, cwd: string) => Promise<boolean>,
   activeFile?: string,
   abortSignal?: AbortSignal,
+  subscribe?: (callback: (event: any) => void) => () => void,
 ): Promise<ChatMessage[]> {
   const fullHistory: ChatMessage[] = [...history]
 
@@ -53,7 +54,7 @@ export async function runAgentLoop(
     createdAt: Date.now(),
   }
 
-  let requestId
+  let requestId: string
   try {
     const res = await window.aynite.aiChat({
       messages: [...fullHistory, userMsg],
@@ -68,6 +69,7 @@ export async function runAgentLoop(
       workspaceFolders,
       activeFile,
     })
+    if (!res.requestId) throw new Error('Failed to start AI chat: No requestId')
     requestId = res.requestId
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
@@ -113,29 +115,34 @@ export async function runAgentLoop(
       toolCalls = []
     }
 
-    const removeApprovalListener = window.aynite.onAiApprovalRequest(
-      async (data: { id: string; command: string; cwd: string }) => {
+    if (!subscribe) {
+      console.error('[Agent] No subscription provided for AI events')
+      fulfill([...fullHistory, userMsg])
+      return
+    }
+
+    const unsubscribe = subscribe((event: any) => {
+      if (abortSignal?.aborted) {
+        unsubscribe()
+        flushAssistant()
+        fulfill([...fullHistory, userMsg, ...loopMessages])
+        return
+      }
+
+      if (event.type === 'ai-approval-request') {
+        const data = event.data
         onEvent({
           type: 'tool-call',
           toolCallId: data.id,
           toolName: 'run_command',
           args: JSON.stringify({ command: data.command, cwd: data.cwd }),
         })
-        const approved = await requestApproval(data.command, data.cwd)
-        window.aynite.respondToAiApproval(data.id, approved)
-      },
-    )
-
-    const removeDeltaListener = window.aynite.onAiChatDelta(
-      requestId,
-      (part: StreamPart) => {
-        if (abortSignal?.aborted) {
-          removeDeltaListener()
-          removeApprovalListener()
-          flushAssistant()
-          fulfill([...fullHistory, userMsg, ...loopMessages])
-          return
-        }
+        requestApproval(data.command, data.cwd).then((approved) => {
+          window.aynite.respondToAiApproval(data.id, approved)
+        })
+      } else if (event.type === 'ai-chat-delta') {
+        const { requestId: eventReqId, part } = event.data
+        if (eventReqId !== requestId) return
 
         switch (part.type) {
           case 'text-delta':
@@ -166,9 +173,7 @@ export async function runAgentLoop(
           }
 
           case 'tool-result': {
-            // Flush the assistant message that contains the tool calls
             flushAssistant()
-            // Add a tool message with the result
             const resultPart: ToolResultPart = {
               type: 'tool-result',
               toolCallId: part.toolCallId,
@@ -190,8 +195,7 @@ export async function runAgentLoop(
             break
 
           case 'error': {
-            removeDeltaListener()
-            removeApprovalListener()
+            unsubscribe()
             flushAssistant()
             onEvent(part)
             const errorMsg: ChatMessage = {
@@ -205,13 +209,12 @@ export async function runAgentLoop(
           }
 
           case 'finish':
-            removeDeltaListener()
-            removeApprovalListener()
+            unsubscribe()
             flushAssistant()
             fulfill([...fullHistory, userMsg, ...loopMessages])
             break
         }
-      },
-    )
+      }
+    })
   })
 }

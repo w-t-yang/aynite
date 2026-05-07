@@ -97,6 +97,7 @@ export interface Theme {
   id: string
   name: string
   type: 'light' | 'dark'
+  isSystem?: boolean
   colors: Record<string, string>
   fonts?: {
     fontFamily?: string

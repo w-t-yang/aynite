@@ -7,6 +7,7 @@ import { UnifiedViewer } from './UnifiedViewer'
 export const VideoViewer: React.FC<{ file: FileInfo }> = ({ file }) => (
   <UnifiedViewer padding="p-8">
     <div className={VIEWER_CENTERED_COL}>
+      {/* biome-ignore lint/a11y/useMediaCaption: generic file viewer */}
       <video
         controls
         className="max-w-full max-h-[70vh] rounded-lg shadow-2xl border border-white/10"

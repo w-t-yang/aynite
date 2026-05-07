@@ -1,6 +1,5 @@
 import type React from 'react'
 import { AppProvider, useApp } from './context/AppContext'
-import { ThemeProvider } from './context/ThemeContext'
 import TileNode from './layout/TileNode'
 import TitleBar from './layout/TitleBar'
 
@@ -29,11 +28,9 @@ const AppContent: React.FC = () => {
 }
 
 const App: React.FC = () => (
-  <ThemeProvider>
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
-  </ThemeProvider>
+  <AppProvider>
+    <AppContent />
+  </AppProvider>
 )
 
 export default App
