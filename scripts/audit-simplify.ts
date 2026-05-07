@@ -35,6 +35,14 @@ const CHECKS: CheckDef[] = [
     },
   },
   {
+    label: 'Preload Isolation',
+    cmd: 'tsx scripts/audit-preload.ts',
+    parse: (_output, status) => {
+      if (status === 0) return { violations: 0 }
+      return { violations: 1 }
+    },
+  },
+  {
     label: 'Complexity',
     cmd: 'tsx scripts/audit-complexity.ts',
     parse: (output) => {
@@ -158,6 +166,7 @@ function formatMetrics(label: string, m: Metrics): string {
     case 'UI Architecture':
     case 'Main Architecture':
     case 'Bridge':
+    case 'Preload Isolation':
       return m.violations === 0 ? 'clean' : `${m.violations} violations`
     case 'Complexity':
       return `${m.flagged} flagged (${m.high} high, ${m.medium} medium)`
