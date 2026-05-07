@@ -49,4 +49,5 @@ export function setupConfigIpc() {
   )
 }
 
-export * from './logic'
+export { getIgnorePatterns } from './ignore'
+export { loadConfig, saveConfig } from './logic'

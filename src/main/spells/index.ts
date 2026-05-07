@@ -102,7 +102,24 @@ export function setupSpellsIpc() {
   )
 }
 
-export * from './commands'
-export * from './common'
-export * from './skills'
+export {
+  getCommandsConfig,
+  listAvailableCommands,
+  restoreCommand,
+  restoreDefaultCommands,
+  saveCommandsConfig,
+} from './commands'
+export {
+  findFilesRecursively,
+  getBundledResourcesPath,
+  notifyError,
+  reportedErrors,
+} from './common'
+export {
+  getSkillsConfig,
+  listAvailableSkills,
+  restoreDefaultSkills,
+  restoreSkill,
+  saveSkillsConfig,
+} from './skills'
 export { restoreSpell } from './spell-installer'

@@ -4,7 +4,7 @@ import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import type { WorkspaceTab } from '../../lib/types/workspace'
-import { getIgnorePatterns } from '../config/ignore'
+import { getIgnorePatterns } from '../config'
 import { sendAppEvent, showOpenDialog } from '../window'
 import {
   addWorkspaceFolder,
@@ -133,4 +133,15 @@ export function setupWorkspaceIpc(): void {
   })
 }
 
-export * from './logic'
+export {
+  addWorkspaceFolder,
+  createWorkspace,
+  getWorkspaceFolders,
+  getWorkspaceState,
+  getWorkspacesList,
+  removeWorkspaceFolder,
+  renameWorkspaceFolder,
+  reorderWorkspaceFolders,
+  saveWorkspaceState,
+  switchWorkspace,
+} from './logic'

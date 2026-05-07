@@ -39,4 +39,11 @@ export function setupThemeIpc() {
   })
 }
 
-export * from './logic'
+export {
+  deleteTheme,
+  getTheme,
+  getThemesList,
+  initThemes,
+  restoreDefaultTheme,
+  saveTheme,
+} from './logic'

@@ -1,6 +1,6 @@
 import type { Input } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
-import { loadConfig } from '../config/logic'
+import { loadConfig } from '../config'
 import { onBeforeInputEvent, sendAppEvent, sendAppOperation } from '../window'
 
 interface KeyBinding {

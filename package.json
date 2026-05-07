@@ -19,6 +19,7 @@
     "audit:types": "tsx scripts/base-audit-types.ts",
     "audit:window": "tsx scripts/base-audit-window.ts",
     "audit:path": "tsx scripts/base-audit-path.ts",
+    "audit:main-import": "tsx scripts/base-audit-main-import.ts",
     "audit:base": "npm run audit:preload && npm run audit:constants && npm run audit:types && npm run audit:window && npm run audit:path",
     "audit:check": "tsx scripts/audit-ui.ts --check && tsx scripts/audit-main.ts --check && tsx scripts/audit-ipc-bridge.ts --check && npm run audit:base -- --check",
     "audit:complexity": "tsx scripts/audit-complexity.ts",
@@ -30,8 +31,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/lib/ tests/main/",
-    "lint": "biome check src/ tests/ scripts/",
-    "lint:fix": "biome check --write --unsafe src/ tests/ scripts/",
+    "lint": "biome check src/ tests/",
+    "lint:fix": "biome check --write --unsafe src/ tests/",
     "inventory": "tsx scripts/component-inventory.ts",
     "audit:simplify": "tsx scripts/audit-simplify.ts",
     "audit:ast-grep": "ast-grep scan",
@@ -51,11 +52,14 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
-      "biome check --write --unsafe src/ tests/"
+    "src/**/*.{ts,tsx}": [
+      "biome check --write --unsafe"
     ],
-    "*.{json,md,css}": [
-      "biome check --write src/ tests/"
+    "tests/**/*.{ts,tsx}": [
+      "biome check --write --unsafe"
+    ],
+    "src/**/*.{json,md,css}": [
+      "biome check --write"
     ]
   },
   "dependencies": {

@@ -18,9 +18,9 @@ import {
   stat,
   writeText,
 } from '../../lib/path'
-import { getIgnorePatterns } from '../config/ignore'
+import { getIgnorePatterns } from '../config'
 import { sendAppEvent } from '../window'
-import { getWorkspaceFolders } from '../workspace/logic'
+import { getWorkspaceFolders } from '../workspace'
 
 let watcher: FSWatcher | null = null
 
