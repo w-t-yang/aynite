@@ -16,12 +16,11 @@ import {
 } from '../../shared/featured/ChatInput'
 import { type AgentConfig, runAgentLoop } from '../../shared/lib/agent'
 import type { ChatMessage, SettingsState } from '../../shared/lib/types'
-import { cn } from '../../shared/lib/utils'
-import { useApp } from '../../src/context/AppContext'
+import { useAppEventSubscriber } from '../../views/ViewContext'
 import { ApprovalModal, SessionsModal } from './components'
 
 export function AIChat() {
-  const { subscribeToAppEvents } = useApp()
+  const subscribeToAppEvents = useAppEventSubscriber()
   const [settings, _setSettings] = useState<SettingsState>(
     DEFAULT_SETTINGS as SettingsState,
   )

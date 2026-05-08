@@ -16,6 +16,7 @@ import type {
   Theme,
   WorkspaceConfig,
 } from '../../lib/constants/types'
+import type { UpdateStatus } from '../../lib/types/app'
 import { applyThemeColors } from '../shared/lib/utils'
 import {
   executeLayoutOperation,
@@ -25,14 +26,6 @@ import {
 } from './utils/tile'
 
 // --- Context Type ---
-
-export type UpdateStatus =
-  | 'idle'
-  | 'checking'
-  | 'available'
-  | 'downloading'
-  | 'downloaded'
-  | 'error'
 
 interface AppContextType {
   workspaceConfig: WorkspaceConfig | null

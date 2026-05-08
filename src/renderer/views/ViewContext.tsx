@@ -53,6 +53,23 @@ export const useAppEvent = (
   }, [type, ...deps, callback])
 }
 
+/**
+ * Hook that returns a subscription function for relayed system events.
+ * Useful for non-React code (like agent loops) that need to manage listeners.
+ */
+export const useAppEventSubscriber = () => {
+  return useCallback((callback: (event: any) => void) => {
+    const handler = (e: MessageEvent) => {
+      const msg = e.data
+      if (msg?.type?.startsWith('aynite:')) {
+        callback({ type: msg.type.replace('aynite:', ''), data: msg.data })
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
+}
+
 // ─── View Provider ─────────────────────────────────────────────────────────
 
 /**
