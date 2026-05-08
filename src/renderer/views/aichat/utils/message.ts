@@ -123,10 +123,10 @@ export function appendToolInputDeltaToAssistant(
 
     if (toolCallIdx !== -1) {
       const part = content[toolCallIdx] as ToolCallPart
-      // SDK v6.0.169 uses 'input' as string during streaming phases or object once done.
+      // SDK v6.0.169 uses 'args' as string during streaming phases or object once done.
       // We treat it as string accumulation here.
-      const currentInput = typeof part.input === 'string' ? part.input : ''
-      content[toolCallIdx] = { ...part, input: currentInput + delta }
+      const currentArgs = typeof part.args === 'string' ? part.args : ''
+      content[toolCallIdx] = { ...part, args: currentArgs + delta }
       return [...prev.slice(0, -1), { ...last, content }]
     }
   }

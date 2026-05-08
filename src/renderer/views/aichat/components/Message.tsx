@@ -4,6 +4,7 @@ import {
   Clipboard,
   FileText,
   FolderOpen,
+  RotateCcw,
   Save,
   Terminal,
 } from 'lucide-react'
@@ -121,11 +122,11 @@ const ToolCallRenderer = memo(
     isStreaming?: boolean
   }) => {
     const toolName = part.toolName
-    let toolArgs = part.input
+    let toolArgs = part.args
 
-    if (typeof part.input === 'string') {
+    if (typeof part.args === 'string') {
       try {
-        toolArgs = JSON.parse(part.input)
+        toolArgs = JSON.parse(part.args)
       } catch {
         // use raw string if not valid JSON yet
       }
@@ -150,7 +151,7 @@ const ToolCallRenderer = memo(
         defaultExpanded={isLast}
         compact
       >
-        <pre className="text-[12px] font-mono text-muted-foreground/70 bg-black/20 p-2 rounded overflow-auto max-h-40">
+        <pre className="text-[12px] font-mono text-muted-foreground bg-muted/10 p-2 rounded overflow-auto max-h-40">
           {typeof toolArgs === 'string'
             ? toolArgs
             : JSON.stringify(toolArgs, null, 2)}
@@ -161,7 +162,7 @@ const ToolCallRenderer = memo(
 )
 
 const ToolResultRenderer = memo(({ part }: { part: ToolResultPart }) => {
-  const isError = isErrorMessage(part.output)
+  const isError = isErrorMessage(part.result)
   return (
     <Collapsible
       title={`Result: ${part.toolName}`}
@@ -180,13 +181,38 @@ const ToolResultRenderer = memo(({ part }: { part: ToolResultPart }) => {
           isError ? 'text-destructive/90' : 'text-muted-foreground/80',
         )}
       >
-        {typeof part.output === 'string'
-          ? part.output
-          : JSON.stringify(part.output, null, 2)}
+        {typeof part.result === 'string'
+          ? part.result
+          : JSON.stringify(part.result, null, 2)}
       </pre>
     </Collapsible>
   )
 })
+
+const CommandResultRenderer = memo(
+  ({
+    result,
+    exitCode,
+  }: {
+    command: string
+    result: string
+    exitCode?: number
+  }) => {
+    const isError = exitCode !== undefined && exitCode !== 0
+    return (
+      <div className="mx-2 my-2 rounded-md border border-border/20 bg-muted/10 overflow-hidden">
+        <pre
+          className={cn(
+            'text-[12px] font-mono p-3 whitespace-pre-wrap max-h-[400px] overflow-auto leading-relaxed',
+            isError ? 'text-destructive/90' : 'text-muted-foreground',
+          )}
+        >
+          {result}
+        </pre>
+      </div>
+    )
+  },
+)
 
 // ─── Role-based Renderers ───────────────────────────────────────────
 
@@ -208,29 +234,94 @@ function SystemMessage({ content }: { content: string }) {
 }
 
 function UserMessage({
-  content,
-  onCopy,
+  msg,
+  onRevert,
 }: {
-  content: string | TextPart[]
-  onCopy: (t: string) => void
+  msg: ChatMessage & { role: 'user' }
+  onRevert: (id: string) => void
 }) {
+  const { content, commandResults, id } = msg
   const text =
     typeof content === 'string' ? content : content.map((p) => p.text).join('')
+
+  // Simple formatter for mentions
+  const formatMentions = (t: string) => {
+    const parts = t.split(
+      /(>cmd\[.*?\]\(.*?\)|@(?:file|dir)\[.*?\]\(.*?\)| \/skill\[.*?\]\(.*?\))/g,
+    )
+    return parts.map((part, i) => {
+      const cmdMatch = part.match(/>cmd\[(.*?)\]\((.*?)\)/)
+      const fileMatch = part.match(/@(?:file|dir)\[(.*?)\]\((.*?)\)/)
+      const skillMatch = part.match(/\/skill\[(.*?)\]\((.*?)\)/)
+
+      if (cmdMatch) {
+        return (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
+            key={i}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[13px] font-mono border border-amber-500/10"
+          >
+            <Terminal size={12} />
+            {cmdMatch[1]}
+          </span>
+        )
+      }
+      if (fileMatch) {
+        return (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
+            key={i}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[13px] font-mono border border-blue-500/10"
+          >
+            <FileText size={12} />
+            {fileMatch[1]}
+          </span>
+        )
+      }
+      if (skillMatch) {
+        return (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
+            key={i}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 text-[13px] font-mono border border-purple-500/10"
+          >
+            <Bot size={12} />
+            {skillMatch[1]}
+          </span>
+        )
+      }
+      // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
+      return <span key={i}>{part}</span>
+    })
+  }
 
   return (
     <div className="max-w-4xl mx-auto mb-2 px-6 group/user relative">
       <div className="bg-foreground/[0.03] border border-border/5 rounded-lg my-1 mx-2 py-1.5 px-2 group-hover/user:bg-foreground/[0.05] transition-all">
-        <div className="text-foreground/90 text-base leading-normal whitespace-pre-wrap font-semibold tracking-tight px-2">
-          {text}
+        <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight px-2">
+          {formatMentions(text)}
         </div>
+        {commandResults && commandResults.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {commandResults.map((res) => (
+              <CommandResultRenderer
+                key={res.command}
+                command={res.command}
+                result={res.result}
+                exitCode={res.exitCode}
+              />
+            ))}
+          </div>
+        )}
         <div className="absolute top-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onCopy(text)}
-            className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded"
+            onClick={() => onRevert(id)}
+            title="Revert to here"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
           >
-            <Clipboard size={10} />
+            <RotateCcw size={14} />
           </Button>
         </div>
       </div>
@@ -312,9 +403,9 @@ function AssistantMessage({
             variant="ghost"
             size="sm"
             onClick={() => onCopy(fullText)}
-            className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
           >
-            <Clipboard size={10} />
+            <Clipboard size={14} />
           </Button>
         </div>
       )}
@@ -326,7 +417,7 @@ function AssistantMessage({
 function ToolMessage({ content }: { content: Array<ToolResultPart> }) {
   return (
     <div className="max-w-4xl mx-auto mb-2 px-8 opacity-90">
-      <div className="px-4">
+      <div className="px-2">
         {content.map((part, i) => (
           <ToolResultRenderer
             key={`tool-res-${part.toolCallId || i}`}
@@ -348,10 +439,19 @@ interface MessageItemProps {
   isStreaming: boolean
   onOpenFile: (path: string) => void
   onCopy: (text: string) => void
+  onRevert: (id: string) => void
 }
 
 export const MessageItem = memo(
-  ({ msg, idx, total, isStreaming, onOpenFile, onCopy }: MessageItemProps) => {
+  ({
+    msg,
+    idx,
+    total,
+    isStreaming,
+    onOpenFile,
+    onCopy,
+    onRevert,
+  }: MessageItemProps) => {
     const { role, content } = msg
     const isLast = idx === total - 1
 
@@ -367,8 +467,8 @@ export const MessageItem = memo(
       case 'user':
         return (
           <UserMessage
-            content={content as string | TextPart[]}
-            onCopy={onCopy}
+            msg={msg as ChatMessage & { role: 'user' }}
+            onRevert={onRevert}
           />
         )
       case 'assistant':

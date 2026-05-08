@@ -239,37 +239,31 @@ export function useAIChat() {
       }
 
       // Build messages
-      const userMsg: ChatMessage = {
-        id: genId(),
-        role: 'user',
-        content: text,
-        createdAt: Date.now(),
-      }
-      const updatedMessages = [...messagesRef.current, userMsg]
-
+      const results: CommandResultPart[] = []
       for (const res of commandResults) {
         const content = [res.stdout, res.stderr]
           .filter(Boolean)
           .join('\n')
           .trim()
-        const output =
+        const result =
           content || (res.error ? `Error: ${res.error}` : '(No output)')
-        const cmdMsg: ChatMessage = {
-          id: genId(),
-          role: 'tool',
-          content: [
-            {
-              type: 'tool-result',
-              toolCallId: `cmd_${Date.now()}`,
-              toolName: res.name,
-              output,
-            },
-          ],
-          createdAt: Date.now(),
-        }
-        updatedMessages.push(cmdMsg)
+
+        results.push({
+          command: res.name,
+          result,
+          exitCode: res.error ? 1 : 0,
+        })
       }
 
+      const userMsg: ChatMessage = {
+        id: genId(),
+        role: 'user',
+        content: text,
+        createdAt: Date.now(),
+        commandResults: results.length > 0 ? results : undefined,
+      }
+
+      const updatedMessages = [...messagesRef.current, userMsg]
       setMessages(updatedMessages)
       setLoading(true)
 
@@ -288,8 +282,7 @@ export function useAIChat() {
 
       try {
         const resultHistory = await runAgentLoop(
-          text,
-          updatedMessages.slice(0, -1),
+          updatedMessages,
           agentConfig,
           workspaceFolders,
           (event: StreamPart) => {
@@ -376,6 +369,14 @@ export function useAIChat() {
       .catch((err) => console.error('Failed to copy', err))
   }, [])
 
+  const revertToMessage = useCallback((id: string) => {
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === id)
+      if (idx === -1) return prev
+      return prev.slice(0, idx + 1)
+    })
+  }, [])
+
   // Public API
   return {
     settings,
@@ -393,5 +394,6 @@ export function useAIChat() {
     setMessages,
     setSessionId,
     copyToClipboard,
+    revertToMessage,
   }
 }

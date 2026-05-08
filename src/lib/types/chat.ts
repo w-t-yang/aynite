@@ -15,14 +15,20 @@ export interface ToolCallPart {
   type: 'tool-call'
   toolCallId: string
   toolName: string
-  input: unknown
+  args: unknown
 }
 
 export interface ToolResultPart {
   type: 'tool-result'
   toolCallId: string
   toolName: string
-  output: unknown
+  result: unknown
+}
+
+export interface CommandResultPart {
+  command: string
+  result: string
+  exitCode?: number
 }
 
 // ─── Message type (matches AI SDK ModelMessage structurally) ─────────
@@ -32,7 +38,11 @@ export type ChatMessage = {
   createdAt: number
 } & (
   | { role: 'system'; content: string }
-  | { role: 'user'; content: string | Array<TextPart> }
+  | {
+      role: 'user'
+      content: string | Array<TextPart>
+      commandResults?: CommandResultPart[]
+    }
   | {
       role: 'assistant'
       content:
@@ -53,13 +63,13 @@ export type StreamPart =
       type: 'tool-call'
       toolCallId: string
       toolName: string
-      input: unknown
+      args: unknown
     }
   | {
       type: 'tool-result'
       toolCallId: string
       toolName: string
-      output: unknown
+      result: unknown
     }
   | {
       type: 'tool-input-delta'

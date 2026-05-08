@@ -18,6 +18,7 @@ export function AIChat() {
     setMessages,
     setSessionId,
     copyToClipboard,
+    revertToMessage,
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -107,6 +108,7 @@ export function AIChat() {
         onReject={handleReject}
         onOpenFile={(path) => window.aynite.openFile(path)}
         onCopy={copyToClipboard}
+        onRevert={revertToMessage}
       />
 
       <InputArea

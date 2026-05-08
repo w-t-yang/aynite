@@ -44,7 +44,7 @@ export const MOCK_MESSAGES: ChatMessage[] = [
         type: 'tool-call',
         toolCallId: 'mock-tc-1',
         toolName: 'grep_search',
-        input: { pattern: 'TileNode', folderPath: 'src' },
+        args: { pattern: 'TileNode', folderPath: 'src' },
       },
     ],
     createdAt: 5000,
@@ -57,7 +57,7 @@ export const MOCK_MESSAGES: ChatMessage[] = [
         type: 'tool-result',
         toolCallId: 'mock-tc-1',
         toolName: 'grep_search',
-        output:
+        result:
           'src/renderer/src/layout/TileNode.tsx\nsrc/renderer/src/layout/Tile.tsx\nsrc/renderer/src/utils/tile.ts\nsrc/renderer/src/context/AppContext.tsx',
       },
     ],
@@ -93,7 +93,7 @@ export const MOCK_MESSAGES: ChatMessage[] = [
         type: 'tool-call',
         toolCallId: 'mock-tc-2',
         toolName: 'read_file',
-        input: { path: 'src/renderer/src/layout/TileNode.tsx' },
+        args: { path: 'src/renderer/src/layout/TileNode.tsx' },
       },
     ],
     createdAt: 9000,
@@ -106,7 +106,7 @@ export const MOCK_MESSAGES: ChatMessage[] = [
         type: 'tool-result',
         toolCallId: 'mock-tc-2',
         toolName: 'read_file',
-        output:
+        result:
           'import { type TileNode as TileNodeType } from ...\n\nexport function TileNode({ node, ... }: Props) {\n  if (node.type === "split") {\n    return <SplitNode ... />\n  }\n  return <LeafNode ... />\n}',
       },
     ],

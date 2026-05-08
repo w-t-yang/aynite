@@ -7,40 +7,40 @@ interface StreamingIndicatorProps {
 }
 
 export function StreamingIndicator({ step }: StreamingIndicatorProps) {
-  if (!step) return null
-
-  let label = 'Working...'
+  let label = 'Connecting...'
   let Icon = Bot
   let colorClass = 'text-primary/60'
 
-  switch (step.type) {
-    case 'text-delta':
-      label = 'Responding...'
-      Icon = Bot
-      break
-    case 'reasoning-delta':
-      label = 'Thinking...'
-      Icon = Zap
-      colorClass = 'text-amber-500/60'
-      break
-    case 'tool-call':
-      label = `Calling ${step.toolName}...`
-      Icon = Terminal
-      colorClass = 'text-blue-500/60'
-      break
-    case 'tool-result':
-      label = `Processing ${step.toolName}...`
-      Icon = Terminal
-      colorClass = 'text-green-500/60'
-      break
-    case 'error':
-      label = 'Error'
-      colorClass = 'text-destructive/60'
-      break
+  if (step) {
+    switch (step.type) {
+      case 'text-delta':
+        label = 'Responding...'
+        Icon = Bot
+        break
+      case 'reasoning-delta':
+        label = 'Thinking...'
+        Icon = Zap
+        colorClass = 'text-amber-500/60'
+        break
+      case 'tool-call':
+        label = `Calling ${step.toolName}...`
+        Icon = Terminal
+        colorClass = 'text-blue-500/60'
+        break
+      case 'tool-result':
+        label = `Processing ${step.toolName}...`
+        Icon = Terminal
+        colorClass = 'text-green-500/60'
+        break
+      case 'error':
+        label = 'Error'
+        colorClass = 'text-destructive/60'
+        break
+    }
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-2">
+    <div className="max-w-4xl mx-auto px-12 py-2">
       <AnimatePresence mode="wait">
         <motion.div
           key={label}

@@ -34,33 +34,38 @@ export async function executeCommandOnly(
     })
     const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim()
     const output = content || '(No output)'
+    const _toolCallId = `cmd_${Date.now()}`
     setMessages([
       ...messages,
-      { id: genId(), role: 'user', content: text, createdAt: Date.now() },
       {
         id: genId(),
-        role: 'tool',
-        content: [
+        role: 'user',
+        content: text,
+        createdAt: Date.now(),
+        commandResults: [
           {
-            type: 'tool-result',
-            toolCallId: '',
-            toolName: name,
-            output,
+            command: `${name} ${params.join(' ')}`,
+            result: output,
           },
         ],
-        createdAt: Date.now(),
       },
     ])
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : String(e)
     setMessages([
       ...messages,
-      { id: genId(), role: 'user', content: text, createdAt: Date.now() },
       {
         id: genId(),
-        role: 'assistant',
-        content: `**Execution Error**: ${errorMsg}`,
+        role: 'user',
+        content: text,
         createdAt: Date.now(),
+        commandResults: [
+          {
+            command: `${name} ${params.join(' ')}`,
+            result: `Error: ${errorMsg}`,
+            exitCode: 1,
+          },
+        ],
       },
     ])
   } finally {

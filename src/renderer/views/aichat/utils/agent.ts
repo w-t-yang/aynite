@@ -13,8 +13,7 @@ export interface AgentLoopConfig extends AIProvider {
 }
 
 export async function runAgentLoop(
-  userText: string,
-  fullHistory: ChatMessage[],
+  messages: ChatMessage[],
   config: AgentLoopConfig,
   workspaceFolders: string[],
   onEvent: (event: StreamPart) => void,
@@ -23,13 +22,6 @@ export async function runAgentLoop(
   abortSignal: AbortSignal,
   subscribe: (handler: (event: any) => void) => () => void,
 ): Promise<ChatMessage[]> {
-  const userMsg: ChatMessage = {
-    id: genId(),
-    role: 'user',
-    content: userText,
-    createdAt: Date.now(),
-  }
-
   const loopMessages: ChatMessage[] = []
   const _assistantAccum = ''
   let reasoningAccum = ''
@@ -63,7 +55,7 @@ export async function runAgentLoop(
   return new Promise((fulfill, reject) => {
     window.aynite
       .aiChat({
-        messages: [...fullHistory, userMsg, ...loopMessages],
+        messages: [...messages, ...loopMessages],
         config: {
           id: 'temp',
           name: 'Temp',
@@ -80,7 +72,7 @@ export async function runAgentLoop(
       .then((res: { requestId?: string }) => {
         const requestId = res.requestId
         if (!requestId) {
-          fulfill([...fullHistory, userMsg, ...loopMessages])
+          fulfill([...messages, ...loopMessages])
           return
         }
         const unsubscribe = subscribe(async (event: any) => {
@@ -91,7 +83,7 @@ export async function runAgentLoop(
             return
           if (abortSignal.aborted) {
             unsubscribe()
-            fulfill([...fullHistory, userMsg, ...loopMessages])
+            fulfill([...messages, ...loopMessages])
             return
           }
 
@@ -120,14 +112,14 @@ export async function runAgentLoop(
                   type: 'tool-call',
                   toolCallId: part.toolCallId,
                   toolName: part.toolName,
-                  input: part.input,
+                  args: part.args,
                 }
               } else {
                 toolCalls.push({
                   type: 'tool-call',
                   toolCallId: part.toolCallId,
                   toolName: part.toolName,
-                  input: part.input,
+                  args: part.args,
                 })
               }
               onEvent(part)
@@ -140,7 +132,7 @@ export async function runAgentLoop(
                 type: 'tool-result',
                 toolCallId: part.toolCallId,
                 toolName: part.toolName,
-                output: part.output,
+                result: part.result,
               }
               loopMessages.push({
                 id: genId(),
@@ -166,7 +158,7 @@ export async function runAgentLoop(
                 content: `**AI Stream Error**: ${part.error}`,
                 createdAt: Date.now(),
               }
-              fulfill([...fullHistory, userMsg, ...loopMessages, errorMsg])
+              fulfill([...messages, ...loopMessages, errorMsg])
               break
             }
 
@@ -174,14 +166,14 @@ export async function runAgentLoop(
               unsubscribe()
               flushAssistant()
               onEvent({ type: 'finish' })
-              fulfill([...fullHistory, userMsg, ...loopMessages])
+              fulfill([...messages, ...loopMessages])
               break
           }
         })
 
         abortSignal.addEventListener('abort', () => {
           unsubscribe()
-          fulfill([...fullHistory, userMsg, ...loopMessages])
+          fulfill([...messages, ...loopMessages])
         })
       })
       .catch((err: any) => {

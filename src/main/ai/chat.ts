@@ -1,4 +1,4 @@
-import { type ModelMessage, stepCountIs, streamText } from 'ai'
+import { stepCountIs, streamText } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
@@ -101,11 +101,48 @@ export async function aiChat({
       sendAppEvent(AppEvents.AI_CHAT_DELTA, { requestId, part })
     }
 
+    /**
+     * Standardizes messages for the AI SDK.
+     * Special handling for 'user' messages that contain 'commandResults' from local executions.
+     * These are transformed into a single text block so the AI can understand the context
+     * without requiring complex tool-call/tool-result sequencing.
+     */
+    const standardizeMessagesForSDK = (msgs: ChatMessage[]): any[] => {
+      return msgs.map((msg) => {
+        if (
+          msg.role === 'user' &&
+          msg.commandResults &&
+          msg.commandResults.length > 0
+        ) {
+          const resultsText = msg.commandResults
+            .map(
+              (res) =>
+                `> Command: ${res.command}\n${res.result}${res.exitCode ? `\n(Exit Code: ${res.exitCode})` : ''}`,
+            )
+            .join('\n\n---\n\n')
+
+          const originalText =
+            typeof msg.content === 'string'
+              ? msg.content
+              : msg.content.map((p) => p.text).join('')
+
+          return {
+            role: 'user',
+            content: `${originalText}\n\nI ran local commands, here are the results:\n\n${resultsText}`,
+          }
+        }
+        return msg
+      })
+    }
+
+    const sanitizedMessages = standardizeMessagesForSDK(messages)
+
+    console.log(`[AI] Starting stream for requestId: ${requestId}`)
     ;(async () => {
       try {
         const result = streamText({
           model,
-          messages: messages as Array<ModelMessage>,
+          messages: sanitizedMessages,
           tools: enabledTools,
           stopWhen: stepCountIs(10),
         })
@@ -115,7 +152,7 @@ export async function aiChat({
         const fullToolCalls: {
           toolCallId: string
           toolName: string
-          input: unknown
+          args: unknown
         }[] = []
 
         for await (const part of result.fullStream) {
@@ -156,6 +193,8 @@ export async function aiChat({
               break
           }
         }
+
+        console.log(`[AI] Finished stream for requestId: ${requestId}`)
 
         // Final log append (optional, maybe we only save on user action)
         const logPath = getLogPath()
