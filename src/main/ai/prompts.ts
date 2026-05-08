@@ -5,6 +5,7 @@ import {
 } from '../../lib/constants/ai'
 import {
   ensureDir,
+  exists,
   getAynitePromptPath,
   getAynitePromptsDir,
   getMainConfigPath,
