@@ -32,7 +32,8 @@ export function Collapsible({
       className={cn(
         'my-1 bg-muted/5 rounded-r overflow-hidden transition-all duration-200',
         borderStyle,
-        compact ? 'px-2 py-1' : 'px-3 py-1.5',
+        compact ? 'py-1' : 'py-1.5',
+        'px-2',
       )}
     >
       <div className="flex items-center justify-between group">

@@ -11,19 +11,13 @@ import {
 import { memo } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type {
-  ChatMessage,
-  ReasoningPart,
-  TextPart,
-  ToolCallPart,
-  ToolResultPart,
-} from '../../../../lib/types/chat'
+import type { ChatMessage } from '../../../../lib/types/chat'
 import { Button } from '../../../shared/basic/Button'
 import { Collapsible } from '../../../shared/basic/Collapsible'
 import { cn } from '../../../shared/lib/utils'
 import { isErrorMessage } from '../utils/message'
 
-// ─── Sub-renderers for Parts ─────────────────────────────────────────
+// ─── Sub-renderers ───────────────────────────────────────────────────
 
 const MarkdownRenderer = memo(
   ({
@@ -37,9 +31,9 @@ const MarkdownRenderer = memo(
   }) => (
     <div
       className={cn(
-        'markdown-body prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed selection:bg-primary/30 px-2',
+        'markdown-body prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed selection:bg-primary/30',
         isStreaming &&
-          "after:content-['▋'] after:ml-0.5 after:animate-pulse after:text-primary",
+        "after:content-['▋'] after:ml-0.5 after:animate-pulse after:text-primary",
       )}
     >
       <Markdown
@@ -81,110 +75,72 @@ const MarkdownRenderer = memo(
   ),
 )
 
-const ReasoningRenderer = memo(
-  ({
-    part,
-    isLast,
-    isStreaming,
-  }: {
-    part: ReasoningPart
-    isLast?: boolean
-    isStreaming?: boolean
-  }) => (
-    <Collapsible
-      title="Thinking"
-      icon={Bot}
-      colorClass="border-primary/10 bg-primary/[0.01]"
-      defaultExpanded={isLast}
-      compact
-    >
-      <div
-        className={cn(
-          'text-[12px] leading-snug text-muted-foreground/60 italic whitespace-pre-wrap font-serif px-1',
-          isStreaming &&
-            "after:content-['...'] after:ml-0.5 after:animate-pulse",
-        )}
-      >
-        {part.text}
-      </div>
-    </Collapsible>
-  ),
-)
+const ToolPartRenderer = memo(({ part }: { part: any }) => {
+  const { toolName, state, input, errorText } = part
+  const output = part.output ?? part.result
+  const isResult = state === 'output-available' || state === 'output-error'
+  
+  // Per user request: tool call is not necessary for display
+  if (!isResult) return null
 
-const ToolCallRenderer = memo(
-  ({
-    part,
-    isLast,
-    isStreaming,
-  }: {
-    part: ToolCallPart
-    isLast?: boolean
-    isStreaming?: boolean
-  }) => {
-    const toolName = part.toolName
-    let toolArgs = part.args
+  const isError = state === 'output-error' || isErrorMessage(output)
+  
+  let toolArgs = input
+  if (typeof toolArgs === 'string') {
+    try { toolArgs = JSON.parse(toolArgs) } catch { /* ignore */ }
+  }
 
-    if (typeof part.args === 'string') {
-      try {
-        toolArgs = JSON.parse(part.args)
-      } catch {
-        // use raw string if not valid JSON yet
-      }
+  let Icon = Terminal
+  if (toolName.includes('file')) Icon = FileText
+  if (toolName.includes('dir') || toolName.includes('folder')) Icon = FolderOpen
+  if (toolName.includes('write')) Icon = Save
+
+  // Robust title extraction: prefer the command, then the primary argument, then the tool name
+  const getToolTitle = () => {
+    // 1. Try to find a command-like string in direct or nested args
+    const getCmd = (obj: any): string | null => {
+      if (!obj || typeof obj !== 'object') return null
+      return obj.command || obj.path || obj.pattern || obj.url || obj.query || obj.name || null
     }
 
-    let Icon = Terminal
-    const colorClass = 'border-amber-500/10 bg-amber-500/[0.01]'
+    const actualArgs = toolArgs?.args || toolArgs?.input || toolArgs
+    const cmd = getCmd(actualArgs)
+    if (cmd) return cmd
 
-    if (toolName.includes('file')) Icon = FileText
-    if (toolName.includes('dir') || toolName.includes('folder'))
-      Icon = FolderOpen
-    if (toolName.includes('write')) Icon = Save
+    // 2. Fallback to tool name
+    return toolName.toUpperCase().replace(/_/g, ' ')
+  }
 
-    return (
-      <Collapsible
-        title={isStreaming ? `${toolName}...` : toolName}
-        icon={Icon}
-        colorClass={cn(
-          colorClass,
-          isStreaming && 'animate-pulse border-amber-500/30',
-        )}
-        defaultExpanded={isLast}
-        compact
-      >
-        <pre className="text-[12px] font-mono text-muted-foreground bg-muted/10 p-2 rounded overflow-auto max-h-40">
-          {typeof toolArgs === 'string'
-            ? toolArgs
-            : JSON.stringify(toolArgs, null, 2)}
-        </pre>
-      </Collapsible>
-    )
-  },
-)
+  const title = getToolTitle()
 
-const ToolResultRenderer = memo(({ part }: { part: ToolResultPart }) => {
-  const isError = isErrorMessage(part.result)
   return (
     <Collapsible
-      title={`Result: ${part.toolName}`}
-      icon={isError ? AlertTriangle : FileText}
-      colorClass={
-        isError
-          ? 'border-destructive/20 bg-destructive/[0.01]'
-          : 'border-green-500/10 bg-green-500/[0.01]'
-      }
+      title={title}
+      icon={isError ? AlertTriangle : Icon}
+      colorClass={cn(
+        isError ? 'border-destructive/20 bg-destructive/[0.01]' : 'border-green-500/10 bg-green-500/[0.01]'
+      )}
       defaultExpanded={false}
       compact
     >
-      <pre
-        className={cn(
-          'text-[12px] font-mono whitespace-pre-wrap max-h-96 overflow-auto p-2 rounded bg-black/10',
-          isError ? 'text-destructive/90' : 'text-muted-foreground/80',
+      <div className="space-y-2">
+        <pre className={cn(
+          'text-[12px] font-mono whitespace-pre-wrap max-h-96 overflow-auto py-2 px-3 rounded bg-black/10',
+          isError ? 'text-destructive/90' : 'text-muted-foreground/80'
+        )}>
+          {output !== undefined && output !== null && output !== ''
+            ? (typeof output === 'string' ? output : JSON.stringify(output, null, 2))
+            : (errorText || '(No output)')}
+        </pre>
+        {toolName !== 'run_command' && toolArgs && (
+          <div className="px-1 opacity-40 hover:opacity-100 transition-opacity">
+            <div className="text-[10px] font-bold mb-1 opacity-50 uppercase tracking-wider">Arguments</div>
+            <pre className="text-[10px] font-mono px-2 py-1 bg-black/5 rounded overflow-auto max-h-20">
+              {typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs, null, 2)}
+            </pre>
+          </div>
         )}
-      >
-        {typeof part.result === 'string'
-          ? part.result
-          : JSON.stringify(part.result, null, 2)}
-      </pre>
+      </div>
     </Collapsible>
   )
 })
@@ -200,10 +156,10 @@ const CommandResultRenderer = memo(
   }) => {
     const isError = exitCode !== undefined && exitCode !== 0
     return (
-      <div className="mx-2 my-2 rounded-md border border-border/20 bg-muted/10 overflow-hidden">
+      <div className="mx-4 rounded-md border border-border/20 bg-muted/10 overflow-hidden">
         <pre
           className={cn(
-            'text-[12px] font-mono p-3 whitespace-pre-wrap max-h-[400px] overflow-auto leading-relaxed',
+            'text-[12px] font-mono whitespace-pre-wrap max-h-[400px] overflow-auto leading-relaxed px-4 py-3',
             isError ? 'text-destructive/90' : 'text-muted-foreground',
           )}
         >
@@ -214,17 +170,16 @@ const CommandResultRenderer = memo(
   },
 )
 
-// ─── Role-based Renderers ───────────────────────────────────────────
+// ─── Role Renderers ──────────────────────────────────────────────────
 
-function SystemMessage({ content }: { content: string }) {
+function SystemMessage({ msg }: { msg: ChatMessage }) {
+  const parts = msg.parts || []
+  const content = parts.length > 0 
+    ? parts.map(p => (p as any).text || '').join('')
+    : (typeof msg.content === 'string' ? msg.content : '')
   return (
-    <div className="max-w-4xl mx-auto py-1 px-6 opacity-30 hover:opacity-100 transition-opacity mb-1">
-      <Collapsible
-        title="System"
-        icon={Terminal}
-        colorClass="border-muted/20"
-        compact
-      >
+    <div className="opacity-30 hover:opacity-100 transition-opacity mb-3">
+      <Collapsible title="System" icon={Terminal} colorClass="border-muted/20" compact>
         <div className="text-[12px] font-mono text-muted-foreground whitespace-pre-wrap leading-tight">
           {content}
         </div>
@@ -233,94 +188,40 @@ function SystemMessage({ content }: { content: string }) {
   )
 }
 
-function UserMessage({
-  msg,
-  onRevert,
-}: {
-  msg: ChatMessage & { role: 'user' }
-  onRevert: (id: string) => void
-}) {
-  const { content, commandResults, id } = msg
-  const text =
-    typeof content === 'string' ? content : content.map((p) => p.text).join('')
-
-  // Simple formatter for mentions
+function UserMessage({ msg, onRevert }: { msg: ChatMessage; onRevert: (id: string) => void }) {
+  const { parts, id } = msg
+  const text = (parts && parts.length > 0)
+    ? parts.map(p => (p as any).text || '').join('')
+    : (typeof msg.content === 'string' ? msg.content : '')
+  
   const formatMentions = (t: string) => {
-    const parts = t.split(
-      /(>cmd\[.*?\]\(.*?\)|@(?:file|dir)\[.*?\]\(.*?\)| \/skill\[.*?\]\(.*?\))/g,
-    )
-    return parts.map((part, i) => {
+    const segments = t.split(/(>cmd\[.*?\]\(.*?\)|@(?:file|dir)\[.*?\]\(.*?\)| \/skill\[.*?\]\(.*?\))/g)
+    return segments.map((part, i) => {
       const cmdMatch = part.match(/>cmd\[(.*?)\]\((.*?)\)/)
       const fileMatch = part.match(/@(?:file|dir)\[(.*?)\]\((.*?)\)/)
       const skillMatch = part.match(/\/skill\[(.*?)\]\((.*?)\)/)
-
-      if (cmdMatch) {
-        return (
-          <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
-            key={i}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[13px] font-mono border border-amber-500/10"
-          >
-            <Terminal size={12} />
-            {cmdMatch[1]}
-          </span>
-        )
-      }
-      if (fileMatch) {
-        return (
-          <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
-            key={i}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[13px] font-mono border border-blue-500/10"
-          >
-            <FileText size={12} />
-            {fileMatch[1]}
-          </span>
-        )
-      }
-      if (skillMatch) {
-        return (
-          <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
-            key={i}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 text-[13px] font-mono border border-purple-500/10"
-          >
-            <Bot size={12} />
-            {skillMatch[1]}
-          </span>
-        )
-      }
-      // biome-ignore lint/suspicious/noArrayIndexKey: parts are static
-      return <span key={i}>{part}</span>
+      if (cmdMatch) return <span key={`cmd-${i}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[13px] font-mono border border-amber-500/10"><Terminal size={12} />{cmdMatch[1]}</span>
+      if (fileMatch) return <span key={`file-${i}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[13px] font-mono border border-blue-500/10"><FileText size={12} />{fileMatch[1]}</span>
+      if (skillMatch) return <span key={`skill-${i}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 text-[13px] font-mono border border-purple-500/10"><Bot size={12} />{skillMatch[1]}</span>
+      return <span key={`text-${i}`}>{part}</span>
     })
   }
 
   return (
-    <div className="max-w-4xl mx-auto mb-2 px-6 group/user relative">
-      <div className="bg-foreground/[0.03] border border-border/5 rounded-lg my-1 mx-2 py-1.5 px-2 group-hover/user:bg-foreground/[0.05] transition-all">
-        <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight px-2">
+    <div className="group/user relative mb-3">
+      <div className="bg-foreground/[0.03] border border-border/5 rounded-xl py-3 px-4 mx-4 group-hover/user:bg-foreground/[0.05] transition-all">
+        <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
           {formatMentions(text)}
         </div>
-        {commandResults && commandResults.length > 0 && (
-          <div className="mt-2 space-y-2">
-            {commandResults.map((res) => (
-              <CommandResultRenderer
-                key={res.command}
-                command={res.command}
-                result={res.result}
-                exitCode={res.exitCode}
-              />
+        {(msg as any).commandResults?.length > 0 && (
+          <div className="space-y-2 mt-2">
+            {(msg as any).commandResults.map((res: any) => (
+              <CommandResultRenderer key={res.command} command={res.command} result={res.result} exitCode={res.exitCode} />
             ))}
           </div>
         )}
         <div className="absolute top-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRevert(id)}
-            title="Revert to here"
-            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
-          >
+          <Button variant="ghost" size="sm" onClick={() => onRevert(id)} title="Revert to here" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
             <RotateCcw size={14} />
           </Button>
         </div>
@@ -330,118 +231,85 @@ function UserMessage({
 }
 
 function AssistantMessage({
-  id,
-  content,
+  msg,
   isLast,
   isStreaming,
   onCopy,
   onOpenFile,
   onRevert,
 }: {
-  id: string
-  content:
-    | string
-    | Array<TextPart | ReasoningPart | ToolCallPart | ToolResultPart>
+  msg: ChatMessage
   isLast: boolean
   isStreaming: boolean
   onCopy: (t: string) => void
   onOpenFile: (p: string) => void
   onRevert: (id: string) => void
 }) {
-  const parts =
-    typeof content === 'string'
-      ? [{ type: 'text', text: content } as TextPart]
-      : content
-  const fullText = parts
-    .filter((p): p is TextPart => p.type === 'text')
-    .map((p) => p.text)
-    .join('')
+  const parts = msg.parts || []
+  const fullText = parts.length > 0
+    ? parts.filter(p => p.type === 'text').map(p => (p as any).text).join('')
+    : (typeof msg.content === 'string' ? msg.content : '')
 
+  const hasNoParts = !parts || parts.length === 0
+  const hasToolParts = parts.some(p => 
+    (p.type as string) === 'tool' || (p.type as string).startsWith('tool-') || (p.type as string) === 'dynamic-tool'
+  )
+
+  const hasVisibleParts = parts.some(p => {
+    if (p.type === 'text' || p.type === 'reasoning') return true
+    if ((p.type as string) === 'dynamic-tool' || (p.type as string).startsWith('tool')) {
+      return p.state === 'output-available' || p.state === 'output-error'
+    }
+    return false
+  })
+
+  if (!hasVisibleParts && !fullText && !isStreaming) return null
+  
   return (
-    <div className="max-w-4xl mx-auto mb-3 px-8 group/assistant relative">
-      <div className="py-1.5 px-2 space-y-2">
+    <div className="group/assistant relative mb-3">
+      <div className="space-y-4 py-3 px-6">
+        {hasNoParts && fullText && (
+          <MarkdownRenderer content={fullText} isStreaming={isStreaming} onOpenFile={onOpenFile} />
+        )}
         {parts.map((part, i) => {
           const isPartLast = i === parts.length - 1
           const isPartStreaming = isStreaming && isPartLast
-          const partKey = `${part.type}-${'toolCallId' in part ? part.toolCallId : i}`
 
           switch (part.type) {
             case 'text':
-              return (
-                <MarkdownRenderer
-                  key={partKey}
-                  content={part.text}
-                  isStreaming={isPartStreaming}
-                  onOpenFile={onOpenFile}
-                />
-              )
+              return <MarkdownRenderer key={`text-${i}-${part.text.length}`} content={part.text} isStreaming={isPartStreaming} onOpenFile={onOpenFile} />
             case 'reasoning':
               return (
-                <ReasoningRenderer
-                  key={partKey}
-                  part={part}
-                  isLast={isLast && isPartLast}
-                  isStreaming={isPartStreaming}
-                />
+                <Collapsible key={`reasoning-${i}-${part.text.length}`} title="Thinking" icon={Bot} colorClass="border-primary/10 bg-primary/[0.01]" defaultExpanded={isLast} compact>
+                  <div className={cn("text-[12px] leading-snug text-muted-foreground/60 italic whitespace-pre-wrap font-serif", isPartStreaming && "after:content-['...'] after:ml-0.5 after:animate-pulse after:text-primary")}>
+                    {part.text}
+                  </div>
+                </Collapsible>
               )
-            case 'tool-call':
-              return (
-                <ToolCallRenderer
-                  key={partKey}
-                  part={part}
-                  isLast={isLast && isPartLast}
-                  isStreaming={isPartStreaming}
-                />
-              )
-            case 'tool-result':
-              return <ToolResultRenderer key={partKey} part={part} />
+            case 'tool' as any:
+            case 'dynamic-tool' as any:
+              return <ToolPartRenderer key={part.toolCallId || `tool-${i}`} part={part} />
             default:
+              if (part.type.startsWith('tool-')) {
+                 return <ToolPartRenderer key={part.toolCallId || `tool-${i}`} part={part} />
+              }
               return null
           }
         })}
       </div>
 
-      {!isStreaming && (
+      {!isStreaming && !hasToolParts && (
         <div className="absolute top-1 right-8 flex gap-1 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRevert(id)}
-            title="Revert to here"
-            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
-          >
+          <Button variant="ghost" size="sm" onClick={() => onRevert(msg.id)} title="Revert to here" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
             <RotateCcw size={14} />
           </Button>
           {fullText && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCopy(fullText)}
-              title="Copy response"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
-            >
+            <Button variant="ghost" size="sm" onClick={() => onCopy(fullText)} title="Copy response" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
               <Clipboard size={14} />
             </Button>
           )}
         </div>
       )}
-      <div className="h-px w-full bg-border/5" />
-    </div>
-  )
-}
-
-function ToolMessage({ content }: { content: Array<ToolResultPart> }) {
-  return (
-    <div className="max-w-4xl mx-auto mb-2 px-8 opacity-90">
-      <div className="px-2">
-        {content.map((part, i) => (
-          <ToolResultRenderer
-            key={`tool-res-${part.toolCallId || i}`}
-            part={part}
-          />
-        ))}
-      </div>
-      <div className="h-px w-full bg-border/5" />
     </div>
   )
 }
@@ -459,50 +327,24 @@ interface MessageItemProps {
 }
 
 export const MessageItem = memo(
-  ({
-    msg,
-    idx,
-    total,
-    isStreaming,
-    onOpenFile,
-    onCopy,
-    onRevert,
-  }: MessageItemProps) => {
-    const { role, content } = msg
+  ({ msg, idx, total, isStreaming, onOpenFile, onCopy, onRevert }: MessageItemProps) => {
     const isLast = idx === total - 1
-
-    switch (role) {
-      case 'system':
+    switch (msg.role) {
+      case 'system': return <SystemMessage msg={msg} />
+      case 'user': return <UserMessage msg={msg} onRevert={onRevert} />
+      case 'assistant': return <AssistantMessage msg={msg} isLast={isLast} isStreaming={isStreaming} onCopy={onCopy} onOpenFile={onOpenFile} onRevert={onRevert} />
+      case 'tool' as any: {
+        const visibleParts = (msg.parts || []).filter((p: any) => p.state === 'output-available' || p.state === 'output-error')
+        if (visibleParts.length === 0) return null
         return (
-          <SystemMessage
-            content={
-              typeof content === 'string' ? content : JSON.stringify(content)
-            }
-          />
+          <div className="opacity-90 mb-3 px-6 space-y-2">
+            {visibleParts.map((p: any, i: number) => (
+              <ToolPartRenderer key={p.toolCallId || `tool-res-${i}`} part={p} />
+            ))}
+          </div>
         )
-      case 'user':
-        return (
-          <UserMessage
-            msg={msg as ChatMessage & { role: 'user' }}
-            onRevert={onRevert}
-          />
-        )
-      case 'assistant':
-        return (
-          <AssistantMessage
-            id={msg.id}
-            content={content as any}
-            isLast={isLast}
-            isStreaming={isStreaming}
-            onCopy={onCopy}
-            onOpenFile={onOpenFile}
-            onRevert={onRevert}
-          />
-        )
-      case 'tool':
-        return <ToolMessage content={content as ToolResultPart[]} />
-      default:
-        return null
+      }
+      default: return null
     }
   },
 )

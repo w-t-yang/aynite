@@ -1,4 +1,4 @@
-import { stepCountIs, streamText } from 'ai'
+import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
@@ -53,11 +53,13 @@ export async function listSessions() {
         )
         if (content && Array.isArray(content)) {
           const firstUser = content.find((m) => m.role === 'user')
+          const text = (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') || 'Untitled Chat'
+
           all.push({
             id,
             date,
-            title: firstUser?.content || 'Untitled Chat',
-            lastMessage: content[content.length - 1]?.content || '',
+            title: text || 'Untitled Chat',
+            lastMessage: '',
             messageCount: content.length,
           })
         }
@@ -81,7 +83,7 @@ export async function aiChat({
   const requestId = Math.random().toString(36).slice(2, 10)
   const model = getAIModel(config)
   const toolContext = (global as any).toolContext || {}
-  ;(global as any).toolContext = toolContext
+    ; (global as any).toolContext = toolContext
 
   try {
     const cachedTools = createTools(toolContext)
@@ -102,126 +104,115 @@ export async function aiChat({
     }
 
     /**
-     * Standardizes messages for the AI SDK.
-     * Special handling for 'user' messages that contain 'commandResults' from local executions.
-     * These are transformed into a single text block so the AI can understand the context
-     * without requiring complex tool-call/tool-result sequencing.
+     * Minimal standardization before official SDK conversion.
+     * Mainly handles our custom LocalCommandMessage by injecting results into text parts.
      */
-    const standardizeMessagesForSDK = (msgs: ChatMessage[]): any[] => {
+    const standardizeMessages = (msgs: ChatMessage[]): any[] => {
       return msgs.map((msg) => {
         if (
           msg.role === 'user' &&
-          msg.commandResults &&
-          msg.commandResults.length > 0
+          'commandResults' in msg &&
+          (msg as any).commandResults &&
+          (msg as any).commandResults.length > 0
         ) {
-          const resultsText = msg.commandResults
+          const resultsText = ((msg as any).commandResults as any[])
             .map(
               (res) =>
-                `> Command: ${res.command}\n${res.result}${res.exitCode ? `\n(Exit Code: ${res.exitCode})` : ''}`,
+                `> Command: ${res.command}\n${res.result ?? res.output}${res.exitCode ? `\n(Exit Code: ${res.exitCode})` : ''}`,
             )
             .join('\n\n---\n\n')
 
-          const originalText =
-            typeof msg.content === 'string'
-              ? msg.content
-              : msg.content.map((p) => p.text).join('')
-
+          const text = msg.parts.map((p: any) => p.text || '').join('')
           return {
-            role: 'user',
-            content: `${originalText}\n\nI ran local commands, here are the results:\n\n${resultsText}`,
+            ...msg,
+            parts: [{ type: 'text', text: `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}` }]
           }
         }
         return msg
       })
     }
 
-    const sanitizedMessages = standardizeMessagesForSDK(messages)
+    // Use official SDK helper to get CoreMessage[]
+    const coreMessages = await convertToModelMessages(standardizeMessages(messages))
 
     const toolNames = Object.keys(enabledTools)
-    const lastMsg = sanitizedMessages[sanitizedMessages.length - 1]
     console.log(
       `[AI] Starting stream [${requestId}] with tools: [${toolNames.join(', ')}]`,
     )
-    console.log(`[AI] Last Message:`, JSON.stringify(lastMsg, null, 2))
-    ;(async () => {
-      try {
-        const result = streamText({
-          model,
-          messages: sanitizedMessages,
-          tools: enabledTools,
-          stopWhen: stepCountIs(10),
-        })
+    
+      ; (async () => {
+        try {
+          const result = streamText({
+            model,
+            messages: coreMessages,
+            tools: enabledTools,
+            stopWhen: stepCountIs(10),
+          })
 
-        let fullResponseText = ''
-        let reasoningText = ''
-        const fullToolCalls: {
-          toolCallId: string
-          toolName: string
-          args: unknown
-        }[] = []
+          let fullResponseText = ''
+          let reasoningText = ''
+          const fullToolCalls: any[] = []
 
-        for await (const part of result.fullStream) {
-          switch (part.type) {
-            case 'text-delta':
-              fullResponseText += part.text
-              emit(part)
-              break
-            case 'reasoning-delta':
-              reasoningText += part.text
-              emit(part)
-              break
-            case 'tool-input-delta':
-              emit(part)
-              break
-            case 'tool-call':
-              fullToolCalls.push(part)
-              emit(part)
-              break
-            case 'tool-result':
-              emit(part)
-              break
-            case 'finish-step':
-              emit({
-                type: 'finish-step',
-                finishReason: part.finishReason,
-                usage: part.usage,
-              })
-              break
-            case 'finish':
-              emit({ type: 'finish' })
-              break
-            case 'error':
-              console.error(`[AI] Error [${requestId}]:`, part.error)
-              emit({ type: 'error', error: String(part.error) })
-              break
-            case 'start':
-              emit({ type: 'start' })
-              break
+          for await (const part of result.fullStream) {
+            switch (part.type) {
+              case 'text-delta':
+                fullResponseText += part.text
+                emit(part)
+                break
+              case 'reasoning-delta':
+                reasoningText += part.text
+                emit(part)
+                break
+              case 'tool-input-delta':
+                emit(part)
+                break
+              case 'tool-call':
+                fullToolCalls.push(part)
+                emit(part as any)
+                break
+              case 'tool-result':
+                emit(part as any)
+                break
+              case 'finish-step':
+                emit({
+                  type: 'finish-step',
+                  finishReason: part.finishReason,
+                  usage: part.usage,
+                })
+                break
+              case 'finish':
+                emit({ type: 'finish' })
+                break
+              case 'error':
+                emit({ type: 'error', error: String(part.error) })
+                break
+              case 'start':
+                emit({ type: 'start' })
+                break
+            }
           }
+
+          console.log(
+            `[AI] Full Response [${requestId}]:`,
+            JSON.stringify(
+              {
+                text: fullResponseText,
+                reasoning: reasoningText,
+                toolCalls: fullToolCalls,
+              },
+              null,
+              2,
+            ),
+          )
+
+          const logPath = getLogPath()
+          const logEntry = `[${new Date().toISOString()}] AI Response: ${fullResponseText.slice(0, 100)}...\n`
+          await appendText(logPath, logEntry).catch(() => { })
+        } catch (err: any) {
+          console.error('[AI Chat Stream Error]', err)
+          emit({ type: 'error', error: err.message || String(err) })
         }
-
-        console.log(
-          `[AI] Full Response [${requestId}]:`,
-          JSON.stringify(
-            {
-              text: fullResponseText,
-              reasoning: reasoningText,
-              toolCalls: fullToolCalls,
-            },
-            null,
-            2,
-          ),
-        )
-
-        // Final log append (optional, maybe we only save on user action)
-        const logPath = getLogPath()
-        const logEntry = `[${new Date().toISOString()}] AI Response: ${fullResponseText.slice(0, 100)}...\n`
-        await appendText(logPath, logEntry).catch(() => {})
-      } catch (err: any) {
-        console.error('[AI Chat Stream Error]', err)
-        emit({ type: 'error', error: err.message || String(err) })
-      }
-    })()
+      })()
 
     return { requestId }
   } catch (error: any) {

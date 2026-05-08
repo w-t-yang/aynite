@@ -74,7 +74,10 @@ export function createTools(context: ToolContext) {
 
         try {
           const { stdout, stderr } = await execAsync(command, { cwd: runCwd })
-          const output = `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`
+          let output = stdout
+          if (stderr && stderr.trim()) {
+            output += `\n\nSTDERR:\n${stderr}`
+          }
 
           try {
             const parsed = JSON.parse(stdout.trim())

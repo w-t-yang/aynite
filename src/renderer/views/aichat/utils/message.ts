@@ -1,42 +1,34 @@
-import type {
-  ChatMessage,
-  ReasoningPart,
-  TextPart,
-  ToolCallPart,
-  ToolResultPart,
-} from '../../../../lib/types/chat'
+import type { UIMessage } from 'ai'
+import type { ChatMessage, StreamPart } from '../../../../lib/types/chat'
 
 export function genId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 /**
- * Append text delta to the last assistant message.
- *
- * Logic:
- * 1. If the last message is assistant and a simple string, it just appends.
- * 2. If the last message uses complex parts, it finds the last TextPart to append to,
- *    or adds a new TextPart if the last part wasn't text.
+ * Helper to get text content from a UIMessage for legacy components.
  */
+export function getMessageText(msg: ChatMessage): string {
+  return msg.parts
+    .filter((p): p is any => p.type === 'text')
+    .map((p) => p.text)
+    .join('')
+}
+
 export function appendToAssistant(
   prev: ChatMessage[],
   text: string,
 ): ChatMessage[] {
   const last = prev[prev.length - 1]
   if (last && last.role === 'assistant') {
-    if (typeof last.content === 'string') {
-      return [...prev.slice(0, -1), { ...last, content: last.content + text }]
-    }
-
-    // It's an array of parts
-    const content = [...last.content]
-    const lastPart = content[content.length - 1]
+    const parts = [...(last.parts || [])]
+    const lastPart = parts[parts.length - 1]
     if (lastPart && lastPart.type === 'text') {
-      content[content.length - 1] = { ...lastPart, text: lastPart.text + text }
+      parts[parts.length - 1] = { ...lastPart, text: lastPart.text + text }
     } else {
-      content.push({ type: 'text', text })
+      parts.push({ type: 'text', text })
     }
-    return [...prev.slice(0, -1), { ...last, content }]
+    return [...prev.slice(0, -1), { ...last, parts }]
   }
 
   return [
@@ -44,50 +36,29 @@ export function appendToAssistant(
     {
       id: genId(),
       role: 'assistant',
-      content: text,
-      createdAt: Date.now(),
-    },
+      parts: [{ type: 'text', text }],
+      createdAt: new Date(),
+    } as UIMessage,
   ]
 }
 
-/**
- * Append reasoning delta to the last assistant message.
- *
- * Logic:
- * 1. Always ensures the content is converted to an array of parts (since reasoning
- *    is a distinct metadata block and shouldn't be mixed into plain text).
- * 2. Finds the last ReasoningPart to append to, or adds a new one.
- */
 export function appendReasoningToAssistant(
   prev: ChatMessage[],
   reasoning: string,
 ): ChatMessage[] {
   const last = prev[prev.length - 1]
   if (last && last.role === 'assistant') {
-    if (typeof last.content === 'string') {
-      return [
-        ...prev.slice(0, -1),
-        {
-          ...last,
-          content: [
-            { type: 'text', text: last.content } as TextPart,
-            { type: 'reasoning', text: reasoning } as ReasoningPart,
-          ],
-        },
-      ]
-    }
-
-    const content = [...last.content]
-    const lastPart = content[content.length - 1]
+    const parts = [...(last.parts || [])]
+    const lastPart = parts[parts.length - 1]
     if (lastPart && lastPart.type === 'reasoning') {
-      content[content.length - 1] = {
+      parts[parts.length - 1] = {
         ...lastPart,
-        text: lastPart.text + reasoning,
+        text: (lastPart as any).text + reasoning,
       }
     } else {
-      content.push({ type: 'reasoning', text: reasoning })
+      parts.push({ type: 'reasoning', text: reasoning } as any)
     }
-    return [...prev.slice(0, -1), { ...last, content }]
+    return [...prev.slice(0, -1), { ...last, parts }]
   }
 
   return [
@@ -95,100 +66,120 @@ export function appendReasoningToAssistant(
     {
       id: genId(),
       role: 'assistant',
-      content: [{ type: 'reasoning', text: reasoning }],
-      createdAt: Date.now(),
-    },
+      parts: [{ type: 'reasoning', text: reasoning } as any],
+      createdAt: new Date(),
+    } as UIMessage,
   ]
 }
 
-/**
- * Append tool input delta (streaming args) to the last tool call in assistant message.
- *
- * Reason to keep separate:
- * Unlike text/reasoning which usually append to the VERY LAST part, tool input deltas
- * might arrive out of order if multiple tools are streaming, so we MUST find the
- * specific tool-call part by its toolCallId.
- */
+export function appendPartToAssistant(
+  prev: ChatMessage[],
+  part: StreamPart & { type: 'tool-call' | 'tool-result' },
+): ChatMessage[] {
+  const last = prev[prev.length - 1]
+  if (last && last.role === 'assistant') {
+    const parts = [...(last.parts || [])]
+    
+    // Find if we already have this tool call in parts
+    const existingIdx = parts.findIndex(p => 
+       ((p.type as string) === 'tool' || (p.type as string).startsWith('tool-') || (p.type as string) === 'dynamic-tool') && 
+       (p as any).toolCallId === part.toolCallId
+    )
+
+    const uiPart: any = {
+      type: 'dynamic-tool',
+      toolCallId: part.toolCallId,
+      toolName: part.toolName,
+    }
+
+    if (part.type === 'tool-call') {
+      uiPart.state = 'input-available'
+      uiPart.input = part.args
+    } else {
+      uiPart.state = 'output-available'
+      uiPart.output = part.result ?? (part as any).output
+      // Preserve input if we can find it
+      if (existingIdx !== -1) {
+        uiPart.input = (parts[existingIdx] as any).input
+      }
+    }
+
+    if (existingIdx !== -1) {
+      parts[existingIdx] = { ...parts[existingIdx], ...uiPart }
+    } else {
+      parts.push(uiPart)
+    }
+
+    return [...prev.slice(0, -1), { ...last, parts }]
+  }
+
+  // Create new assistant message if needed
+  return [
+    ...prev,
+    {
+      id: genId(),
+      role: 'assistant',
+      parts: [{
+        type: 'dynamic-tool',
+        toolCallId: part.toolCallId,
+        toolName: part.toolName,
+        state: part.type === 'tool-call' ? 'input-available' : 'output-available',
+        input: (part as any).args,
+        output: (part as any).result
+      } as any],
+      createdAt: new Date(),
+    } as UIMessage,
+  ]
+}
+
 export function appendToolInputDeltaToAssistant(
   prev: ChatMessage[],
   id: string,
   delta: string,
 ): ChatMessage[] {
   const last = prev[prev.length - 1]
-  if (last && last.role === 'assistant' && Array.isArray(last.content)) {
-    const content = [...last.content]
-    const toolCallIdx = content.findIndex(
-      (p) => p.type === 'tool-call' && p.toolCallId === id,
-    )
+  if (last && last.role === 'assistant') {
+    const parts = [...(last.parts || [])]
+    const idx = parts.findIndex(p => (p as any).toolCallId === id)
 
-    if (toolCallIdx !== -1) {
-      const part = content[toolCallIdx] as ToolCallPart
-      // SDK v6.0.169 uses 'args' as string during streaming phases or object once done.
-      // We treat it as string accumulation here.
-      const currentArgs = typeof part.args === 'string' ? part.args : ''
-      content[toolCallIdx] = { ...part, args: currentArgs + delta }
-      return [...prev.slice(0, -1), { ...last, content }]
+    if (idx !== -1) {
+      const p = parts[idx] as any
+      const currentInput = typeof p.input === 'string' ? p.input : JSON.stringify(p.input || '')
+      parts[idx] = { ...p, input: currentInput + delta, state: 'input-streaming' }
+      return [...prev.slice(0, -1), { ...last, parts }]
     }
   }
   return prev
 }
 
-/**
- * Append or update a full part (like tool-call) in the last assistant message.
- *
- * Logic:
- * 1. Checks if a part with the same toolCallId already exists (e.g. replacing a
- *    partially streamed tool-call with a finished one).
- * 2. If it exists, updates it in-place. Otherwise, appends to the end.
- */
-export function appendPartToAssistant(
-  prev: ChatMessage[],
-  part: TextPart | ReasoningPart | ToolCallPart | ToolResultPart,
-): ChatMessage[] {
-  const last = prev[prev.length - 1]
-  if (last && last.role === 'assistant') {
-    const content =
-      typeof last.content === 'string'
-        ? [{ type: 'text', text: last.content } as TextPart]
-        : [...last.content]
-
-    // If it's a tool-call or tool-result, check for existing ID to update
-    if (part.type === 'tool-call' || part.type === 'tool-result') {
-      const existingIdx = content.findIndex(
-        (p) =>
-          (p.type === 'tool-call' || p.type === 'tool-result') &&
-          p.toolCallId === part.toolCallId,
-      )
-
-      if (existingIdx !== -1) {
-        content[existingIdx] = part
-        return [...prev.slice(0, -1), { ...last, content }]
-      }
-    }
-
-    content.push(part)
-    return [...prev.slice(0, -1), { ...last, content }]
-  }
-
-  return [
-    ...prev,
-    {
-      id: genId(),
-      role: 'assistant',
-      content: [part],
-      createdAt: Date.now(),
-    },
-  ]
-}
-
 export const isErrorMessage = (content: any) => {
   if (!content) return false
-  const c =
-    typeof content === 'string' ? content.trim() : JSON.stringify(content)
+  const c = typeof content === 'string' ? content.trim() : JSON.stringify(content)
   return (
     c.startsWith('Error:') ||
     c.startsWith('Execution Error:') ||
     c.startsWith('**') ||
     c.includes('"status": "error"')
   )
+}
+
+export function findUnfulfilledToolCalls(
+  messages: ChatMessage[],
+): any[] {
+  const allCalls: any[] = []
+
+  for (const m of messages) {
+    for (const p of m.parts) {
+      if ((p as any).toolCallId) {
+        if ((p as any).state === 'input-available' || (p as any).state === 'input-streaming') {
+           allCalls.push(p)
+        } else if ((p as any).state === 'output-available') {
+           const idx = allCalls.findIndex(c => c.toolCallId === (p as any).toolCallId)
+           if (idx !== -1) allCalls.splice(idx, 1)
+        }
+      }
+    }
+  }
+
+  return allCalls
 }

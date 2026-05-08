@@ -1,28 +1,10 @@
+import type { UIMessage } from 'ai'
+
 /**
- * Content part types (matches AI SDK 6.0.169 structure)
+ * ChatMessage extends the SDK's UIMessage to include optional createdAt.
  */
-export interface TextPart {
-  type: 'text'
-  text: string
-}
-
-export interface ReasoningPart {
-  type: 'reasoning'
-  text: string
-}
-
-export interface ToolCallPart {
-  type: 'tool-call'
-  toolCallId: string
-  toolName: string
-  args: unknown
-}
-
-export interface ToolResultPart {
-  type: 'tool-result'
-  toolCallId: string
-  toolName: string
-  result: unknown
+export type ChatMessage = UIMessage & {
+  createdAt?: Date
 }
 
 export interface CommandResultPart {
@@ -31,30 +13,13 @@ export interface CommandResultPart {
   exitCode?: number
 }
 
-// ─── Message type (matches AI SDK ModelMessage structurally) ─────────
-
-export type ChatMessage = {
-  id: string
-  createdAt: number
-} & (
-  | { role: 'system'; content: string }
-  | {
-      role: 'user'
-      content: string | Array<TextPart>
-      commandResults?: CommandResultPart[]
-    }
-  | {
-      role: 'assistant'
-      content:
-        | string
-        | Array<TextPart | ReasoningPart | ToolCallPart | ToolResultPart>
-    }
-  | { role: 'tool'; content: Array<ToolResultPart> }
-)
-
-// ─── Stream parts (IPC protocol between main and renderer) ───────────
-// Matches Vercel AI SDK v6.0.169 TextStreamPart union.
-// Definition: node_modules/ai/dist/index.d.ts:2601
+/**
+ * LocalCommandMessage extension.
+ */
+export interface LocalCommandMessage extends ChatMessage {
+  role: 'user'
+  commandResults?: CommandResultPart[]
+}
 
 export type StreamPart =
   | { type: 'text-delta'; text: string; id?: string }
@@ -63,13 +28,13 @@ export type StreamPart =
       type: 'tool-call'
       toolCallId: string
       toolName: string
-      args: unknown
+      args: any
     }
   | {
       type: 'tool-result'
       toolCallId: string
       toolName: string
-      result: unknown
+      result: any
     }
   | {
       type: 'tool-input-delta'

@@ -2,8 +2,6 @@ import type { AIProvider } from '../../../../lib/types/ai'
 import type {
   ChatMessage,
   StreamPart,
-  ToolCallPart,
-  ToolResultPart,
 } from '../../../../lib/types/chat'
 import { genId } from './message'
 
@@ -22,32 +20,49 @@ export async function runAgentLoop(
   subscribe: (handler: (event: any) => void) => () => void,
 ): Promise<ChatMessage[]> {
   const loopMessages: ChatMessage[] = []
-  const _assistantAccum = ''
   let reasoningAccum = ''
   let textAccum = ''
-  let toolCalls: ToolCallPart[] = []
+  
+  // Track all tool calls in this loop to preserve their inputs for results
+  const allToolCalls = new Map<string, any>()
+  // Current step's tool calls for the next assistant message
+  let currentStepToolCalls: any[] = []
 
   const flushAssistant = () => {
-    if (textAccum || reasoningAccum || toolCalls.length > 0) {
-      const content: any[] = []
-      if (reasoningAccum)
-        content.push({ type: 'reasoning', text: reasoningAccum })
-      if (textAccum) content.push({ type: 'text', text: textAccum })
-      if (toolCalls.length > 0) content.push(...toolCalls)
+    if (textAccum || reasoningAccum || currentStepToolCalls.length > 0) {
+      const parts: any[] = []
+      
+      if (reasoningAccum) {
+        parts.push({ type: 'reasoning', text: reasoningAccum })
+      }
+      
+      if (textAccum) {
+        parts.push({ type: 'text', text: textAccum })
+      }
+      
+      if (currentStepToolCalls.length > 0) {
+        currentStepToolCalls.forEach(tc => {
+          parts.push({
+            type: 'dynamic-tool',
+            toolCallId: tc.toolCallId,
+            toolName: tc.toolName,
+            state: 'input-available',
+            input: tc.args || tc.input
+          })
+        })
+      }
 
       const assistantMsg: ChatMessage = {
         id: genId(),
         role: 'assistant',
-        content:
-          content.length === 1 && content[0].type === 'text'
-            ? content[0].text
-            : content,
-        createdAt: Date.now(),
+        parts,
+        createdAt: new Date(),
       }
+      
       loopMessages.push(assistantMsg)
       textAccum = ''
       reasoningAccum = ''
-      toolCalls = []
+      currentStepToolCalls = []
     }
   }
 
@@ -103,41 +118,36 @@ export async function runAgentLoop(
               break
 
             case 'tool-call': {
-              const existingIdx = toolCalls.findIndex(
+              allToolCalls.set(part.toolCallId, part)
+              const existingIdx = currentStepToolCalls.findIndex(
                 (tc) => tc.toolCallId === part.toolCallId,
               )
               if (existingIdx !== -1) {
-                toolCalls[existingIdx] = {
-                  type: 'tool-call',
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  args: part.args,
-                }
+                currentStepToolCalls[existingIdx] = part
               } else {
-                toolCalls.push({
-                  type: 'tool-call',
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  args: part.args,
-                })
+                currentStepToolCalls.push(part)
               }
               onEvent(part)
               break
             }
 
             case 'tool-result': {
+              const matchingCall = allToolCalls.get(part.toolCallId)
+              const args = matchingCall?.args || matchingCall?.input || {}
+              
               flushAssistant()
-              const resultPart: ToolResultPart = {
-                type: 'tool-result',
-                toolCallId: part.toolCallId,
-                toolName: part.toolName,
-                result: part.result,
-              }
               loopMessages.push({
                 id: genId(),
-                role: 'tool',
-                content: [resultPart],
-                createdAt: Date.now(),
+                role: 'assistant',
+                parts: [{
+                  type: 'dynamic-tool',
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  state: 'output-available',
+                  input: args,
+                  output: part.result ?? (part as any).output
+                } as any],
+                createdAt: new Date(),
               })
               onEvent(part)
               break
@@ -154,8 +164,8 @@ export async function runAgentLoop(
               const errorMsg: ChatMessage = {
                 id: genId(),
                 role: 'assistant',
-                content: `**AI Stream Error**: ${part.error}`,
-                createdAt: Date.now(),
+                parts: [{ type: 'text', text: `**AI Stream Error**: ${part.error}` }],
+                createdAt: new Date(),
               }
               fulfill([...messages, ...loopMessages, errorMsg])
               break

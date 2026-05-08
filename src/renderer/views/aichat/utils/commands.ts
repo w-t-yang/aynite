@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { ChatMessage } from '../../../shared/lib/types'
+import type { ChatMessage } from '../../../../lib/types/chat'
 import { genId } from './message'
 
 export async function executeCommandOnly(
@@ -32,40 +32,33 @@ export async function executeCommandOnly(
       params,
       currentFile: activeTabPath,
     })
-    const content = [res.stdout, res.stderr].filter(Boolean).join('\n').trim()
-    const output = content || '(No output)'
-    const _toolCallId = `cmd_${Date.now()}`
+    const output = [res.stdout, res.stderr].filter(Boolean).join('\n').trim() || '(No output)'
+    const commandStr = `${name} ${params.join(' ')}`
+    
+    // Format command result into text parts to comply with SDK v6 schema
+    const formattedText = `${text}\n\n> Command: ${commandStr}\n${output}`
+
     setMessages([
       ...messages,
       {
         id: genId(),
         role: 'user',
-        content: text,
-        createdAt: Date.now(),
-        commandResults: [
-          {
-            command: `${name} ${params.join(' ')}`,
-            result: output,
-          },
-        ],
+        parts: [{ type: 'text', text: formattedText }],
+        createdAt: new Date(),
       },
     ])
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : String(e)
+    const commandStr = `${name} ${params.join(' ')}`
+    const formattedText = `${text}\n\n> Command: ${commandStr}\nError: ${errorMsg}`
+
     setMessages([
       ...messages,
       {
         id: genId(),
         role: 'user',
-        content: text,
-        createdAt: Date.now(),
-        commandResults: [
-          {
-            command: `${name} ${params.join(' ')}`,
-            result: `Error: ${errorMsg}`,
-            exitCode: 1,
-          },
-        ],
+        parts: [{ type: 'text', text: formattedText }],
+        createdAt: new Date(),
       },
     ])
   } finally {

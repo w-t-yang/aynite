@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppEvents } from '../../../../lib/constants/app'
 import { DEFAULT_SETTINGS } from '../../../../lib/constants/settings'
-import type { StreamPart } from '../../../../lib/types/chat'
-import type { ChatMessage, SettingsState } from '../../../shared/lib/types'
+import type {
+  ChatMessage,
+  CommandResultPart,
+  LocalCommandMessage,
+  StreamPart
+} from '../../../../lib/types/chat'
+import type { SettingsState } from '../../../shared/lib/types'
 import { useAppEvent, useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
 import { type AgentLoopConfig, runAgentLoop } from '../utils/agent'
@@ -15,6 +20,8 @@ import {
   genId,
 } from '../utils/message'
 
+// import { MOCK_MESSAGES } from '../utils/mocks'
+
 export function useAIChat() {
   const subscribeToAppEvents = useAppEventSubscriber()
   const [settings, setSettings] = useState<SettingsState>(
@@ -22,9 +29,8 @@ export function useAIChat() {
   )
   const [activeTabPath, setActiveTabPath] = useState<string>('')
   const [workspaceFolders, setWorkspaceFolders] = useState<string[]>([])
-  // Uncomment the line below to use mock data for testing all message types
-  // const [messages, setMessages] = useState<ChatMessage[]>(MOCK_SESSION)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  // const [messages, setMessages] = useState<ChatMessage[]>(MOCK_MESSAGES)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState<StreamPart | null>(null)
@@ -39,16 +45,18 @@ export function useAIChat() {
 
   const loadSettings = useCallback(async () => {
     try {
-      const [resAI, resAgents, resTools] = await Promise.all([
+      const [resAI, resAgents, resTools, resPrompts] = await Promise.all([
         window.aynite.getConfig('ai'),
         window.aynite.getConfig('agents'),
         window.aynite.getConfig('tools'),
+        window.aynite.getConfig('prompts'),
       ])
       setSettings((prev) => ({
         ...prev,
         ai: resAI || prev.ai,
         agents: resAgents || prev.agents,
         aiTools: resTools?.active || prev.aiTools,
+        prompts: resPrompts || prev.prompts,
       }))
     } catch (e) {
       console.error('[AIChat] Failed to load settings:', e)
@@ -89,7 +97,6 @@ export function useAIChat() {
 
   useAppEvent(AppEvents.SUBMIT_CHAT, () => inputRef.current?.submit())
 
-  // Persistence
   useEffect(() => {
     const lastSession = localStorage.getItem('lastSession')
     if (lastSession) {
@@ -177,7 +184,6 @@ export function useAIChat() {
       )
         return
 
-      // Run embedded commands before AI
       const commandMatches = [...text.matchAll(commandMentionRegex)]
       const commandResults: {
         name: string
@@ -236,7 +242,6 @@ export function useAIChat() {
         agentPromptFiles,
       }
 
-      // Build messages
       const results: CommandResultPart[] = []
       for (const res of commandResults) {
         const content = [res.stdout, res.stderr]
@@ -253,15 +258,34 @@ export function useAIChat() {
         })
       }
 
+      let initialMessages = [...messagesRef.current]
+      if (initialMessages.length === 0) {
+        const globalPromptFiles = settingsRef.current.prompts?.files || []
+        const systemPrompt = await window.aynite.getMergedSystemPrompt(
+          globalPromptFiles,
+          agentPromptFiles,
+        )
+        if (systemPrompt) {
+          initialMessages.push({
+            id: genId(),
+            role: 'system',
+            parts: [{ type: 'text', text: systemPrompt }],
+            createdAt: new Date(),
+          })
+        }
+      }
+
       const userMsg: ChatMessage = {
         id: genId(),
         role: 'user',
-        content: text,
-        createdAt: Date.now(),
-        commandResults: results.length > 0 ? results : undefined,
+        parts: [{ type: 'text', text: text }],
+        createdAt: new Date(),
+      }
+      if (results.length > 0) {
+        (userMsg as LocalCommandMessage).commandResults = results
       }
 
-      const updatedMessages = [...messagesRef.current, userMsg]
+      const updatedMessages = [...initialMessages, userMsg]
       setMessages(updatedMessages)
       setLoading(true)
 
@@ -303,15 +327,7 @@ export function useAIChat() {
                 setMessages((prev) => appendPartToAssistant(prev, event))
                 break
               case 'tool-result':
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: genId(),
-                    role: 'tool',
-                    content: [event],
-                    createdAt: Date.now(),
-                  },
-                ])
+                setMessages((prev) => appendPartToAssistant(prev, event))
                 break
               case 'error':
                 setMessages((prev) => [
@@ -319,8 +335,8 @@ export function useAIChat() {
                   {
                     id: genId(),
                     role: 'assistant',
-                    content: `**Error**: ${event.error}`,
-                    createdAt: Date.now(),
+                    parts: [{ type: 'text', text: `**Error**: ${event.error}` }],
+                    createdAt: new Date(),
                   },
                 ])
                 break
@@ -340,8 +356,8 @@ export function useAIChat() {
           {
             id: genId(),
             role: 'assistant',
-            content: `❌ **System Error**: ${e instanceof Error ? e.message : String(e)}`,
-            createdAt: Date.now(),
+            parts: [{ type: 'text', text: `❌ **System Error**: ${e instanceof Error ? e.message : String(e)}` }],
+            createdAt: new Date(),
           },
         ])
       } finally {
@@ -374,7 +390,6 @@ export function useAIChat() {
     })
   }, [])
 
-  // Public API
   return {
     settings,
     messages,

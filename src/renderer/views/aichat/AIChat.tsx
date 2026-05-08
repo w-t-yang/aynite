@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Header, InputArea, List, SessionsModal } from './components'
 import { useAIChat } from './hooks/useAIChat'
+import { getMessageText } from './utils/message'
 
 export function AIChat() {
   const {
@@ -29,7 +30,7 @@ export function AIChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [])
+  }, [messages, loading])
 
   // Global actions for micro-app bridge
   useEffect(() => {
@@ -65,7 +66,7 @@ export function AIChat() {
     }
     ;(window as any).clearChat = clearChat
     ;(window as any).copyChat = () =>
-      copyToClipboard(messages.map((m) => m.content).join('\n\n'))
+      copyToClipboard(messages.map((m) => getMessageText(m)).join('\n\n'))
 
     return () => {
       delete (window as any).focusChatInput
@@ -119,7 +120,7 @@ export function AIChat() {
         onAbort={() => {}}
         onClear={clearChat}
         onCopyHistory={() =>
-          copyToClipboard(messages.map((m) => m.content).join('\n\n'))
+          copyToClipboard(messages.map((m) => getMessageText(m)).join('\n\n'))
         }
         getFiles={(path) => window.aynite.listFolder(path)}
         getAvailableSkills={() => window.aynite.getAvailableSkills()}
