@@ -263,7 +263,7 @@ function AssistantMessage({
     .join('')
 
   return (
-    <div className="max-w-4xl mx-auto mb-3 px-6 group/assistant relative">
+    <div className="max-w-4xl mx-auto mb-3 px-8 group/assistant relative">
       <div className="py-1.5 px-2 space-y-2">
         {parts.map((part, i) => {
           const isPartLast = i === parts.length - 1
@@ -325,7 +325,7 @@ function AssistantMessage({
 
 function ToolMessage({ content }: { content: Array<ToolResultPart> }) {
   return (
-    <div className="max-w-4xl mx-auto mb-2 px-4 opacity-90">
+    <div className="max-w-4xl mx-auto mb-2 px-8 opacity-90">
       <div className="px-4">
         {content.map((part, i) => (
           <ToolResultRenderer
