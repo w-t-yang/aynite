@@ -80,7 +80,7 @@ const aynite = {
 
   // ── Theme operations ────────────────────────────────────────────────────
   getThemes: () => ipcRenderer.invoke(ThemeChannels.LIST),
-  getTheme: (name: string) => ipcRenderer.invoke(ThemeChannels.GET, name),
+  getTheme: (name: string) => ipcRenderer.invoke(ThemeChannels.READ, name),
   deleteTheme: (name: string) => ipcRenderer.invoke(ThemeChannels.DELETE, name),
 
   // ── Spells ──────────────────────────────────────────────────────────────
