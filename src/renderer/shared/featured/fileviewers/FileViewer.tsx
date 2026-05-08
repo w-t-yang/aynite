@@ -581,7 +581,7 @@ function FileViewer({
             >
               {/* External Change Banner */}
               {externalChangeDetected && (
-                <div className="absolute top-0 left-0 right-0 z-50 bg-primary/10 border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-4 py-2 text-xs text-primary animate-in fade-in slide-in-from-top-1 duration-300">
+                <div className="absolute top-0 left-0 right-0 z-layout bg-primary/10 border-b border-primary/20 backdrop-blur-sm flex items-center justify-between px-4 py-2 text-xs text-primary animate-in fade-in slide-in-from-top-1 duration-300">
                   <div className={FLEX_CENTER_GAP_2}>
                     <AlertCircle size={14} />
                     <span>This file has been modified externally.</span>
@@ -608,7 +608,7 @@ function FileViewer({
 
               <div
                 ref={lineNumRef}
-                className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-60 overflow-hidden select-none z-10"
+                className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-60 overflow-hidden select-none z-layout"
               >
                 {lines.map((l) => (
                   <div key={l} className="leading-relaxed h-6">
@@ -680,7 +680,7 @@ function FileViewer({
                 effectiveCategory === 'video' ||
                 effectiveCategory === 'audio' ||
                 effectiveCategory === 'unsupported') && (
-                <div className="absolute inset-0 z-1 bg-background">
+                <div className="absolute inset-0 z-layout bg-background">
                   <Handler
                     file={fileInfo as FileInfo}
                     content={localContent}
@@ -692,7 +692,7 @@ function FileViewer({
         )}
 
         {showSearch && (
-          <div className="file-viewer-search absolute top-4 right-4 z-50 bg-sidebar border border-border rounded-md shadow-lg p-2 flex items-center gap-2">
+          <div className="file-viewer-search absolute top-4 right-4 z-layout bg-sidebar border border-border rounded-md shadow-lg p-2 flex items-center gap-2">
             <Input
               ref={searchInputRef}
               unstyled

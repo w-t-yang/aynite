@@ -48,7 +48,7 @@ const TitleBar: React.FC = () => {
 
   return (
     <>
-      <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2 relative z-[100]">
+      <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2 relative z-layout">
         {/* Left: Layout switcher (dynamic from workspace config) */}
         <div className="flex items-center gap-1 no-drag">
           {workspaceConfig.layouts.map((layout) => (

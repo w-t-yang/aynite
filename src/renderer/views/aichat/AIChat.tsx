@@ -85,7 +85,7 @@ export function AIChat() {
 
   return (
     <div className="chat-panel flex flex-col h-full bg-card relative overflow-hidden">
-      <div className="absolute inset-0 bg-ambient-gradient z-0 opacity-40" />
+      <div className="absolute inset-0 bg-ambient-gradient z-base opacity-40" />
 
       <Header
         settings={settings}

@@ -34,7 +34,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
     ref,
   ) => {
     return (
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent z-10">
+      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent z-layout">
         <div className="max-w-4xl mx-auto relative group">
           <InputEditor
             ref={ref}

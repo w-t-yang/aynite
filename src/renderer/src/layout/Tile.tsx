@@ -62,7 +62,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     >
       <div
         className={cn(
-          'absolute top-2 right-2 z-50 transition-opacity',
+          'absolute top-2 right-2 z-layout transition-opacity',
           url ? 'opacity-0 hover:opacity-100' : 'opacity-100',
         )}
       >

@@ -117,7 +117,7 @@ export function NodeRenderer({
 
 function ModalShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+    <div className="fixed inset-0 z-modal bg-background/80 backdrop-blur-sm flex items-center justify-center">
       <div className="bg-sidebar border border-border shadow-xl rounded-xl p-5 w-80 max-w-[90vw]">
         {children}
       </div>

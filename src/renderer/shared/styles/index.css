@@ -224,6 +224,13 @@
 
   --font-size-xs: var(--font-size-xs);
   --font-size-xxs: var(--font-size-xxs);
+
+  /* Z-Index Scale */
+  --z-base: 0;
+  --z-layout: 100;
+  --z-splitter: 200;
+  --z-popover: 1000;
+  --z-modal: 5000;
 }
 
 /* ─── Tile & Splitter Component Styles ───────────────────────────── */
@@ -242,13 +249,13 @@
   }
 
   .splitter {
-    @apply relative z-[200] transition-colors duration-200 bg-transparent;
+    @apply relative z-splitter transition-colors duration-200 bg-transparent;
   }
 
   /* Larger hit area for splitters */
   .splitter::after {
     content: "";
-    @apply absolute inset-[-4px] z-[201];
+    @apply absolute inset-[-4px] z-splitter;
   }
 
   .splitter.horizontal {

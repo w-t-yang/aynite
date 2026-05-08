@@ -29,7 +29,7 @@ export function UpdateNotification() {
   const isError = updateStatus === 'error'
 
   return (
-    <div className="fixed bottom-4 right-4 z-[4000] animate-in slide-in-from-bottom-2 fade-in">
+    <div className="fixed bottom-4 right-4 z-modal animate-in slide-in-from-bottom-2 fade-in">
       <div
         className={cn(
           'bg-popover border border-border shadow-2xl rounded-xl p-4 min-w-[320px] max-w-md flex flex-col gap-3 transition-all duration-300',

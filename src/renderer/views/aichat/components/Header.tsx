@@ -16,7 +16,7 @@ export function Header({ settings, onShowHistory, onClear }: HeaderProps) {
   const agentDescription = activeAgent?.description || 'AI Pair Programmer'
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-border/10 bg-background/40 backdrop-blur-md z-20 relative">
+    <div className="flex items-center justify-between px-6 py-4 border-b border-border/10 bg-background/40 backdrop-blur-md z-layout relative">
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5 border border-primary/20 group hover:scale-105 transition-transform duration-300">
           <Sparkles

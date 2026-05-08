@@ -135,7 +135,7 @@ function TabSwitcherWIP({
     // biome-ignore lint/a11y/useKeyWithClickEvents: WIP unused
     // biome-ignore lint/a11y/noStaticElementInteractions: WIP unused
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]"
+      className="fixed inset-0 z-modal flex items-start justify-center pt-[15vh]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -149,7 +149,7 @@ function TabSwitcherWIP({
       />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-3xl bg-sidebar border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative z-layout w-full max-w-3xl bg-sidebar border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
         {/* Search input */}
         <div className="p-3 border-b border-border/50 bg-accent/10 flex items-center gap-3">
           <Search size={16} className="text-muted-foreground ml-1" />

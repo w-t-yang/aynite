@@ -17,7 +17,7 @@ export function SessionsModal({
   onClose: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
       <div className="w-full max-w-3xl bg-background border border-border/50 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
         <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
           <div className={FLEX_CENTER_GAP_3}>
