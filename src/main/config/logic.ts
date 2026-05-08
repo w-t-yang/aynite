@@ -29,7 +29,7 @@ import {
   writeJson,
   writeText,
 } from '../../lib/path'
-import { getDefaultGlobalPrompts, restoreDefaultPrompts } from '../ai'
+import { getDefaultGlobalPrompts } from '../ai'
 import {
   getBundledResourcesPath,
   getCommandsConfig,
@@ -131,7 +131,7 @@ export async function initAppFolders() {
     }
   }
 
-  await restoreDefaultPrompts()
+  await ensureDefaultPromptFiles()
 
   // Copy bundled views to ~/.aynite/views
   const bundledViewsDir = joinPaths(

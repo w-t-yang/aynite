@@ -43,24 +43,45 @@ export async function savePromptsConfig(files: string[]) {
 }
 
 /**
+ * Ensures all default prompt files exist in the prompts directory.
+ * Does not modify config.json.
+ */
+export async function ensureDefaultPromptFiles() {
+  await ensureDir(getAynitePromptsDir())
+
+  // Write global prompts if they don't exist
+  for (const def of Object.values(GLOBAL_PROMPTS)) {
+    const p = getAynitePromptPath(def.filename)
+    if (!(await exists(p))) {
+      await writeText(p, def.content)
+    }
+  }
+
+  // Write agent prompts if they don't exist
+  for (const def of Object.values(AGENT_PROMPTS)) {
+    const p = getAynitePromptPath(def.filename)
+    if (!(await exists(p))) {
+      await writeText(p, def.content)
+    }
+  }
+}
+
+/**
  * Restores all default prompts (global and agent) to the prompts directory
- * and initializes the agents in config.json.
+ * AND resets the agents/prompts configuration in config.json.
  */
 export async function restoreDefaultPrompts() {
   await ensureDir(getAynitePromptsDir())
 
-  // Write all global prompts
+  // Force write all prompts
   for (const def of Object.values(GLOBAL_PROMPTS)) {
     await writeText(getAynitePromptPath(def.filename), def.content)
   }
-
-  // Write all agent prompts
   for (const def of Object.values(AGENT_PROMPTS)) {
     await writeText(getAynitePromptPath(def.filename), def.content)
   }
 
   const promptFiles = getDefaultGlobalPrompts()
-
   const agents = createDefaultAgentConfig(getAynitePromptPath)
 
   // Save to config.json

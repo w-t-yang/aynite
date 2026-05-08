@@ -73,6 +73,7 @@ export function setupAiIpc() {
 
 export { listSessions, loadSession, saveSession } from './chat'
 export {
+  ensureDefaultPromptFiles,
   getDefaultGlobalPrompts,
   getMergedSystemPrompt,
   restoreDefaultPrompts,
