@@ -29,7 +29,7 @@ import {
   writeJson,
   writeText,
 } from '../../lib/path'
-import { getDefaultGlobalPrompts } from '../ai'
+import { ensureDefaultPromptFiles, getDefaultGlobalPrompts } from '../ai'
 import {
   getBundledResourcesPath,
   getCommandsConfig,
