@@ -1,5 +1,4 @@
-import type React from 'react'
-import { useRef } from 'react'
+import React, { useRef } from 'react'
 import { AppOperation } from '../../../lib/constants/app'
 import type { LeafNode } from '../../../lib/constants/types'
 
@@ -25,6 +24,20 @@ const Tile: React.FC<TileProps> = ({ node }) => {
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
+  // Listen for activation requests from within the view (iframe)
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (
+        event.data?.type === 'aynite:tile-activate' &&
+        event.source === iframeRef.current?.contentWindow
+      ) {
+        setActiveTileId(id)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [id, setActiveTileId])
+
   const viewOptions = availableViews.map((v) => ({ id: v.id, label: v.name }))
 
   const handleSelectView = (selectedUrl: string) => {
@@ -48,13 +61,16 @@ const Tile: React.FC<TileProps> = ({ node }) => {
   ]
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: Tile container needs to catch clicks for activation
     <div
       id={id}
+      role="presentation"
       className={cn(
         'tile relative group border-2',
         isActive ? 'border-primary z-10' : 'border-tile-border',
       )}
       style={{ flex: `${size} 1 0%` }}
+      onMouseDown={() => setActiveTileId(id)}
     >
       <div
         className={cn(
@@ -125,13 +141,6 @@ const Tile: React.FC<TileProps> = ({ node }) => {
             <div className="text-[13px] font-medium opacity-10">Empty Tile</div>
           </div>
         )}
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: Overlay catches clicks for tile activation */}
-        <div
-          role="presentation"
-          className="absolute inset-0 appearance-none border-none bg-transparent p-0 m-0 cursor-pointer"
-          style={{ pointerEvents: isActive ? 'none' : 'auto' }}
-          onMouseDown={() => setActiveTileId(id)}
-        />
       </div>
     </div>
   )

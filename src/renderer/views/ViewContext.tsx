@@ -120,6 +120,15 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
     [loadTheme],
   )
 
+  // Report clicks to parent for tile activation
+  useEffect(() => {
+    const handleMouseDown = () => {
+      window.parent.postMessage({ type: 'aynite:tile-activate' }, '*')
+    }
+    window.addEventListener('mousedown', handleMouseDown, true)
+    return () => window.removeEventListener('mousedown', handleMouseDown, true)
+  }, [])
+
   return (
     <ViewContext.Provider value={{ themes, activeThemeId, setTheme }}>
       <div className={VIEW_CONTAINER}>{children}</div>
