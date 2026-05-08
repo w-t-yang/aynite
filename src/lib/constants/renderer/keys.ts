@@ -262,11 +262,6 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
   }
 
   if (context === 'chat' && chatApi) {
-    if (checkMatch(e, kb.app[AppOperation.SUBMIT_CHAT])) {
-      e.preventDefault()
-      chatApi.submit()
-      return
-    }
     if (isCmd && key === 'Q') {
       e.preventDefault()
       chatApi.selectAll()

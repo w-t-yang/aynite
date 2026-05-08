@@ -53,7 +53,9 @@ export async function listSessions() {
         )
         if (content && Array.isArray(content)) {
           const firstUser = content.find((m) => m.role === 'user')
-          const text = (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') || 'Untitled Chat'
+          const text =
+            (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') ||
+            'Untitled Chat'
 
           all.push({
             id,
@@ -82,13 +84,13 @@ export async function aiChat({
 }) {
   const requestId = Math.random().toString(36).slice(2, 10)
   const model = getAIModel(config)
-  const toolContext = (global as any).toolContext || {}
-    ; (global as any).toolContext = toolContext
-
   try {
+    const toolContext = {
+      workspaceFolders,
+      activeFile,
+    }
     const cachedTools = createTools(toolContext)
-    toolContext.workspaceFolders = workspaceFolders
-    toolContext.activeFile = activeFile
+    console.log('[AI Chat] Context initialized:', toolContext)
 
     const enabledTools: Record<string, any> = {}
     const toolSettings = config.enabledTools || {}
@@ -125,7 +127,12 @@ export async function aiChat({
           const text = msg.parts.map((p: any) => p.text || '').join('')
           return {
             ...msg,
-            parts: [{ type: 'text', text: `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}` }]
+            parts: [
+              {
+                type: 'text',
+                text: `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`,
+              },
+            ],
           }
         }
         return msg
@@ -133,86 +140,88 @@ export async function aiChat({
     }
 
     // Use official SDK helper to get CoreMessage[]
-    const coreMessages = await convertToModelMessages(standardizeMessages(messages))
+    const coreMessages = await convertToModelMessages(
+      standardizeMessages(messages),
+    )
 
     const toolNames = Object.keys(enabledTools)
     console.log(
       `[AI] Starting stream [${requestId}] with tools: [${toolNames.join(', ')}]`,
     )
-    
-      ; (async () => {
-        try {
-          const result = streamText({
-            model,
-            messages: coreMessages,
-            tools: enabledTools,
-            stopWhen: stepCountIs(10),
-          })
 
-          let fullResponseText = ''
-          let reasoningText = ''
-          const fullToolCalls: any[] = []
+    ;(async () => {
+      try {
+        const result = streamText({
+          model,
+          messages: coreMessages,
+          tools: enabledTools,
+          stopWhen: stepCountIs(10),
+        })
 
-          for await (const part of result.fullStream) {
-            switch (part.type) {
-              case 'text-delta':
-                fullResponseText += part.text
-                emit(part)
-                break
-              case 'reasoning-delta':
-                reasoningText += part.text
-                emit(part)
-                break
-              case 'tool-input-delta':
-                emit(part)
-                break
-              case 'tool-call':
-                fullToolCalls.push(part)
-                emit(part as any)
-                break
-              case 'tool-result':
-                emit(part as any)
-                break
-              case 'finish-step':
-                emit({
-                  type: 'finish-step',
-                  finishReason: part.finishReason,
-                  usage: part.usage,
-                })
-                break
-              case 'finish':
-                emit({ type: 'finish' })
-                break
-              case 'error':
-                emit({ type: 'error', error: String(part.error) })
-                break
-              case 'start':
-                emit({ type: 'start' })
-                break
-            }
+        let fullResponseText = ''
+        let reasoningText = ''
+        const fullToolCalls: any[] = []
+
+        for await (const part of result.fullStream) {
+          switch (part.type) {
+            case 'text-delta':
+              fullResponseText += part.text
+              emit(part)
+              break
+            case 'reasoning-delta':
+              reasoningText += part.text
+              emit(part)
+              break
+            case 'tool-input-delta':
+              emit(part)
+              break
+            case 'tool-call':
+              fullToolCalls.push(part)
+              emit(part as any)
+              break
+            case 'tool-result':
+              emit(part as any)
+              break
+            case 'finish-step':
+              emit({
+                type: 'finish-step',
+                finishReason: part.finishReason,
+                usage: part.usage,
+              })
+              break
+            case 'finish':
+              emit({ type: 'finish' })
+              break
+            case 'error':
+              emit({ type: 'error', error: String(part.error) })
+              break
+            case 'start':
+              emit({ type: 'start' })
+              break
           }
-
-          console.log(
-            `[AI] Full Response [${requestId}]:`,
-            JSON.stringify(
-              {
-                text: fullResponseText,
-                reasoning: reasoningText,
-                toolCalls: fullToolCalls,
-              },
-              null,
-              2,
-            ),
-          )
-
-          const logPath = getLogPath()
-          const logEntry = `[${new Date().toISOString()}] AI Response: ${fullResponseText.slice(0, 100)}...\n`
-          await appendText(logPath, logEntry).catch(() => { })
-        } catch (err: any) {
-          console.error('[AI Chat Stream Error]', err)
-          emit({ type: 'error', error: err.message || String(err) })
         }
-      })()
+
+        console.log(
+          `[AI] Full Response [${requestId}]:`,
+          JSON.stringify(
+            {
+              text: fullResponseText,
+              reasoning: reasoningText,
+              toolCalls: fullToolCalls,
+            },
+            null,
+            2,
+          ),
+        )
+
+        const logPath = getLogPath()
+        const logEntry = `[${new Date().toISOString()}] AI Response: ${fullResponseText.slice(0, 100)}...\n`
+        await appendText(logPath, logEntry).catch(() => {})
+      } catch (err: any) {
+        console.error('[AI Chat Stream Error]', err)
+        emit({ type: 'error', error: err.message || String(err) })
+      }
+    })()
 
     return { requestId }
   } catch (error: any) {

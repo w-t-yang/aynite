@@ -1,4 +1,4 @@
-import { app, ipcMain, net, protocol, shell } from 'electron'
+import { app, clipboard, ipcMain, net, protocol, shell } from 'electron'
 import {
   exists,
   expandHome,
@@ -95,11 +95,22 @@ export function setupSystemIpc() {
   ipcMain.handle(SystemChannels.VIEW_LIST, async () => {
     return await getAvailableViews()
   })
-  ipcMain.handle(SystemChannels.TILE_ACTIVATE, (_event, tileId: string) => {
-    // Broadcast to all windows (renderer process will handle it)
-    sendAppEvent(AppEvents.TILE_ACTIVATED, tileId)
-    return true
-  })
+
+  ipcMain.handle(
+    SystemChannels.TILE_ACTIVATE,
+    async (_event, tileId: string) => {
+      sendAppEvent(AppEvents.TILE_ACTIVATED, tileId)
+      return true
+    },
+  )
+
+  ipcMain.handle(
+    SystemChannels.CLIPBOARD_WRITE_TEXT,
+    (_event, text: string) => {
+      clipboard.writeText(text)
+      return true
+    },
+  )
 }
 
 export function setupProtocol() {

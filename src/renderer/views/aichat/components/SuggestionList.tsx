@@ -75,6 +75,7 @@ export const SuggestionList = forwardRef<
       label: item.name || item.label,
       subtitle: item.error ? `Error: ${item.error}` : item.subtitle,
       icon,
+      subtitleClassName: 'text-[10px] opacity-40 leading-tight mt-0.5',
     }
   })
 

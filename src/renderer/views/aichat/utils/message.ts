@@ -6,13 +6,37 @@ export function genId(): string {
 }
 
 /**
- * Helper to get text content from a UIMessage for legacy components.
+ * Helper to get text content from a ChatMessage for copying/exporting.
+ * Includes all part types (text, reasoning, tools) formatted for readability.
  */
 export function getMessageText(msg: ChatMessage): string {
-  return msg.parts
-    .filter((p): p is any => p.type === 'text')
-    .map((p) => p.text)
-    .join('')
+  const role = msg.role.toUpperCase()
+  const parts = msg.parts || []
+  const content = parts
+    .map((p: any) => {
+      switch (p.type) {
+        case 'text':
+          return p.text
+        case 'reasoning':
+          return `\n[Thinking]\n${p.text}\n`
+        case 'dynamic-tool':
+        case 'tool-call':
+        case 'tool-result': {
+          const name = p.toolName || 'tool'
+          const state = p.state || ''
+          const input = p.input
+            ? `\nInput: ${typeof p.input === 'string' ? p.input : JSON.stringify(p.input, null, 2)}`
+            : ''
+          const output = p.output ? `\nOutput:\n${p.output}` : ''
+          return `\n[Tool: ${name}${state ? ` (${state})` : ''}]${input}${output}\n`
+        }
+        default:
+          return ''
+      }
+    })
+    .join('\n')
+
+  return `[${role}]\n${content.trim()}`
 }
 
 export function appendToAssistant(
@@ -79,11 +103,14 @@ export function appendPartToAssistant(
   const last = prev[prev.length - 1]
   if (last && last.role === 'assistant') {
     const parts = [...(last.parts || [])]
-    
+
     // Find if we already have this tool call in parts
-    const existingIdx = parts.findIndex(p => 
-       ((p.type as string) === 'tool' || (p.type as string).startsWith('tool-') || (p.type as string) === 'dynamic-tool') && 
-       (p as any).toolCallId === part.toolCallId
+    const existingIdx = parts.findIndex(
+      (p) =>
+        ((p.type as string) === 'tool' ||
+          (p.type as string).startsWith('tool-') ||
+          (p.type as string) === 'dynamic-tool') &&
+        (p as any).toolCallId === part.toolCallId,
     )
 
     const uiPart: any = {
@@ -119,14 +146,17 @@ export function appendPartToAssistant(
     {
       id: genId(),
       role: 'assistant',
-      parts: [{
-        type: 'dynamic-tool',
-        toolCallId: part.toolCallId,
-        toolName: part.toolName,
-        state: part.type === 'tool-call' ? 'input-available' : 'output-available',
-        input: (part as any).args,
-        output: (part as any).result
-      } as any],
+      parts: [
+        {
+          type: 'dynamic-tool',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          state:
+            part.type === 'tool-call' ? 'input-available' : 'output-available',
+          input: (part as any).args,
+          output: (part as any).result,
+        } as any,
+      ],
       createdAt: new Date(),
     } as UIMessage,
   ]
@@ -140,12 +170,17 @@ export function appendToolInputDeltaToAssistant(
   const last = prev[prev.length - 1]
   if (last && last.role === 'assistant') {
     const parts = [...(last.parts || [])]
-    const idx = parts.findIndex(p => (p as any).toolCallId === id)
+    const idx = parts.findIndex((p) => (p as any).toolCallId === id)
 
     if (idx !== -1) {
       const p = parts[idx] as any
-      const currentInput = typeof p.input === 'string' ? p.input : JSON.stringify(p.input || '')
-      parts[idx] = { ...p, input: currentInput + delta, state: 'input-streaming' }
+      const currentInput =
+        typeof p.input === 'string' ? p.input : JSON.stringify(p.input || '')
+      parts[idx] = {
+        ...p,
+        input: currentInput + delta,
+        state: 'input-streaming',
+      }
       return [...prev.slice(0, -1), { ...last, parts }]
     }
   }
@@ -154,7 +189,8 @@ export function appendToolInputDeltaToAssistant(
 
 export const isErrorMessage = (content: any) => {
   if (!content) return false
-  const c = typeof content === 'string' ? content.trim() : JSON.stringify(content)
+  const c =
+    typeof content === 'string' ? content.trim() : JSON.stringify(content)
   return (
     c.startsWith('Error:') ||
     c.startsWith('Execution Error:') ||
@@ -163,19 +199,22 @@ export const isErrorMessage = (content: any) => {
   )
 }
 
-export function findUnfulfilledToolCalls(
-  messages: ChatMessage[],
-): any[] {
+export function findUnfulfilledToolCalls(messages: ChatMessage[]): any[] {
   const allCalls: any[] = []
 
   for (const m of messages) {
     for (const p of m.parts) {
       if ((p as any).toolCallId) {
-        if ((p as any).state === 'input-available' || (p as any).state === 'input-streaming') {
-           allCalls.push(p)
+        if (
+          (p as any).state === 'input-available' ||
+          (p as any).state === 'input-streaming'
+        ) {
+          allCalls.push(p)
         } else if ((p as any).state === 'output-available') {
-           const idx = allCalls.findIndex(c => c.toolCallId === (p as any).toolCallId)
-           if (idx !== -1) allCalls.splice(idx, 1)
+          const idx = allCalls.findIndex(
+            (c) => c.toolCallId === (p as any).toolCallId,
+          )
+          if (idx !== -1) allCalls.splice(idx, 1)
         }
       }
     }

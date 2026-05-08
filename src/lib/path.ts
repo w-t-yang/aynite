@@ -163,10 +163,19 @@ export function isPathWithinDomain(
 ): boolean {
   if (!targetPath) return false
   const resolvedTarget = path.resolve(expandHome(targetPath))
-  return domainFolders.some((folder) => {
+  const result = domainFolders.some((folder) => {
     const resolvedFolder = path.resolve(expandHome(folder))
-    return resolvedTarget.startsWith(resolvedFolder)
+    return (
+      resolvedTarget === resolvedFolder ||
+      resolvedTarget.startsWith(resolvedFolder + path.sep)
+    )
   })
+  if (!result) {
+    console.warn(
+      `[isPathWithinDomain] Access denied: "${resolvedTarget}" is not within any of [${domainFolders.join(', ')}]`,
+    )
+  }
+  return result
 }
 
 export function expandHome(filePath: string): string {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Header, InputArea, List, SessionsModal } from './components'
 import { useAIChat } from './hooks/useAIChat'
 import { getMessageText } from './utils/message'
@@ -10,6 +10,7 @@ export function AIChat() {
     loading,
     currentStep,
     pendingApproval,
+    workspaceFolders,
     inputRef,
     handleApprove,
     handleReject,
@@ -30,7 +31,7 @@ export function AIChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, loading])
+  }, [])
 
   // Global actions for micro-app bridge
   useEffect(() => {
@@ -85,6 +86,20 @@ export function AIChat() {
     setSessionId,
   ])
 
+  const getFiles = useCallback(
+    (path: string) => window.aynite.listFolder(path),
+    [],
+  )
+  const getAllFiles = useCallback(() => window.aynite.workspaceAllFiles(), [])
+  const getAvailableSkills = useCallback(
+    () => window.aynite.getAvailableSkills(),
+    [],
+  )
+  const getAvailableCommands = useCallback(
+    () => window.aynite.getAvailableCommands(),
+    [],
+  )
+
   return (
     <div className="chat-panel flex flex-col h-full bg-card relative overflow-hidden">
       <div className="absolute inset-0 bg-ambient-gradient z-base opacity-40" />
@@ -97,6 +112,14 @@ export function AIChat() {
           setShowHistory(true)
         }}
         onClear={clearChat}
+        onCopy={() => {
+          try {
+            const text = messages.map((m) => getMessageText(m)).join('\n\n')
+            copyToClipboard(text)
+          } catch (e) {
+            console.error('[AIChat] Failed to serialize session for copy:', e)
+          }
+        }}
       />
 
       <List
@@ -114,17 +137,15 @@ export function AIChat() {
 
       <InputArea
         ref={inputRef}
+        workspaceFolders={workspaceFolders}
         loading={loading}
-        copied={false}
         onSend={sendMessage}
         onAbort={() => {}}
         onClear={clearChat}
-        onCopyHistory={() =>
-          copyToClipboard(messages.map((m) => getMessageText(m)).join('\n\n'))
-        }
-        getFiles={(path) => window.aynite.listFolder(path)}
-        getAvailableSkills={() => window.aynite.getAvailableSkills()}
-        getAvailableCommands={() => window.aynite.getAvailableCommands()}
+        getFiles={getFiles}
+        getAllFiles={getAllFiles}
+        getAvailableSkills={getAvailableSkills}
+        getAvailableCommands={getAvailableCommands}
       />
 
       {showHistory && (

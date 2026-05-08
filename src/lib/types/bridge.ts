@@ -30,7 +30,6 @@ export interface SidebarAPI {
 }
 
 export interface ChatAPI {
-  submit: () => void
   selectAll: () => void
 }
 

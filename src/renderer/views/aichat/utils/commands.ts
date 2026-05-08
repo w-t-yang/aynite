@@ -32,11 +32,13 @@ export async function executeCommandOnly(
       params,
       currentFile: activeTabPath,
     })
-    const output = [res.stdout, res.stderr].filter(Boolean).join('\n').trim() || '(No output)'
-    const commandStr = `${name} ${params.join(' ')}`
-    
+    const output =
+      [res.stdout, res.stderr].filter(Boolean).join('\n').trim() ||
+      '(No output)'
+    const _commandStr = `${name} ${params.join(' ')}`
+
     // Format command result into text parts to comply with SDK v6 schema
-    const formattedText = `${text}\n\n> Command: ${commandStr}\n${output}`
+    const formattedText = `${text}\n\n${output}`
 
     setMessages([
       ...messages,
@@ -49,8 +51,8 @@ export async function executeCommandOnly(
     ])
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : String(e)
-    const commandStr = `${name} ${params.join(' ')}`
-    const formattedText = `${text}\n\n> Command: ${commandStr}\nError: ${errorMsg}`
+    const _commandStr = `${name} ${params.join(' ')}`
+    const formattedText = `${text}\n\nError: ${errorMsg}`
 
     setMessages([
       ...messages,

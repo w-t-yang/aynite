@@ -5,10 +5,10 @@ import type {
   ChatMessage,
   CommandResultPart,
   LocalCommandMessage,
-  StreamPart
+  StreamPart,
 } from '../../../../lib/types/chat'
 import type { SettingsState } from '../../../shared/lib/types'
-import { useAppEvent, useAppEventSubscriber } from '../../../views/ViewContext'
+import { useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
 import { type AgentLoopConfig, runAgentLoop } from '../utils/agent'
 import { executeCommandOnly } from '../utils/commands'
@@ -58,9 +58,7 @@ export function useAIChat() {
         aiTools: resTools?.active || prev.aiTools,
         prompts: resPrompts || prev.prompts,
       }))
-    } catch (e) {
-      console.error('[AIChat] Failed to load settings:', e)
-    }
+    } catch (_e) {}
   }, [])
 
   const loadWorkspaceFolders = useCallback(async () => {
@@ -95,8 +93,6 @@ export function useAIChat() {
     }
   })
 
-  useAppEvent(AppEvents.SUBMIT_CHAT, () => inputRef.current?.submit())
-
   useEffect(() => {
     const lastSession = localStorage.getItem('lastSession')
     if (lastSession) {
@@ -108,9 +104,7 @@ export function useAIChat() {
             setSessionId(id || null)
           }
         })
-      } catch (e) {
-        console.error('Failed to load last session from localStorage', e)
-      }
+      } catch (_e) {}
     }
   }, [])
 
@@ -131,9 +125,7 @@ export function useAIChat() {
       const timer = setTimeout(async () => {
         try {
           await window.aynite.saveSession(sessionId, messages)
-        } catch (err) {
-          console.error('[AIChat] Failed to auto-save session:', err)
-        }
+        } catch (_err) {}
       }, 1000)
       return () => clearTimeout(timer)
     }
@@ -166,6 +158,16 @@ export function useAIChat() {
     settingsRef.current = settings
   }, [settings])
 
+  const workspaceFoldersRef = useRef(workspaceFolders)
+  useEffect(() => {
+    workspaceFoldersRef.current = workspaceFolders
+  }, [workspaceFolders])
+
+  const activeTabPathRef = useRef(activeTabPath)
+  useEffect(() => {
+    activeTabPathRef.current = activeTabPath
+  }, [activeTabPath])
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || loadingRef.current) return
@@ -176,7 +178,7 @@ export function useAIChat() {
       if (
         await executeCommandOnly(
           text,
-          activeTabPath,
+          activeTabPathRef.current,
           messagesRef.current,
           setMessages,
           setLoading,
@@ -200,7 +202,7 @@ export function useAIChat() {
             const res = await window.aynite.runDirectCommand({
               commandPath: path,
               params: [],
-              currentFile: activeTabPath,
+              currentFile: activeTabPathRef.current,
             })
             commandResults.push({
               name,
@@ -258,7 +260,7 @@ export function useAIChat() {
         })
       }
 
-      let initialMessages = [...messagesRef.current]
+      const initialMessages = [...messagesRef.current]
       if (initialMessages.length === 0) {
         const globalPromptFiles = settingsRef.current.prompts?.files || []
         const systemPrompt = await window.aynite.getMergedSystemPrompt(
@@ -282,7 +284,7 @@ export function useAIChat() {
         createdAt: new Date(),
       }
       if (results.length > 0) {
-        (userMsg as LocalCommandMessage).commandResults = results
+        ;(userMsg as LocalCommandMessage).commandResults = results
       }
 
       const updatedMessages = [...initialMessages, userMsg]
@@ -306,7 +308,7 @@ export function useAIChat() {
         const resultHistory = await runAgentLoop(
           updatedMessages,
           agentConfig,
-          workspaceFolders,
+          workspaceFoldersRef.current,
           (event: StreamPart) => {
             setCurrentStep(event)
             switch (event.type) {
@@ -335,7 +337,9 @@ export function useAIChat() {
                   {
                     id: genId(),
                     role: 'assistant',
-                    parts: [{ type: 'text', text: `**Error**: ${event.error}` }],
+                    parts: [
+                      { type: 'text', text: `**Error**: ${event.error}` },
+                    ],
                     createdAt: new Date(),
                   },
                 ])
@@ -345,7 +349,7 @@ export function useAIChat() {
                 break
             }
           },
-          activeTabPath,
+          activeTabPathRef.current,
           abort.signal,
           subscribeToAppEvents,
         )
@@ -356,7 +360,12 @@ export function useAIChat() {
           {
             id: genId(),
             role: 'assistant',
-            parts: [{ type: 'text', text: `❌ **System Error**: ${e instanceof Error ? e.message : String(e)}` }],
+            parts: [
+              {
+                type: 'text',
+                text: `❌ **System Error**: ${e instanceof Error ? e.message : String(e)}`,
+              },
+            ],
             createdAt: new Date(),
           },
         ])
@@ -366,7 +375,7 @@ export function useAIChat() {
         abortRef.current = null
       }
     },
-    [workspaceFolders, activeTabPath, subscribeToAppEvents],
+    [subscribeToAppEvents],
   )
 
   const clearChat = useCallback(() => {
@@ -377,9 +386,9 @@ export function useAIChat() {
   }, [])
 
   const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard
-      .writeText(text)
-      .catch((err) => console.error('Failed to copy', err))
+    window.aynite
+      .writeClipboard(text)
+      .catch((err) => console.error('[useAIChat] Failed to copy', err))
   }, [])
 
   const revertToMessage = useCallback((id: string) => {
@@ -396,6 +405,7 @@ export function useAIChat() {
     loading,
     currentStep,
     pendingApproval,
+    workspaceFolders,
     inputRef,
     abortRef,
     handleApprove,

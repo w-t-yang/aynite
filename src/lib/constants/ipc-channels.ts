@@ -75,6 +75,7 @@ export const SystemChannels = {
   WINDOW_CLOSE: 'aynite:window-close',
   CLIPBOARD_COPY: 'aynite:file-clipboard-copy',
   CLIPBOARD_PASTE: 'aynite:file-clipboard-paste',
+  CLIPBOARD_WRITE_TEXT: 'aynite:clipboard-write-text',
   VIEW_LIST: 'aynite:system-view-list',
   TILE_ACTIVATE: 'aynite:layout-tile-activate',
 } as const

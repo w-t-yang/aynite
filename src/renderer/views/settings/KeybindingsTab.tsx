@@ -182,15 +182,6 @@ export function KeybindingsTab({ state, actions }: KeybindingsTabProps) {
                   handleKeybindingChange('app', AppOperation.FOCUS_COMMANDS, v)
                 }
               />
-              <KeybindingRow
-                label="Submit Chat"
-                value={formatKeybinding(
-                  keybindings.app[AppOperation.SUBMIT_CHAT],
-                )}
-                onChange={(v) =>
-                  handleKeybindingChange('app', AppOperation.SUBMIT_CHAT, v)
-                }
-              />
             </div>
           </Section>
         </div>

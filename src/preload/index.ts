@@ -121,6 +121,8 @@ const aynite = {
   joinPath: (...paths: string[]) => paths.join('/'),
   dirname: (p: string) => p.split('/').slice(0, -1).join('/') || '.',
   platform: process.platform,
+  writeClipboard: (text: string) =>
+    ipcRenderer.invoke(SystemChannels.CLIPBOARD_WRITE_TEXT, text),
 }
 
 // ─── Expose bridge ─────────────────────────────────────────────────────────

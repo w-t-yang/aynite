@@ -1,3 +1,4 @@
+import { Extension } from '@tiptap/core'
 import Mention from '@tiptap/extension-mention'
 import Placeholder from '@tiptap/extension-placeholder'
 import { EditorContent, useEditor } from '@tiptap/react'
@@ -14,11 +15,7 @@ import type { ChatInputHandle } from '../../../../lib/types/ui'
 import { Button } from '../../../shared/basic/Button'
 import type { Keybinding } from '../../../shared/lib/types'
 import type { SuggestionItem } from '../utils/input'
-import {
-  createSuggestion,
-  flattenWorkspaceFiles,
-  serializeTiptapToText,
-} from '../utils/input'
+import { createSuggestion, serializeTiptapToText } from '../utils/input'
 
 export type { ChatInputHandle }
 
@@ -31,11 +28,13 @@ interface InputEditorProps {
   disabled?: boolean
   workspaceFolders?: string[]
   focusKeybinding?: Keybinding
-  submitKeybinding?: Keybinding
   // API Props for indexing
   getFiles: (
     path: string,
   ) => Promise<{ path: string; name: string; isDirectory: boolean }[]>
+  getAllFiles: () => Promise<
+    { path: string; name: string; isDirectory: boolean }[]
+  >
   getAvailableSkills: () => Promise<
     { name: string; path: string; error?: string }[]
   >
@@ -57,8 +56,8 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       disabled,
       workspaceFolders = EMPTY_ARRAY,
       focusKeybinding: _focusKeybinding,
-      submitKeybinding,
       getFiles,
+      getAllFiles,
       getAvailableSkills,
       getAvailableCommands,
     },
@@ -151,8 +150,23 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
             ),
           ),
         }),
+        Extension.create({
+          name: 'submitHandler',
+          addKeyboardShortcuts() {
+            return {
+              Enter: () => {
+                if (loading) return false
+                const text = serializeTiptapToText(this.editor.getJSON())
+                if (!text.trim()) return false
+                onSend(text)
+                this.editor.commands.clearContent()
+                return true
+              },
+            }
+          },
+        }),
       ],
-      [BaseMention, placeholder],
+      [BaseMention, placeholder, loading, onSend],
     )
 
     // Unified effect for indexing workspace files, skills, and commands
@@ -171,10 +185,31 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
         // 2. Index Files
         if (workspaceFolders.length > 0) {
           try {
-            const items = await flattenWorkspaceFiles(
-              workspaceFolders,
-              getFiles,
-            )
+            const files = await getAllFiles()
+            const items = (files || []).map((file: any) => {
+              const parts = file.path.split(/[/\\]/)
+              const name = file.name
+              const parent = parts[parts.length - 2] || ''
+
+              // Find which workspace folder this file belongs to for the label
+              const rootFolder =
+                workspaceFolders.find((f) => file.path.startsWith(f)) || ''
+              const rootName = rootFolder.split(/[/\\]/).pop() || ''
+              const relativePath = file.path
+                .replace(rootFolder, '')
+                .replace(/^[/\\]/, '')
+
+              return {
+                id: file.path,
+                label: relativePath ? `${rootName}/${relativePath}` : rootName,
+                name: name,
+                subtitle: parent
+                  ? `${rootName}/.../${parent}/`
+                  : `(Root: ${rootName})`,
+                isDirectory: file.isDirectory,
+              }
+            })
+
             if (isMounted) {
               fileItemsRef.current = items
               setFileItems(items)
@@ -224,20 +259,12 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       return () => {
         isMounted = false
       }
-    }, [workspaceFolders, getAvailableCommands, getFiles, getAvailableSkills])
-
-    const checkMatch = useCallback((e: KeyboardEvent, kb?: Keybinding) => {
-      if (!kb) return false
-      const isDarwin =
-        window.navigator.platform.toUpperCase().indexOf('MAC') >= 0
-      return (
-        !!kb.ctrl === (e.ctrlKey || (!isDarwin && e.metaKey)) &&
-        !!kb.meta === (isDarwin ? e.metaKey : false) &&
-        !!kb.shift === e.shiftKey &&
-        !!kb.alt === e.altKey &&
-        e.key.toUpperCase() === kb.key.toUpperCase()
-      )
-    }, [])
+    }, [
+      workspaceFolders,
+      getAvailableCommands,
+      getAllFiles,
+      getAvailableSkills,
+    ])
 
     const editor = useEditor(
       {
@@ -265,23 +292,6 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       editor.commands.clearContent()
     }, [editor, disabled, onSend])
 
-    // Handle submit keybinding
-    useEffect(() => {
-      if (!editor) return
-      editor.setOptions({
-        editorProps: {
-          handleKeyDown: (_view, event) => {
-            if (checkMatch(event, submitKeybinding)) {
-              event.preventDefault()
-              handleSubmit()
-              return true
-            }
-            return false
-          },
-        },
-      })
-    }, [editor, handleSubmit, checkMatch, submitKeybinding])
-
     // Update editable when disabled changes
     useEffect(() => {
       if (editor) {
@@ -302,7 +312,6 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
         editor.commands.clearContent()
         editor.commands.insertContent(prefix)
       },
-      submit: () => handleSubmit(),
     }))
 
     return (
