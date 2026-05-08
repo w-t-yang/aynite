@@ -242,13 +242,13 @@
   }
 
   .splitter {
-    @apply relative z-[100] transition-colors duration-200 bg-transparent;
+    @apply relative z-[200] transition-colors duration-200 bg-transparent;
   }
 
   /* Larger hit area for splitters */
   .splitter::after {
     content: "";
-    @apply absolute inset-[-4px] z-[101];
+    @apply absolute inset-[-4px] z-[201];
   }
 
   .splitter.horizontal {

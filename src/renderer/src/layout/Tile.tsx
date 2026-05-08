@@ -54,7 +54,8 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       role="presentation"
       className={cn(
         'tile relative group border-2',
-        isActive ? 'border-primary z-10' : 'border-tile-border',
+        isActive ? 'border-primary' : 'border-tile-border',
+        isResizing && 'pointer-events-none select-none',
       )}
       style={{ flex: `${size} 1 0%` }}
       onMouseDown={() => setActiveTileId(id)}

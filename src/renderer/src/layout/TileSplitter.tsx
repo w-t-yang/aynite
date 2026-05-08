@@ -55,8 +55,9 @@ const TileSplitter: React.FC<TileSplitterProps> = ({
     <hr
       onMouseDown={handleMouseDown}
       tabIndex={-1}
-      aria-valuenow={0}
-      className={`splitter ${direction} border-none m-0 p-0`}
+      aria-orientation={direction}
+      className={`splitter ${direction} border-none m-0 p-0 flex-shrink-0 z-[200]`}
+      style={{ flex: '0 0 auto' }}
     />
   )
 }
