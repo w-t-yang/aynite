@@ -20,6 +20,8 @@ export async function listAvailableCommands() {
 }
 
 export async function restoreDefaultCommands() {
+  const defaultDir = getCommandsDir()
+  await saveCommandsConfig({ folders: [defaultDir] })
   return restoreDefaultSpells('commands', ['hello-command'], (name) =>
     getCommandPath(name),
   )

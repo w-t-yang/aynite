@@ -20,9 +20,11 @@ export async function listAvailableSkills() {
 }
 
 export async function restoreDefaultSkills() {
+  const defaultDir = getSkillsDir()
+  await saveSkillsConfig({ folders: [defaultDir] })
   return restoreDefaultSpells(
     'skills',
-    ['skill-creator', 'command-creator', 'hello-skill'],
+    ['skill-creator', 'command-creator', 'hello-skill', 'theme-creator'],
     (name) => getSkillPath(name),
   )
 }
