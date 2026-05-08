@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { DESCRIPTION_TEXT } from '../../../lib/constants/renderer/styles'
 import { Input } from '../basic/Input'
-import type { AIProviderInstance } from '../lib/types'
+import type { AIProvider } from '../lib/types'
 import {
   DeleteItemModal,
   EditableCardFrame,
@@ -10,7 +10,7 @@ import {
 import { SelectionMenu } from './SelectionMenu'
 
 interface AIProviderCardProps {
-  provider: AIProviderInstance
+  provider: AIProvider
   isActive: boolean
   onSetActive: (id: string) => void
   onUpdate: (id: string, field: string, value: any) => void
@@ -78,8 +78,8 @@ export function AIProviderCard({
           <div className="col-span-2">
             <Input
               label="Base URL"
-              value={provider.url || ''}
-              onChange={(e) => onUpdate(provider.id, 'url', e.target.value)}
+              value={provider.baseUrl || ''}
+              onChange={(e) => onUpdate(provider.id, 'baseUrl', e.target.value)}
               placeholder={
                 provider.provider === 'ollama'
                   ? 'http://localhost:11434'

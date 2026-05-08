@@ -1,3 +1,4 @@
+import type { AIProvider } from '../../../../lib/types/ai'
 import type {
   ChatMessage,
   StreamPart,
@@ -6,12 +7,7 @@ import type {
 } from '../../../../lib/types/chat'
 import { genId } from './message'
 
-export interface AgentConfig {
-  provider: string
-  apiKey: string
-  baseUrl: string
-  model: string
-  compatibility?: string
+export interface AgentLoopConfig extends AIProvider {
   enabledTools?: Record<string, boolean>
   agentPromptFiles?: string[]
 }
@@ -19,7 +15,7 @@ export interface AgentConfig {
 export async function runAgentLoop(
   userText: string,
   fullHistory: ChatMessage[],
-  config: AgentConfig,
+  config: AgentLoopConfig,
   workspaceFolders: string[],
   onEvent: (event: StreamPart) => void,
   _requestApproval: (command: string, cwd: string) => Promise<boolean>,
@@ -72,7 +68,7 @@ export async function runAgentLoop(
           id: 'temp',
           name: 'Temp',
           provider: config.provider,
-          url: config.baseUrl,
+          baseUrl: config.baseUrl,
           apiKey: config.apiKey,
           model: config.model,
           compatibility: config.compatibility,

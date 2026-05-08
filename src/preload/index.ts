@@ -109,9 +109,9 @@ const aynite = {
    * Internal app operations listener.
    * Used for operations that should NOT be broadcasted to iframes (e.g. layout actions, keyboard shortcuts).
    */
-  onAppOperation: (callback: (operation: string) => void) => {
-    const listener = (_: any, operation: string) => {
-      callback(operation)
+  onAppOperation: (callback: (operation: string, data?: unknown) => void) => {
+    const listener = (_: any, operation: string, data?: unknown) => {
+      callback(operation, data)
     }
     ipcRenderer.on(AppOperationChannel, listener)
     return () => ipcRenderer.removeListener(AppOperationChannel, listener)

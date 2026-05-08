@@ -8,7 +8,7 @@ import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
 import { AIProviderCard } from '../../shared/featured/AIProviderCard'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
-import type { AIProviderInstance, SettingsState } from '../../shared/lib/types'
+import type { AIProvider, SettingsState } from '../../shared/lib/types'
 
 interface AITabProps {
   state: {
@@ -25,7 +25,7 @@ export function AITab({ state, actions }: AITabProps) {
   const { setAI } = actions
 
   const handleUpdateProvider = (id: string, field: string, value: any) => {
-    const providers = (ai.providers || []).map((p: AIProviderInstance) => {
+    const providers = (ai.providers || []).map((p: AIProvider) => {
       if (p.id !== id) return p
 
       const updated = {
@@ -39,10 +39,10 @@ export function AITab({ state, actions }: AITabProps) {
         // If provider changed, also update the model and URL to its default
         if (field === 'provider') {
           updated.model = DEFAULT_PROVIDER_MODELS[value] || updated.model
-          updated.url =
+          updated.baseUrl =
             DEFAULT_PROVIDER_URLS[value] !== undefined
               ? DEFAULT_PROVIDER_URLS[value]
-              : updated.url
+              : updated.baseUrl
         }
 
         const providerLabel: Record<string, string> = {
@@ -69,11 +69,11 @@ export function AITab({ state, actions }: AITabProps) {
 
   const handleAddProvider = () => {
     const id = `provider-${Date.now()}`
-    const newProvider: AIProviderInstance = {
+    const newProvider: AIProvider = {
       id,
       name: 'New Provider',
       provider: 'openai',
-      url: '',
+      baseUrl: '',
       apiKey: '',
       model: '',
     }
@@ -83,7 +83,7 @@ export function AITab({ state, actions }: AITabProps) {
 
   const handleDeleteProvider = (id: string) => {
     const providers = (ai.providers || []).filter(
-      (p: AIProviderInstance) => p.id !== id,
+      (p: AIProvider) => p.id !== id,
     )
     let activeId = ai.activeId
     if (activeId === id) activeId = providers[0]?.id || ''
@@ -108,7 +108,7 @@ export function AITab({ state, actions }: AITabProps) {
     >
       <Section title="Configured Providers">
         <div className="space-y-6">
-          {(ai.providers || []).map((provider: AIProviderInstance) => (
+          {(ai.providers || []).map((provider: AIProvider) => (
             <AIProviderCard
               key={provider.id}
               provider={provider}

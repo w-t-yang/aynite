@@ -74,7 +74,7 @@ export async function aiChat({
   activeFile,
 }: {
   messages: ChatMessage[]
-  config: AIProvider
+  config: AIProvider & { enabledTools?: Record<string, boolean> }
   workspaceFolders: string[]
   activeFile?: string
 }) {

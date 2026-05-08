@@ -5,7 +5,7 @@ import type { StreamPart } from '../../../../lib/types/chat'
 import type { ChatMessage, SettingsState } from '../../../shared/lib/types'
 import { useAppEvent, useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
-import { type AgentConfig, runAgentLoop } from '../utils/agent'
+import { type AgentLoopConfig, runAgentLoop } from '../utils/agent'
 import { executeCommandOnly } from '../utils/commands'
 import {
   appendPartToAssistant,
@@ -226,10 +226,12 @@ export function useAIChat() {
       )
       const agentPromptFiles = activeAgent?.promptFiles || []
 
-      const agentConfig: AgentConfig = {
+      const agentConfig: AgentLoopConfig = {
+        id: activeProvider?.id || 'chat',
+        name: activeProvider?.name || 'Chat',
         provider: activeProvider?.provider || 'ollama',
         apiKey: activeProvider?.apiKey || '',
-        baseUrl: activeProvider?.url || '',
+        baseUrl: activeProvider?.baseUrl || '',
         model: activeProvider?.model || '',
         compatibility: activeProvider?.compatibility,
         enabledTools: settingsRef.current.aiTools,

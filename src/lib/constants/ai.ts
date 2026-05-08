@@ -146,7 +146,7 @@ export const DEFAULT_AI_CONFIG = {
       id: 'default-ollama',
       name: `Ollama - ${DEFAULT_PROVIDER_MODELS.ollama}`,
       provider: 'ollama' as const,
-      url: DEFAULT_PROVIDER_URLS.ollama,
+      baseUrl: DEFAULT_PROVIDER_URLS.ollama,
       model: DEFAULT_PROVIDER_MODELS.ollama,
       contextWindow: 8192,
     },

@@ -2,6 +2,7 @@ import type React from 'react'
 import { AppProvider, useApp } from './AppContext'
 import TileNode from './layout/TileNode'
 import TitleBar from './layout/TitleBar'
+import { NotificationProvider } from './NotificationProvider'
 
 const AppContent: React.FC = () => {
   const { workspaceConfig } = useApp()
@@ -30,6 +31,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => (
   <AppProvider>
     <AppContent />
+    <NotificationProvider />
   </AppProvider>
 )
 

@@ -6,9 +6,9 @@ import type { ChatMessage, StreamPart } from '../../../lib/types/chat'
 
 export type { ChatMessage, StreamPart }
 
-import type { Agent, AIProviderInstance } from '../../../lib/types/ai'
+import type { Agent, AIProvider } from '../../../lib/types/ai'
 
-export type { Agent, AIProviderInstance }
+export type { Agent, AIProvider }
 
 import type { SettingsState } from '../../../lib/types/settings'
 

@@ -1,11 +1,11 @@
 import type { KeybindingConfig } from '../constants/types'
-import type { Agent, AIProviderInstance } from './ai'
+import type { Agent, AIProvider } from './ai'
 
 export interface SettingsState {
   activeTheme: string
   ai: {
     activeId: string
-    providers: AIProviderInstance[]
+    providers: AIProvider[]
   }
   agents: {
     activeId: string

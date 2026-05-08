@@ -1,7 +1,8 @@
 import { ipcMain } from 'electron'
+import { AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
 import type { ChatMessage } from '../../lib/types/chat'
-import { showOpenDialog } from '../window'
+import { sendAppOperation, showOpenDialog } from '../window'
 import { aiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
@@ -36,6 +37,24 @@ export function setupAiIpc() {
   })
 
   ipcMain.handle(AiChannels.CHAT, async (_event, params: AiChatPayload) => {
+    const provider = params.config?.provider?.toLowerCase()
+    if (provider === 'ollama' && !params.config.baseUrl) {
+      sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+        type: 'warning',
+        title: 'Ollama URL not configured',
+        message:
+          'Using default http://localhost:11434. Set a custom URL in settings if needed.',
+      })
+    } else if (
+      (provider === 'openai' || provider === 'anthropic') &&
+      !params.config.apiKey
+    ) {
+      sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+        type: 'error',
+        title: 'API Key Missing',
+        message: `No API key configured for ${provider}. Add it in Settings > AI Providers.`,
+      })
+    }
     return await aiChat(params)
   })
 

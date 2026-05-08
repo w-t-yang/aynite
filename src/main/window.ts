@@ -77,9 +77,9 @@ export function sendAppEvent(type: string, data: any) {
   mainWindow.webContents.send(AppEventChannel, { type, data })
 }
 
-export function sendAppOperation(operation: string) {
+export function sendAppOperation(operation: string, data?: unknown) {
   if (!mainWindow) return
-  mainWindow.webContents.send(AppOperationChannel, operation)
+  mainWindow.webContents.send(AppOperationChannel, operation, data)
 }
 
 // ─── Window State & Dialog Helpers ─────────────────────────────────────────

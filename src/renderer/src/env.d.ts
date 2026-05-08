@@ -132,7 +132,9 @@ interface AyniteWindow {
   selectFile: (options?: any) => Promise<string[] | null>
   activateTile: (tileId: string) => Promise<boolean>
 
-  onAppOperation: (callback: (operation: string) => void) => () => void
+  onAppOperation: (
+    callback: (operation: string, data?: unknown) => void,
+  ) => () => void
   onAppEvent: (
     callback: (event: { type: string; data: unknown }) => void,
   ) => () => void

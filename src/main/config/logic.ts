@@ -1,6 +1,7 @@
 import {
   createDefaultAgentConfig,
   DEFAULT_AI_CONFIG,
+  DEFAULT_PROVIDER_URLS,
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import type { MainConfig } from '../../lib/constants/types'
@@ -151,6 +152,14 @@ export async function initAppFolders() {
 
 export async function loadConfig() {
   const ai = await readJson(getAIConfigPath(), DEFAULT_AI_CONFIG)
+  // Normalize provider URLs: fill in defaults for known providers that have no URL set
+  if (ai?.providers) {
+    for (const p of ai.providers) {
+      if (!p.baseUrl && DEFAULT_PROVIDER_URLS[p.provider]) {
+        p.baseUrl = DEFAULT_PROVIDER_URLS[p.provider]
+      }
+    }
+  }
   const keybindings = await readJson(
     getKeybindingsConfigPath(),
     DEFAULT_KEYBINDINGS,

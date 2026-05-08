@@ -89,7 +89,7 @@ export function Settings() {
       window.aynite.getConfig('tools'),
     ])
 
-    if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list })
+    if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.providers })
     const normalizedGlobalPrompts = resPrompts?.files || resPrompts?.list || []
     if (resAgents) {
       setAgents({ activeId: resAgents.activeId, list: resAgents.list })
@@ -174,7 +174,7 @@ export function Settings() {
     setAI(newAI)
     await window.aynite.setConfig('ai', {
       activeId: newAI.activeId,
-      list: newAI.providers,
+      providers: newAI.providers,
     })
   }
 
