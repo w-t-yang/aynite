@@ -226,11 +226,11 @@
   --font-size-xxs: var(--font-size-xxs);
 
   /* Z-Index Scale */
-  --z-base: 0;
-  --z-layout: 100;
-  --z-splitter: 200;
-  --z-popover: 1000;
-  --z-modal: 5000;
+  --z-index-base: 0;
+  --z-index-layout: 100;
+  --z-index-splitter: 200;
+  --z-index-popover: 1000;
+  --z-index-modal: 5000;
 }
 
 /* ─── Tile & Splitter Component Styles ───────────────────────────── */
