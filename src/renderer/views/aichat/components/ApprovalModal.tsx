@@ -13,7 +13,7 @@ export function ApprovalModal({
   onReject: () => void
 }) {
   return (
-    <div className="relative group/approval my-2 overflow-hidden rounded-md border border-warning/30 bg-warning/5 backdrop-blur-md shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="relative group/approval my-2 mx-8 overflow-hidden rounded-md border border-warning/30 bg-warning/5 backdrop-blur-md shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-transparent opacity-30" />
 
       <div className="relative p-3 space-y-3">

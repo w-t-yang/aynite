@@ -330,12 +330,15 @@ function UserMessage({
 }
 
 function AssistantMessage({
+  id,
   content,
   isLast,
   isStreaming,
   onCopy,
   onOpenFile,
+  onRevert,
 }: {
+  id: string
   content:
     | string
     | Array<TextPart | ReasoningPart | ToolCallPart | ToolResultPart>
@@ -343,6 +346,7 @@ function AssistantMessage({
   isStreaming: boolean
   onCopy: (t: string) => void
   onOpenFile: (p: string) => void
+  onRevert: (id: string) => void
 }) {
   const parts =
     typeof content === 'string'
@@ -397,16 +401,28 @@ function AssistantMessage({
         })}
       </div>
 
-      {!isStreaming && fullText && (
-        <div className="absolute top-1 right-8 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
+      {!isStreaming && (
+        <div className="absolute top-1 right-8 flex gap-1 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onCopy(fullText)}
+            onClick={() => onRevert(id)}
+            title="Revert to here"
             className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
           >
-            <Clipboard size={14} />
+            <RotateCcw size={14} />
           </Button>
+          {fullText && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onCopy(fullText)}
+              title="Copy response"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
+            >
+              <Clipboard size={14} />
+            </Button>
+          )}
         </div>
       )}
       <div className="h-px w-full bg-border/5" />
@@ -474,11 +490,13 @@ export const MessageItem = memo(
       case 'assistant':
         return (
           <AssistantMessage
+            id={msg.id}
             content={content as any}
             isLast={isLast}
             isStreaming={isStreaming}
             onCopy={onCopy}
             onOpenFile={onOpenFile}
+            onRevert={onRevert}
           />
         )
       case 'tool':

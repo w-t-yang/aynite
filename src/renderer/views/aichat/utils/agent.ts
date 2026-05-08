@@ -17,7 +17,6 @@ export async function runAgentLoop(
   config: AgentLoopConfig,
   workspaceFolders: string[],
   onEvent: (event: StreamPart) => void,
-  _requestApproval: (command: string, cwd: string) => Promise<boolean>,
   activeFile: string,
   abortSignal: AbortSignal,
   subscribe: (handler: (event: any) => void) => () => void,

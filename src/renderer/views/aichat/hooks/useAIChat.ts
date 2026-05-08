@@ -65,8 +65,7 @@ export function useAIChat() {
     return res || []
   }, [])
 
-  // Approval flow state
-  const approvalResolveRef = useRef<((approved: boolean) => void) | null>(null)
+  const approvalIdRef = useRef<string | null>(null)
   const [pendingApproval, setPendingApproval] = useState<{
     command: string
     cwd: string
@@ -81,6 +80,11 @@ export function useAIChat() {
     if (event.type === 'config-changed') loadSettings()
     if (event.type === 'workspace-changed') loadWorkspaceFolders()
     if (event.type === 'active-tab-changed') setActiveTabPath(event.data.path)
+    if (event.type === AppEvents.AI_APPROVAL_REQUEST) {
+      const { id, command, cwd } = event.data as any
+      approvalIdRef.current = id
+      setPendingApproval({ command, cwd })
+    }
   })
 
   useAppEvent(AppEvents.SUBMIT_CHAT, () => inputRef.current?.submit())
@@ -129,25 +133,19 @@ export function useAIChat() {
     return undefined
   }, [messages, sessionId])
 
-  const requestApproval = useCallback(
-    (command: string, cwd: string): Promise<boolean> => {
-      return new Promise((resolve) => {
-        approvalResolveRef.current = resolve
-        setPendingApproval({ command, cwd })
-      })
-    },
-    [],
-  )
-
   const handleApprove = useCallback(() => {
-    approvalResolveRef.current?.(true)
-    approvalResolveRef.current = null
+    if (approvalIdRef.current) {
+      window.aynite.respondToAiApproval(approvalIdRef.current, true)
+      approvalIdRef.current = null
+    }
     setPendingApproval(null)
   }, [])
 
   const handleReject = useCallback(() => {
-    approvalResolveRef.current?.(false)
-    approvalResolveRef.current = null
+    if (approvalIdRef.current) {
+      window.aynite.respondToAiApproval(approvalIdRef.current, false)
+      approvalIdRef.current = null
+    }
     setPendingApproval(null)
   }, [])
 
@@ -331,7 +329,6 @@ export function useAIChat() {
                 break
             }
           },
-          requestApproval,
           activeTabPath,
           abort.signal,
           subscribeToAppEvents,
@@ -353,7 +350,7 @@ export function useAIChat() {
         abortRef.current = null
       }
     },
-    [workspaceFolders, requestApproval, activeTabPath, subscribeToAppEvents],
+    [workspaceFolders, activeTabPath, subscribeToAppEvents],
   )
 
   const clearChat = useCallback(() => {

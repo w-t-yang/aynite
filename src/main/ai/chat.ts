@@ -137,7 +137,12 @@ export async function aiChat({
 
     const sanitizedMessages = standardizeMessagesForSDK(messages)
 
-    console.log(`[AI] Starting stream for requestId: ${requestId}`)
+    const toolNames = Object.keys(enabledTools)
+    const lastMsg = sanitizedMessages[sanitizedMessages.length - 1]
+    console.log(
+      `[AI] Starting stream [${requestId}] with tools: [${toolNames.join(', ')}]`,
+    )
+    console.log(`[AI] Last Message:`, JSON.stringify(lastMsg, null, 2))
     ;(async () => {
       try {
         const result = streamText({
@@ -148,7 +153,7 @@ export async function aiChat({
         })
 
         let fullResponseText = ''
-        let _fullReasoningText = ''
+        let reasoningText = ''
         const fullToolCalls: {
           toolCallId: string
           toolName: string
@@ -162,7 +167,7 @@ export async function aiChat({
               emit(part)
               break
             case 'reasoning-delta':
-              _fullReasoningText += part.text
+              reasoningText += part.text
               emit(part)
               break
             case 'tool-input-delta':
@@ -186,6 +191,7 @@ export async function aiChat({
               emit({ type: 'finish' })
               break
             case 'error':
+              console.error(`[AI] Error [${requestId}]:`, part.error)
               emit({ type: 'error', error: String(part.error) })
               break
             case 'start':
@@ -194,7 +200,18 @@ export async function aiChat({
           }
         }
 
-        console.log(`[AI] Finished stream for requestId: ${requestId}`)
+        console.log(
+          `[AI] Full Response [${requestId}]:`,
+          JSON.stringify(
+            {
+              text: fullResponseText,
+              reasoning: reasoningText,
+              toolCalls: fullToolCalls,
+            },
+            null,
+            2,
+          ),
+        )
 
         // Final log append (optional, maybe we only save on user action)
         const logPath = getLogPath()

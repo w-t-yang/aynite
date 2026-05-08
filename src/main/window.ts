@@ -122,7 +122,7 @@ export async function requestAiApproval(data: {
   if (!mainWindow) return false
 
   const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-  mainWindow.webContents.send(AiEventChannels.APPROVAL_REQUEST, {
+  sendAppEvent(AppEvents.AI_APPROVAL_REQUEST, {
     id: approvalId,
     ...data,
   })
