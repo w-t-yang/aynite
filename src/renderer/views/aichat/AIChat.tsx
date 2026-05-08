@@ -4,6 +4,7 @@ import { MOCK_MESSAGES } from '../../../lib/constants/renderer/mocks'
 import { FLEX_CENTER_GAP_3 } from '../../../lib/constants/renderer/styles'
 import { DEFAULT_SETTINGS } from '../../../lib/constants/settings'
 import type { StreamPart } from '../../../lib/types/chat'
+import { Button } from '../../shared/basic/Button'
 import { ChatMessageItem } from '../../shared/featured/advanced/ChatMessage'
 import {
   appendToAssistant,
@@ -16,6 +17,7 @@ import {
 } from '../../shared/featured/ChatInput'
 import { type AgentConfig, runAgentLoop } from '../../shared/lib/agent'
 import type { ChatMessage, SettingsState } from '../../shared/lib/types'
+import { cn } from '../../shared/lib/utils'
 import { useAppEventSubscriber } from '../../views/ViewContext'
 import { ApprovalModal, SessionsModal } from './components'
 
@@ -535,30 +537,32 @@ export function AIChat() {
 
           {/* Micro Action Bar */}
           <div className="absolute -top-8 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={copyHistoryAsJson}
               className={cn(
-                'p-1.5 rounded bg-muted/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5',
+                'p-1.5 rounded bg-muted/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 h-auto w-auto',
                 copied && 'text-green-500',
               )}
               title="Copy Chat as JSON"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               <span className="text-[9px] font-bold uppercase">JSON</span>
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => {
                 loadSessions()
                 setShowHistory(true)
               }}
-              className="p-1.5 rounded bg-muted/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5"
+              className="p-1.5 rounded bg-muted/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 h-auto w-auto"
               title="Session History"
             >
               <History size={12} />
               <span className="text-[9px] font-bold uppercase">Logs</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>

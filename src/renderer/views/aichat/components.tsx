@@ -10,6 +10,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { FLEX_CENTER_GAP_3 } from '../../../lib/constants/renderer/styles'
+import { Button } from '../../shared/basic/Button'
 import { Collapsible } from '../../shared/basic/Collapsible'
 import {
   isErrorMessage,
@@ -97,28 +98,27 @@ export function ApprovalModal({
         </div>
 
         <div className="flex gap-2 pt-1">
-          <button
-            type="button"
+          <Button
             onClick={onApprove}
-            className="flex-1 h-8 rounded bg-warning text-warning-foreground hover:bg-warning/90 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest shadow shadow-warning/10 flex items-center justify-center gap-1.5 group/btn"
+            className="flex-1 h-8 bg-warning text-warning-foreground hover:bg-warning/90 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest shadow shadow-warning/10 flex items-center justify-center gap-1.5 group/btn rounded"
           >
             <Check
               size={12}
               className="group-hover/btn:scale-110 transition-transform"
             />
             Approve
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
             onClick={onReject}
-            className="flex-1 h-8 rounded bg-muted/30 border border-border/20 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 group/btn"
+            className="flex-1 h-8 bg-muted/30 border border-border/20 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 group/btn rounded"
           >
             <X
               size={12}
               className="group-hover/btn:scale-110 transition-transform"
             />
             Reject
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -158,13 +158,14 @@ export function SessionsModal({
               </p>
             </div>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-2 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
+            className="p-2 h-8 w-8 text-muted-foreground hover:text-foreground"
           >
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -177,14 +178,14 @@ export function SessionsModal({
             </div>
           ) : (
             sessions.map((s) => (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 key={s.id}
                 onClick={() => {
                   onSelect(s.id, s.date)
                   onClose()
                 }}
-                className="w-full text-left p-3 rounded-lg hover:bg-accent/50 border border-transparent hover:border-border/30 transition-all group flex gap-4 items-start"
+                className="w-full text-left p-3 rounded-lg hover:bg-accent/50 border border-transparent hover:border-border/30 transition-all group flex gap-4 items-start h-auto"
               >
                 <div className="shrink-0 mt-1">
                   <div className="w-8 h-8 rounded bg-muted flex flex-col items-center justify-center text-[8px] font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
@@ -209,7 +210,7 @@ export function SessionsModal({
                     {s.preview || 'No content'}
                   </p>
                 </div>
-              </button>
+              </Button>
             ))
           )}
         </div>

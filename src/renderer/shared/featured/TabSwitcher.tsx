@@ -1,6 +1,7 @@
 import { FileText, Search, Settings as SettingsIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
+import { Input } from '../../shared/basic/Input'
 import {
   type SelectionItem,
   SelectionList,
@@ -140,9 +141,9 @@ function TabSwitcherWIP({
       }}
     >
       {/* Backdrop */}
-      <button
-        type="button"
-        aria-label="Close"
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: Backdrop needs to catch clicks to close */}
+      <div
+        role="presentation"
         className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default"
         onClick={onClose}
       />
@@ -152,13 +153,14 @@ function TabSwitcherWIP({
         {/* Search input */}
         <div className="p-3 border-b border-border/50 bg-accent/10 flex items-center gap-3">
           <Search size={16} className="text-muted-foreground ml-1" />
-          <input
+          <Input
             ref={inputRef}
+            unstyled
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search open tabs..."
-            className="w-full bg-transparent border-none focus:outline-none text-sm py-1 placeholder:text-muted-foreground/50"
+            className="w-full text-sm py-1"
           />
         </div>
 

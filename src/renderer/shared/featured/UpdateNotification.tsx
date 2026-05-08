@@ -1,6 +1,7 @@
 import { AlertCircle, Download, RefreshCw, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { FLEX_CENTER_GAP_3 } from '../../../lib/constants/renderer/styles'
+import { Button } from '../../shared/basic/Button'
 import { cn } from '../../shared/lib/utils'
 import { useApp } from '../../src/AppContext'
 
@@ -68,13 +69,14 @@ export function UpdateNotification() {
             </h4>
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setUpdateStatus('idle')}
-            className="p-1 hover:bg-accent rounded-md text-muted-foreground transition-colors shrink-0"
+            className="h-7 w-7 text-muted-foreground"
           >
             <X size={16} />
-          </button>
+          </Button>
         </div>
 
         {isError ? (
@@ -101,13 +103,13 @@ export function UpdateNotification() {
         )}
 
         {updateStatus === 'downloaded' && (
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={() => window.aynite.installUpdate()}
-            className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 mt-1"
+            className="w-full mt-1 shadow-lg shadow-primary/20"
           >
             <RefreshCw size={14} /> Restart and Update
-          </button>
+          </Button>
         )}
       </div>
     </div>

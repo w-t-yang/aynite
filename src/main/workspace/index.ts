@@ -5,7 +5,7 @@ import type { WorkspaceConfig } from '../../lib/constants/types'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import type { WorkspaceTab } from '../../lib/types/workspace'
 import { getIgnorePatterns } from '../config'
-import { sendAppEvent, showMessageBox, showOpenDialog } from '../window'
+import { sendAppEvent, showOpenDialog } from '../window'
 import {
   addWorkspaceFolder,
   createWorkspace,
@@ -52,22 +52,12 @@ export function setupWorkspaceIpc(): void {
     })
     if (canceled || filePaths.length === 0) return null
     const folderPath = filePaths[0]
-    try {
-      const success = await addWorkspaceFolder(folderPath)
-      if (success) {
-        const folders = await getWorkspaceFolders()
-        notifyChanged(folders)
-      }
-      return folderPath
-    } catch (e: any) {
-      await showMessageBox({
-        type: 'warning',
-        title: 'Invalid Folder',
-        message: e.message || 'Could not add folder.',
-        buttons: ['OK'],
-      })
-      return null
+    const success = await addWorkspaceFolder(folderPath)
+    if (success) {
+      const folders = await getWorkspaceFolders()
+      notifyChanged(folders)
     }
+    return folderPath
   })
 
   ipcMain.handle(WorkspaceChannels.FOLDER_LIST, async () => {

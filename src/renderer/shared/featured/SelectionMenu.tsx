@@ -3,6 +3,7 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SECTION_LABEL } from '../../../lib/constants/renderer/styles'
 import type { SelectionMenuProps } from '../../../lib/types/ui'
+import { Button } from '../basic/Button'
 import { Input } from '../basic/Input'
 import { type SelectionItem, SelectionList } from '../basic/SelectionList'
 import { cn } from '../lib/utils'
@@ -159,12 +160,13 @@ export function SelectionMenu({
             {trigger}
           </div>
         ) : (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             disabled={disabled}
             onClick={() => setInternalIsOpen(!internalIsOpen)}
             className={cn(
-              'w-full flex items-center justify-between bg-transparent border-b border-border/60 py-1.5 text-xs focus:outline-none focus:border-primary transition-all hover:border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]',
+              'w-full flex items-center justify-between bg-transparent border-b border-border/60 py-1.5 text-xs focus:outline-none focus:border-primary transition-all hover:border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px] rounded-none hover:bg-transparent px-0',
               isOpen && 'border-primary',
             )}
           >
@@ -183,7 +185,7 @@ export function SelectionMenu({
                 isOpen && 'rotate-180',
               )}
             />
-          </button>
+          </Button>
         )}
 
         {isOpen && (

@@ -8,6 +8,8 @@ import { type FileInfo, getFileCategory } from '../../../lib/file-handlers'
 import { KeyManager } from '../../../lib/key-handlers'
 import { cn } from '../../../lib/utils'
 import { useAppEvent, useView } from '../../../views/ViewContext'
+import { Button } from '../../basic/Button'
+import { Input } from '../../basic/Input'
 import { FileHandlerComponents } from './index'
 import 'prismjs/components/prism-typescript'
 import 'prismjs/components/prism-javascript'
@@ -586,18 +588,16 @@ function FileViewer({
                         Discard changes?
                       </span>
                     )}
-                    <button
-                      type="button"
+                    <Button
+                      variant={showRefreshConfirm ? 'destructive' : 'primary'}
                       onClick={handleRefresh}
                       className={cn(
-                        'px-3 py-1 rounded-sm transition-all font-medium',
-                        showRefreshConfirm
-                          ? 'bg-destructive text-destructive-foreground shadow-lg scale-105'
-                          : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                        'h-7 px-3 transition-all',
+                        showRefreshConfirm && 'scale-105',
                       )}
                     >
                       {showRefreshConfirm ? 'Confirm Refresh' : 'Refresh'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -689,26 +689,28 @@ function FileViewer({
 
         {showSearch && (
           <div className="file-viewer-search absolute top-4 right-4 z-50 bg-sidebar border border-border rounded-md shadow-lg p-2 flex items-center gap-2">
-            <input
+            <Input
               ref={searchInputRef}
+              unstyled
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search..."
-              className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:border-primary w-48"
+              className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:border-primary w-48 h-auto"
             />
             <span className="text-xs text-muted-foreground mr-2">
               {searchResults.length > 0
                 ? `${currentSearchIndex + 1}/${searchResults.length}`
                 : '0/0'}
             </span>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setShowSearch(false)}
-              className="text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground"
             >
               <Eye size={16} />
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -719,20 +721,20 @@ function FileViewer({
           {!loading && !error && canEdit && (
             <div className={FLEX_CENTER_GAP_2}>
               {isDirty && (
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={onSave}
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors mr-2"
+                  className="h-6 px-2 text-[10px] bg-primary/20 text-primary hover:bg-primary/30 transition-colors mr-2 border-none rounded"
                   title="Save File (Cmd/Ctrl + S)"
                 >
                   <Save size={12} />
                   <span>Save</span>
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors"
+                className="h-6 px-2 text-[10px] hover:bg-accent hover:text-foreground transition-colors rounded"
                 title={
                   isEditing ? 'Switch to View Mode' : 'Switch to Edit Mode'
                 }
@@ -743,7 +745,7 @@ function FileViewer({
                   <Eye size={12} />
                 )}
                 <span>{isEditing ? 'Edit' : 'View'}</span>
-              </button>
+              </Button>
             </div>
           )}
         </div>

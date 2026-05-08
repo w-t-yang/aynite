@@ -227,9 +227,19 @@ export function Treeview() {
   }
 
   const handleAddFolder = async () => {
-    const res = await window.aynite.addWorkspaceFolder()
-    if (res) {
-      await loadWorkspaceData()
+    try {
+      const res = await window.aynite.addWorkspaceFolder()
+      if (res) {
+        await loadWorkspaceData()
+      }
+    } catch (e: any) {
+      console.error('[Treeview] Failed to add folder:', e)
+      const msg = e.message || String(e)
+      // Extract the error message from Electron's remote error string if needed
+      const cleanMsg = msg.includes('Error: ')
+        ? msg.split('Error: ').pop()
+        : msg
+      ;(window as any).showToast?.(cleanMsg, 'error')
     }
   }
 

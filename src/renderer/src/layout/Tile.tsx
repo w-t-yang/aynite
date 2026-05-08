@@ -125,11 +125,11 @@ const Tile: React.FC<TileProps> = ({ node }) => {
             <div className="text-[13px] font-medium opacity-10">Empty Tile</div>
           </div>
         )}
-        <button
-          type="button"
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: Overlay catches clicks for tile activation */}
+        <div
+          role="presentation"
           className="absolute inset-0 appearance-none border-none bg-transparent p-0 m-0 cursor-pointer"
           style={{ pointerEvents: isActive ? 'none' : 'auto' }}
-          tabIndex={-1}
           onMouseDown={() => setActiveTileId(id)}
         />
       </div>
