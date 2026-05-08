@@ -80,6 +80,8 @@ const aynite = {
   selectFolder: () => ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FOLDER),
   selectFile: (options?: any) =>
     ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FILE, options),
+  activateTile: (tileId: string) =>
+    ipcRenderer.invoke(SystemChannels.TILE_ACTIVATE, tileId),
 
   // ── Theme operations ────────────────────────────────────────────────────
   getThemes: () => ipcRenderer.invoke(ThemeChannels.LIST),

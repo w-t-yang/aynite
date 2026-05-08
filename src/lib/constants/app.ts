@@ -48,6 +48,9 @@ export const AppEvents = {
   // AI
   AI_CHAT_DELTA: 'ai-chat-delta',
   AI_APPROVAL_REQUEST: 'ai-approval-request',
+
+  // Tile
+  TILE_ACTIVATED: 'tile-activated',
 } as const
 
 export const ViewOperation = {

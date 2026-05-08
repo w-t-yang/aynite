@@ -1,4 +1,4 @@
-import { app, ipcMain, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, net, protocol, shell } from 'electron'
 import {
   exists,
   expandHome,
@@ -17,7 +17,11 @@ import { getAvailableViews, getSystemFonts } from './logic'
 let clipboardPath: string | null = null
 
 // ─── Channel constants ────────────────────────────────────────────────────
-import { SystemChannels } from '../../lib/constants/ipc-channels'
+import { AppEvents } from '../../lib/constants/app'
+import {
+  AppEventChannel,
+  SystemChannels,
+} from '../../lib/constants/ipc-channels'
 
 export function setupSystemIpc() {
   ipcMain.handle(SystemChannels.FONT_LIST, async () => {
@@ -92,6 +96,16 @@ export function setupSystemIpc() {
 
   ipcMain.handle(SystemChannels.VIEW_LIST, async () => {
     return await getAvailableViews()
+  })
+  ipcMain.handle(SystemChannels.TILE_ACTIVATE, (_event, tileId: string) => {
+    // Broadcast to all windows (renderer process will handle it)
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send(AppEventChannel, {
+        type: AppEvents.TILE_ACTIVATED,
+        data: tileId,
+      })
+    }
+    return true
   })
 }
 

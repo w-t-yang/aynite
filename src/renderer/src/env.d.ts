@@ -130,6 +130,7 @@ interface AyniteWindow {
   getSystemFonts: () => Promise<string[]>
   selectFolder: () => Promise<string[] | null>
   selectFile: (options?: any) => Promise<string[] | null>
+  activateTile: (tileId: string) => Promise<boolean>
 
   onAppOperation: (callback: (operation: string) => void) => () => void
   onAppEvent: (

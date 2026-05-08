@@ -1,4 +1,5 @@
-import React, { useRef } from 'react'
+import type React from 'react'
+import { useRef } from 'react'
 import { AppOperation } from '../../../lib/constants/app'
 import type { LeafNode } from '../../../lib/constants/types'
 
@@ -23,20 +24,6 @@ const Tile: React.FC<TileProps> = ({ node }) => {
   const { id, content: title, size, url } = node
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
-
-  // Listen for activation requests from within the view (iframe)
-  React.useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (
-        event.data?.type === 'aynite:tile-activate' &&
-        event.source === iframeRef.current?.contentWindow
-      ) {
-        setActiveTileId(id)
-      }
-    }
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [id, setActiveTileId])
 
   const viewOptions = availableViews.map((v) => ({ id: v.id, label: v.name }))
 
@@ -113,7 +100,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
         {url ? (
           <iframe
             ref={iframeRef}
-            src={url}
+            src={`${url}#tileId=${id}`}
             className="w-full h-full border-none"
             style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
             title={title}

@@ -122,8 +122,18 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Report clicks to parent for tile activation
   useEffect(() => {
+    const w = window as any
+    if (!w.aynite) return
+
+    // Extract tileId from hash (e.g. #tileId=...)
+    const hash = window.location.hash
+    const match = hash.match(/tileId=([^&]+)/)
+    const tileId = match ? match[1] : null
+
+    if (!tileId) return
+
     const handleMouseDown = () => {
-      window.parent.postMessage({ type: 'aynite:tile-activate' }, '*')
+      w.aynite.activateTile(tileId)
     }
     window.addEventListener('mousedown', handleMouseDown, true)
     return () => window.removeEventListener('mousedown', handleMouseDown, true)

@@ -283,6 +283,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           case AppEvents.WORKSPACE_UPDATED:
             ld()
             break
+          case AppEvents.TILE_ACTIVATED:
+            if (event.data) setActiveTileId(event.data as string)
+            break
 
           // --- Release/Update Events ---
           case AppEvents.UPDATE_CHECKING:

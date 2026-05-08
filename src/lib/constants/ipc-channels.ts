@@ -76,6 +76,7 @@ export const SystemChannels = {
   CLIPBOARD_COPY: 'aynite:file-clipboard-copy',
   CLIPBOARD_PASTE: 'aynite:file-clipboard-paste',
   VIEW_LIST: 'aynite:system-view-list',
+  TILE_ACTIVATE: 'aynite:layout-tile-activate',
 } as const
 
 export const UpdateChannels = {
