@@ -50,4 +50,4 @@ export function setupConfigIpc() {
 }
 
 export { getIgnorePatterns } from './ignore'
-export { loadConfig, saveConfig } from './logic'
+export { initAppFolders, loadConfig, saveConfig } from './logic'

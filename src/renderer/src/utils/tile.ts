@@ -1,5 +1,9 @@
 import { AppOperation } from '../../../lib/constants/app'
-import type { LayoutNode } from '../../../lib/constants/types'
+import type {
+  LayoutNode,
+  LeafNode,
+  WorkspaceConfig,
+} from '../../../lib/constants/types'
 
 export const getAllLeafIds = (node: LayoutNode): string[] => {
   if (node.type === 'leaf') return [node.id]
@@ -226,4 +230,41 @@ export const executeLayoutOperation = (
     default:
       return { node }
   }
+}
+
+/**
+ * Merges a new layout tree into the active layout slot of a workspace config.
+ */
+export function updateLayoutInConfig(
+  prev: WorkspaceConfig,
+  newLayout: LayoutNode,
+): WorkspaceConfig {
+  return {
+    ...prev,
+    layouts: prev.layouts.map((l) =>
+      l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l,
+    ),
+  }
+}
+
+/**
+ * Recursively updates a specific node in a layout tree.
+ */
+export function updateNodeInLayout(
+  node: LayoutNode,
+  nodeId: string,
+  updates: Partial<LeafNode>,
+): LayoutNode {
+  if (node.id === nodeId && node.type === 'leaf') {
+    return { ...node, ...updates }
+  }
+  if (node.type === 'split') {
+    return {
+      ...node,
+      children: node.children.map((child) =>
+        updateNodeInLayout(child, nodeId, updates),
+      ),
+    }
+  }
+  return node
 }

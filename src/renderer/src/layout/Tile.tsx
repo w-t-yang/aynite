@@ -6,7 +6,7 @@ import type { LeafNode } from '../../../lib/constants/types'
 import { Button } from '../../shared/basic/Button'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { cn } from '../../shared/lib/utils'
-import { useApp } from '../context/AppContext'
+import { useApp } from '../AppContext'
 
 interface TileProps {
   node: LeafNode

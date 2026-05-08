@@ -8,28 +8,31 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
-import { ayniteConfig } from '../../../lib/constants/renderer/config'
+import { AppEvents } from '../../lib/constants/app'
+import { ayniteConfig } from '../../lib/constants/renderer/config'
 import type {
   LayoutNode,
   LeafNode,
   Theme,
   WorkspaceConfig,
-} from '../../../lib/constants/types'
-import { applyThemeColors } from '../../shared/lib/utils'
-import { executeLayoutOperation, getAllLeafIds } from '../utils/tile'
+} from '../../lib/constants/types'
+import { applyThemeColors } from '../shared/lib/utils'
+import {
+  executeLayoutOperation,
+  getAllLeafIds,
+  updateLayoutInConfig,
+  updateNodeInLayout,
+} from './utils/tile'
 
-function updateLayoutInConfig(
-  prev: WorkspaceConfig,
-  newLayout: LayoutNode,
-): WorkspaceConfig {
-  return {
-    ...prev,
-    layouts: prev.layouts.map((l) =>
-      l.id === prev.activeLayoutId ? { ...l, layout: newLayout } : l,
-    ),
-  }
-}
+// --- Context Type ---
+
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
 
 interface AppContextType {
   workspaceConfig: WorkspaceConfig | null
@@ -51,18 +54,26 @@ interface AppContextType {
   handleResizeStart: () => void
   handleResizeEnd: () => void
 
-  // Theme support
   themes: Theme[]
   activeTheme: Theme | null
   setTheme: (themeId: string) => Promise<void>
-  subscribeToAppEvents: (callback: (event: any) => void) => () => void
+
+  // Update State
+  updateStatus: UpdateStatus
+  updateInfo: any
+  updateProgress: number
+  updateError: string | null
+  setUpdateStatus: (status: UpdateStatus) => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
+// --- Provider ---
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  // 1. State definitions
   const [workspaceConfig, setWorkspaceConfig] =
     useState<WorkspaceConfig | null>(null)
   const [workspaces, setWorkspaces] = useState<string[]>([])
@@ -75,38 +86,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const [themes, setThemes] = useState<Theme[]>([])
   const [activeTheme, setActiveTheme] = useState<Theme | null>(null)
 
-  const eventListenersRef = useRef<Set<(event: any) => void>>(new Set())
+  // Update State
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
+  const [updateInfo, setUpdateInfo] = useState<any>(null)
+  const [updateProgress, setUpdateProgress] = useState<number>(0)
+  const [updateError, setUpdateError] = useState<string | null>(null)
 
-  const subscribeToAppEvents = useCallback((callback: (event: any) => void) => {
-    eventListenersRef.current.add(callback)
-    return () => eventListenersRef.current.delete(callback)
-  }, [])
+  const activeTileIdRef = useRef(activeTileId)
 
-  const loadThemes = useCallback(async () => {
+  // Sync ref for access in async callbacks
+  useEffect(() => {
+    activeTileIdRef.current = activeTileId
+  }, [activeTileId])
+
+  // 2. Theme Management (Reactive)
+
+  // Side Effect: "Paint" the app whenever the activeTheme state changes
+  useEffect(() => {
+    if (activeTheme) {
+      applyThemeColors(activeTheme)
+    }
+  }, [activeTheme])
+
+  const refreshThemes = useCallback(async () => {
     const loadedThemes = await ayniteConfig.getThemes()
     setThemes(loadedThemes)
 
     const themeId = await ayniteConfig.getActiveThemeId()
     const theme = await ayniteConfig.getTheme(themeId)
+
     if (theme) {
       setActiveTheme(theme)
-      applyThemeColors(theme)
     }
   }, [])
 
-  const setTheme = useCallback(
-    async (themeId: string) => {
-      await window.aynite.setConfig('activeTheme', themeId)
-      await loadThemes()
-    },
-    [loadThemes],
-  )
-
-  const activeTileIdRef = useRef(activeTileId)
-  useEffect(() => {
-    activeTileIdRef.current = activeTileId
-  }, [activeTileId])
-
+  // 3. Core Data Sync
   const loadData = useCallback(() => {
     if (!window.aynite) {
       console.error('CRITICAL: Aynite Electron API not found.')
@@ -135,13 +149,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     if (window.aynite.getAvailableViews) {
       window.aynite.getAvailableViews().then(setAvailableViews)
     }
-    loadThemes()
-  }, [loadThemes])
+    refreshThemes()
+  }, [refreshThemes])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
+  const setTheme = useCallback(
+    async (themeId: string) => {
+      await window.aynite.setConfig('activeTheme', themeId)
+      await refreshThemes()
+    },
+    [refreshThemes],
+  )
+
+  // 4. Workspace Management
   const switchWorkspace = useCallback(
     (id: string) => {
       ayniteConfig.setActiveWorkspace(id).then(() => {
@@ -160,66 +183,60 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     [loadData],
   )
 
+  // 5. Layout & Tile Management
   const switchLayout = useCallback((id: string) => {
     setWorkspaceConfig((prev) => {
       if (!prev) return null
-      const newConfig = { ...prev, activeLayoutId: id }
-      ayniteConfig.saveWorkspace(newConfig)
-      return newConfig
+      return { ...prev, activeLayoutId: id }
     })
   }, [])
 
-  const updateLayout = useCallback(
-    (newLayout: LayoutNode) => {
-      setWorkspaceConfig((prev) => {
-        if (!prev) return null
-        const newConfig = updateLayoutInConfig(prev, newLayout)
-        if (!isResizing) ayniteConfig.saveWorkspace(newConfig)
-        return newConfig
-      })
-    },
-    [isResizing],
-  )
+  const updateLayout = useCallback((newLayout: LayoutNode) => {
+    setWorkspaceConfig((prev) => {
+      if (!prev) return null
+      return updateLayoutInConfig(prev, newLayout)
+    })
+  }, [])
 
   const updateTileView = useCallback(
     (nodeId: string, updates: Partial<LeafNode>) => {
-      const updateNodeTree = (node: LayoutNode): LayoutNode => {
-        if (node.id === nodeId && node.type === 'leaf')
-          return { ...node, ...updates }
-        if (node.type === 'split')
-          return { ...node, children: node.children.map(updateNodeTree) }
-        return node
-      }
-
       setWorkspaceConfig((prev) => {
         if (!prev) return null
-        console.log(`[AppContext] updateTileView: finding node ${nodeId}`)
         const activeLayout = prev.layouts.find(
           (l) => l.id === prev.activeLayoutId,
         )
         if (!activeLayout) return prev
-        const newLayout = updateNodeTree(activeLayout.layout)
-        const newConfig = updateLayoutInConfig(prev, newLayout)
-        // ayniteConfig.saveWorkspace(newConfig)
-        return newConfig
+        const newLayout = updateNodeInLayout(
+          activeLayout.layout,
+          nodeId,
+          updates,
+        )
+        return updateLayoutInConfig(prev, newLayout)
       })
     },
     [],
   )
 
-  useEffect(() => {
-    if (workspaceConfig && !isResizing) {
-      ayniteConfig.saveWorkspace(workspaceConfig)
-    }
-  }, [workspaceConfig, isResizing])
+  const executeAppOperation = useCallback(
+    (operation: string) => {
+      // 1. Handle Global/Non-Layout Operations
+      switch (operation) {
+        case 'REFRESH_APP':
+          window.location.reload()
+          return
+        case 'TOGGLE_LEFT_PANEL':
+          // We could add state for panels here later
+          console.log('[App] Toggle Left Panel')
+          return
+        // Add other global cases as needed...
+      }
 
-  const executeAppOperation = useCallback((operation: string) => {
-    setWorkspaceConfig((prev) => {
-      if (!prev) return null
-      const activeLayout = prev.layouts.find(
-        (l) => l.id === prev.activeLayoutId,
+      // 2. Handle Layout/Tile Operations
+      if (!workspaceConfig) return
+      const activeLayout = workspaceConfig.layouts.find(
+        (l) => l.id === workspaceConfig.activeLayoutId,
       )
-      if (!activeLayout) return prev
+      if (!activeLayout) return
 
       const { node: newLayoutNode, newActiveId } = executeLayoutOperation(
         activeLayout.layout,
@@ -228,38 +245,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       )
 
       if (newActiveId) setActiveTileId(newActiveId)
-      if (newLayoutNode === activeLayout.layout) return prev
 
-      const newConfig = {
-        ...prev,
-        layouts: prev.layouts.map((l) =>
-          l.id === prev.activeLayoutId ? { ...l, layout: newLayoutNode } : l,
-        ),
+      if (newLayoutNode !== activeLayout.layout) {
+        setWorkspaceConfig(updateLayoutInConfig(workspaceConfig, newLayoutNode))
       }
+    },
+    [workspaceConfig],
+  )
 
-      ayniteConfig.saveWorkspace(newConfig)
-      return newConfig
-    })
-  }, [])
+  // 6. IPC Event & Operation Handling
+  const handlersRef = useRef({ refreshThemes, loadData, executeAppOperation })
+  useEffect(() => {
+    handlersRef.current = { refreshThemes, loadData, executeAppOperation }
+  }, [refreshThemes, loadData, executeAppOperation])
 
   useEffect(() => {
     if (!window.aynite) return
-    // Listen for app operations (layout, etc.)
-    return window.aynite.onAppOperation(executeAppOperation)
-  }, [executeAppOperation])
 
-  useEffect(() => {
-    if (!window.aynite) return
-
-    // Listen for broadcast events and relay to iframes
-    return window.aynite.onAppEvent(
-      (event: { type: string; data: unknown }) => {
-        // 1. Notify local subscribers
-        for (const listener of eventListenersRef.current) {
-          listener(event)
-        }
-
-        // 2. Relay to all iframes
+    const unbindEvent = window.aynite.onAppEvent(
+      (event: { type: string; data: any }) => {
+        // 1. Relay to all iframes
         for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
           'iframe',
         )) {
@@ -269,27 +274,68 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           )
         }
 
-        // 3. Local reactions to app events
-        if (event.type === AppEvents.CONFIG_ERROR) {
-          console.error('[App] Config Error:', event.data)
-        } else if (event.type === AppEvents.THEME_CHANGED) {
-          loadThemes()
-        } else if (event.type === AppEvents.WORKSPACE_CHANGED) {
-          window.aynite.refreshWatcher()
-        } else if (event.type === AppEvents.FILE_RENAMED) {
-          const { oldPath: _oldPath, newPath: _newPath } = event.data as {
-            oldPath: string
-            newPath: string
-          }
-          // TODO: Implement workspace folder rename in bridge if needed
-        } else if (event.type === AppEvents.FILE_DELETED) {
-          const { path } = event.data as { path: string }
-          window.aynite.removeWorkspaceFolder(path)
+        // 2. Core Reactions to System Events (using latest handlers from ref)
+        const { refreshThemes: rt, loadData: ld } = handlersRef.current
+
+        switch (event.type) {
+          case AppEvents.CONFIG_ERROR:
+            console.error('[App] Config Error:', event.data)
+            break
+          case AppEvents.THEME_CHANGED:
+            rt()
+            break
+          case AppEvents.WORKSPACE_CHANGED:
+            ld()
+            break
+          case AppEvents.WORKSPACE_UPDATED:
+            ld()
+            break
+
+          // --- Release/Update Events ---
+          case AppEvents.UPDATE_CHECKING:
+            setUpdateStatus('checking')
+            break
+          case AppEvents.UPDATE_AVAILABLE:
+            setUpdateStatus('available')
+            setUpdateInfo(event.data)
+            break
+          case AppEvents.UPDATE_NOT_AVAILABLE:
+            setUpdateStatus('idle')
+            break
+          case AppEvents.UPDATE_ERROR:
+            setUpdateStatus('error')
+            setUpdateError(event.data)
+            break
+          case AppEvents.UPDATE_PROGRESS:
+            setUpdateStatus('downloading')
+            setUpdateProgress(event.data.percent)
+            break
+          case AppEvents.UPDATE_DOWNLOADED:
+            setUpdateStatus('downloaded')
+            setUpdateInfo(event.data)
+            break
         }
       },
     )
-  }, [loadThemes])
 
+    const unbindOp = window.aynite.onAppOperation((op: string) => {
+      handlersRef.current.executeAppOperation(op)
+    })
+
+    return () => {
+      unbindEvent()
+      unbindOp()
+    }
+  }, [])
+
+  // Persistence
+  useEffect(() => {
+    if (workspaceConfig && !isResizing) {
+      ayniteConfig.saveWorkspace(workspaceConfig)
+    }
+  }, [workspaceConfig, isResizing])
+
+  // 7. UI Helpers
   const handleResizeStart = useCallback(() => {
     setIsResizing(true)
     document.body.classList.add('is-resizing')
@@ -304,25 +350,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     })
   }, [])
 
-  const _openFile = useCallback((path: string) => {
-    setWorkspaceConfig((prev) => {
-      if (!prev) return null
-      const currentFiles = prev.files || []
-      const newFiles = currentFiles.includes(path)
-        ? currentFiles
-        : [...currentFiles, path]
-      const newConfig = {
-        ...prev,
-        files: newFiles,
-        activeFile: path,
-      }
-      ayniteConfig.saveWorkspace(newConfig)
-      return newConfig
-    })
-    return true
-  }, [])
-
-  // Expose context to window for debugging in development
+  // 8. Debugging
   useEffect(() => {
     if (import.meta.env.DEV) {
       ;(window as any).__aynite_context = {
@@ -343,6 +371,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         themes,
         activeTheme,
         setTheme,
+        updateStatus,
+        updateInfo,
+        updateProgress,
       }
     }
   }, [
@@ -362,6 +393,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     themes,
     setTheme,
     activeTheme,
+    updateStatus,
+    updateInfo,
+    updateProgress,
   ])
 
   return (
@@ -382,10 +416,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         handleResizeStart,
         handleResizeEnd,
         availableViews,
-        subscribeToAppEvents,
         themes,
         activeTheme,
         setTheme,
+        updateStatus,
+        updateInfo,
+        updateProgress,
+        updateError,
+        setUpdateStatus,
       }}
     >
       {children}

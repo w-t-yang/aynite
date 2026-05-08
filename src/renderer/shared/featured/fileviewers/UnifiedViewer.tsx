@@ -219,7 +219,7 @@ export const UnifiedViewer: React.FC<{
                 '*',
               )
               window.top?.dispatchEvent(
-                new CustomEvent('aynite:open-file', {
+                new CustomEvent('shell:open-file', {
                   detail: { path: cleanPath },
                 }),
               )

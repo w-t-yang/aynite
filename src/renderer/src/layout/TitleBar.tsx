@@ -5,7 +5,7 @@ import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import { Button } from '../../shared/basic/Button'
 import { FormModal } from '../../shared/featured/FormModal'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
-import { useApp } from '../context/AppContext'
+import { useApp } from '../AppContext'
 
 const TitleBar: React.FC = () => {
   const {

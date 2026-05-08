@@ -1,6 +1,6 @@
 import React, { useCallback, useRef } from 'react'
 import type { LayoutNode } from '../../../lib/constants/types'
-import { useApp } from '../context/AppContext'
+import { useApp } from '../AppContext'
 import Tile from './Tile'
 import TileSplitter from './TileSplitter'
 

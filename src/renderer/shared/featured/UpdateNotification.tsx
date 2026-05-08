@@ -1,61 +1,27 @@
 import { AlertCircle, Download, RefreshCw, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
+import { useEffect } from 'react'
 import { FLEX_CENTER_GAP_3 } from '../../../lib/constants/renderer/styles'
 import { cn } from '../../shared/lib/utils'
-import { useApp } from '../../src/context/AppContext'
+import { useApp } from '../../src/AppContext'
 
 export function UpdateNotification() {
-  const [updateStatus, setUpdateStatus] = useState<
-    'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
-  >('idle')
-  const [updateInfo, setUpdateInfo] = useState<any>(null)
-  const [updateProgress, setUpdateProgress] = useState<number>(0)
-  const [updateError, setUpdateError] = useState<string | null>(null)
-
-  const { subscribeToAppEvents } = useApp()
-
-  useEffect(() => {
-    if (!window.aynite) return
-
-    return subscribeToAppEvents((event: { type: string; data: any }) => {
-      switch (event.type) {
-        case AppEvents.UPDATE_CHECKING:
-          setUpdateStatus('checking')
-          break
-        case AppEvents.UPDATE_AVAILABLE:
-          setUpdateStatus('available')
-          setUpdateInfo(event.data)
-          break
-        case AppEvents.UPDATE_NOT_AVAILABLE:
-          setUpdateStatus('idle')
-          break
-        case AppEvents.UPDATE_ERROR:
-          setUpdateStatus('error')
-          setUpdateError(event.data)
-          break
-        case AppEvents.UPDATE_PROGRESS:
-          setUpdateStatus('downloading')
-          setUpdateProgress(event.data.percent)
-          break
-        case AppEvents.UPDATE_DOWNLOADED:
-          setUpdateStatus('downloaded')
-          setUpdateInfo(event.data)
-          break
-      }
-    })
-  }, [subscribeToAppEvents])
+  const {
+    updateStatus,
+    updateInfo,
+    updateProgress,
+    updateError,
+    setUpdateStatus,
+  } = useApp()
 
   useEffect(() => {
     if (updateStatus === 'error') {
       const timer = setTimeout(() => {
         setUpdateStatus('idle')
-        setUpdateError(null)
       }, 8000) // Auto-close error after 8 seconds
       return () => clearTimeout(timer)
     }
     return undefined
-  }, [updateStatus])
+  }, [updateStatus, setUpdateStatus])
 
   if (updateStatus === 'idle') return null
 
@@ -69,7 +35,6 @@ export function UpdateNotification() {
           isError && 'border-destructive/50',
         )}
       >
-        {/* Header Row: Icon, Title, Close Button */}
         <div className={FLEX_CENTER_GAP_3}>
           <div
             className={cn(
@@ -105,22 +70,17 @@ export function UpdateNotification() {
 
           <button
             type="button"
-            onClick={() => {
-              setUpdateStatus('idle')
-              setUpdateError(null)
-            }}
+            onClick={() => setUpdateStatus('idle')}
             className="p-1 hover:bg-accent rounded-md text-muted-foreground transition-colors shrink-0"
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* Content Area: Simplified Error or Status */}
         {isError ? (
           <div className="bg-destructive/5 rounded-lg p-2 max-h-[120px] overflow-auto scrollbar-thin">
             <p className="text-xs text-destructive/90 break-words whitespace-pre-wrap font-mono leading-relaxed">
-              {updateError?.split('\n').slice(0, 3).join('\n') ||
-                'Unknown error occurred during update.'}
+              {updateError || 'Unknown error occurred during update.'}
             </p>
           </div>
         ) : (
@@ -131,7 +91,6 @@ export function UpdateNotification() {
           </p>
         )}
 
-        {/* Progress / Actions */}
         {updateStatus === 'downloading' && (
           <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden mt-1">
             <div

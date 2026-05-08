@@ -1,5 +1,5 @@
 import type React from 'react'
-import { AppProvider, useApp } from './context/AppContext'
+import { AppProvider, useApp } from './AppContext'
 import TileNode from './layout/TileNode'
 import TitleBar from './layout/TitleBar'
 

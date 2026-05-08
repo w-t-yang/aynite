@@ -4,10 +4,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Editor from 'react-simple-code-editor'
 import { AppEvents } from '../../../../lib/constants/app'
 import { FLEX_CENTER_GAP_2 } from '../../../../lib/constants/renderer/styles'
-import { useApp } from '../../../src/context/AppContext'
-import { type FileInfo, getFileCategory } from '../../lib/file-handlers'
-import { KeyManager } from '../../lib/key-handlers'
-import { cn } from '../../lib/utils'
+import { type FileInfo, getFileCategory } from '../../../lib/file-handlers'
+import { KeyManager } from '../../../lib/key-handlers'
+import { cn } from '../../../lib/utils'
+import { useAppEvent, useView } from '../../../views/ViewContext'
 import { FileHandlerComponents } from './index'
 import 'prismjs/components/prism-typescript'
 import 'prismjs/components/prism-javascript'
@@ -45,7 +45,7 @@ function FileViewer({
   onRefresh,
   id,
 }: FileViewerProps) {
-  const { subscribeToAppEvents } = useApp()
+  useView() // Ensure we are inside ViewProvider
   const [localContent, setLocalContent] = useState(content)
   const [isEditing, setIsEditing] = useState(false)
   const [cursor, setCursor] = useState({ line: 1, col: 1 })
@@ -184,10 +184,10 @@ function FileViewer({
     return () => window.removeEventListener('file-saving', handleSaving)
   }, [id])
 
-  useEffect(() => {
-    const handleEvent = (type: string, data: any) => {
-      if (type !== AppEvents.FS_CHANGE) return
-
+  // Unified System Event Listener
+  useAppEvent(
+    AppEvents.FS_CHANGE,
+    (data) => {
       const currentPath = id.startsWith('file-') ? id.replace('file-', '') : id
       const normalizedChangedPath = data.path.replace(/\\/g, '/')
       const normalizedCurrentPath = currentPath.replace(/\\/g, '/')
@@ -210,28 +210,9 @@ function FileViewer({
           setExternalChangeDetected(true)
         }
       }
-    }
-
-    // 1. Listen for relayed messages (for iframes)
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === `aynite:${AppEvents.FS_CHANGE}`) {
-        handleEvent(AppEvents.FS_CHANGE, event.data.data)
-      }
-    }
-    window.addEventListener('message', handleMessage)
-
-    // 2. Listen for app events via AppContext
-    const unsubscribe = subscribeToAppEvents(
-      (event: { type: string; data: any }) => {
-        handleEvent(event.type, event.data)
-      },
-    )
-
-    return () => {
-      window.removeEventListener('message', handleMessage)
-      unsubscribe()
-    }
-  }, [id, subscribeToAppEvents])
+    },
+    [id],
+  )
 
   const handleRefresh = useCallback(async () => {
     if (isDirty && !showRefreshConfirm) {
