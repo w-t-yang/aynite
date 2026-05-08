@@ -40,14 +40,21 @@ export function Settings() {
   const [keybindings, setKeybindings] = useState<
     SettingsState['keybindings'] | null
   >(null)
-  const [skills, setSkills] = useState<any | null>(null)
-  const [commands, setCommands] = useState<any | null>(null)
+  const [skills, setSkills] = useState<{
+    folders: string[]
+    items: any[]
+  } | null>(null)
+  const [commands, setCommands] = useState<{
+    folders: string[]
+    items: any[]
+  } | null>(null)
   const [themes, setThemes] = useState<{
     list: Theme[]
     activeId: string
     systemFonts: string[]
   } | null>(null)
   const [aiTools, setAiTools] = useState<SettingsState['aiTools'] | null>(null)
+  const [mergedPrompt, setMergedPrompt] = useState<string>('')
 
   // Other shared state
   const [appVersion, setAppVersion] = useState<string>('')
@@ -58,29 +65,53 @@ export function Settings() {
 
   const loadSettings = useCallback(async () => {
     // Parallel load all decoupled resources
-    const [resAI, resAgents, resPrompts, resKb, resSkills, resCmds, resTools] =
-      await Promise.all([
-        window.aynite.getConfig('ai'),
-        window.aynite.getConfig('agents'),
-        window.aynite.getConfig('prompts'),
-        window.aynite.getConfig('keybindings'),
-        window.aynite.getConfig('skills'),
-        window.aynite.getConfig('commands'),
-        window.aynite.getConfig('tools'),
-      ])
+    const [
+      resAI,
+      resAgents,
+      resPrompts,
+      resKb,
+      resSkillsCfg,
+      resSkillsItems,
+      resCmdsCfg,
+      resCmdsItems,
+      resTools,
+    ] = await Promise.all([
+      window.aynite.getConfig('ai'),
+      window.aynite.getConfig('agents'),
+      window.aynite.getConfig('prompts'),
+      window.aynite.getConfig('keybindings'),
+      window.aynite.getConfig('skills'),
+      window.aynite.getAvailableSkills(),
+      window.aynite.getConfig('commands'),
+      window.aynite.getAvailableCommands(),
+      window.aynite.getConfig('tools'),
+    ])
 
     if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list })
-    if (resAgents)
+    if (resAgents) {
       setAgents({ activeId: resAgents.activeId, list: resAgents.list })
-    if (resPrompts) setPrompts({ files: resPrompts.list })
+
+      // Load merged prompt for active agent
+      const merged = await window.aynite.getMergedSystemPrompt(
+        resPrompts?.files || [],
+        resAgents.list.find((a: any) => a.id === resAgents.activeId)
+          ?.promptFiles || [],
+      )
+      setMergedPrompt(merged || '')
+    }
+    if (resPrompts)
+      setPrompts({ files: resPrompts.list || resPrompts.files || [] })
     if (resKb) setKeybindings(resKb)
 
-    if (resSkills) setSkills(resSkills)
-    if (resCmds) setCommands(resCmds)
-    if (resTools) {
-      setAiTools(resTools.active)
-      setAvailableTools(resTools.list)
-    }
+    setSkills({
+      folders: resSkillsCfg?.folders || [],
+      items: resSkillsItems || [],
+    })
+    setCommands({
+      folders: resCmdsCfg?.folders || [],
+      items: resCmdsItems || [],
+    })
+
     if (resTools) {
       setAiTools(resTools.active)
       setAvailableTools(resTools.list)
@@ -163,7 +194,45 @@ export function Settings() {
     })
   }
 
-  if (!ai || !agents || !prompts || !keybindings || !aiTools) {
+  const handlePickSkillFolder = async () => {
+    const folder = await window.aynite.pickSkillFolder()
+    if (folder) {
+      const newFolders = Array.from(
+        new Set([...(skills?.folders || []), folder]),
+      )
+      await handleSetSkills({ folders: newFolders })
+      await loadSettings()
+    }
+  }
+
+  const handlePickCommandFolder = async () => {
+    const folder = await window.aynite.pickCommandFolder()
+    if (folder) {
+      const newFolders = Array.from(
+        new Set([...(commands?.folders || []), folder]),
+      )
+      await handleSetCommands({ folders: newFolders })
+      await loadSettings()
+    }
+  }
+
+  const handlePickPromptFile = async () => {
+    const file = await window.aynite.selectFile({
+      title: 'Select Prompt File',
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    })
+    return file ? { data: file } : null
+  }
+
+  if (
+    !ai ||
+    !agents ||
+    !prompts ||
+    !keybindings ||
+    !aiTools ||
+    !skills ||
+    !commands
+  ) {
     return (
       <div className="w-full h-full bg-background flex items-center justify-center text-muted-foreground">
         Loading settings...
@@ -276,7 +345,7 @@ export function Settings() {
 
             {activeTab === 'agents' && (
               <AgentsTab
-                state={{ agents, prompts, mergedPrompt: '' }}
+                state={{ agents, prompts, mergedPrompt }}
                 actions={{
                   setAgentsTab: async (payload) => {
                     if (payload.agents) {
@@ -292,8 +361,9 @@ export function Settings() {
                         list: payload.prompts.files,
                       })
                     }
+                    await loadSettings()
                   },
-                  onPickPromptFile: async () => null, // Removed
+                  onPickPromptFile: handlePickPromptFile,
                   onRestore: () => setShowRestoreModal(true),
                 }}
               />
@@ -302,19 +372,16 @@ export function Settings() {
             {activeTab === 'skills' && (
               <SkillsTab
                 state={{
-                  skills: { folders: skills?.list || [] },
+                  skills: { folders: skills?.folders || [] },
                   availableSkills: skills?.items || [],
                 }}
                 actions={{
                   setSkills: (newSkills) => {
                     if (newSkills) {
-                      handleSetSkills({
-                        list: newSkills.folders,
-                        items: skills?.items || [],
-                      })
+                      handleSetSkills(newSkills)
                     }
                   },
-                  onPickSkillFolder: async () => null, // Removed
+                  onPickSkillFolder: handlePickSkillFolder,
                   onRestore: () => setShowRestoreModal(true),
                 }}
               />
@@ -323,19 +390,16 @@ export function Settings() {
             {activeTab === 'commands' && (
               <CommandsTab
                 state={{
-                  commands: { folders: commands?.list || [] },
+                  commands: { folders: commands?.folders || [] },
                   availableCommands: commands?.items || [],
                 }}
                 actions={{
                   setCommands: (newCmds) => {
                     if (newCmds) {
-                      handleSetCommands({
-                        list: newCmds.folders,
-                        items: commands?.items || [],
-                      })
+                      handleSetCommands(newCmds)
                     }
                   },
-                  onPickCommandFolder: async () => null, // Removed
+                  onPickCommandFolder: handlePickCommandFolder,
                   onRestore: () => setShowRestoreModal(true),
                 }}
               />

@@ -77,6 +77,8 @@ const aynite = {
   getAvailableViews: () => ipcRenderer.invoke(SystemChannels.VIEW_LIST),
   checkForUpdates: () => ipcRenderer.invoke(UpdateChannels.CHECK),
   selectFolder: () => ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FOLDER),
+  selectFile: (options?: any) =>
+    ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FILE, options),
 
   // ── Theme operations ────────────────────────────────────────────────────
   getThemes: () => ipcRenderer.invoke(ThemeChannels.LIST),
@@ -86,6 +88,10 @@ const aynite = {
   // ── Spells ──────────────────────────────────────────────────────────────
   getAvailableSkills: () => ipcRenderer.invoke(SpellChannels.SKILL_LIST),
   getAvailableCommands: () => ipcRenderer.invoke(SpellChannels.COMMAND_LIST),
+  pickSkillFolder: () => ipcRenderer.invoke(SpellChannels.SKILL_ADD_FOLDER),
+  pickCommandFolder: () => ipcRenderer.invoke(SpellChannels.COMMAND_ADD_FOLDER),
+  restoreSkills: () => ipcRenderer.invoke(SpellChannels.SKILL_RESTORE),
+  restoreCommands: () => ipcRenderer.invoke(SpellChannels.COMMAND_RESTORE),
 
   // ── Unified Communication Channels (Listeners) ──────────────────────────
 
