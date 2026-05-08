@@ -78,6 +78,8 @@ const aynite = {
   selectFolder: () => ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FOLDER),
 
   // ── Theme operations ────────────────────────────────────────────────────
+  getThemes: () => ipcRenderer.invoke(ThemeChannels.LIST),
+  getTheme: (name: string) => ipcRenderer.invoke(ThemeChannels.GET, name),
   deleteTheme: (name: string) => ipcRenderer.invoke(ThemeChannels.DELETE, name),
 
   // ── Spells ──────────────────────────────────────────────────────────────

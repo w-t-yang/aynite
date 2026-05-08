@@ -42,7 +42,6 @@ export const useAppEvent = (
 ) => {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Security: In production, you'd check event.origin here
       const message = event.data
       if (message?.type === `aynite:${type}`) {
         callback(message.data)
@@ -58,7 +57,7 @@ export const useAppEvent = (
 
 /**
  * Unified Provider for micro-app views.
- * Handles theme application and reacts to relayed events.
+ * Handles theme application.
  */
 export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -79,6 +78,7 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
         applyThemeColors(themeData as Theme)
       }
 
+      // Also load theme list
       const themesList = await w.aynite.getThemes()
       if (themesList) setThemes(themesList)
     } catch (e) {
