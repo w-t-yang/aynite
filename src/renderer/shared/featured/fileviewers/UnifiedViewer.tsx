@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom'
 /**
  * UnifiedViewer provides a consistent iframe container for all file types.
  * It ensures background, scrollbars, and theme alignment are identical.
+ *
+ * Note: Theme variables are handled by ViewContext inside the iframe.
  */
 export const UnifiedViewer: React.FC<{
   children?: React.ReactNode
@@ -17,119 +19,6 @@ export const UnifiedViewer: React.FC<{
     null,
   )
   const [ready, setReady] = React.useState(false)
-
-  const injectStyles = React.useCallback(
-    (doc: Document) => {
-      const head = doc.head
-      const body = doc.body
-
-      if (!head || !body) return
-
-      // Set base URL for relative assets
-      if (basePath && !src) {
-        const existingBase = head.querySelector('base')
-        if (existingBase) head.removeChild(existingBase)
-        const base = doc.createElement('base')
-        base.href = `aynite-resource://${basePath}/`
-        head.appendChild(base)
-      }
-
-      // Copy theme variables
-      const rootStyle = getComputedStyle(document.documentElement)
-      const variables = [
-        '--background',
-        '--foreground',
-        '--sidebar',
-        '--card',
-        '--card-foreground',
-        '--popover',
-        '--popover-foreground',
-        '--primary',
-        '--primary-foreground',
-        '--secondary',
-        '--secondary-foreground',
-        '--muted',
-        '--muted-foreground',
-        '--accent',
-        '--accent-foreground',
-        '--destructive',
-        '--destructive-foreground',
-        '--border',
-        '--input',
-        '--ring',
-        '--selection',
-        '--selection-foreground',
-        '--link',
-        '--success',
-        '--success-foreground',
-        '--warning',
-        '--warning-foreground',
-        '--info',
-        '--info-foreground',
-        '--tab-active',
-        '--tab-active-border',
-        '--scrollbar-thumb',
-        '--scrollbar-track',
-        '--radius',
-      ]
-
-      const varStyle = doc.createElement('style')
-      let varRules = ':root {'
-      variables.forEach((v) => {
-        const val = rootStyle.getPropertyValue(v)
-        if (val) varRules += `${v}: ${val};`
-      })
-      varRules += '}'
-      varStyle.appendChild(doc.createTextNode(varRules))
-      head.appendChild(varStyle)
-
-      // Copy app styles
-      Array.from(document.styleSheets).forEach((sheet) => {
-        try {
-          const newStyle = doc.createElement('style')
-          const rules = Array.from(sheet.cssRules)
-            .map((rule) => rule.cssText)
-            .join('')
-          newStyle.appendChild(doc.createTextNode(rules))
-          head.appendChild(newStyle)
-        } catch (_e) {}
-      })
-
-      // Inject unified global styles
-      const extraStyles = doc.createElement('style')
-      extraStyles.appendChild(
-        doc.createTextNode(`
-      html, body {
-        background-color: var(--background) !important;
-        color: var(--foreground) !important;
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        width: 100%;
-      }
-      #unified-content {
-        height: 100%;
-        width: 100%;
-        overflow: auto;
-        box-sizing: border-box;
-      }
-      ::-webkit-scrollbar { width: 10px; height: 10px; }
-      ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-      ::-webkit-scrollbar-thumb { 
-        background: var(--scrollbar-thumb); 
-        border: 2px solid var(--scrollbar-track); 
-        border-radius: 10px; 
-      }
-      ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
-    `),
-      )
-      head.appendChild(extraStyles)
-
-      body.classList.add('bg-background', 'text-foreground', 'outline-none')
-      body.tabIndex = 0
-    },
-    [basePath, src],
-  )
 
   // Keep track of documents we've already attached listeners to
   const initializedDocs = React.useMemo(() => new WeakSet<Document>(), [])
@@ -176,7 +65,6 @@ export const UnifiedViewer: React.FC<{
         const anchor = target.closest('a')
         if (anchor?.href) {
           const url = anchor.href
-          // Check if it's an internal link or external
           const isExternal = url.startsWith('http')
           const isInternal =
             url.startsWith('aynite-resource://') ||
@@ -238,13 +126,12 @@ export const UnifiedViewer: React.FC<{
     if (!doc) return
 
     try {
-      if (!src && !srcDoc) injectStyles(doc)
       attachListeners(doc)
       setReady(true)
     } catch (_e) {
       setReady(true)
     }
-  }, [contentRef, src, srcDoc, injectStyles, attachListeners])
+  }, [contentRef, attachListeners])
 
   React.useEffect(() => {
     if (contentRef) handleLoad()

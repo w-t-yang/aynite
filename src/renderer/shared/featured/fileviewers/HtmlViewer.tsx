@@ -33,8 +33,8 @@ export const HtmlViewer: React.FC<{ file: FileInfo; content?: string }> = ({
     <style>
       :root { ${themeVars} }
       html, body { 
-        background-color: var(--background, #09090b) !important; 
-        color: var(--foreground, #fafafa) !important;
+        background-color: var(--background) !important; 
+        color: var(--foreground) !important;
       }
     </style>
   `

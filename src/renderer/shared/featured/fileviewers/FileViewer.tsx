@@ -505,7 +505,7 @@ function FileViewer({
     ) as HTMLTextAreaElement
     if (el) {
       textareaRef.current = el
-      el.style.caretColor = isEditing ? 'var(--primary)' : '#808080'
+      el.style.caretColor = isEditing ? 'var(--primary)' : 'transparent'
       el.style.opacity = '1'
       el.setAttribute('track-cursor', 'true')
       el.spellcheck = false
