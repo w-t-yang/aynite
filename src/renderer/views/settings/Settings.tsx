@@ -88,19 +88,19 @@ export function Settings() {
     ])
 
     if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.list })
+    const normalizedGlobalPrompts = resPrompts?.files || resPrompts?.list || []
     if (resAgents) {
       setAgents({ activeId: resAgents.activeId, list: resAgents.list })
 
       // Load merged prompt for active agent
       const merged = await window.aynite.getMergedSystemPrompt(
-        resPrompts?.files || [],
+        normalizedGlobalPrompts,
         resAgents.list.find((a: any) => a.id === resAgents.activeId)
           ?.promptFiles || [],
       )
       setMergedPrompt(merged || '')
     }
-    if (resPrompts)
-      setPrompts({ files: resPrompts.list || resPrompts.files || [] })
+    if (resPrompts) setPrompts({ files: normalizedGlobalPrompts })
     if (resKb) setKeybindings(resKb)
 
     setSkills({
@@ -358,7 +358,7 @@ export function Settings() {
                     if (payload.prompts) {
                       setPrompts(payload.prompts)
                       await window.aynite.setConfig('prompts', {
-                        list: payload.prompts.files,
+                        files: payload.prompts.files,
                       })
                     }
                     await loadSettings()
