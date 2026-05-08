@@ -210,19 +210,8 @@ export const UnifiedViewer: React.FC<{
               } else if (!isWin && !cleanPath.startsWith('/')) {
                 cleanPath = `/${cleanPath}`
               }
-              console.log(
-                '[UnifiedViewer] Intercepted internal link:',
-                cleanPath,
-              )
-              window.top?.postMessage(
-                { type: 'open-file', path: cleanPath },
-                '*',
-              )
-              window.top?.dispatchEvent(
-                new CustomEvent('shell:open-file', {
-                  detail: { path: cleanPath },
-                }),
-              )
+              console.log('[UnifiedViewer] Opening internal link:', cleanPath)
+              window.aynite?.openFile(cleanPath)
             }
           }
         }

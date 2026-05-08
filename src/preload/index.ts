@@ -29,6 +29,7 @@ const aynite = {
   // ── File operations ─────────────────────────────────────────────────────
   listFolder: (path: string) => ipcRenderer.invoke(FileChannels.LIST, path),
   readFile: (path: string) => ipcRenderer.invoke(FileChannels.READ, path),
+  openFile: (path: string) => ipcRenderer.invoke(FileChannels.OPEN, path),
   writeFile: (path: string, content: string) =>
     ipcRenderer.invoke(FileChannels.SAVE, { path, content }),
   createFile: (path: string, isDirectory: boolean) =>
