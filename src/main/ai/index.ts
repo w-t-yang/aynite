@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { AiChannels } from '../../lib/constants/ipc-channels'
 import type { ChatMessage } from '../../lib/types/chat'
 import { showOpenDialog } from '../window'
-import { handleAiChat, listSessions, loadSession, saveSession } from './chat'
+import { aiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
 
@@ -36,7 +36,7 @@ export function setupAiIpc() {
   })
 
   ipcMain.handle(AiChannels.CHAT, async (_event, params: AiChatPayload) => {
-    return await handleAiChat(params)
+    return await aiChat(params)
   })
 
   ipcMain.handle(

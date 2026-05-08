@@ -4,12 +4,16 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Editor from 'react-simple-code-editor'
 import { AppEvents } from '../../../../lib/constants/app'
 import { FLEX_CENTER_GAP_2 } from '../../../../lib/constants/renderer/styles'
-import { type FileInfo, getFileCategory } from '../../../lib/file-handlers'
-import { KeyManager } from '../../../lib/key-handlers'
-import { cn } from '../../../lib/utils'
 import { useAppEvent, useView } from '../../../views/ViewContext'
 import { Button } from '../../basic/Button'
 import { Input } from '../../basic/Input'
+import {
+  type FileCategory,
+  type FileInfo,
+  getFileCategory,
+} from '../../lib/file-handlers'
+import { KeyManager } from '../../lib/key-handlers'
+import { cn } from '../../lib/utils'
 import { FileHandlerComponents } from './index'
 import 'prismjs/components/prism-typescript'
 import 'prismjs/components/prism-javascript'
@@ -70,7 +74,7 @@ function FileViewer({
   const isTextLike =
     category === 'text' || category === 'markdown' || category === 'html'
   const isTooLarge = isTextLike && (fileInfo?.size || 0) > MAX_TEXT_SIZE
-  const effectiveCategory = isTooLarge ? 'unsupported' : category
+  const effectiveCategory: FileCategory = isTooLarge ? 'unsupported' : category
 
   useEffect(() => {
     if (fileInfo) {

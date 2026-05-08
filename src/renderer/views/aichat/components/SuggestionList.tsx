@@ -3,8 +3,11 @@ import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import type {
   SuggestionItem,
   SuggestionListHandle,
-} from '../../../lib/types/ui'
-import { type SelectionItem, SelectionList } from '../basic/SelectionList'
+} from '../../../../lib/types/ui'
+import {
+  type SelectionItem,
+  SelectionList,
+} from '../../../shared/basic/SelectionList'
 
 export type { SuggestionItem, SuggestionListHandle }
 

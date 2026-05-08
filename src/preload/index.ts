@@ -61,10 +61,10 @@ const aynite = {
   getMergedSystemPrompt: (globalFiles?: string[], agentFiles?: string[]) =>
     ipcRenderer.invoke(AiChannels.PROMPT_GET_MERGED, globalFiles, agentFiles),
   restorePrompts: () => ipcRenderer.invoke(AiChannels.PROMPT_RESTORE),
-  listChatLogs: () => ipcRenderer.invoke(AiChannels.SESSION_LIST),
-  saveChatLog: (sessionId: string, messages: any[]) =>
+  listSessions: () => ipcRenderer.invoke(AiChannels.SESSION_LIST),
+  saveSession: (sessionId: string, messages: any[]) =>
     ipcRenderer.invoke(AiChannels.SESSION_SAVE, { sessionId, messages }),
-  loadChatLog: (sessionId: string, date: string) =>
+  loadSession: (sessionId: string, date: string) =>
     ipcRenderer.invoke(AiChannels.SESSION_LOAD, { sessionId, date }),
   runDirectCommand: (payload: any) =>
     ipcRenderer.invoke(SpellChannels.COMMAND_RUN_DIRECT, payload),

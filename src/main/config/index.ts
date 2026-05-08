@@ -37,12 +37,24 @@ export function setupConfigIpc() {
     ConfigChannels.SET,
     async (_event, { key, payload }: ConfigSetPayload) => {
       const result = await routeSetConfig(key, payload)
-      // Broadcast theme changes via the unified app event channel
-      if (key === ConfigKey.ACTIVE_THEME) {
-        sendAppEvent(AppEvents.THEME_CHANGED, { themeId: payload })
-      } else if (key === ConfigKey.THEME) {
-        const themeId = (payload as { id: string }).id
+      // Broadcast specific changes via the unified app event channel
+      if (key === ConfigKey.ACTIVE_THEME || key === ConfigKey.THEME) {
+        const themeId =
+          key === ConfigKey.ACTIVE_THEME
+            ? payload
+            : (payload as { id: string }).id
         sendAppEvent(AppEvents.THEME_CHANGED, { themeId })
+      } else if (
+        [
+          ConfigKey.AI,
+          ConfigKey.AGENTS,
+          ConfigKey.PROMPTS,
+          ConfigKey.SKILLS,
+          ConfigKey.COMMANDS,
+          ConfigKey.TOOLS,
+        ].includes(key as ConfigKey)
+      ) {
+        sendAppEvent(AppEvents.CONFIG_CHANGED, { key })
       }
       return result
     },

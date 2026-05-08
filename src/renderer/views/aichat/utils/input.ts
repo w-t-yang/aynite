@@ -1,8 +1,11 @@
 import { ReactRenderer } from '@tiptap/react'
 import tippy, { type Instance as TippyInstance } from 'tippy.js'
-import { SuggestionList, type SuggestionListHandle } from './SuggestionList'
+import {
+  SuggestionList,
+  type SuggestionListHandle,
+} from '../components/SuggestionList'
 
-interface SuggestionItem {
+export interface SuggestionItem {
   id: string
   name?: string
   isDirectory?: boolean

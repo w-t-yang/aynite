@@ -10,11 +10,10 @@ import { createPortal } from 'react-dom'
 export const UnifiedViewer: React.FC<{
   children?: React.ReactNode
   className?: string
-  basePath?: string
   padding?: string
   src?: string
   srcDoc?: string
-}> = ({ children, className, basePath, padding = 'p-0', src, srcDoc }) => {
+}> = ({ children, className, padding = 'p-0', src, srcDoc }) => {
   const [contentRef, setContentRef] = React.useState<HTMLIFrameElement | null>(
     null,
   )

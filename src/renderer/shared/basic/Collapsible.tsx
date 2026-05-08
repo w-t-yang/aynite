@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
+import { cn } from '../lib/utils'
 
 interface CollapsibleProps {
   title: string
@@ -9,6 +10,7 @@ interface CollapsibleProps {
   children: React.ReactNode
   defaultExpanded?: boolean
   borderPosition?: 'left' | 'bottom'
+  compact?: boolean
 }
 
 export function Collapsible({
@@ -18,6 +20,7 @@ export function Collapsible({
   children,
   defaultExpanded = false,
   borderPosition = 'left',
+  compact = false,
 }: CollapsibleProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const textColor = colorClass.replace('border-', 'text-').replace(/\/.*$/, '')
@@ -26,7 +29,11 @@ export function Collapsible({
 
   return (
     <div
-      className={`my-1 ${borderStyle} bg-muted/5 rounded-r px-3 py-1.5 overflow-hidden transition-all duration-200`}
+      className={cn(
+        'my-1 bg-muted/5 rounded-r overflow-hidden transition-all duration-200',
+        borderStyle,
+        compact ? 'px-2 py-1' : 'px-3 py-1.5',
+      )}
     >
       <div className="flex items-center justify-between group">
         <button
@@ -35,22 +42,36 @@ export function Collapsible({
           className="flex-1 flex items-center justify-between"
         >
           <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
-            {Icon && <Icon size={12} className={textColor} />}
+            {Icon && <Icon size={compact ? 10 : 12} className={textColor} />}
             <span>{title}</span>
           </div>
           <ChevronRight
-            size={10}
-            className={`text-muted-foreground/40 group-hover:text-primary transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+            size={compact ? 8 : 10}
+            className={cn(
+              'text-muted-foreground/40 group-hover:text-primary transition-transform duration-200',
+              expanded && 'rotate-90',
+            )}
           />
         </button>
       </div>
       {expanded && (
-        <div className="mt-2 border-t border-border/10 pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div
+          className={cn(
+            'border-t border-border/10 animate-in fade-in slide-in-from-top-1 duration-200',
+            compact ? 'mt-1 pt-1' : 'mt-2 pt-2',
+          )}
+        >
           {children}
         </div>
       )}
       {borderPosition === 'bottom' && (
-        <div className={`border-b ${colorClass} -mx-3 mt-2 opacity-50`} />
+        <div
+          className={cn(
+            'border-b opacity-50',
+            colorClass,
+            compact ? '-mx-2 mt-1' : '-mx-3 mt-2',
+          )}
+        />
       )}
     </div>
   )

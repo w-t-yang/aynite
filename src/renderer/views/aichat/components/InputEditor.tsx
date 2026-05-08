@@ -10,19 +10,19 @@ import React, {
   useImperativeHandle,
   useState,
 } from 'react'
-import type { ChatInputHandle } from '../../../lib/types/ui'
-import { Button } from '../basic/Button'
-import type { Keybinding } from '../lib/types'
+import type { ChatInputHandle } from '../../../../lib/types/ui'
+import { Button } from '../../../shared/basic/Button'
+import type { Keybinding } from '../../../shared/lib/types'
+import type { SuggestionItem } from '../utils/input'
 import {
   createSuggestion,
   flattenWorkspaceFiles,
   serializeTiptapToText,
-} from './chat-input-utils'
-import type { SuggestionItem } from './SuggestionList'
+} from '../utils/input'
 
 export type { ChatInputHandle }
 
-interface ChatInputProps {
+interface InputEditorProps {
   onSend: (text: string) => void
   placeholder?: string
   loading?: boolean
@@ -45,9 +45,9 @@ interface ChatInputProps {
   >
 }
 
-// ─── Main ChatInput Component ────────────────────────────────────────
+const EMPTY_ARRAY: any[] = []
 
-const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
+const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
   (
     {
       onSend,
@@ -57,7 +57,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
       onClear: _onClear,
       onShowHistory: _onShowHistory,
       disabled,
-      workspaceFolders = [],
+      workspaceFolders = EMPTY_ARRAY,
       focusKeybinding: _focusKeybinding,
       submitKeybinding,
       getFiles,
@@ -252,7 +252,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
         },
         editable: !disabled,
       },
-      [workspaceFolders],
+      [],
     )
 
     const handleSubmit = useCallback(() => {
@@ -343,6 +343,6 @@ const ChatInputComponent = forwardRef<ChatInputHandle, ChatInputProps>(
   },
 )
 
-export const ChatInput = React.memo(ChatInputComponent)
+export const InputEditor = React.memo(InputEditorComponent)
 
-ChatInput.displayName = 'ChatInput'
+InputEditor.displayName = 'InputEditor'

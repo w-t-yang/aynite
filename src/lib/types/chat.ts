@@ -1,15 +1,6 @@
 /**
- * Chat types aligned with the AI SDK's ModelMessage format for direct
- * compatibility with streamText() — no conversion needed.
- *
- * Content parts: TextPart, ReasoningPart, ToolCallPart, ToolResultPart
- * match the SDK's @ai-sdk/provider-utils types structurally.
- *
- * ChatMessage extends ModelMessage with id + createdAt for session storage.
+ * Content part types (matches AI SDK 6.0.169 structure)
  */
-
-// ─── Content parts ───────────────────────────────────────────────────
-
 export interface TextPart {
   type: 'text'
   text: string
@@ -52,26 +43,34 @@ export type ChatMessage = {
 )
 
 // ─── Stream parts (IPC protocol between main and renderer) ───────────
+// Matches Vercel AI SDK v6.0.169 TextStreamPart union.
+// Definition: node_modules/ai/dist/index.d.ts:2601
 
 export type StreamPart =
-  | { type: 'text-delta'; content: string }
-  | { type: 'reasoning-delta'; content: string }
+  | { type: 'text-delta'; text: string; id?: string }
+  | { type: 'reasoning-delta'; text: string; id?: string }
   | {
       type: 'tool-call'
       toolCallId: string
       toolName: string
-      args: string
+      input: unknown
     }
   | {
       type: 'tool-result'
       toolCallId: string
       toolName: string
-      content: string
+      output: unknown
     }
   | {
-      type: 'step-finish'
+      type: 'tool-input-delta'
+      id: string
+      delta: string
+    }
+  | {
+      type: 'finish-step'
       finishReason: string
-      usage?: { promptTokens?: number; completionTokens?: number }
+      usage?: any
     }
   | { type: 'error'; error: string }
   | { type: 'finish' }
+  | { type: 'start' }

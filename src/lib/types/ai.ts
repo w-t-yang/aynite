@@ -4,11 +4,15 @@ export interface PromptDefinition {
 }
 
 export interface AIProvider {
+  id?: string
+  name?: string
   provider: string
   apiKey?: string
   baseUrl?: string
+  url?: string // Alias for baseUrl sometimes
   model: string
   compatibility?: 'openai' | 'anthropic' | 'google'
+  enabledTools?: { [key: string]: boolean }
 }
 
 export interface AIProviderInstance {
@@ -25,6 +29,7 @@ export interface AIProviderInstance {
 export interface Agent {
   id: string
   name: string
+  description?: string
   promptFiles: string[]
 }
 

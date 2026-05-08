@@ -53,6 +53,7 @@ interface AyniteWindow {
   // File operations
   listFolder: (path: string) => Promise<FileEntry[]>
   readFile: (path: string) => Promise<string>
+  openFile: (path: string) => Promise<boolean>
   writeFile: (path: string, content: string) => Promise<boolean>
   createFile: (path: string, isDirectory: boolean) => Promise<boolean>
   renameFile: (oldPath: string, newPath: string) => Promise<boolean>
@@ -79,6 +80,8 @@ interface AyniteWindow {
   paste: (destDir: string) => Promise<boolean>
 
   deleteTheme: (name: string) => Promise<boolean>
+  getThemes: () => Promise<string[]>
+  getTheme: (name: string) => Promise<any>
   // Workspace
   getWorkspacesList: () => Promise<WorkspacesConfig>
   createWorkspace: (name: string) => Promise<WorkspacesConfig>
@@ -100,12 +103,12 @@ interface AyniteWindow {
       agentFiles?: string[]
     }): Promise<string>
   }
-  listChatLogs: () => Promise<ChatSessionEntry[]>
-  saveChatLog: {
+  listSessions: () => Promise<ChatSessionEntry[]>
+  saveSession: {
     (sessionId: string, messages: any[]): Promise<void>
     (payload: { id: string; messages: any[] }): Promise<void>
   }
-  loadChatLog: {
+  loadSession: {
     (sessionId: string, date: string): Promise<any>
     (payload: { id: string; date: string }): Promise<any>
   }
@@ -113,6 +116,7 @@ interface AyniteWindow {
     payload: DirectCommandPayload,
   ) => Promise<{ stdout: string; stderr: string }>
   respondToAiApproval: (id: string, approved: boolean) => void
+  restorePrompts: () => Promise<boolean>
   onAiChatDelta: (
     requestId: string,
     callback: (part: any) => void,
@@ -125,6 +129,7 @@ interface AyniteWindow {
   openExternal: (url: string) => Promise<boolean>
   getSystemFonts: () => Promise<string[]>
   selectFolder: () => Promise<string[] | null>
+  selectFile: (options?: any) => Promise<string[] | null>
 
   onAppOperation: (callback: (operation: string) => void) => () => void
   onAppEvent: (
@@ -146,6 +151,10 @@ interface AyniteWindow {
   getAvailableSkills: () => Promise<SkillEntry[]>
   getAvailableCommands: () => Promise<CommandEntry[]>
   getAvailableViews: () => Promise<{ id: string; name: string }[]>
+  restoreSkills: () => Promise<boolean>
+  restoreCommands: () => Promise<boolean>
+  pickSkillFolder: () => Promise<string | null>
+  pickCommandFolder: () => Promise<string | null>
 
   // Utilities
   joinPath: (...paths: string[]) => string

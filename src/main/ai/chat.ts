@@ -1,9 +1,7 @@
 import { type ModelMessage, stepCountIs, streamText } from 'ai'
-import { app } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
-  getAyniteDir,
   getAyniteSessionsDir,
   getLogPath,
   getSessionPath,
@@ -19,127 +17,74 @@ import type { AIProvider } from './factory'
 import { getAIModel } from './factory'
 import { createTools } from './tools'
 
-// ─── Cached tools with mutable context ───────────────────────────────
-// tools.ts functions reference `context.*` instead of destructuring,
-// so mutating this object before each request updates the tool closures.
-
-const toolContext = {
-  workspaceFolders: [] as string[],
-  activeFile: undefined as string | undefined,
-}
-const cachedTools = createTools(toolContext)
-
-// ─── Session persistence ─────────────────────────────────────────────
-
-export async function saveSession(sessionId: string, messages: ChatMessage[]) {
-  const dateStr = new Date().toISOString().split('T')[0]
-  const logPath = getSessionPath(sessionId, dateStr)
-  await writeJson(logPath, messages)
+export async function initAiFolders() {
+  const dir = getAyniteSessionsDir()
+  const exists = await stat(dir).catch(() => null)
+  if (!exists) {
+    const fs = await import('node:fs/promises')
+    await fs.mkdir(dir, { recursive: true })
+  }
 }
 
-export async function loadSession(
-  sessionId: string,
-  date: string,
-): Promise<ChatMessage[]> {
-  const raw = await readJson(getSessionPath(sessionId, date))
-  if (!raw || !Array.isArray(raw)) return []
-  return raw as ChatMessage[]
+export async function saveSession(id: string, messages: ChatMessage[]) {
+  const path = getSessionPath(id)
+  await writeJson(path, messages)
+}
+
+export async function loadSession(id: string, date: string) {
+  const path = getSessionPath(id, date)
+  return readJson(path).catch(() => null)
 }
 
 export async function listSessions() {
-  const logsBaseDir = getAyniteSessionsDir()
-  const allLogs: {
-    id: string
-    date: string
-    lastModified: Date
-    size: number
-    preview: string
-  }[] = []
-
-  try {
-    const dates = await readdir(logsBaseDir)
-    for (const dateEntry of dates) {
-      if (!dateEntry.isDirectory()) continue
-      const date = dateEntry.name
-      const dateDir = getSessionsDateDir(date)
-
-      const sessions = await readdir(dateDir)
-      for (const sessionEntry of sessions) {
-        if (!sessionEntry.name.endsWith('.json')) continue
-        const sessionId = sessionEntry.name.replace('.json', '')
-        const sessionPath = getSessionPath(sessionId, date)
-        try {
-          const sessionStats = await stat(sessionPath)
-          const messages: ChatMessage[] = await loadSession(sessionId, date)
-          if (messages.length > 0) {
-            const firstMsg =
-              messages.find((m) => m.role === 'user')?.content || ''
-            const preview =
-              typeof firstMsg === 'string'
-                ? firstMsg.slice(0, 60) + (firstMsg.length > 60 ? '...' : '')
-                : '(complex message)'
-
-            allLogs.push({
-              id: sessionId,
-              date,
-              lastModified: sessionStats.mtime,
-              size: sessionStats.size,
-              preview,
-            })
-          }
-        } catch (e) {
-          console.error(`Error reading session ${sessionEntry.name}`, e)
+  const dir = getAyniteSessionsDir()
+  const dates = await readdir(dir).catch(() => [])
+  const all: any[] = []
+  for (const d of dates) {
+    if (!d.isDirectory()) continue
+    const date = d.name
+    const dPath = getSessionsDateDir(date)
+    const files = await readdir(dPath).catch(() => [])
+    for (const f of files) {
+      if (f.isFile() && f.name.endsWith('.json')) {
+        const id = f.name.replace('.json', '')
+        const content = await readJson(getSessionPath(id, date)).catch(
+          () => null,
+        )
+        if (content && Array.isArray(content)) {
+          const firstUser = content.find((m) => m.role === 'user')
+          all.push({
+            id,
+            date,
+            title: firstUser?.content || 'Untitled Chat',
+            lastMessage: content[content.length - 1]?.content || '',
+            messageCount: content.length,
+          })
         }
       }
     }
-  } catch (_e) {
-    // Directory might not exist yet
   }
-
-  return allLogs.sort(
-    (a, b) => b.lastModified.getTime() - a.lastModified.getTime(),
-  )
+  return all.sort((a, b) => b.id.localeCompare(a.id))
 }
 
-// ─── Logging ─────────────────────────────────────────────────────────
-
-async function logEvent(type: 'REQUEST' | 'RESPONSE' | 'ERROR', payload: any) {
-  if (app.isPackaged) return
-  try {
-    const logFile = getLogPath('dev.log')
-    const timestamp = new Date().toISOString()
-    const logEntry = `[${timestamp}] [${type}] ${JSON.stringify(payload, null, 2)}\n${'-'.repeat(80)}\n`
-    await appendText(logFile, logEntry)
-  } catch (err) {
-    console.error('Failed to log AI event:', err)
-  }
-}
-
-// ─── Main handler ────────────────────────────────────────────────────
-
-export async function handleAiChat({
+export async function aiChat({
   messages,
   config,
   workspaceFolders,
   activeFile,
 }: {
   messages: ChatMessage[]
-  config: AIProvider & { enabledTools?: { [key: string]: boolean } }
+  config: AIProvider
   workspaceFolders: string[]
   activeFile?: string
 }) {
-  const ayniteDir = getAyniteDir()
-  if (!workspaceFolders.some((f) => f === ayniteDir)) {
-    workspaceFolders = [...workspaceFolders, ayniteDir]
-  }
-
-  logEvent('REQUEST', { config, messages: messages.length })
+  const requestId = Math.random().toString(36).slice(2, 10)
+  const model = getAIModel(config)
+  const toolContext = (global as any).toolContext || {}
+  ;(global as any).toolContext = toolContext
 
   try {
-    const model = getAIModel(config)
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-
-    // Update mutable tool context
+    const cachedTools = createTools(toolContext)
     toolContext.workspaceFolders = workspaceFolders
     toolContext.activeFile = activeFile
 
@@ -166,81 +111,65 @@ export async function handleAiChat({
         })
 
         let fullResponseText = ''
-        let fullReasoningText = ''
+        let _fullReasoningText = ''
         const fullToolCalls: {
           toolCallId: string
           toolName: string
-          args: string
+          input: unknown
         }[] = []
 
         for await (const part of result.fullStream) {
-          if (part.type === 'text-delta') {
-            fullResponseText += part.text
-            emit({ type: 'text-delta', content: part.text })
-          } else if (part.type === 'reasoning-delta') {
-            fullReasoningText += part.text
-            emit({ type: 'reasoning-delta', content: part.text })
-          } else if (part.type === 'tool-call') {
-            fullToolCalls.push({
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              args: JSON.stringify(part.input),
-            })
-            emit({
-              type: 'tool-call',
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              args: JSON.stringify(part.input),
-            })
-          } else if (part.type === 'tool-result') {
-            const content =
-              typeof part.output === 'string'
-                ? part.output
-                : JSON.stringify(part.output)
-            emit({
-              type: 'tool-result',
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              content,
-            })
-          } else if (part.type === 'finish-step') {
-            emit({
-              type: 'step-finish',
-              finishReason: part.finishReason,
-              usage: part.usage
-                ? {
-                    promptTokens: part.usage.inputTokens,
-                    completionTokens: part.usage.outputTokens,
-                  }
-                : undefined,
-            })
-          } else if (part.type === 'error') {
-            const errorMessage =
-              part.error instanceof Error
-                ? part.error.message
-                : String(part.error)
-            emit({ type: 'error', error: errorMessage })
-          } else if (part.type === 'finish') {
-            emit({ type: 'finish' })
+          switch (part.type) {
+            case 'text-delta':
+              fullResponseText += part.text
+              emit(part)
+              break
+            case 'reasoning-delta':
+              _fullReasoningText += part.text
+              emit(part)
+              break
+            case 'tool-input-delta':
+              emit(part)
+              break
+            case 'tool-call':
+              fullToolCalls.push(part)
+              emit(part)
+              break
+            case 'tool-result':
+              emit(part)
+              break
+            case 'finish-step':
+              emit({
+                type: 'finish-step',
+                finishReason: part.finishReason,
+                usage: part.usage,
+              })
+              break
+            case 'finish':
+              emit({ type: 'finish' })
+              break
+            case 'error':
+              emit({ type: 'error', error: String(part.error) })
+              break
+            case 'start':
+              emit({ type: 'start' })
+              break
           }
         }
 
-        logEvent('RESPONSE', {
-          text: fullResponseText,
-          reasoning: fullReasoningText,
-          toolCalls: fullToolCalls,
-        })
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : String(e)
-        logEvent('ERROR', { error: message })
-        emit({ type: 'error', error: message })
+        // Final log append (optional, maybe we only save on user action)
+        const logPath = getLogPath()
+        const logEntry = `[${new Date().toISOString()}] AI Response: ${fullResponseText.slice(0, 100)}...\n`
+        await appendText(logPath, logEntry).catch(() => {})
+      } catch (err: any) {
+        console.error('[AI Chat Stream Error]', err)
+        emit({ type: 'error', error: err.message || String(err) })
       }
     })()
 
     return { requestId }
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e)
-    logEvent('ERROR', { error: message })
-    throw e
+  } catch (error: any) {
+    console.error('[AI Chat Error]', error)
+    throw error
   }
 }

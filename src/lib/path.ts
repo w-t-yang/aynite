@@ -36,7 +36,7 @@ export function getAyniteLogsDir() {
   return path.join(AYNITE_DIR, AYNITE_SUBDIRS.LOGS)
 }
 
-export function getLogPath(filename: string) {
+export function getLogPath(filename: string = 'ai-chat.log') {
   return path.join(getAyniteLogsDir(), filename)
 }
 
@@ -44,8 +44,9 @@ export function getAyniteSessionsDir() {
   return path.join(AYNITE_DIR, AYNITE_SUBDIRS.SESSIONS)
 }
 
-export function getSessionPath(sessionId: string, date: string) {
-  return path.join(getAyniteSessionsDir(), date, `${sessionId}.json`)
+export function getSessionPath(sessionId: string, date?: string) {
+  const dateStr = date || new Date().toISOString().split('T')[0]
+  return path.join(getAyniteSessionsDir(), dateStr, `${sessionId}.json`)
 }
 
 export function getSessionsDateDir(date: string) {

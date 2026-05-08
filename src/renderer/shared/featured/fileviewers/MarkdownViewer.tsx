@@ -9,7 +9,7 @@ export const MarkdownViewer: React.FC<{ file: FileInfo; content?: string }> = ({
   file,
   content,
 }) => {
-  const dirPath = file.path.substring(0, file.path.lastIndexOf('/'))
+  const _dirPath = file.path.substring(0, file.path.lastIndexOf('/'))
 
   // Parse frontmatter
   let frontmatter: any = null
@@ -26,7 +26,7 @@ export const MarkdownViewer: React.FC<{ file: FileInfo; content?: string }> = ({
   }
 
   return (
-    <UnifiedViewer basePath={dirPath} padding="p-8">
+    <UnifiedViewer padding="p-8">
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
         {frontmatter && (
           <div className="bg-muted/20 border border-border/50 rounded-2xl p-8 mb-10 shadow-sm relative overflow-hidden group">

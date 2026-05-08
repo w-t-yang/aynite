@@ -1,38 +1,6 @@
 import type React from 'react'
-import type { ChatMessage } from '../../../../lib/types/chat'
-
-export function genId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-}
-
-/** Append text to the last assistant message, or create a new one. */
-export function appendToAssistant(
-  prev: ChatMessage[],
-  text: string,
-): ChatMessage[] {
-  const last = prev[prev.length - 1]
-  if (last && last.role === 'assistant') {
-    const existingContent = typeof last.content === 'string' ? last.content : ''
-    return [
-      ...prev.slice(0, -1),
-      {
-        id: last.id,
-        role: 'assistant',
-        content: existingContent + text,
-        createdAt: last.createdAt,
-      },
-    ]
-  }
-  return [
-    ...prev,
-    {
-      id: genId(),
-      role: 'assistant',
-      content: text,
-      createdAt: Date.now(),
-    },
-  ]
-}
+import type { ChatMessage } from '../../../shared/lib/types'
+import { genId } from './message'
 
 export async function executeCommandOnly(
   text: string,

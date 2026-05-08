@@ -34,6 +34,7 @@ export const AppEvents = {
   CONFIG_ERROR: 'config-error',
   WORKSPACE_CHANGED: 'workspace-changed',
   WORKSPACE_UPDATED: 'workspace-updated',
+  CONFIG_CHANGED: 'config-changed',
   APP_OPERATION: 'app-operation',
 
   // Updates
