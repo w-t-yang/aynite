@@ -9,6 +9,8 @@ import {
   Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { DEFAULT_AI_CONFIG, DEFAULT_AI_TOOLS } from '../../../lib/constants/ai'
+import { DEFAULT_KEYBINDINGS } from '../../../lib/constants/keybindings'
 import type { Theme } from '../../../lib/constants/types'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
@@ -448,39 +450,42 @@ export function Settings() {
               variant="primary"
               onClick={async () => {
                 // Execute standardized restore logic
-                if (activeTab === 'appearance')
-                  await handleSetThemes({ list: [], activeId: '' })
+                if (activeTab === 'appearance') {
+                  await setContextTheme('light')
+                  await loadSettings()
+                }
                 if (activeTab === 'keybindings') {
-                  const res = await window.aynite.getConfig('keybindings')
-                  if (res) handleSetKeybindings(res)
+                  await window.aynite.setConfig('keybindings', {
+                    list: DEFAULT_KEYBINDINGS,
+                  })
+                  await loadSettings()
                 }
 
                 if (activeTab === 'ai') {
-                  const res = await window.aynite.getConfig('ai')
-                  if (res)
-                    handleSetAI({ activeId: res.activeId, providers: res.list })
+                  await window.aynite.setConfig('ai', {
+                    activeId: DEFAULT_AI_CONFIG.activeId,
+                    list: DEFAULT_AI_CONFIG.providers,
+                  })
+                  await loadSettings()
                 }
                 if (activeTab === 'agents') {
-                  const res = await window.aynite.getConfig('agents')
-                  if (res) {
-                    setAgents({ activeId: res.activeId, list: res.list })
-                    await window.aynite.setConfig('agents', {
-                      activeId: res.activeId,
-                      list: res.list,
-                    })
-                  }
+                  await window.aynite.restorePrompts()
+                  await loadSettings()
                 }
                 if (activeTab === 'skills') {
-                  const res = await window.aynite.getConfig('skills')
-                  if (res) handleSetSkills(res)
+                  await window.aynite.restoreSkills()
+                  await loadSettings()
                 }
                 if (activeTab === 'commands') {
-                  const res = await window.aynite.getConfig('commands')
-                  if (res) handleSetCommands(res)
+                  await window.aynite.restoreCommands()
+                  await loadSettings()
                 }
                 if (activeTab === 'tools') {
-                  const res = await window.aynite.getConfig('tools')
-                  if (res) handleSetTools(res.active)
+                  await window.aynite.setConfig('tools', {
+                    active: DEFAULT_AI_TOOLS,
+                    list: availableTools,
+                  })
+                  await loadSettings()
                 }
                 setShowRestoreModal(false)
               }}

@@ -60,6 +60,7 @@ const aynite = {
   aiChat: (payload: any) => ipcRenderer.invoke(AiChannels.CHAT, payload),
   getMergedSystemPrompt: (globalFiles?: string[], agentFiles?: string[]) =>
     ipcRenderer.invoke(AiChannels.PROMPT_GET_MERGED, globalFiles, agentFiles),
+  restorePrompts: () => ipcRenderer.invoke(AiChannels.PROMPT_RESTORE),
   listChatLogs: () => ipcRenderer.invoke(AiChannels.SESSION_LIST),
   saveChatLog: (sessionId: string, messages: any[]) =>
     ipcRenderer.invoke(AiChannels.SESSION_SAVE, { sessionId, messages }),
