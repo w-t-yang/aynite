@@ -28,7 +28,6 @@ interface InputEditorProps {
   loading?: boolean
   onAbort?: () => void
   onClear?: () => void
-  onShowHistory?: () => void
   disabled?: boolean
   workspaceFolders?: string[]
   focusKeybinding?: Keybinding
@@ -55,7 +54,6 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       loading,
       onAbort,
       onClear: _onClear,
-      onShowHistory: _onShowHistory,
       disabled,
       workspaceFolders = EMPTY_ARRAY,
       focusKeybinding: _focusKeybinding,
@@ -304,6 +302,7 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
         editor.commands.clearContent()
         editor.commands.insertContent(prefix)
       },
+      submit: () => handleSubmit(),
     }))
 
     return (

@@ -249,13 +249,18 @@
   }
 
   .splitter {
-    @apply relative z-splitter transition-colors duration-200 bg-transparent;
+    position: relative;
+    z-index: 200;
+    transition: background-color 0.2s;
+    background: transparent;
   }
 
   /* Larger hit area for splitters */
   .splitter::after {
     content: "";
-    @apply absolute inset-[-4px] z-splitter;
+    position: absolute;
+    inset: -4px;
+    z-index: 200;
   }
 
   .splitter.horizontal {

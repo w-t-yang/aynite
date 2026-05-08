@@ -116,11 +116,6 @@ export function AIChat() {
         onSend={sendMessage}
         onAbort={() => {}}
         onClear={clearChat}
-        onShowHistory={async () => {
-          const res = await loadSessions()
-          setSessions(res)
-          setShowHistory(true)
-        }}
         onCopyHistory={() =>
           copyToClipboard(messages.map((m) => m.content).join('\n\n'))
         }

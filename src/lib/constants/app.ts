@@ -51,6 +51,9 @@ export const AppEvents = {
 
   // Tile
   TILE_ACTIVATED: 'tile-activated',
+
+  // Chat
+  SUBMIT_CHAT: 'submit-chat',
 } as const
 
 export const ViewOperation = {

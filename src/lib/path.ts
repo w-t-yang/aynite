@@ -10,16 +10,6 @@ import { AYNITE_SUBDIRS } from './constants/path'
 
 export { AYNITE_SUBDIRS }
 
-/**
- * Ensures the aynite directory and its subdirectories exist.
- */
-export async function initAppFolders() {
-  await ensureDir(AYNITE_DIR)
-  for (const subdir of Object.values(AYNITE_SUBDIRS)) {
-    await ensureDir(path.join(AYNITE_DIR, subdir))
-  }
-}
-
 export function getAyniteDir() {
   return AYNITE_DIR
 }

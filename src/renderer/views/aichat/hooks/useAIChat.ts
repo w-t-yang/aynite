@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AppEvents } from '../../../../lib/constants/app'
 import { DEFAULT_SETTINGS } from '../../../../lib/constants/settings'
 import type { StreamPart } from '../../../../lib/types/chat'
 import type { ChatMessage, SettingsState } from '../../../shared/lib/types'
-import { useAppEventSubscriber } from '../../../views/ViewContext'
+import { useAppEvent, useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
 import { type AgentConfig, runAgentLoop } from '../utils/agent'
 import { executeCommandOnly } from '../utils/commands'
@@ -81,6 +82,8 @@ export function useAIChat() {
     if (event.type === 'workspace-changed') loadWorkspaceFolders()
     if (event.type === 'active-tab-changed') setActiveTabPath(event.data.path)
   })
+
+  useAppEvent(AppEvents.SUBMIT_CHAT, () => inputRef.current?.submit())
 
   // Persistence
   useEffect(() => {

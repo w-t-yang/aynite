@@ -1,4 +1,4 @@
-import { History, LayoutGrid, MoreHorizontal, Sparkles } from 'lucide-react'
+import { History, LayoutGrid } from 'lucide-react'
 import { Button } from '../../../shared/basic/Button'
 import type { SettingsState } from '../../../shared/lib/types'
 
@@ -13,26 +13,24 @@ export function Header({ settings, onShowHistory, onClear }: HeaderProps) {
     (a) => a.id === settings.agents?.activeId,
   )
   const agentName = activeAgent?.name || 'Assistant'
-  const agentDescription = activeAgent?.description || 'AI Pair Programmer'
+  const activeProvider = settings.ai?.providers?.find(
+    (p) => p.id === settings.ai?.activeId,
+  )
+  const providerLabel = activeProvider
+    ? `${activeProvider.provider}/${activeProvider.model}`
+    : 'No AI Provider Selected'
 
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-border/10 bg-background/40 backdrop-blur-md z-layout relative">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5 border border-primary/20 group hover:scale-105 transition-transform duration-300">
-          <Sparkles
-            size={20}
-            className="group-hover:rotate-12 transition-transform"
-          />
-        </div>
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-[13px] font-bold uppercase tracking-widest text-foreground/90">
               {agentName}
             </h2>
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-sm shadow-green-500/50" />
           </div>
           <p className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-tight">
-            {agentDescription}
+            {providerLabel}
           </p>
         </div>
       </div>
@@ -55,14 +53,6 @@ export function Header({ settings, onShowHistory, onClear }: HeaderProps) {
           title="Clear Chat"
         >
           <LayoutGrid size={16} className="rotate-45" />
-        </Button>
-        <div className="w-[1px] h-4 bg-border/20 mx-1" />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="w-8 h-8 rounded-lg hover:bg-accent text-muted-foreground transition-all active:scale-95"
-        >
-          <MoreHorizontal size={16} />
         </Button>
       </div>
     </div>

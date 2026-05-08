@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../lib/constants/app'
+import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { ayniteConfig } from '../../lib/constants/renderer/config'
 import type {
   LayoutNode,
@@ -220,6 +220,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         case 'TOGGLE_LEFT_PANEL':
           // We could add state for panels here later
           console.log('[App] Toggle Left Panel')
+          return
+        case AppOperation.SUBMIT_CHAT:
+          for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
+            'iframe',
+          )) {
+            iframe.contentWindow?.postMessage(
+              { type: `aynite:${AppEvents.SUBMIT_CHAT}`, data: null },
+              '*',
+            )
+          }
           return
         // Add other global cases as needed...
       }

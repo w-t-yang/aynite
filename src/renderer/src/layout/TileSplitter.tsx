@@ -52,12 +52,15 @@ const TileSplitter: React.FC<TileSplitterProps> = ({
   }
 
   return (
-    <hr
+    // biome-ignore lint/a11y/useSemanticElements: <hr> gets height:0 from Tailwind preflight, breaking the splitter
+    <div
       onMouseDown={handleMouseDown}
+      role="separator"
       tabIndex={-1}
       aria-orientation={direction}
-      className={`splitter ${direction} border-none m-0 p-0 flex-shrink-0 z-splitter`}
-      style={{ flex: '0 0 auto' }}
+      aria-valuenow={50}
+      className={`splitter ${direction} m-0 p-0 flex-shrink-0`}
+      style={{ flex: '0 0 auto', zIndex: 200 }}
     />
   )
 }

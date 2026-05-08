@@ -22,6 +22,7 @@ export interface ChatInputHandle {
   focus: () => void
   clear: () => void
   trigger: (prefix: string) => void
+  submit: () => void
 }
 
 export interface SuggestionListHandle {

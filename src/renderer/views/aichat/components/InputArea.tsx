@@ -1,4 +1,4 @@
-import { Check, Copy, History } from 'lucide-react'
+import { Check, Copy } from 'lucide-react'
 import { forwardRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
 import { cn } from '../../../shared/lib/utils'
@@ -10,7 +10,6 @@ interface InputAreaProps {
   onSend: (text: string) => void
   onAbort: () => void
   onClear: () => void
-  onShowHistory: () => void
   onCopyHistory: () => void
   getFiles: (path: string) => Promise<any>
   getAvailableSkills: () => Promise<any>
@@ -25,7 +24,6 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       onSend,
       onAbort,
       onClear,
-      onShowHistory,
       onCopyHistory,
       getFiles,
       getAvailableSkills,
@@ -43,7 +41,6 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
             loading={loading}
             onAbort={onAbort}
             onClear={onClear}
-            onShowHistory={onShowHistory}
             getFiles={getFiles}
             getAvailableSkills={getAvailableSkills}
             getAvailableCommands={getAvailableCommands}
@@ -63,16 +60,6 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               <span className="text-[9px] font-bold uppercase">Copy</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onShowHistory}
-              className="p-1.5 rounded bg-muted/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 h-auto w-auto"
-              title="Session History"
-            >
-              <History size={12} />
-              <span className="text-[9px] font-bold uppercase">Logs</span>
             </Button>
           </div>
         </div>
