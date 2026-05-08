@@ -135,8 +135,10 @@ export function SelectionMenu({
         tabIndex={0}
       >
         {trigger ? (
-          <button
-            type="button"
+          // biome-ignore lint/a11y/useSemanticElements: Necessary to avoid nested <button> tags when trigger is a button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               if (disabled) return
               e.stopPropagation()
@@ -146,7 +148,6 @@ export function SelectionMenu({
               'cursor-pointer inline-flex bg-transparent border-none p-0 text-inherit font-inherit focus:outline-none',
               disabled && 'opacity-50 cursor-not-allowed',
             )}
-            disabled={disabled}
             onKeyDown={(e) => {
               if (disabled) return
               if (e.key === 'Enter' || e.key === ' ') {
@@ -156,7 +157,7 @@ export function SelectionMenu({
             }}
           >
             {trigger}
-          </button>
+          </div>
         ) : (
           <button
             type="button"

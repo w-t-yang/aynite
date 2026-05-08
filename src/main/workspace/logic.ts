@@ -83,6 +83,28 @@ export async function addWorkspaceFolder(
   workspaceName?: string,
 ): Promise<boolean> {
   const { targetWs, data } = await resolveWorkspace(workspaceName)
+
+  // Normalize paths for comparison (ensure trailing slash consistency)
+  const sep = getPathSep()
+  const normalize = (p: string) => (p.endsWith(sep) ? p : p + sep)
+  const newPath = normalize(folderPath)
+
+  for (const existing of data.folders) {
+    const existingPath = normalize(existing)
+
+    // Check if newPath is a parent of existingPath or vice versa
+    if (existingPath.startsWith(newPath)) {
+      throw new Error(
+        `Cannot add folder: "${folderPath}" is a parent of the already added folder "${existing}".`,
+      )
+    }
+    if (newPath.startsWith(existingPath)) {
+      throw new Error(
+        `Cannot add folder: "${folderPath}" is already contained within "${existing}".`,
+      )
+    }
+  }
+
   if (!data.folders.includes(folderPath)) {
     data.folders.push(folderPath)
     await writeJson(getWorkspaceDataPath(targetWs), data)

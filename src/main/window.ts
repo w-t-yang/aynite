@@ -92,6 +92,10 @@ export async function showSaveDialog(options: SaveDialogOptions) {
   return await dialog.showSaveDialog(getMainWindow(), options)
 }
 
+export async function showMessageBox(options: Electron.MessageBoxOptions) {
+  return await dialog.showMessageBox(getMainWindow(), options)
+}
+
 export function minimizeWindow() {
   getMainWindow().minimize()
 }
