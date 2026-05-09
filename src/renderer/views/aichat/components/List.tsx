@@ -1,14 +1,14 @@
+import type { TextStreamPart, UIMessage } from 'ai'
 import { forwardRef } from 'react'
 import { FLEX_CENTER_GAP_3 } from '../../../../lib/constants/renderer/styles'
-import type { ChatMessage, StreamPart } from '../../../../lib/types/chat'
 import { ApprovalModal } from './ApprovalModal'
 import { MessageItem } from './Message'
 import { StreamingIndicator } from './StreamingIndicator'
 
 interface ListProps {
-  messages: ChatMessage[]
+  messages: UIMessage[]
   loading: boolean
-  currentStep: StreamPart | null
+  currentStep: TextStreamPart<any> | null
   pendingApproval: { command: string; cwd: string } | null
   onApprove: () => void
   onReject: () => void

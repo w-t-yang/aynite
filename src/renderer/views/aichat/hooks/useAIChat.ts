@@ -1,12 +1,7 @@
+import type { TextStreamPart, UIMessage } from 'ai'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppEvents } from '../../../../lib/constants/app'
 import { DEFAULT_SETTINGS } from '../../../../lib/constants/settings'
-import type {
-  ChatMessage,
-  CommandResultPart,
-  LocalCommandMessage,
-  StreamPart,
-} from '../../../../lib/types/chat'
 import type { SettingsState } from '../../../shared/lib/types'
 import { useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
@@ -17,8 +12,8 @@ import {
   appendReasoningToAssistant,
   appendToAssistant,
   appendToolInputDeltaToAssistant,
-  appendToolMessage,
   genId,
+  updateToolResult,
 } from '../utils/message'
 
 // import { MOCK_MESSAGES } from '../utils/mocks'
@@ -30,11 +25,13 @@ export function useAIChat() {
   )
   const [activeTabPath, setActiveTabPath] = useState<string>('')
   const [workspaceFolders, setWorkspaceFolders] = useState<string[]>([])
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  // const [messages, setMessages] = useState<ChatMessage[]>(MOCK_MESSAGES)
+  const [messages, setMessages] = useState<UIMessage[]>([])
+  // const [messages, setMessages] = useState<UIMessage[]>(MOCK_MESSAGES)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [currentStep, setCurrentStep] = useState<StreamPart | null>(null)
+  const [currentStep, setCurrentStep] = useState<TextStreamPart<any> | null>(
+    null,
+  )
   const [error, setError] = useState<{
     message: string
     redacted: string
@@ -275,7 +272,8 @@ export function useAIChat() {
         agentPromptFiles,
       }
 
-      const results: CommandResultPart[] = []
+      // Build command results text inline (no separate commandResults field)
+      let resultsText = ''
       for (const res of commandResults) {
         const content = [res.stdout, res.stderr]
           .filter(Boolean)
@@ -283,12 +281,7 @@ export function useAIChat() {
           .trim()
         const result =
           content || (res.error ? `Error: ${res.error}` : '(No output)')
-
-        results.push({
-          command: res.name,
-          result,
-          exitCode: res.error ? 1 : 0,
-        })
+        resultsText += `> Command: ${res.name}\n${result}\n\n---\n\n`
       }
 
       const initialMessages = [...messagesRef.current]
@@ -303,19 +296,19 @@ export function useAIChat() {
             id: genId(),
             role: 'system',
             parts: [{ type: 'text', text: systemPrompt }],
-            createdAt: new Date(),
           })
         }
       }
 
-      const userMsg: ChatMessage = {
+      // Create user message with command results inlined as text
+      const userText = resultsText
+        ? `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`
+        : text
+
+      const userMsg: UIMessage = {
         id: genId(),
         role: 'user',
-        parts: [{ type: 'text', text: text }],
-        createdAt: new Date(),
-      }
-      if (results.length > 0) {
-        ;(userMsg as LocalCommandMessage).commandResults = results
+        parts: [{ type: 'text', text: userText }],
       }
 
       const updatedMessages = [...initialMessages, userMsg]
@@ -340,7 +333,7 @@ export function useAIChat() {
           updatedMessages,
           agentConfig,
           workspaceFoldersRef.current,
-          (event: StreamPart) => {
+          (event: TextStreamPart<any>) => {
             setCurrentStep(event)
             switch (event.type) {
               case 'text-delta':
@@ -357,18 +350,30 @@ export function useAIChat() {
                 )
                 break
               case 'tool-call':
-                setMessages((prev) => appendPartToAssistant(prev, event))
+                setMessages((prev) =>
+                  appendPartToAssistant(prev, {
+                    toolCallId: event.toolCallId,
+                    toolName: event.toolName,
+                    input: event.input,
+                  }),
+                )
                 break
               case 'tool-result':
-                setMessages((prev) => appendToolMessage(prev, event))
+                setMessages((prev) =>
+                  updateToolResult(prev, {
+                    toolCallId: event.toolCallId,
+                    toolName: event.toolName,
+                    output: event.output,
+                  }),
+                )
                 break
               case 'error':
                 setError({
-                  message: event.error,
-                  redacted: event.error.includes('fetch failed')
+                  message: String(event.error),
+                  redacted: String(event.error).includes('fetch failed')
                     ? 'Connection failed. Please check if your AI provider service is running.'
-                    : event.error.includes('401') ||
-                        event.error.includes('invalid_api_key')
+                    : String(event.error).includes('401') ||
+                        String(event.error).includes('invalid_api_key')
                       ? 'Authentication failed. Please check your API key.'
                       : 'An error occurred while communicating with the AI provider.',
                 })

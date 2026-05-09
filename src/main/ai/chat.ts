@@ -1,4 +1,5 @@
-import { stepCountIs, streamText } from 'ai'
+import type { TextStreamPart, UIMessage } from 'ai'
+import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
@@ -12,11 +13,7 @@ import {
   stat,
   writeJson,
 } from '../../lib/path'
-import type {
-  ChatMessage,
-  SessionMetadata,
-  StreamPart,
-} from '../../lib/types/chat'
+import type { SessionMetadata } from '../../lib/types/chat'
 import { sendAppEvent } from '../window'
 import type { AIProvider } from './factory'
 import { getAIModel } from './factory'
@@ -33,12 +30,11 @@ export async function initAiFolders() {
 
 export async function saveSession(
   id: string,
-  messages: ChatMessage[],
+  messages: UIMessage[],
   metadata?: SessionMetadata,
 ) {
   const path = getSessionPath(id)
-  const coreMessages = toCoreMessages(messages)
-  await writeJson(path, coreMessages)
+  await writeJson(path, messages)
 
   if (metadata) {
     const metaPath = getSessionMetadataPath(id)
@@ -116,7 +112,7 @@ export async function listSessions() {
         ])
 
         if (content && Array.isArray(content)) {
-          const firstUser = content.find((m) => m.role === 'user')
+          const firstUser = content.find((m: any) => m.role === 'user')
           const preview =
             (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') ||
             'No content'
@@ -159,7 +155,7 @@ export async function aiChat({
   workspaceFolders,
   activeFile,
 }: {
-  messages: ChatMessage[]
+  messages: UIMessage[]
   config: AIProvider & { enabledTools?: Record<string, boolean> }
   workspaceFolders: string[]
   activeFile?: string
@@ -183,34 +179,30 @@ export async function aiChat({
       }
     })
 
-    const emit = (part: StreamPart) => {
+    const emit = (part: TextStreamPart<any>) => {
       sendAppEvent(AppEvents.AI_CHAT_DELTA, { requestId, part })
     }
 
+    // Extract system message and convert to model messages
     const systemMessage = messages.find((m) => m.role === 'system')
     const chatMessages = messages.filter((m) => m.role !== 'system')
-    const finalMessages = toCoreMessages(chatMessages)
+    const modelMessages = await convertToModelMessages(chatMessages, {
+      tools: enabledTools,
+    })
 
-    const _toolNames = Object.keys(enabledTools)
+    const system = systemMessage
+      ? systemMessage.parts
+          .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+          .map((p) => p.text)
+          .join('\n')
+      : undefined
 
     ;(async () => {
       try {
         const result = streamText({
           model,
-          system: (() => {
-            if (!systemMessage) return undefined
-            const parts =
-              systemMessage.parts ||
-              (Array.isArray(systemMessage.content)
-                ? systemMessage.content
-                : [])
-            if (parts.length > 0)
-              return parts.map((p: any) => p.text || '').join('\n')
-            return typeof systemMessage.content === 'string'
-              ? systemMessage.content
-              : undefined
-          })(),
-          messages: finalMessages,
+          system,
+          messages: modelMessages,
           tools: enabledTools,
           stopWhen: stepCountIs(10),
         })
@@ -234,26 +226,16 @@ export async function aiChat({
               break
             case 'tool-call':
               fullToolCalls.push(part)
-              emit(part as any)
+              emit(part)
               break
             case 'tool-result':
-              emit(part as any)
+              emit(part)
               break
             case 'finish-step':
-              emit({
-                type: 'finish-step',
-                finishReason: part.finishReason,
-                usage: part.usage,
-              })
-              break
             case 'finish':
-              emit({ type: 'finish' })
-              break
             case 'error':
-              emit({ type: 'error', error: String(part.error) })
-              break
             case 'start':
-              emit({ type: 'start' })
+              emit(part)
               break
           }
         }
@@ -285,112 +267,4 @@ export async function aiChat({
     console.error('[AI Chat Error]', error)
     throw error
   }
-}
-
-/**
- * Converts internal ChatMessage[] to AI SDK CoreMessage[].
- * Handles tool mapping, reasoning flattening, and provider compatibility.
- */
-function toCoreMessages(messages: ChatMessage[]): any[] {
-  return messages.flatMap((msg) => {
-    // 1. Handle already formatted SDK messages (idempotency)
-    if (msg.role === 'tool' || (msg as any).content) {
-      const content = (msg as any).content || msg.parts
-      return [{ role: msg.role, content }]
-    }
-
-    let currentParts = [...(msg.parts || [])]
-
-    // 2. Inject command results into user messages
-    if (msg.role === 'user' && (msg as any).commandResults?.length > 0) {
-      const resultsText = ((msg as any).commandResults as any[])
-        .map(
-          (res) =>
-            `> Command: ${res.command}\n${res.result ?? res.output}${res.exitCode ? `\n(Exit Code: ${res.exitCode})` : ''}`,
-        )
-        .join('\n\n---\n\n')
-
-      const text = currentParts.map((p: any) => p.text || '').join('')
-      currentParts = [
-        {
-          type: 'text',
-          text: `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`,
-        },
-      ]
-    }
-
-    // 3. Map parts and handle role-splitting
-    const assistantParts: any[] = []
-    const toolParts: any[] = []
-    const otherParts: any[] = []
-
-    for (const p of currentParts) {
-      if (p.type === 'dynamic-tool') {
-        const isResult =
-          p.state === 'output-available' || p.state === 'output-error'
-        if (isResult) {
-          toolParts.push({
-            type: 'tool-result',
-            toolCallId: p.toolCallId,
-            toolName: p.toolName,
-            result: p.output ?? (p as any).result,
-            output: p.output ?? (p as any).result,
-            isError: p.state === 'output-error',
-          })
-        } else {
-          assistantParts.push({
-            type: 'tool-call',
-            toolCallId: p.toolCallId,
-            toolName: p.toolName,
-            args: p.input ?? (p as any).args,
-            input: p.input ?? (p as any).args,
-          })
-        }
-      } else if (p.type === 'reasoning') {
-        assistantParts.push({ type: 'text', text: `Thinking:\n${p.text}` })
-      } else if (p.type === 'text') {
-        if (msg.role === 'assistant') assistantParts.push(p)
-        else otherParts.push(p)
-      } else if (p.type === 'tool-call') {
-        assistantParts.push({
-          ...p,
-          args: p.input ?? p.args,
-          input: p.input ?? p.args,
-        })
-      } else if (p.type === 'tool-result') {
-        toolParts.push({
-          ...p,
-          result: p.output ?? p.result,
-          output: p.output ?? p.result,
-        })
-      } else {
-        otherParts.push(p)
-      }
-    }
-
-    const result: any[] = []
-
-    if (msg.role === 'user' || msg.role === 'system') {
-      result.push({
-        role: msg.role,
-        content:
-          otherParts.length > 0 ? otherParts : (msg as any).content || '',
-      })
-    } else if (msg.role === 'assistant') {
-      // If an assistant message contains tool results, we MUST split it
-      if (assistantParts.length > 0) {
-        result.push({ role: 'assistant', content: assistantParts })
-      }
-      if (toolParts.length > 0) {
-        result.push({ role: 'tool', content: toolParts })
-      }
-    } else if (msg.role === 'tool') {
-      result.push({
-        role: 'tool',
-        content: toolParts.length > 0 ? toolParts : otherParts,
-      })
-    }
-
-    return result
-  })
 }

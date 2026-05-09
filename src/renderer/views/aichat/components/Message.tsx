@@ -1,3 +1,4 @@
+import type { UIMessage } from 'ai'
 import {
   AlertTriangle,
   Bot,
@@ -12,7 +13,6 @@ import { memo } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PROTOCOL } from '../../../../lib/constants/app'
-import type { ChatMessage } from '../../../../lib/types/chat'
 import { Button } from '../../../shared/basic/Button'
 import { Collapsible } from '../../../shared/basic/Collapsible'
 import { cn } from '../../../shared/lib/utils'
@@ -109,7 +109,6 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
 
   // Robust title extraction: prefer the command, then the primary argument, then the tool name
   const getToolTitle = () => {
-    // 1. Try to find a command-like string in direct or nested args
     const getCmd = (obj: any): string | null => {
       if (!obj || typeof obj !== 'object') return null
       return (
@@ -127,7 +126,6 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
     const cmd = getCmd(actualArgs)
     if (cmd) return cmd
 
-    // 2. Fallback to tool name
     return toolName.toUpperCase().replace(/_/g, ' ')
   }
 
@@ -185,42 +183,12 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
   )
 })
 
-const CommandResultRenderer = memo(
-  ({
-    result,
-    exitCode,
-  }: {
-    command: string
-    result: string
-    exitCode?: number
-  }) => {
-    const isError = exitCode !== undefined && exitCode !== 0
-    return (
-      <div className="mx-4 rounded-md border border-border/20 bg-muted/10 overflow-hidden">
-        <pre
-          className={cn(
-            'text-[12px] font-mono whitespace-pre-wrap max-h-[400px] overflow-auto leading-relaxed px-4 py-3',
-            isError ? 'text-destructive/90' : 'text-muted-foreground',
-          )}
-        >
-          {result}
-        </pre>
-      </div>
-    )
-  },
-)
-
 // ─── Role Renderers ──────────────────────────────────────────────────
 
-function SystemMessage({ msg }: { msg: ChatMessage }) {
-  const parts = (msg.parts ||
-    (Array.isArray(msg.content) ? msg.content : [])) as any[]
+function SystemMessage({ msg }: { msg: UIMessage }) {
+  const parts = msg.parts as any[]
   const content =
-    parts.length > 0
-      ? parts.map((p) => p.text || '').join('')
-      : typeof msg.content === 'string'
-        ? msg.content
-        : ''
+    parts.length > 0 ? parts.map((p) => p.text || '').join('') : ''
   return (
     <div className="opacity-30 hover:opacity-100 transition-opacity mb-3">
       <Collapsible
@@ -241,21 +209,15 @@ function UserMessage({
   msg,
   onRevert,
 }: {
-  msg: ChatMessage
+  msg: UIMessage
   onRevert: () => void
 }) {
   const { id } = msg
-  const parts = (msg.parts ||
-    (Array.isArray(msg.content) ? msg.content : [])) as any[]
+  const parts = msg.parts as any[]
   const text =
-    parts && parts.length > 0
-      ? parts.map((p) => p.text || '').join('')
-      : typeof msg.content === 'string'
-        ? msg.content
-        : ''
+    parts && parts.length > 0 ? parts.map((p) => p.text || '').join('') : ''
 
   const formatMentions = (t: string) => {
-    // Split by any mention pattern, keeping the mentions in the result array
     const segments = t.split(
       /(>cmd\[.*?\]\(.*?\)|@(?:file|dir)\[.*?\]\(.*?\)|(?:\s|^)\/skill\[.*?\]\(.*?\))/g,
     )
@@ -311,18 +273,6 @@ function UserMessage({
         <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
           {formatMentions(text)}
         </div>
-        {(msg as any).commandResults?.length > 0 && (
-          <div className="space-y-2 mt-2">
-            {(msg as any).commandResults.map((res: any) => (
-              <CommandResultRenderer
-                key={res.command}
-                command={res.command}
-                result={res.result}
-                exitCode={res.exitCode}
-              />
-            ))}
-          </div>
-        )}
         <div className="absolute bottom-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
           <Button
             variant="ghost"
@@ -347,24 +297,21 @@ function AssistantMessage({
   onOpenFile,
   onRevert,
 }: {
-  msg: ChatMessage
+  msg: UIMessage
   isLast: boolean
   isStreaming: boolean
   onCopy: (t: string) => void
   onOpenFile: (p: string) => void
   onRevert: () => void
 }) {
-  const parts = (msg.parts ||
-    (Array.isArray(msg.content) ? msg.content : [])) as any[]
+  const parts = msg.parts as any[]
   const fullText =
     parts.length > 0
       ? parts
           .filter((p) => p.type === 'text')
           .map((p) => p.text)
           .join('')
-      : typeof msg.content === 'string'
-        ? msg.content
-        : ''
+      : ''
 
   const hasNoParts = parts.length === 0
   const hasToolParts = parts.some(
@@ -500,7 +447,7 @@ function AssistantMessage({
 // ─── Main Message Item ──────────────────────────────────────────────
 
 interface MessageItemProps {
-  msg: ChatMessage
+  msg: UIMessage
   idx: number
   total: number
   isStreaming: boolean
@@ -536,28 +483,6 @@ export const MessageItem = memo(
             onRevert={onRevert}
           />
         )
-      case 'tool':
-      case 'tool' as any: {
-        const parts = (msg.parts ||
-          (Array.isArray(msg.content) ? msg.content : [])) as any[]
-        const visibleParts = parts.filter(
-          (p: any) =>
-            p.type === 'tool-result' ||
-            p.state === 'output-available' ||
-            p.state === 'output-error',
-        )
-        if (visibleParts.length === 0) return null
-        return (
-          <div className="opacity-90 mb-3 px-6 space-y-2">
-            {visibleParts.map((p: any, i: number) => (
-              <ToolPartRenderer
-                key={p.toolCallId || `tool-res-${i}`}
-                part={p}
-              />
-            ))}
-          </div>
-        )
-      }
       default:
         return null
     }

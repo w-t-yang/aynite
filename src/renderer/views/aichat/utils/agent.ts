@@ -2,19 +2,19 @@ import type { AgentLoopConfig } from '../../../../lib/types/ai'
 
 export type { AgentLoopConfig }
 
-import type { ChatMessage, StreamPart } from '../../../../lib/types/chat'
+import type { TextStreamPart, UIMessage } from 'ai'
 import { genId } from './message'
 
 export async function runAgentLoop(
-  messages: ChatMessage[],
+  messages: UIMessage[],
   config: AgentLoopConfig,
   workspaceFolders: string[],
-  onEvent: (event: StreamPart) => void,
+  onEvent: (event: TextStreamPart<any>) => void,
   activeFile: string,
   abortSignal: AbortSignal,
   subscribe: (handler: (event: any) => void) => () => void,
-): Promise<ChatMessage[]> {
-  const loopMessages: ChatMessage[] = []
+): Promise<UIMessage[]> {
+  const loopMessages: UIMessage[] = []
   let reasoningAccum = ''
   let textAccum = ''
 
@@ -28,11 +28,11 @@ export async function runAgentLoop(
       const parts: any[] = []
 
       if (reasoningAccum) {
-        parts.push({ type: 'reasoning', text: reasoningAccum })
+        parts.push({ type: 'reasoning', text: reasoningAccum, state: 'done' })
       }
 
       if (textAccum) {
-        parts.push({ type: 'text', text: textAccum })
+        parts.push({ type: 'text', text: textAccum, state: 'done' })
       }
 
       if (currentStepToolCalls.length > 0) {
@@ -42,19 +42,16 @@ export async function runAgentLoop(
             toolCallId: tc.toolCallId,
             toolName: tc.toolName,
             state: 'input-available',
-            input: tc.args || tc.input,
-          })
+            input: tc.input || tc.args,
+          } as any)
         })
       }
 
-      const assistantMsg: ChatMessage = {
+      loopMessages.push({
         id: genId(),
         role: 'assistant',
         parts,
-        createdAt: new Date(),
-      }
-
-      loopMessages.push(assistantMsg)
+      })
       textAccum = ''
       reasoningAccum = ''
       currentStepToolCalls = []
@@ -96,7 +93,7 @@ export async function runAgentLoop(
             return
           }
 
-          const part = event.data.part as StreamPart
+          const part = event.data.part as TextStreamPart<any>
           switch (part.type) {
             case 'text-delta':
               textAccum += part.text
@@ -128,24 +125,29 @@ export async function runAgentLoop(
 
             case 'tool-result': {
               const matchingCall = allToolCalls.get(part.toolCallId)
-              const args = matchingCall?.args || matchingCall?.input || {}
+              const _input = matchingCall?.input || matchingCall?.args || {}
 
               flushAssistant()
-              loopMessages.push({
-                id: genId(),
-                role: 'assistant',
-                parts: [
-                  {
-                    type: 'dynamic-tool',
-                    toolCallId: part.toolCallId,
-                    toolName: part.toolName,
+
+              // Update the matching dynamic-tool part in the last assistant message
+              if (loopMessages.length > 0) {
+                const last = loopMessages[loopMessages.length - 1]
+                const parts = [...last.parts]
+                const idx = parts.findIndex(
+                  (p) =>
+                    p.type === 'dynamic-tool' &&
+                    p.toolCallId === part.toolCallId,
+                )
+                if (idx !== -1) {
+                  parts[idx] = {
+                    ...parts[idx],
                     state: 'output-available',
-                    input: args,
-                    output: part.result ?? (part as any).output,
-                  } as any,
-                ],
-                createdAt: new Date(),
-              })
+                    output: part.output,
+                  } as any
+                  loopMessages[loopMessages.length - 1] = { ...last, parts }
+                }
+              }
+
               onEvent(part)
               break
             }
@@ -165,7 +167,7 @@ export async function runAgentLoop(
             case 'finish':
               unsubscribe()
               flushAssistant()
-              onEvent({ type: 'finish' })
+              onEvent({ type: 'finish' } as any)
               fulfill([...messages, ...loopMessages])
               break
           }

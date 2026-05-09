@@ -1,12 +1,12 @@
+import type { UIMessage } from 'ai'
 import type React from 'react'
-import type { ChatMessage } from '../../../../lib/types/chat'
 import { genId } from './message'
 
 export async function executeCommandOnly(
   text: string,
   activeTabPath: string,
-  messages: ChatMessage[],
-  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
+  messages: UIMessage[],
+  setMessages: React.Dispatch<React.SetStateAction<UIMessage[]>>,
   setLoading: React.Dispatch<React.SetStateAction<boolean>>,
 ): Promise<boolean> {
   const firstCmdMatch = text.trim().match(/^>cmd\[(.*?)\]\((.*?)\)/)
@@ -37,7 +37,7 @@ export async function executeCommandOnly(
       '(No output)'
     const _commandStr = `${name} ${params.join(' ')}`
 
-    // Format command result into text parts to comply with SDK v6 schema
+    // Format command result into text parts
     const formattedText = `${text}\n\n${output}`
 
     setMessages([
@@ -46,12 +46,10 @@ export async function executeCommandOnly(
         id: genId(),
         role: 'user',
         parts: [{ type: 'text', text: formattedText }],
-        createdAt: new Date(),
       },
     ])
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : String(e)
-    const _commandStr = `${name} ${params.join(' ')}`
     const formattedText = `${text}\n\nError: ${errorMsg}`
 
     setMessages([
@@ -60,7 +58,6 @@ export async function executeCommandOnly(
         id: genId(),
         role: 'user',
         parts: [{ type: 'text', text: formattedText }],
-        createdAt: new Date(),
       },
     ])
   } finally {

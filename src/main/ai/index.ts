@@ -1,7 +1,7 @@
+import type { UIMessage } from 'ai'
 import { ipcMain } from 'electron'
 import { AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
-import type { ChatMessage } from '../../lib/types/chat'
 import { sendAppOperation, showOpenDialog } from '../window'
 import { aiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
@@ -9,7 +9,7 @@ import { getToolsMetadata } from './tools'
 
 // ─── Payload types ─────────────────────────────────────────────────────────
 interface AiChatPayload {
-  messages: ChatMessage[]
+  messages: UIMessage[]
   config: any
   workspaceFolders: string[]
   activeFile?: string
@@ -17,7 +17,7 @@ interface AiChatPayload {
 
 interface SessionSavePayload {
   sessionId: string
-  messages: ChatMessage[]
+  messages: UIMessage[]
   metadata?: any
 }
 

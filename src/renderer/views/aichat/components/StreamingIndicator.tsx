@@ -1,9 +1,9 @@
+import type { TextStreamPart } from 'ai'
 import { Bot, Terminal, Zap } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import type { StreamPart } from '../../../../lib/types/chat'
 
 interface StreamingIndicatorProps {
-  step: StreamPart | null
+  step: TextStreamPart<any> | null
 }
 
 export function StreamingIndicator({ step }: StreamingIndicatorProps) {
