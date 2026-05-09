@@ -18,9 +18,35 @@ export function FileBrowserPage() {
 
   // Content state
   const [content, setContent] = useState<string | null>(null)
+  const [originalContent, setOriginalContent] = useState<string | null>(null)
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Track dirty state per path
+  const [dirtyPaths, setDirtyPaths] = useState<Set<string>>(new Set())
+
+  const isDirty = content !== originalContent && activePath !== null
+
+  // Update dirty paths set
+  useEffect(() => {
+    if (!activePath) return
+    setDirtyPaths((prev) => {
+      if (
+        (content !== originalContent && prev.has(activePath)) ||
+        (content === originalContent && !prev.has(activePath))
+      ) {
+        return prev
+      }
+      const next = new Set(prev)
+      if (content !== originalContent) {
+        next.add(activePath)
+      } else {
+        next.delete(activePath)
+      }
+      return next
+    })
+  }, [content, originalContent, activePath])
 
   // Track if we are currently handling a broadcast to avoid infinite loops
   const isBroadcastingRef = useRef(false)
@@ -149,6 +175,7 @@ export function FileBrowserPage() {
 
     // Clear state immediately to show loading for the new file
     setContent(null)
+    setOriginalContent(null)
     setFileInfo(null)
 
     const loadFile = async () => {
@@ -163,8 +190,10 @@ export function FileBrowserPage() {
         if (isText) {
           const text = await window.aynite.readFile(activePath)
           setContent(text)
+          setOriginalContent(text)
         } else {
           setContent(null)
+          setOriginalContent(null)
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load file')
@@ -202,12 +231,31 @@ export function FileBrowserPage() {
     }
   })
 
+  const [isEditing, setIsEditing] = useState(false)
+
+  const handleSave = useCallback(async () => {
+    if (!activePath || content === null) return
+    try {
+      await window.aynite.writeFile(activePath, content)
+      setOriginalContent(content)
+      // Notify main and other views if needed
+    } catch (e) {
+      console.error('Failed to save file:', e)
+    }
+  }, [activePath, content])
+
+  // Reset editing mode when switching files
+  useEffect(() => {
+    setIsEditing(false)
+  }, [])
+
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden">
       {activePath && (
         <TabBar
           tabs={tabs}
           activePath={activePath}
+          dirtyPaths={dirtyPaths}
           onTabSelect={handleTabSelect}
           onTabClose={closeTab}
           onCloseAll={closeAll}
@@ -220,9 +268,20 @@ export function FileBrowserPage() {
           fileInfo={fileInfo}
           loading={loading}
           error={error}
+          isEditing={isEditing}
+          onContentChange={setContent}
         />
       </div>
-      {activePath && <StatusBar />}
+      {activePath && (
+        <StatusBar
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          fileInfo={fileInfo}
+          content={content}
+          onSave={handleSave}
+          isDirty={isDirty}
+        />
+      )}
     </div>
   )
 }

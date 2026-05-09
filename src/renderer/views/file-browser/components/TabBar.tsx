@@ -12,6 +12,7 @@ interface Tab {
 interface TabBarProps {
   tabs: Tab[]
   activePath: string | null
+  dirtyPaths?: Set<string>
   onTabSelect: (path: string) => void
   onTabClose: (path: string) => void
   onCloseAll: () => void
@@ -20,6 +21,7 @@ interface TabBarProps {
 export function TabBar({
   tabs,
   activePath,
+  dirtyPaths = new Set(),
   onTabSelect,
   onTabClose,
   onCloseAll,
@@ -109,6 +111,9 @@ export function TabBar({
               <span className="flex-1 truncate text-xs font-medium">
                 {tab.name}
               </span>
+              {dirtyPaths.has(tab.path) && (
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/60 ml-2 shrink-0 animate-pulse" />
+              )}
               <Button
                 variant="ghost"
                 size="icon"

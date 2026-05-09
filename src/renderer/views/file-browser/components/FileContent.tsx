@@ -4,6 +4,7 @@ import { FileHandlerComponents } from '../../../../lib/constants/renderer/ui'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
 import { MarkdownViewer } from '../../../shared/featured/fileviewers/MarkdownViewer'
+import { TextEditor } from '../../../shared/featured/fileviewers/TextEditor'
 import { TextViewer } from '../../../shared/featured/fileviewers/TextViewer'
 import { getFileCategory } from '../../../shared/lib/file-handlers'
 import { useAppOperation } from '../../ViewContext'
@@ -14,6 +15,8 @@ interface FileContentProps {
   fileInfo: FileInfo | null
   loading: boolean
   error: string | null
+  isEditing?: boolean
+  onContentChange?: (content: string) => void
 }
 
 export function FileContent({
@@ -22,6 +25,8 @@ export function FileContent({
   fileInfo,
   loading,
   error,
+  isEditing = false,
+  onContentChange,
 }: FileContentProps) {
   const execOp = useAppOperation()
 
@@ -76,10 +81,30 @@ export function FileContent({
   )
 
   if (category === 'markdown') {
+    if (isEditing) {
+      return (
+        <TextEditor
+          content={content || ''}
+          onChange={onContentChange || (() => {})}
+          file={fileInfo}
+          className="flex-1"
+        />
+      )
+    }
     return <MarkdownViewer content={content || ''} file={fileInfo} />
   }
 
   if (category === 'text' || category === 'html') {
+    if (isEditing) {
+      return (
+        <TextEditor
+          content={content || ''}
+          onChange={onContentChange || (() => {})}
+          file={fileInfo}
+          className="flex-1"
+        />
+      )
+    }
     return (
       <TextViewer content={content || ''} file={fileInfo} className="flex-1" />
     )

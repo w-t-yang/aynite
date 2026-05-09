@@ -90,6 +90,7 @@ export const MarkdownViewer: React.FC<{
           prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:font-semibold
           prose-blockquote:border-l-4 prose-blockquote:border-primary/40 prose-blockquote:bg-primary/[0.02] prose-blockquote:px-6 prose-blockquote:py-1 prose-blockquote:rounded-r-xl prose-blockquote:italic
           prose-code:text-primary prose-code:bg-primary/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none
+          prose-pre:bg-transparent prose-pre:p-0
           prose-ul:list-disc prose-ol:list-decimal
           prose-li:my-2
           prose-img:rounded-2xl prose-img:shadow-2xl prose-img:border prose-img:border-border/40
