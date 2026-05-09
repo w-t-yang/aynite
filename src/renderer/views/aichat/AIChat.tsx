@@ -30,18 +30,22 @@ export function AIChat() {
   const [sessions, setSessions] = useState<any[]>([])
 
   useEffect(() => {
-    if (scrollRef.current) {
-      // Use requestAnimationFrame to ensure the DOM has updated
+    const el = scrollRef.current
+    if (!el) return
+
+    // Only auto-scroll if user is already near the bottom
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
+
+    if (isNearBottom) {
       const scroll = () => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-        }
+        el.scrollTop = el.scrollHeight
       }
       requestAnimationFrame(scroll)
       // Double check after a short delay for heavy rendering
       setTimeout(scroll, 100)
     }
-  }, [])
+    void [messages, loading]
+  }, [messages, loading])
 
   // Global actions for micro-app bridge
   useEffect(() => {
