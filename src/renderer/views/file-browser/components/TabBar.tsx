@@ -1,4 +1,14 @@
-import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  File,
+  FileCode,
+  FileImage,
+  FileJson,
+  FileText,
+  Menu,
+  X,
+} from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
@@ -16,6 +26,35 @@ interface TabBarProps {
   onTabSelect: (path: string) => void
   onTabClose: (path: string) => void
   onCloseAll: () => void
+}
+
+function getFileIcon(name: string) {
+  const ext = name.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'json':
+      return <FileJson size={13} />
+    case 'js':
+    case 'ts':
+    case 'jsx':
+    case 'tsx':
+    case 'css':
+    case 'html':
+    case 'xml':
+      return <FileCode size={13} />
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'svg':
+    case 'webp':
+      return <FileImage size={13} />
+    case 'md':
+    case 'txt':
+    case 'log':
+      return <FileText size={13} />
+    default:
+      return <File size={13} />
+  }
 }
 
 export function TabBar({
@@ -80,11 +119,11 @@ export function TabBar({
   }, [activePath])
 
   return (
-    <div className="h-10 shrink-0 bg-sidebar border-b border-border flex items-center">
+    <div className="h-9 shrink-0 bg-muted/30 border-b border-border flex items-center select-none">
       {/* Tabs Area */}
       <div
         ref={scrollRef}
-        className="flex-1 flex items-center h-full overflow-x-auto scrollbar-hide no-scrollbar select-none"
+        className="flex-1 flex items-center h-full overflow-x-auto scrollbar-hide no-scrollbar"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {tabs.map((tab) => {
@@ -102,18 +141,30 @@ export function TabBar({
                 }
               }}
               className={cn(
-                'group h-full min-w-[120px] max-w-[200px] flex items-center px-3 border-r border-border cursor-pointer transition-colors relative outline-none focus:bg-accent/30',
+                'group relative h-full flex items-center gap-1.5 px-3 cursor-pointer transition-all duration-150 outline-none',
+                'min-w-0 max-w-[180px]',
                 isActive
                   ? 'bg-background text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                  : 'text-muted-foreground/70 hover:text-foreground hover:bg-background/40',
               )}
             >
+              {/* Right separator line (hide for active tab) */}
+              {!isActive && (
+                <div className="absolute right-0 top-[20%] h-[60%] w-px bg-border/40" />
+              )}
+
+              <span className="shrink-0 opacity-60">
+                {getFileIcon(tab.name)}
+              </span>
+
               <span className="flex-1 truncate text-xs font-medium">
                 {tab.name}
               </span>
+
               {dirtyPaths.has(tab.path) && (
-                <div className="w-1.5 h-1.5 rounded-full bg-primary/60 ml-2 shrink-0 animate-pulse" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0 animate-pulse" />
               )}
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -122,14 +173,19 @@ export function TabBar({
                   onTabClose(tab.path)
                 }}
                 className={cn(
-                  'ml-2 h-5 w-5 p-0.5 rounded-sm hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity',
-                  isActive && 'opacity-100',
+                  'h-[18px] w-[18px] p-0 rounded-sm transition-all duration-150',
+                  'hover:bg-muted-foreground/10 hover:text-foreground',
+                  isActive
+                    ? 'opacity-60 hover:opacity-100'
+                    : 'opacity-0 group-hover:opacity-40 hover:group-hover:opacity-100',
                 )}
               >
-                <X size={12} />
+                <X size={11} />
               </Button>
+
+              {/* Active tab bottom border — extends full width with no gap */}
               {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-background" />
               )}
             </div>
           )
@@ -137,7 +193,7 @@ export function TabBar({
       </div>
 
       {/* Tab Menu */}
-      <div className="px-2 border-l border-border h-full flex items-center bg-sidebar">
+      <div className="px-1.5 h-full flex items-center">
         <SelectionMenu
           items={menuItems}
           onSelect={handleMenuSelect}
@@ -146,10 +202,10 @@ export function TabBar({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 rounded hover:bg-accent/50 transition-colors"
+              className="h-7 w-7 rounded-md hover:bg-accent/40 transition-colors text-muted-foreground/50 hover:text-foreground"
               title="Tab options"
             >
-              <Menu size={16} />
+              <Menu size={14} />
             </Button>
           }
         />

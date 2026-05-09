@@ -50,7 +50,12 @@ export function TextViewer({
       <div className="flex-1 overflow-auto p-4">
         <pre
           className="m-0 p-0 leading-relaxed selection:bg-primary/30"
-          style={{ fontFamily: '"Fira Code", monospace' }}
+          style={{
+            fontFamily: '"Fira Code", monospace',
+            whiteSpace: 'pre',
+            overflowWrap: 'normal',
+            overflowX: 'auto',
+          }}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: Required for PrismJS highlighting
           dangerouslySetInnerHTML={{ __html: highlightedHtml }}
         />

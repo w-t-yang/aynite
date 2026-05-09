@@ -1,6 +1,5 @@
 import { Eye, Pencil, Save } from 'lucide-react'
 import type { FileInfo } from '../../../../lib/types/files'
-import { Button } from '../../../shared/basic/Button'
 import { cn } from '../../../shared/lib/utils'
 
 interface StatusBarProps {
@@ -21,71 +20,88 @@ export function StatusBar({
   isDirty = false,
 }: StatusBarProps) {
   const wordCount = content ? content.trim().split(/\s+/).length : 0
+  const lineCount = content ? content.split('\n').length : 0
 
   return (
-    <div className="h-10 shrink-0 bg-sidebar/80 backdrop-blur-md border-t border-border flex items-center px-4 justify-between text-[10px] text-muted-foreground font-sans tracking-wide">
-      <div className="flex items-center gap-6">
-        <div className="flex items-center bg-muted/30 rounded-lg p-0.5 border border-border/40">
-          <Button
-            variant="ghost"
+    <div className="h-[26px] shrink-0 bg-sidebar border-t border-border flex items-center px-3 text-[11px] text-muted-foreground/70 select-none">
+      {/* Left section: mode + save */}
+      <div className="flex items-center gap-1">
+        <div className="flex items-center text-[10px] font-medium tracking-wider">
+          <button
+            type="button"
             onClick={() => setIsEditing(false)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1 rounded-md transition-all duration-200 uppercase tracking-wider font-bold h-auto border-none',
+              'flex items-center gap-1 px-2 py-0.5 transition-colors',
               !isEditing
-                ? 'bg-background text-primary shadow-sm hover:bg-background'
-                : 'text-muted-foreground/60 hover:text-foreground hover:bg-transparent',
+                ? 'text-foreground/80'
+                : 'text-muted-foreground/40 hover:text-muted-foreground/70',
             )}
           >
-            <Eye size={12} />
+            <Eye size={11} />
             <span>View</span>
-          </Button>
-          <Button
-            variant="ghost"
+          </button>
+          <div className="w-px h-3 bg-border/30" />
+          <button
+            type="button"
             onClick={() => setIsEditing(true)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1 rounded-md transition-all duration-200 uppercase tracking-wider font-bold h-auto border-none',
+              'flex items-center gap-1 px-2 py-0.5 transition-colors',
               isEditing
-                ? 'bg-background text-primary shadow-sm hover:bg-background'
-                : 'text-muted-foreground/60 hover:text-foreground hover:bg-transparent',
+                ? 'text-foreground/80'
+                : 'text-muted-foreground/40 hover:text-muted-foreground/70',
             )}
           >
-            <Pencil size={12} />
+            <Pencil size={11} />
             <span>Edit</span>
-          </Button>
+          </button>
         </div>
 
         {isEditing && (
-          <Button
-            variant="ghost"
+          <button
+            type="button"
             onClick={onSave}
             disabled={!isDirty}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1 border rounded-md font-black uppercase tracking-widest transition-all text-[9px] h-auto',
+              'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-all ml-1',
               isDirty
-                ? 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 cursor-pointer'
-                : 'bg-muted/10 text-muted-foreground/30 border-border/20 cursor-not-allowed opacity-50',
+                ? 'text-primary hover:bg-primary/10 cursor-pointer'
+                : 'text-muted-foreground/20 cursor-default',
             )}
           >
-            <Save size={12} />
+            <Save size={11} />
             <span>Save</span>
-          </Button>
+          </button>
         )}
       </div>
 
-      <div className="flex items-center gap-6 font-medium opacity-80 uppercase tracking-tight">
-        <div className="flex items-center gap-1.5">
-          <span className="opacity-40">Words</span>
-          <span className="text-foreground/70">{wordCount}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>UTF-8</span>
-          <div className="w-px h-3 bg-border/40" />
-          <span>LF</span>
-          <div className="w-px h-3 bg-border/40" />
-          <span className="text-foreground/60 font-black">
-            {fileInfo?.extension || 'txt'}
-          </span>
-        </div>
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Right section: metadata */}
+      <div className="flex items-center gap-1">
+        <span className="px-2 py-0.5 text-muted-foreground/50">
+          Ln {lineCount}
+        </span>
+
+        <div className="w-px h-3 bg-border/30" />
+
+        <span className="px-2 py-0.5 text-muted-foreground/50">
+          {wordCount} {wordCount === 1 ? 'word' : 'words'}
+        </span>
+
+        <div className="w-px h-3 bg-border/30" />
+
+        <span className="px-2 py-0.5">UTF-8</span>
+
+        <div className="w-px h-3 bg-border/30" />
+
+        <span className="px-2 py-0.5">LF</span>
+
+        <div className="w-px h-3 bg-border/30" />
+
+        <span className="px-2 py-0.5 bg-muted/40 rounded text-[10px] font-medium text-foreground/70">
+          {fileInfo?.extension?.toUpperCase() || 'TXT'}
+        </span>
       </div>
     </div>
   )
