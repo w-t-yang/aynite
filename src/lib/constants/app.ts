@@ -20,6 +20,7 @@ export const AppOperation = {
   FOCUS_COMMANDS: 'FOCUS_COMMANDS',
   SHOW_NOTIFICATION: 'SHOW_NOTIFICATION',
   SWITCH_FILE: 'SWITCH_FILE',
+  SETTINGS: 'SETTINGS',
 } as const
 
 export const AppEvents = {

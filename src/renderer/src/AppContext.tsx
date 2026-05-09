@@ -65,6 +65,9 @@ interface AppContextType {
   setShowFileSwitcher: (show: boolean) => void
 
   activeFile: string | null
+
+  showSettings: boolean
+  setShowSettings: (show: boolean) => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -96,6 +99,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const [showTileControls, setShowTileControls] = useState(false)
   const [showFileSwitcher, setShowFileSwitcher] = useState(false)
   const [activeFile, setActiveFile] = useState<string | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
 
   const activeTileIdRef = useRef(activeTileId)
 
@@ -237,6 +241,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           return
         case 'SWITCH_FILE':
           setShowFileSwitcher((prev) => !prev)
+          return
+        case 'SETTINGS':
+          setShowSettings((prev) => !prev)
           return
         // Add other global cases as needed...
       }
@@ -458,6 +465,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         showFileSwitcher,
         setShowFileSwitcher,
         activeFile,
+        showSettings,
+        setShowSettings,
       }}
     >
       {children}

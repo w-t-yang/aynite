@@ -11,7 +11,8 @@ interface ModalProps {
   children: React.ReactNode
   footer?: React.ReactNode
   className?: string
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  contentClassName?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'max' | 'full'
 }
 
 const sizeClasses = {
@@ -19,6 +20,9 @@ const sizeClasses = {
   md: 'w-[600px]',
   lg: 'w-[800px]',
   xl: 'w-[1000px]',
+  '2xl': 'w-[1200px]',
+  max: 'w-[1400px]',
+  full: 'w-[calc(100vw-80px)]',
 }
 
 export function Modal({
@@ -28,6 +32,7 @@ export function Modal({
   children,
   footer,
   className,
+  contentClassName,
   size = 'md',
 }: ModalProps) {
   useEffect(() => {
@@ -80,7 +85,11 @@ export function Modal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">{children}</div>
+        <div
+          className={cn('flex-1 overflow-y-auto', contentClassName || 'p-6')}
+        >
+          {children}
+        </div>
 
         {/* Footer */}
         {footer && (

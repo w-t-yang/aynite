@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useEffect } from 'react'
 import { FileSwitcher } from '../shared/featured/FileSwitcher'
+import { SettingsModal } from '../shared/featured/SettingsModal'
 import { KeyManager } from '../shared/lib/key-handlers'
 import { AppProvider, useApp } from './AppContext'
 import TileNode from './layout/TileNode'
@@ -8,7 +9,12 @@ import TitleBar from './layout/TitleBar'
 import { NotificationProvider } from './NotificationProvider'
 
 const AppContent: React.FC = () => {
-  const { workspaceConfig, showFileSwitcher, setShowFileSwitcher } = useApp()
+  const {
+    workspaceConfig,
+    showFileSwitcher,
+    setShowFileSwitcher,
+    showSettings,
+  } = useApp()
 
   useEffect(() => {
     const api = {
@@ -48,6 +54,7 @@ const AppContent: React.FC = () => {
         {activeLayout && <TileNode isRoot node={activeLayout.layout} />}
       </div>
       {showFileSwitcher && <FileSwitcher />}
+      {showSettings && <SettingsModal />}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { LayoutGrid, Moon, Sun } from 'lucide-react'
+import { LayoutGrid, Moon, Settings, Sun } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
@@ -19,6 +19,7 @@ const TitleBar: React.FC = () => {
     setTheme,
     showTileControls,
     setShowTileControls,
+    setShowSettings,
   } = useApp()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
 
@@ -144,15 +145,33 @@ const TitleBar: React.FC = () => {
             title="Themes"
           />
 
-          <Button
-            variant={showTileControls ? 'secondary' : 'ghost'}
-            size="icon"
-            onClick={() => setShowTileControls(!showTileControls)}
-            title="Toggle Tile Controls"
-            className={showTileControls ? 'text-primary' : ''}
-          >
-            <LayoutGrid size={16} />
-          </Button>
+          <SelectionMenu
+            items={[
+              {
+                id: 'settings',
+                label: 'Settings',
+                icon: <Settings size={14} />,
+              },
+              { id: 'divider-settings', type: 'divider' },
+              {
+                id: 'toggle-controls',
+                label: 'Show Tile Controls',
+                icon: <LayoutGrid size={14} />,
+                isActive: showTileControls,
+              },
+            ]}
+            onSelect={(id) => {
+              if (id === 'settings') setShowSettings(true)
+              else if (id === 'toggle-controls')
+                setShowTileControls(!showTileControls)
+            }}
+            align="right"
+            trigger={
+              <Button variant="ghost" size="icon" title="App Options">
+                <LayoutGrid size={16} />
+              </Button>
+            }
+          />
         </div>
       </div>
 
