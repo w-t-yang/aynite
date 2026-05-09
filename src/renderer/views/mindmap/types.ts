@@ -3,6 +3,7 @@ export interface MindMapNode {
   label: string
   children?: MindMapNode[]
   collapsed?: boolean
+  parentId?: string
 }
 
 export interface MindMapData {

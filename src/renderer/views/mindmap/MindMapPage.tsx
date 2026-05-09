@@ -78,8 +78,6 @@ interface PositionedNode extends MindMapNode {
   x: number
   y: number
   depth: number
-  parentX?: number
-  parentY?: number
 }
 
 export function MindMapPage() {
@@ -181,8 +179,7 @@ export function MindMapPage() {
       depth: number,
       x: number,
       startY: number,
-      parentX?: number,
-      parentY?: number,
+      parentId?: string,
     ): number => {
       const isCollapsed = collapsedNodes.has(node.id)
       const children = !isCollapsed && node.children ? node.children : []
@@ -197,14 +194,13 @@ export function MindMapPage() {
             depth + 1,
             x + levelSpacing,
             startY + totalHeight,
-            x,
-            startY,
+            node.id,
           )
         })
       }
 
       const y = startY + totalHeight / 2
-      nodes.push({ ...node, x, y, depth, parentX, parentY })
+      nodes.push({ ...node, x, y, depth, parentId })
 
       // Update the node's y in the nodes array after children are layouted
       const index = nodes.findIndex(
@@ -368,14 +364,17 @@ export function MindMapPage() {
             <title>Mind Map Visualization</title>
             <g role="menu">
               {positionedNodes.map((node) => {
-                if (node.parentX === undefined || node.parentY === undefined)
-                  return null
+                if (!node.parentId) return null
+                const parent = positionedNodes.find(
+                  (p) => p.id === node.parentId,
+                )
+                if (!parent) return null
 
                 // Curved connection path
-                const dx = node.x - node.parentX
-                const cp1x = node.parentX + dx / 2
-                const cp2x = node.parentX + dx / 2
-                const path = `M ${node.parentX} ${node.parentY} C ${cp1x} ${node.parentY}, ${cp2x} ${node.y}, ${node.x} ${node.y}`
+                const dx = node.x - parent.x
+                const cp1x = parent.x + dx / 2
+                const cp2x = parent.x + dx / 2
+                const path = `M ${parent.x} ${parent.y} C ${cp1x} ${parent.y}, ${cp2x} ${node.y}, ${node.x} ${node.y}`
 
                 return (
                   <path
