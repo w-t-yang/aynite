@@ -196,7 +196,9 @@ export async function routeSetConfig(
     }
 
     case ConfigKey.AI: {
-      await writeJson(getAIConfigPath(), payload)
+      const dataPath = getAIConfigPath()
+      const existing = await readJson<Record<string, unknown>>(dataPath, {})
+      await writeJson(dataPath, { ...existing, ...payload })
       return true
     }
 
@@ -214,7 +216,8 @@ export async function routeSetConfig(
     case ConfigKey.COMMANDS: {
       // These are sub-keys of the main config
       const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
-      mainConfig[key] = payload
+      const existing = (mainConfig[key] || {}) as Record<string, unknown>
+      mainConfig[key] = { ...existing, ...payload }
       await writeJson(getMainConfigPath(), mainConfig)
       return true
     }

@@ -21,6 +21,8 @@ export function AIChat() {
     setSessionId,
     copyToClipboard,
     revertToMessage,
+    switchAgent,
+    switchProvider,
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -31,7 +33,7 @@ export function AIChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [])
+  }, [messages, loading])
 
   // Global actions for micro-app bridge
   useEffect(() => {
@@ -120,6 +122,8 @@ export function AIChat() {
             console.error('[AIChat] Failed to serialize session for copy:', e)
           }
         }}
+        onSwitchAgent={switchAgent}
+        onSwitchProvider={switchProvider}
       />
 
       <List

@@ -399,6 +399,14 @@ export function useAIChat() {
     })
   }, [])
 
+  const switchAgent = useCallback(async (agentId: string) => {
+    await window.aynite.setConfig('agents', { activeId: agentId })
+  }, [])
+
+  const switchProvider = useCallback(async (providerId: string) => {
+    await window.aynite.setConfig('ai', { activeId: providerId })
+  }, [])
+
   return {
     settings,
     messages,
@@ -417,5 +425,7 @@ export function useAIChat() {
     setSessionId,
     copyToClipboard,
     revertToMessage,
+    switchAgent,
+    switchProvider,
   }
 }

@@ -152,8 +152,14 @@ export async function initAppFolders() {
 
 export async function loadConfig() {
   const ai = await readJson(getAIConfigPath(), DEFAULT_AI_CONFIG)
+  // Repair AI config if lists are missing (data loss recovery)
+  if (!ai.providers || !Array.isArray(ai.providers)) {
+    ai.providers = DEFAULT_AI_CONFIG.providers
+    if (!ai.activeId) ai.activeId = DEFAULT_AI_CONFIG.activeId
+  }
+  
   // Normalize provider URLs: fill in defaults for known providers that have no URL set
-  if (ai?.providers) {
+  if (ai.providers) {
     for (const p of ai.providers) {
       if (!p.baseUrl && DEFAULT_PROVIDER_URLS[p.provider]) {
         p.baseUrl = DEFAULT_PROVIDER_URLS[p.provider]
@@ -196,7 +202,9 @@ export async function loadConfig() {
       return filename ? !filename.startsWith('agent-') : true
     })
   }
-  if (!mainConfig.agents) {
+  
+  // Repair agents if lists are missing
+  if (!mainConfig.agents?.list || !Array.isArray(mainConfig.agents.list)) {
     mainConfig.agents = createDefaultAgentConfig(getAynitePromptPath)
   }
 

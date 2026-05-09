@@ -195,15 +195,54 @@ function UserMessage({ msg, onRevert }: { msg: ChatMessage; onRevert: (id: strin
     : (typeof msg.content === 'string' ? msg.content : '')
   
   const formatMentions = (t: string) => {
-    const segments = t.split(/(>cmd\[.*?\]\(.*?\)|@(?:file|dir)\[.*?\]\(.*?\)| \/skill\[.*?\]\(.*?\))/g)
+    // Split by any mention pattern, keeping the mentions in the result array
+    const segments = t.split(
+      /(>cmd\[.*?\]\(.*?\)|@(?:file|dir)\[.*?\]\(.*?\)|(?:\s|^)\/skill\[.*?\]\(.*?\))/g,
+    )
     return segments.map((part, i) => {
-      const cmdMatch = part.match(/>cmd\[(.*?)\]\((.*?)\)/)
-      const fileMatch = part.match(/@(?:file|dir)\[(.*?)\]\((.*?)\)/)
-      const skillMatch = part.match(/\/skill\[(.*?)\]\((.*?)\)/)
-      if (cmdMatch) return <span key={`cmd-${i}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[13px] font-mono border border-amber-500/10"><Terminal size={12} />{cmdMatch[1]}</span>
-      if (fileMatch) return <span key={`file-${i}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[13px] font-mono border border-blue-500/10"><FileText size={12} />{fileMatch[1]}</span>
-      if (skillMatch) return <span key={`skill-${i}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 text-[13px] font-mono border border-purple-500/10"><Bot size={12} />{skillMatch[1]}</span>
-      return <span key={`text-${i}`}>{part}</span>
+      if (!part) return null
+
+      const cmdMatch = part.match(/^>cmd\[(.*?)\]\((.*?)\)$/)
+      const fileMatch = part.match(/^@(?:file|dir)\[(.*?)\]\((.*?)\)$/)
+      const skillMatch = part.match(/^(?:\s|^)\/skill\[(.*?)\]\((.*?)\)$/)
+
+      const keyPrefix = `${id}-${i}`
+
+      if (cmdMatch) {
+        return (
+          <span
+            key={`${keyPrefix}-cmd`}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[13px] font-mono border border-amber-500/10"
+          >
+            <Terminal size={12} />
+            {cmdMatch[1]}
+          </span>
+        )
+      }
+      if (fileMatch) {
+        return (
+          <span
+            key={`${keyPrefix}-file`}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[13px] font-mono border border-blue-500/10"
+          >
+            <FileText size={12} />
+            {fileMatch[1]}
+          </span>
+        )
+      }
+      if (skillMatch) {
+        return (
+          <span
+            key={`${keyPrefix}-skill`}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 text-[13px] font-mono border border-purple-500/10"
+          >
+            <Bot size={12} />
+            {skillMatch[1]}
+          </span>
+        )
+      }
+      // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for these static segments
+      return <span key={`${keyPrefix}-text`}>{part}</span>
     })
   }
 
@@ -220,7 +259,7 @@ function UserMessage({ msg, onRevert }: { msg: ChatMessage; onRevert: (id: strin
             ))}
           </div>
         )}
-        <div className="absolute top-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
+        <div className="absolute bottom-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
           <Button variant="ghost" size="sm" onClick={() => onRevert(id)} title="Revert to here" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
             <RotateCcw size={14} />
           </Button>
@@ -277,10 +316,12 @@ function AssistantMessage({
 
           switch (part.type) {
             case 'text':
-              return <MarkdownRenderer key={`text-${i}-${part.text.length}`} content={part.text} isStreaming={isPartStreaming} onOpenFile={onOpenFile} />
+              // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for streaming parts
+              return <MarkdownRenderer key={`text-${msg.id}-${i}`} content={part.text} isStreaming={isPartStreaming} onOpenFile={onOpenFile} />
             case 'reasoning':
+              // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for streaming parts
               return (
-                <Collapsible key={`reasoning-${i}-${part.text.length}`} title="Thinking" icon={Bot} colorClass="border-primary/10 bg-primary/[0.01]" defaultExpanded={isLast} compact>
+                <Collapsible key={`reasoning-${msg.id}-${i}`} title="Thinking" icon={Bot} colorClass="border-primary/10 bg-primary/[0.01]" defaultExpanded={isLast} compact>
                   <div className={cn("text-[12px] leading-snug text-muted-foreground/60 italic whitespace-pre-wrap font-serif", isPartStreaming && "after:content-['...'] after:ml-0.5 after:animate-pulse after:text-primary")}>
                     {part.text}
                   </div>
@@ -299,7 +340,7 @@ function AssistantMessage({
       </div>
 
       {!isStreaming && !hasToolParts && (
-        <div className="absolute top-1 right-8 flex gap-1 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
+        <div className="absolute bottom-1 right-8 flex gap-1 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
           <Button variant="ghost" size="sm" onClick={() => onRevert(msg.id)} title="Revert to here" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
             <RotateCcw size={14} />
           </Button>
@@ -339,6 +380,7 @@ export const MessageItem = memo(
         return (
           <div className="opacity-90 mb-3 px-6 space-y-2">
             {visibleParts.map((p: any, i: number) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for tool results
               <ToolPartRenderer key={p.toolCallId || `tool-res-${i}`} part={p} />
             ))}
           </div>

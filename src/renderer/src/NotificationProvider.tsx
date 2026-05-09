@@ -24,7 +24,7 @@ export function NotificationProvider() {
   if (!notification) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] flex justify-center pointer-events-none">
+    <div className="fixed top-0 left-0 right-0 z-modal flex justify-center pointer-events-none">
       <button
         className={`mt-2 px-4 py-2 rounded-lg shadow-lg text-sm font-medium pointer-events-auto cursor-pointer border-none ${
           notification.type === 'error'

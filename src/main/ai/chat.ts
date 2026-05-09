@@ -107,10 +107,14 @@ export async function aiChat({
 
     /**
      * Minimal standardization before official SDK conversion.
-     * Mainly handles our custom LocalCommandMessage by injecting results into text parts.
+     * Sanitizes our custom 'dynamic-tool' parts into standard 'tool-call'/'tool-result' parts
+     * so that convertToModelMessages doesn't get confused and duplicate segments.
      */
     const standardizeMessages = (msgs: ChatMessage[]): any[] => {
       return msgs.map((msg) => {
+        let currentMsg = { ...msg }
+
+        // 1. Handle command results (inject into text)
         if (
           msg.role === 'user' &&
           'commandResults' in msg &&
@@ -125,7 +129,7 @@ export async function aiChat({
             .join('\n\n---\n\n')
 
           const text = msg.parts.map((p: any) => p.text || '').join('')
-          return {
+          currentMsg = {
             ...msg,
             parts: [
               {
@@ -135,14 +139,60 @@ export async function aiChat({
             ],
           }
         }
-        return msg
+
+        // 2. Bridge dynamic-tool parts to SDK toolInvocations
+        if (currentMsg.parts && currentMsg.parts.length > 0) {
+          const toolInvocations: any[] = []
+          const remainingParts: any[] = []
+
+          currentMsg.parts.forEach((p: any) => {
+            if (p.type === 'dynamic-tool') {
+              const isResult =
+                p.state === 'output-available' || p.state === 'output-error'
+              toolInvocations.push({
+                state: isResult ? 'result' : 'call',
+                toolCallId: p.toolCallId,
+                toolName: p.toolName,
+                args: p.input,
+                result: isResult ? p.output : undefined,
+              })
+            } else {
+              remainingParts.push(p)
+            }
+          })
+
+          if (toolInvocations.length > 0) {
+            // We move tool data to toolInvocations and remove it from parts 
+            // to prevent the SDK helper from duplicating the calls/results.
+            return {
+              ...currentMsg,
+              parts: remainingParts,
+              toolInvocations,
+            }
+          }
+        }
+
+        return currentMsg
       })
     }
 
+    const standardized = standardizeMessages(messages)
+
     // Use official SDK helper to get CoreMessage[]
-    const coreMessages = await convertToModelMessages(
-      standardizeMessages(messages),
-    )
+    const coreMessages = await convertToModelMessages(standardized)
+
+    // FINAL PASS: Ensure that messages containing tool results have the 'tool' role.
+    // The SDK's convertToModelMessages sometimes fails to switch the role if the input UIMessage was 'assistant'.
+    const finalMessages = coreMessages.map((msg) => {
+      if (
+        msg.role === 'assistant' &&
+        Array.isArray(msg.content) &&
+        msg.content.some((p: any) => p.type === 'tool-result')
+      ) {
+        return { ...msg, role: 'tool' }
+      }
+      return msg
+    })
 
     const toolNames = Object.keys(enabledTools)
     console.log(
@@ -153,7 +203,7 @@ export async function aiChat({
       try {
         const result = streamText({
           model,
-          messages: coreMessages,
+          messages: finalMessages,
           tools: enabledTools,
           stopWhen: stepCountIs(10),
         })

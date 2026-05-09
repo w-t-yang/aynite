@@ -33,7 +33,7 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
     ref,
   ) => {
     return (
-      <div className="flex-1 overflow-y-auto px-12 pb-32 mask-fade-vertical z-layout" ref={ref}>
+      <div className="flex-1 overflow-y-auto px-12 pb-32 mask-fade-vertical" ref={ref}>
         <div className="max-w-[900px] mx-auto">
           {messages.length === 0 && (
             <div className="text-muted-foreground flex flex-col items-start justify-center min-h-[400px] space-y-6 px-4">

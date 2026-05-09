@@ -67,7 +67,8 @@ export async function refreshKeybindings() {
       }
     }
 
-    // Load View keybindings
+    // Load View keybindings (DISABLED FOR NOW - Let view actions pass through to renderer)
+    /*
     if (config.keybindings?.view) {
       for (const [operation, binding] of Object.entries(
         config.keybindings.view,
@@ -79,6 +80,7 @@ export async function refreshKeybindings() {
         }
       }
     }
+    */
 
     keymap = newKeymap
   } catch (e) {
