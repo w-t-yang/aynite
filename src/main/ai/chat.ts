@@ -1,4 +1,4 @@
-import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { stepCountIs, streamText } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
@@ -105,14 +105,19 @@ export async function aiChat({
       sendAppEvent(AppEvents.AI_CHAT_DELTA, { requestId, part })
     }
 
-    const finalMessages = toCoreMessages(messages)
+    const systemMessage = messages.find((m) => m.role === 'system')
+    const chatMessages = messages.filter((m) => m.role !== 'system')
+    const finalMessages = toCoreMessages(chatMessages)
 
-    const toolNames = Object.keys(enabledTools)
+    const _toolNames = Object.keys(enabledTools)
 
     ;(async () => {
       try {
         const result = streamText({
           model,
+          system:
+            systemMessage?.parts.map((p: any) => p.text || '').join('\n') ||
+            undefined,
           messages: finalMessages,
           tools: enabledTools,
           stopWhen: stepCountIs(10),
@@ -220,20 +225,24 @@ function toCoreMessages(messages: ChatMessage[]): any[] {
     const coreParts = currentParts
       .map((p: any) => {
         if (p.type === 'dynamic-tool') {
-          const isResult = p.state === 'output-available' || p.state === 'output-error'
+          const isResult =
+            p.state === 'output-available' || p.state === 'output-error'
           if (isResult) {
             return {
               type: 'tool-result',
               toolCallId: p.toolCallId,
               toolName: p.toolName,
-              result: p.output,
+              output:
+                typeof p.output === 'string'
+                  ? { type: 'text', value: p.output }
+                  : { type: 'json', value: p.output },
             }
           }
           return {
             type: 'tool-call',
             toolCallId: p.toolCallId,
             toolName: p.toolName,
-            args: p.input,
+            input: p.input,
           }
         }
         if (p.type === 'reasoning') {
