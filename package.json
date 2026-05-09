@@ -118,7 +118,7 @@
     "electron-vite": "^3.0.0",
     "husky": "^9.1.7",
     "jscpd": "^4.0.9",
-    "knip": "^6.11.0",
+    "knip": "^6.12.0",
     "lint-staged": "^16.4.0",
     "madge": "^8.0.0",
     "tailwindcss": "^4.1.14",
