@@ -415,13 +415,7 @@ export function MindMapPage() {
                     width={140}
                     height={40}
                     rx={8}
-                    fill={
-                      node.depth === 0
-                        ? 'var(--primary)'
-                        : isDark
-                          ? '#1e293b'
-                          : '#ffffff'
-                    }
+                    fill={node.depth === 0 ? 'var(--primary)' : 'var(--card)'}
                     stroke={node.depth === 0 ? 'transparent' : 'var(--border)'}
                     strokeWidth={1}
                     className="shadow-sm"
@@ -434,9 +428,7 @@ export function MindMapPage() {
                     fill={
                       node.depth === 0
                         ? 'var(--primary-foreground)'
-                        : isDark
-                          ? '#e2e8f0'
-                          : '#1e293b'
+                        : 'var(--card-foreground)'
                     }
                     fontSize={12}
                     className="font-bold pointer-events-none select-none"
@@ -451,9 +443,7 @@ export function MindMapPage() {
                       fill={
                         collapsedNodes.has(node.id)
                           ? 'var(--primary)'
-                          : isDark
-                            ? '#334155'
-                            : '#cbd5e1'
+                          : 'var(--muted-foreground)'
                       }
                       className="transition-colors duration-300"
                     />
