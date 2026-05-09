@@ -50,6 +50,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/datachart/index.html',
         ),
+        'views/graph/index': resolve(
+          __dirname,
+          'src/renderer/views/graph/index.html',
+        ),
       },
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',

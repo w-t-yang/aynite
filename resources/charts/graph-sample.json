@@ -1,0 +1,26 @@
+{
+  "nodes": [
+    { "id": "A", "label": "App", "group": 1, "val": 20 },
+    { "id": "B", "label": "Auth", "group": 2, "val": 15 },
+    { "id": "C", "label": "Database", "group": 2, "val": 15 },
+    { "id": "D", "label": "Storage", "group": 2, "val": 12 },
+    { "id": "E", "label": "Frontend", "group": 3, "val": 18 },
+    { "id": "F", "label": "API", "group": 3, "val": 15 },
+    { "id": "G", "label": "Service A", "group": 4, "val": 10 },
+    { "id": "H", "label": "Service B", "group": 4, "val": 10 },
+    { "id": "I", "label": "Service C", "group": 4, "val": 10 }
+  ],
+  "links": [
+    { "source": "A", "target": "B" },
+    { "source": "A", "target": "C" },
+    { "source": "A", "target": "D" },
+    { "source": "E", "target": "F" },
+    { "source": "F", "target": "A" },
+    { "source": "F", "target": "G" },
+    { "source": "F", "target": "H" },
+    { "source": "F", "target": "I" },
+    { "source": "G", "target": "C" },
+    { "source": "H", "target": "C" },
+    { "source": "I", "target": "D" }
+  ]
+}
