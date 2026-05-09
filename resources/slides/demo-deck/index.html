@@ -4,111 +4,195 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>Aynite Demo Slides</title>
+		<title>Aynite: Future of Work</title>
 
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
-
-		<!-- Theme used for syntax highlighted code -->
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.min.css">
     
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+
     <style>
       :root {
-        --r-main-color: #fafafa;
-        --r-heading-color: #fafafa;
+        --r-main-font: 'Outfit', sans-serif;
+        --r-heading-font: 'Outfit', sans-serif;
+        --r-code-font: 'JetBrains Mono', monospace;
+        --r-main-color: #e2e8f0;
+        --r-heading-color: #ffffff;
         --r-link-color: #3b82f6;
-        --r-selection-background: #264f78;
+        --primary: #3b82f6;
+        --accent: #8b5cf6;
       }
+
       .reveal {
-        background-color: #09090b;
+        background-color: #030712;
       }
-      .slide-gradient {
-        background: radial-gradient(circle at center, #1e293b 0%, #09090b 100%);
-      }
+
       .reveal h1, .reveal h2, .reveal h3 {
+        letter-spacing: -0.03em;
         text-transform: none;
-        font-weight: 800;
-        letter-spacing: -0.02em;
+        background: linear-gradient(to bottom right, #ffffff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
-      .highlight-box {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 2rem;
-        border-radius: 1rem;
-        backdrop-filter: blur(10px);
+
+      .reveal h1 { font-weight: 800; font-size: 4em; }
+
+      /* Particle Background */
+      #bg-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.4;
       }
-      .accent-text {
-        color: #3b82f6;
+
+      .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      }
+
+      .glow-text {
+        text-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+      }
+
+      .accent-glow {
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+        filter: blur(40px);
+        z-index: -1;
+      }
+
+      /* Animated floating elements */
+      @keyframes float {
+        0% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(2deg); }
+        100% { transform: translateY(0px) rotate(0deg); }
+      }
+
+      .floating {
+        animation: float 6s ease-in-out infinite;
+      }
+
+      /* Reveal.js overrides */
+      .reveal .slides section {
+        height: 100%;
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .reveal .controls, .reveal .progress {
+        color: var(--primary);
+      }
+
+      .reveal pre {
+        width: 100%;
+        margin: 0;
+        box-shadow: none;
+        background: transparent;
+      }
+
+      .reveal code {
+        border-radius: 12px;
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.4) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05);
       }
     </style>
 	</head>
 	<body>
+    <canvas id="bg-canvas"></canvas>
+
 		<div class="reveal">
 			<div class="slides">
-				<section data-background-color="#09090b" class="slide-gradient">
-          <h1 class="accent-text">Aynite</h1>
-          <h3>The Next-Generation Workspace</h3>
-          <p style="opacity: 0.6; font-size: 0.8em; margin-top: 2rem;">Dynamic Micro-Apps & AI-First Design</p>
-        </section>
-
-				<section>
-          <h2>Core Architecture</h2>
-          <div class="highlight-box">
-            <ul>
-              <li class="fragment"><strong>Main Process</strong>: Secure system bridge</li>
-              <li class="fragment"><strong>Renderer Hub</strong>: Orchestrates tiles and views</li>
-              <li class="fragment"><strong>IPC Preload</strong>: Strict boundary enforcement</li>
-              <li class="fragment"><strong>Micro-Apps</strong>: Isolated, high-performance views</li>
-            </ul>
+        
+        <!-- TITLE SLIDE -->
+				<section data-auto-animate>
+          <div class="accent-glow"></div>
+          <h1 class="glow-text">Aynite</h1>
+          <p style="opacity: 0.5; font-weight: 300; letter-spacing: 0.5em; text-transform: uppercase; font-size: 0.6em;">Intelligent Workspace Engine</p>
+          <div style="margin-top: 3rem; font-size: 0.8em;" class="fragment fade-up">
+            <span style="color: var(--primary)">●</span> Architecture 
+            <span style="margin: 0 1rem; opacity: 0.3">|</span> 
+            <span style="color: var(--accent)">●</span> Visualization 
+            <span style="margin: 0 1rem; opacity: 0.3">|</span> 
+            <span style="color: #10b981">●</span> Intelligence
           </div>
         </section>
 
-        <section>
-          <section>
-            <h2>Visualization Toolkit</h2>
-            <p>Built for data-driven exploration</p>
-          </section>
-          <section>
-            <h3>StockChart</h3>
-            <p>Real-time financial analysis with technical indicators.</p>
-          </section>
-          <section>
-            <h3>Graph Explorer</h3>
-            <p>Force-directed physics simulation for complex networks.</p>
-          </section>
-          <section>
-            <h3>MindMap View</h3>
-            <p>Hierarchical information mapping with collapsible branches.</p>
-          </section>
-        </section>
-
-        <section>
-          <h2>AI Integration</h2>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-            <div class="highlight-box">
-              <h4 class="accent-text">Context Aware</h4>
-              <p style="font-size: 0.6em;">The AI understands your active files, terminal output, and workspace layout.</p>
-            </div>
-            <div class="highlight-box">
-              <h4 class="accent-text">Tool Use</h4>
-              <p style="font-size: 0.6em;">Securely executes commands and filesystem operations with user approval.</p>
+        <!-- ARCHITECTURE -->
+				<section data-auto-animate>
+          <h2 data-id="title">Core Architecture</h2>
+          <div class="glass-card floating" style="width: 80%;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; text-align: left;">
+              <div>
+                <h4 style="font-size: 0.7em; color: var(--primary);">System Level</h4>
+                <p style="font-size: 0.5em; opacity: 0.7;">Native bridge with strict IPC boundaries and secure resource management.</p>
+              </div>
+              <div>
+                <h4 style="font-size: 0.7em; color: var(--accent);">Micro-Frontend</h4>
+                <p style="font-size: 0.5em; opacity: 0.7;">Sandboxed iframe views with reactive communication channels.</p>
+              </div>
             </div>
           </div>
         </section>
 
-				<section>
-          <h2>Try it now</h2>
-          <pre><code class="language-bash" data-trim data-noescape>
-            npm run dev
-            # Explore the future
-          </code></pre>
+        <!-- VISUALIZATION -->
+        <section data-auto-animate>
+          <h2 data-id="title">Visualization Toolkit</h2>
+          <div style="display: flex; gap: 1rem; width: 90%; margin-top: 2rem;">
+            <div class="glass-card" style="flex: 1; padding: 1.5rem;">
+              <div style="font-size: 1.5em; margin-bottom: 0.5rem;">📈</div>
+              <h4 style="font-size: 0.6em;">Charts</h4>
+              <p style="font-size: 0.4em; opacity: 0.6;">Financial & statistical trends</p>
+            </div>
+            <div class="glass-card" style="flex: 1; padding: 1.5rem;">
+              <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🕸️</div>
+              <h4 style="font-size: 0.6em;">Graphs</h4>
+              <p style="font-size: 0.4em; opacity: 0.6;">Force-directed networks</p>
+            </div>
+            <div class="glass-card" style="flex: 1; padding: 1.5rem;">
+              <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🧠</div>
+              <h4 style="font-size: 0.6em;">MindMaps</h4>
+              <p style="font-size: 0.4em; opacity: 0.6;">Knowledge trees</p>
+            </div>
+          </div>
         </section>
 
-        <section data-background-color="#3b82f6">
-          <h2 style="color: white;">Thank You</h2>
-          <p style="color: white; opacity: 0.8;">Questions? Check the RFCs in the repo.</p>
+        <!-- AI SECTION -->
+        <section data-auto-animate>
+          <h2 data-id="title">AI Orchestration</h2>
+          <div class="glass-card" style="width: 85%; position: relative; overflow: hidden;">
+            <div style="font-family: var(--r-code-font); font-size: 0.5em; color: #10b981; text-align: left;">
+              <span style="opacity: 0.5;">></span> analyzing workspace context...<br>
+              <span style="opacity: 0.5;">></span> identifying patterns...<br>
+              <span style="opacity: 0.5;">></span> executing tool: <span style="color: #ffffff;">read_filesystem</span><br>
+              <span style="color: var(--primary);">✓</span> Optimization complete.
+            </div>
+          </div>
         </section>
+
+        <!-- FINAL SLIDE -->
+				<section data-background-gradient="linear-gradient(to bottom, #030712, #1e1b4b)">
+          <h2 class="glow-text">Future Proof</h2>
+          <p style="font-size: 0.7em; opacity: 0.8; max-width: 600px;">Aynite isn't just an app; it's an extensible engine for your digital workflow.</p>
+          <div style="margin-top: 3rem;">
+            <button style="background: var(--primary); color: white; border: none; padding: 1rem 2.5rem; border-radius: 50px; font-weight: 800; cursor: pointer; box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);">Get Started</button>
+          </div>
+        </section>
+
 			</div>
 		</div>
 
@@ -116,11 +200,68 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.js"></script>
-		<script>
+		
+    <script>
+      // Particle Background Animation
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+
+      function initCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      class Particle {
+        constructor() {
+          this.init();
+        }
+        init() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.vx = (Math.random() - 0.5) * 0.5;
+          this.vy = (Math.random() - 0.5) * 0.5;
+          this.size = Math.random() * 2;
+        }
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+          if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+        draw() {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function setupParticles() {
+        particles = [];
+        for (let i = 0; i < 100; i++) particles.push(new Particle());
+      }
+
+      function animateCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.update();
+          p.draw();
+        });
+        requestAnimationFrame(animateCanvas);
+      }
+
+      window.addEventListener('resize', initCanvas);
+      initCanvas();
+      setupParticles();
+      animateCanvas();
+
 			Reveal.initialize({
 				hash: true,
         center: true,
-        transition: 'convex', // none/fade/slide/convex/concave/zoom
+        transition: 'fade',
+        autoAnimateEasing: 'ease-out',
+        autoAnimateDuration: 1.0,
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
 			});
 		</script>
