@@ -123,6 +123,10 @@ const aynite = {
     return () => ipcRenderer.removeListener(AppOperationChannel, listener)
   },
 
+  executeAppOperation: (operation: string, data?: unknown) => {
+    ipcRenderer.send(AppOperationChannel, operation, data)
+  },
+
   // ── Utilities ───────────────────────────────────────────────────────────
   joinPath: (...paths: string[]) => paths.join('/'),
   dirname: (p: string) => p.split('/').slice(0, -1).join('/') || '.',

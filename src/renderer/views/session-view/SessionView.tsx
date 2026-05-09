@@ -143,14 +143,14 @@ export function SessionView() {
               )
 
               return (
-                <button
+                <Button
                   key={session.id}
-                  type="button"
+                  variant="ghost"
                   onClick={() => handleSelectSession(session.id)}
                   className={cn(
-                    'w-full group flex flex-col items-start gap-1.5 px-3 py-3 rounded-lg border transition-all text-left',
+                    'w-full group flex flex-col items-start gap-1.5 px-3 py-3 rounded-lg border transition-all text-left h-auto p-3',
                     isActive
-                      ? 'bg-primary/10 border-primary/30 ring-1 ring-primary/20'
+                      ? 'bg-primary/10 border-primary/30 ring-1 ring-primary/20 hover:bg-primary/10'
                       : 'bg-accent/5 border-transparent hover:bg-accent/10 hover:border-border/50',
                   )}
                 >
@@ -179,7 +179,7 @@ export function SessionView() {
                       />
                     </div>
                   </div>
-                </button>
+                </Button>
               )
             })
           )}

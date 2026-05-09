@@ -70,13 +70,13 @@ const TitleBar: React.FC = () => {
           {workspaceConfig.layouts.map((layout) => {
             const isActive = workspaceConfig.activeLayoutId === layout.id
             return (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 key={layout.id}
                 onClick={() => switchLayout(layout.id)}
                 title={layout.name}
                 className={cn(
-                  'w-5 h-5 rounded-md flex items-center justify-center transition-all',
+                  'w-5 h-5 rounded-md flex items-center justify-center transition-all p-0 min-w-0',
                   isActive ? 'bg-primary/10' : 'hover:bg-accent',
                 )}
               >
@@ -88,7 +88,7 @@ const TitleBar: React.FC = () => {
                       : 'bg-muted-foreground/40 scale-100',
                   )}
                 />
-              </button>
+              </Button>
             )
           })}
 
@@ -110,7 +110,7 @@ const TitleBar: React.FC = () => {
                   type: 'danger' as any,
                 },
               ]}
-              onSelect={(id) => {
+              onSelect={(id: string) => {
                 if (id === 'add-vibe') setShowVibeModal(true)
                 else if (id === 'remove-vibe')
                   removeLayout(workspaceConfig.activeLayoutId)
@@ -218,7 +218,7 @@ const TitleBar: React.FC = () => {
                 isActive: showTileControls,
               },
             ]}
-            onSelect={(id) => {
+            onSelect={(id: string) => {
               if (id === 'settings') setShowSettings(true)
               else if (id === 'toggle-controls')
                 setShowTileControls(!showTileControls)

@@ -98,22 +98,17 @@ interface AyniteWindow {
   aiChat: (
     payload: AiChatPayload,
   ) => Promise<{ requestId?: string; error?: string }>
-  getMergedSystemPrompt: {
-    (globalFiles?: string[], agentFiles?: string[]): Promise<string>
-    (payload: {
-      globalFiles?: string[]
-      agentFiles?: string[]
-    }): Promise<string>
-  }
+  getMergedSystemPrompt: (
+    globalFiles?: string[],
+    agentFiles?: string[],
+  ) => Promise<string>
   listSessions: () => Promise<ChatSessionEntry[]>
-  saveSession: {
-    (sessionId: string, messages: any[]): Promise<void>
-    (payload: { id: string; messages: any[] }): Promise<void>
-  }
-  loadSession: {
-    (sessionId: string, date?: string): Promise<any>
-    (payload: { id: string; date?: string }): Promise<any>
-  }
+  saveSession: (
+    sessionId: string,
+    messages: any[],
+    metadata?: any,
+  ) => Promise<void>
+  loadSession: (sessionId: string, date?: string) => Promise<any>
   runDirectCommand: (
     payload: DirectCommandPayload,
   ) => Promise<{ stdout: string; stderr: string }>
@@ -160,6 +155,10 @@ interface AyniteWindow {
   restoreCommands: () => Promise<boolean>
   pickSkillFolder: () => Promise<string | null>
   pickCommandFolder: () => Promise<string | null>
+
+  checkIsTextFile: (path: string) => Promise<boolean>
+  executeAppOperation: (operation: string, data?: unknown) => void
+  writeClipboard: (text: string) => Promise<boolean>
 
   // Utilities
   joinPath: (...paths: string[]) => string

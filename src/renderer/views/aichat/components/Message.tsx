@@ -11,6 +11,7 @@ import {
 import { memo } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { PROTOCOL } from '../../../../lib/constants/app'
 import type { ChatMessage } from '../../../../lib/types/chat'
 import { Button } from '../../../shared/basic/Button'
 import { Collapsible } from '../../../shared/basic/Collapsible'
@@ -41,21 +42,20 @@ const MarkdownRenderer = memo(
         components={{
           a: ({ node, ...props }) => {
             const href = props.href || ''
-            if (href.startsWith('aynite://file?path=')) {
-              const path = decodeURIComponent(
-                href.replace('aynite://file?path=', ''),
-              )
+            const filePrefix = `${PROTOCOL}://file?path=`
+            if (href.startsWith(filePrefix)) {
+              const path = decodeURIComponent(href.replace(filePrefix, ''))
               return (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={(e) => {
                     e.preventDefault()
                     onOpenFile(path)
                   }}
-                  className="text-primary hover:underline cursor-pointer inline p-0 bg-transparent border-none align-baseline font-inherit"
+                  className="text-primary hover:underline cursor-pointer inline p-0 bg-transparent border-none align-baseline font-inherit h-auto"
                 >
                   {props.children}
-                </button>
+                </Button>
               )
             }
             return (
@@ -76,16 +76,22 @@ const MarkdownRenderer = memo(
 )
 
 const ToolPartRenderer = memo(({ part }: { part: any }) => {
-  const { toolName, state, input, errorText } = part
+  const { toolName, state, errorText } = part
+  const input = part.input ?? part.args
   const output = part.output ?? part.result
   const isStreaming = state === 'input-streaming'
-  const isCall = state === 'input-available' || isStreaming
-  const isResult = state === 'output-available' || state === 'output-error'
+  const isCall =
+    part.type === 'tool-call' || state === 'input-available' || isStreaming
+  const isResult =
+    part.type === 'tool-result' ||
+    state === 'output-available' ||
+    state === 'output-error'
 
   if (!isResult && !isCall) return null
   if (isCall && !input) return null // Don't show empty call blocks yet
 
-  const isError = state === 'output-error' || isErrorMessage(output)
+  const isError =
+    state === 'output-error' || part.isError || isErrorMessage(output)
 
   let toolArgs = input
   if (typeof toolArgs === 'string') {
@@ -207,10 +213,11 @@ const CommandResultRenderer = memo(
 // ─── Role Renderers ──────────────────────────────────────────────────
 
 function SystemMessage({ msg }: { msg: ChatMessage }) {
-  const parts = msg.parts || []
+  const parts = (msg.parts ||
+    (Array.isArray(msg.content) ? msg.content : [])) as any[]
   const content =
     parts.length > 0
-      ? parts.map((p) => (p as any).text || '').join('')
+      ? parts.map((p) => p.text || '').join('')
       : typeof msg.content === 'string'
         ? msg.content
         : ''
@@ -235,12 +242,14 @@ function UserMessage({
   onRevert,
 }: {
   msg: ChatMessage
-  onRevert: (id: string) => void
+  onRevert: () => void
 }) {
-  const { parts, id } = msg
+  const { id } = msg
+  const parts = (msg.parts ||
+    (Array.isArray(msg.content) ? msg.content : [])) as any[]
   const text =
     parts && parts.length > 0
-      ? parts.map((p) => (p as any).text || '').join('')
+      ? parts.map((p) => p.text || '').join('')
       : typeof msg.content === 'string'
         ? msg.content
         : ''
@@ -292,7 +301,6 @@ function UserMessage({
           </span>
         )
       }
-      // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable
       return <span key={`${keyPrefix}-text`}>{part}</span>
     })
   }
@@ -319,7 +327,7 @@ function UserMessage({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onRevert(id)}
+            onClick={onRevert}
             title="Revert to here"
             className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
           >
@@ -344,36 +352,41 @@ function AssistantMessage({
   isStreaming: boolean
   onCopy: (t: string) => void
   onOpenFile: (p: string) => void
-  onRevert: (id: string) => void
+  onRevert: () => void
 }) {
-  const parts = msg.parts || []
+  const parts = (msg.parts ||
+    (Array.isArray(msg.content) ? msg.content : [])) as any[]
   const fullText =
     parts.length > 0
       ? parts
           .filter((p) => p.type === 'text')
-          .map((p) => (p as any).text)
+          .map((p) => p.text)
           .join('')
       : typeof msg.content === 'string'
         ? msg.content
         : ''
 
-  const hasNoParts = !parts || parts.length === 0
+  const hasNoParts = parts.length === 0
   const hasToolParts = parts.some(
     (p) =>
-      (p.type as string) === 'tool' ||
-      (p.type as string).startsWith('tool-') ||
-      (p.type as string) === 'dynamic-tool',
+      p.type === 'dynamic-tool' ||
+      p.type === 'tool-call' ||
+      p.type === 'tool-result' ||
+      (p.type as string).startsWith('tool-'),
   )
-
   const hasVisibleParts = parts.some((p) => {
     if (p.type === 'text' || p.type === 'reasoning') return true
     if (
-      (p.type as string) === 'dynamic-tool' ||
+      p.type === 'dynamic-tool' ||
+      p.type === 'tool-call' ||
+      p.type === 'tool-result' ||
       (p.type as string).startsWith('tool')
     ) {
+      if (p.type === 'tool-result') return true
+      if (p.type === 'tool-call') return !!(p.args || p.input)
       const isCall =
         p.state === 'input-available' || p.state === 'input-streaming'
-      const hasInput = !!(p as any).input
+      const hasInput = !!(p as any).input || !!(p as any).args
       return (
         p.state === 'output-available' ||
         p.state === 'output-error' ||
@@ -432,8 +445,10 @@ function AssistantMessage({
                   </div>
                 </Collapsible>
               )
-            case 'tool' as any:
-            case 'dynamic-tool' as any:
+            case 'tool':
+            case 'tool-call':
+            case 'tool-result':
+            case 'dynamic-tool':
               return (
                 <ToolPartRenderer
                   key={part.toolCallId || `tool-${i}`}
@@ -459,7 +474,7 @@ function AssistantMessage({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onRevert(msg.id)}
+            onClick={onRevert}
             title="Revert to here"
             className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
           >
@@ -491,7 +506,7 @@ interface MessageItemProps {
   isStreaming: boolean
   onOpenFile: (path: string) => void
   onCopy: (text: string) => void
-  onRevert: (id: string) => void
+  onRevert: () => void
 }
 
 export const MessageItem = memo(
@@ -521,17 +536,21 @@ export const MessageItem = memo(
             onRevert={onRevert}
           />
         )
+      case 'tool':
       case 'tool' as any: {
-        const visibleParts = (msg.parts || []).filter(
+        const parts = (msg.parts ||
+          (Array.isArray(msg.content) ? msg.content : [])) as any[]
+        const visibleParts = parts.filter(
           (p: any) =>
-            p.state === 'output-available' || p.state === 'output-error',
+            p.type === 'tool-result' ||
+            p.state === 'output-available' ||
+            p.state === 'output-error',
         )
         if (visibleParts.length === 0) return null
         return (
           <div className="opacity-90 mb-3 px-6 space-y-2">
             {visibleParts.map((p: any, i: number) => (
               <ToolPartRenderer
-                // biome-ignore lint/suspicious/noArrayIndexKey: stable
                 key={p.toolCallId || `tool-res-${i}`}
                 part={p}
               />

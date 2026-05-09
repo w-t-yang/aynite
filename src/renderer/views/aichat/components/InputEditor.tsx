@@ -28,10 +28,6 @@ interface InputEditorProps {
   disabled?: boolean
   workspaceFolders?: string[]
   focusKeybinding?: Keybinding
-  // API Props for indexing
-  getFiles: (
-    path: string,
-  ) => Promise<{ path: string; name: string; isDirectory: boolean }[]>
   getAllFiles: () => Promise<
     { path: string; name: string; isDirectory: boolean }[]
   >
@@ -56,7 +52,6 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       disabled,
       workspaceFolders = EMPTY_ARRAY,
       focusKeybinding: _focusKeybinding,
-      getFiles,
       getAllFiles,
       getAvailableSkills,
       getAvailableCommands,

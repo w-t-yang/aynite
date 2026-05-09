@@ -1,11 +1,9 @@
-import type { AIProvider } from '../../../../lib/types/ai'
+import type { AgentLoopConfig } from '../../../../lib/types/ai'
+
+export type { AgentLoopConfig }
+
 import type { ChatMessage, StreamPart } from '../../../../lib/types/chat'
 import { genId } from './message'
-
-export interface AgentLoopConfig extends AIProvider {
-  enabledTools?: Record<string, boolean>
-  agentPromptFiles?: string[]
-}
 
 export async function runAgentLoop(
   messages: ChatMessage[],

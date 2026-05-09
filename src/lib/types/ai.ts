@@ -25,3 +25,17 @@ export interface ToolContext {
   workspaceFolders: string[]
   activeFile?: string
 }
+
+export interface AgentLoopConfig extends AIProvider {
+  enabledTools?: Record<string, boolean>
+  agentPromptFiles?: string[]
+}
+
+export interface SuggestionItem {
+  id: string
+  name?: string
+  isDirectory?: boolean
+  label?: string
+  error?: string
+  subtitle?: string
+}

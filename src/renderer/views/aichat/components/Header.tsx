@@ -54,12 +54,12 @@ export function Header({
             activeId={settings.agents?.activeId}
             onSelect={onSwitchAgent}
             trigger={
-              <button
-                type="button"
-                className="hover:text-primary transition-colors focus:outline-none"
+              <Button
+                variant="ghost"
+                className="hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[12px] hover:bg-transparent"
               >
                 {agentName}
-              </button>
+              </Button>
             }
             title="Switch Agent"
           />
@@ -71,12 +71,12 @@ export function Header({
             activeId={settings.ai?.activeId}
             onSelect={onSwitchProvider}
             trigger={
-              <button
-                type="button"
-                className="text-muted-foreground/60 hover:text-primary transition-colors focus:outline-none"
+              <Button
+                variant="ghost"
+                className="text-muted-foreground/60 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[12px] hover:bg-transparent"
               >
                 {modelName}
-              </button>
+              </Button>
             }
             title="Switch Model"
           />

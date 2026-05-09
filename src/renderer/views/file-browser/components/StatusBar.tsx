@@ -1,5 +1,6 @@
 import { Eye, Pencil, Save } from 'lucide-react'
 import type { FileInfo } from '../../../../lib/types/files'
+import { Button } from '../../../shared/basic/Button'
 import { cn } from '../../../shared/lib/utils'
 
 interface StatusBarProps {
@@ -25,41 +26,41 @@ export function StatusBar({
     <div className="h-10 shrink-0 bg-sidebar/80 backdrop-blur-md border-t border-border flex items-center px-4 justify-between text-[10px] text-muted-foreground font-sans tracking-wide">
       <div className="flex items-center gap-6">
         <div className="flex items-center bg-muted/30 rounded-lg p-0.5 border border-border/40">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={() => setIsEditing(false)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1 rounded-md transition-all duration-200 uppercase tracking-wider font-bold',
+              'flex items-center gap-1.5 px-3 py-1 rounded-md transition-all duration-200 uppercase tracking-wider font-bold h-auto border-none',
               !isEditing
-                ? 'bg-background text-primary shadow-sm'
-                : 'text-muted-foreground/60 hover:text-foreground',
+                ? 'bg-background text-primary shadow-sm hover:bg-background'
+                : 'text-muted-foreground/60 hover:text-foreground hover:bg-transparent',
             )}
           >
             <Eye size={12} />
             <span>View</span>
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setIsEditing(true)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1 rounded-md transition-all duration-200 uppercase tracking-wider font-bold',
+              'flex items-center gap-1.5 px-3 py-1 rounded-md transition-all duration-200 uppercase tracking-wider font-bold h-auto border-none',
               isEditing
-                ? 'bg-background text-primary shadow-sm'
-                : 'text-muted-foreground/60 hover:text-foreground',
+                ? 'bg-background text-primary shadow-sm hover:bg-background'
+                : 'text-muted-foreground/60 hover:text-foreground hover:bg-transparent',
             )}
           >
             <Pencil size={12} />
             <span>Edit</span>
-          </button>
+          </Button>
         </div>
 
         {isEditing && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={onSave}
             disabled={!isDirty}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1 border rounded-md font-black uppercase tracking-widest transition-all text-[9px]',
+              'flex items-center gap-1.5 px-3 py-1 border rounded-md font-black uppercase tracking-widest transition-all text-[9px] h-auto',
               isDirty
                 ? 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 cursor-pointer'
                 : 'bg-muted/10 text-muted-foreground/30 border-border/20 cursor-not-allowed opacity-50',
@@ -67,7 +68,7 @@ export function StatusBar({
           >
             <Save size={12} />
             <span>Save</span>
-          </button>
+          </Button>
         )}
       </div>
 

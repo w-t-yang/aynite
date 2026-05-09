@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
+import type { FileInfo } from '../../../../lib/types/files'
 import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
-
-import type { FileInfo } from '../../types/files'
 
 interface TextViewerProps {
   content: string

@@ -37,7 +37,8 @@ export async function saveSession(
   metadata?: SessionMetadata,
 ) {
   const path = getSessionPath(id)
-  await writeJson(path, messages)
+  const coreMessages = toCoreMessages(messages)
+  await writeJson(path, coreMessages)
 
   if (metadata) {
     const metaPath = getSessionMetadataPath(id)
@@ -196,9 +197,19 @@ export async function aiChat({
       try {
         const result = streamText({
           model,
-          system:
-            systemMessage?.parts.map((p: any) => p.text || '').join('\n') ||
-            undefined,
+          system: (() => {
+            if (!systemMessage) return undefined
+            const parts =
+              systemMessage.parts ||
+              (Array.isArray(systemMessage.content)
+                ? systemMessage.content
+                : [])
+            if (parts.length > 0)
+              return parts.map((p: any) => p.text || '').join('\n')
+            return typeof systemMessage.content === 'string'
+              ? systemMessage.content
+              : undefined
+          })(),
           messages: finalMessages,
           tools: enabledTools,
           stopWhen: stepCountIs(10),
@@ -282,9 +293,15 @@ export async function aiChat({
  */
 function toCoreMessages(messages: ChatMessage[]): any[] {
   return messages.flatMap((msg) => {
-    let currentParts = [...msg.parts]
+    // 1. Handle already formatted SDK messages (idempotency)
+    if (msg.role === 'tool' || (msg as any).content) {
+      const content = (msg as any).content || msg.parts
+      return [{ role: msg.role, content }]
+    }
 
-    // 1. Inject command results into user messages
+    let currentParts = [...(msg.parts || [])]
+
+    // 2. Inject command results into user messages
     if (msg.role === 'user' && (msg as any).commandResults?.length > 0) {
       const resultsText = ((msg as any).commandResults as any[])
         .map(
@@ -293,7 +310,7 @@ function toCoreMessages(messages: ChatMessage[]): any[] {
         )
         .join('\n\n---\n\n')
 
-      const text = msg.parts.map((p: any) => p.text || '').join('')
+      const text = currentParts.map((p: any) => p.text || '').join('')
       currentParts = [
         {
           type: 'text',
@@ -302,50 +319,78 @@ function toCoreMessages(messages: ChatMessage[]): any[] {
       ]
     }
 
-    // 2. Map parts to standard SDK types
-    const coreParts = currentParts
-      .map((p: any) => {
-        if (p.type === 'dynamic-tool') {
-          const isResult =
-            p.state === 'output-available' || p.state === 'output-error'
-          if (isResult) {
-            return {
-              type: 'tool-result',
-              toolCallId: p.toolCallId,
-              toolName: p.toolName,
-              output:
-                typeof p.output === 'string'
-                  ? { type: 'text', value: p.output }
-                  : { type: 'json', value: p.output },
-            }
-          }
-          return {
+    // 3. Map parts and handle role-splitting
+    const assistantParts: any[] = []
+    const toolParts: any[] = []
+    const otherParts: any[] = []
+
+    for (const p of currentParts) {
+      if (p.type === 'dynamic-tool') {
+        const isResult =
+          p.state === 'output-available' || p.state === 'output-error'
+        if (isResult) {
+          toolParts.push({
+            type: 'tool-result',
+            toolCallId: p.toolCallId,
+            toolName: p.toolName,
+            result: p.output ?? (p as any).result,
+            output: p.output ?? (p as any).result,
+            isError: p.state === 'output-error',
+          })
+        } else {
+          assistantParts.push({
             type: 'tool-call',
             toolCallId: p.toolCallId,
             toolName: p.toolName,
-            input: p.input,
-          }
+            args: p.input ?? (p as any).args,
+            input: p.input ?? (p as any).args,
+          })
         }
-        if (p.type === 'reasoning') {
-          return { type: 'text', text: `Thinking:\n${p.text}` }
-        }
-        return p
-      })
-      .filter(Boolean)
-
-    // 3. Prevent empty content errors (Ollama)
-    if (coreParts.length === 0) {
-      coreParts.push({ type: 'text', text: '' })
+      } else if (p.type === 'reasoning') {
+        assistantParts.push({ type: 'text', text: `Thinking:\n${p.text}` })
+      } else if (p.type === 'text') {
+        if (msg.role === 'assistant') assistantParts.push(p)
+        else otherParts.push(p)
+      } else if (p.type === 'tool-call') {
+        assistantParts.push({
+          ...p,
+          args: p.input ?? p.args,
+          input: p.input ?? p.args,
+        })
+      } else if (p.type === 'tool-result') {
+        toolParts.push({
+          ...p,
+          result: p.output ?? p.result,
+          output: p.output ?? p.result,
+        })
+      } else {
+        otherParts.push(p)
+      }
     }
 
-    const allText = coreParts.every((p: any) => p.type === 'text')
-    return [
-      {
+    const result: any[] = []
+
+    if (msg.role === 'user' || msg.role === 'system') {
+      result.push({
         role: msg.role,
-        content: allText
-          ? coreParts.map((p: any) => p.text).join('')
-          : coreParts,
-      },
-    ]
+        content:
+          otherParts.length > 0 ? otherParts : (msg as any).content || '',
+      })
+    } else if (msg.role === 'assistant') {
+      // If an assistant message contains tool results, we MUST split it
+      if (assistantParts.length > 0) {
+        result.push({ role: 'assistant', content: assistantParts })
+      }
+      if (toolParts.length > 0) {
+        result.push({ role: 'tool', content: toolParts })
+      }
+    } else if (msg.role === 'tool') {
+      result.push({
+        role: 'tool',
+        content: toolParts.length > 0 ? toolParts : otherParts,
+      })
+    }
+
+    return result
   })
 }

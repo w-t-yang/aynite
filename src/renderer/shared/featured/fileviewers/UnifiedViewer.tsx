@@ -1,5 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
+import { useView } from '../../../views/ViewContext'
 
 /**
  * UnifiedViewer provides a consistent iframe container for all file types.

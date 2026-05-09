@@ -1,9 +1,9 @@
 import type React from 'react'
 import { useMemo } from 'react'
 import Editor from 'react-simple-code-editor'
+import type { FileInfo } from '../../../../lib/types/files'
 import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
-import type { FileInfo } from '../../types/files'
 
 interface TextEditorProps {
   content: string

@@ -1,4 +1,5 @@
 import { highlight, languages } from 'prismjs'
+import { langMap } from '../../../lib/constants/renderer/syntax'
 
 // Load Prism languages
 import 'prismjs/components/prism-markup'
@@ -13,22 +14,7 @@ import 'prismjs/components/prism-rust'
 import 'prismjs/components/prism-yaml'
 import 'prism-themes/themes/prism-vsc-dark-plus.css'
 
-export const langMap: any = {
-  js: languages.js,
-  ts: languages.typescript,
-  tsx: languages.typescript,
-  jsx: languages.js,
-  json: languages.json,
-  css: languages.css,
-  html: languages.html,
-  py: languages.python,
-  rs: languages.rust,
-  sh: languages.bash,
-  bash: languages.bash,
-  yaml: languages.yaml,
-  yml: languages.yaml,
-  md: languages.markdown,
-}
+export { langMap }
 
 export function highlightCode(code: string, extension: string) {
   const lang = langMap[extension] || languages.clike || languages.plain

@@ -14,7 +14,7 @@ interface ListProps {
   onReject: () => void
   onOpenFile: (path: string) => void
   onCopy: (content: string) => void
-  onRevert: (id: string) => void
+  onRevert: (index: number) => void
 }
 
 export const List = forwardRef<HTMLDivElement, ListProps>(
@@ -81,7 +81,7 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
               isStreaming={loading && idx === messages.length - 1}
               onOpenFile={onOpenFile}
               onCopy={onCopy}
-              onRevert={onRevert}
+              onRevert={() => onRevert(idx)}
             />
           ))}
 

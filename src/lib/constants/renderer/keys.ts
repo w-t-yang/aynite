@@ -9,14 +9,7 @@ import type {
 } from '../../types/bridge'
 import { AppOperation, ViewOperation } from '../app'
 
-export type {
-  ChatAPI,
-  EditorAPI,
-  GlobalAPI,
-  SettingsAPI,
-  SidebarAPI,
-  TabSwitcherAPI,
-}
+export type { ChatAPI, EditorAPI, GlobalAPI, SettingsAPI, SidebarAPI }
 
 // Internal State
 let globalApi: GlobalAPI | null = null

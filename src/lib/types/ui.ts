@@ -1,51 +1,30 @@
 import type React from 'react'
 
+export type VibeType = 'chat' | 'file' | 'code' | 'surprise'
+
 export interface SelectionItem {
   id: string
   label?: string
   subtitle?: string
-  description?: string
   icon?: React.ReactNode
-  isActive?: boolean
   badge?: string
-  metadata?: any
-  [key: string]: any
-}
-
-export interface SuggestionItem extends SelectionItem {
-  name?: string
-  isDirectory?: boolean
-  type?: 'file' | 'skill' | 'command' | 'provider' | 'model' | 'agent'
-}
-
-export interface ChatInputHandle {
-  focus: () => void
-  clear: () => void
-  trigger: (prefix: string) => void
-  submit: () => void
-}
-
-export interface SuggestionListHandle {
-  onKeyDown: (props: { event: KeyboardEvent }) => boolean
+  isActive?: boolean
+  disabled?: boolean
+  className?: string
+  type?: 'item' | 'divider' | 'danger' | string
 }
 
 export interface SelectionMenuProps {
   items: SelectionItem[]
   onSelect: (id: string) => void
   onClose?: () => void
-
-  // Trigger-based (Dropdown/Select style)
   trigger?: React.ReactNode
   activeId?: string
   placeholder?: string
   disabled?: boolean
   align?: 'left' | 'center' | 'right'
-
-  // Position-based (Context Menu style)
   x?: number
   y?: number
-
-  // Customization
   title?: string
   footer?: React.ReactNode
   searchable?: boolean
@@ -55,4 +34,23 @@ export interface SelectionMenuProps {
   divided?: boolean
   size?: 'sm' | 'md' | 'lg'
   label?: string
+}
+
+export interface ChatInputHandle {
+  focus: () => void
+  clear: () => void
+  trigger: (prefix: string) => void
+}
+
+export interface SuggestionListHandle {
+  onKeyDown: (props: { event: any }) => boolean
+}
+
+export interface SuggestionItem {
+  id: string
+  name?: string
+  isDirectory?: boolean
+  label?: string
+  error?: string
+  subtitle?: string
 }

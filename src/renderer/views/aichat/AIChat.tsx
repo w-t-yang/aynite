@@ -32,11 +32,14 @@ export function AIChat() {
   useEffect(() => {
     if (scrollRef.current) {
       // Use requestAnimationFrame to ensure the DOM has updated
-      requestAnimationFrame(() => {
+      const scroll = () => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight
         }
-      })
+      }
+      requestAnimationFrame(scroll)
+      // Double check after a short delay for heavy rendering
+      setTimeout(scroll, 100)
     }
   }, [])
 
@@ -63,10 +66,6 @@ export function AIChat() {
     }
   }, [messages, clearChat, copyToClipboard, loadSessions, inputRef])
 
-  const getFiles = useCallback(
-    (path: string) => window.aynite.listFolder(path),
-    [],
-  )
   const getAllFiles = useCallback(() => window.aynite.workspaceAllFiles(), [])
   const getAvailableSkills = useCallback(
     () => window.aynite.getAvailableSkills(),
@@ -121,7 +120,6 @@ export function AIChat() {
         onSend={sendMessage}
         onAbort={() => {}}
         onClear={clearChat}
-        getFiles={getFiles}
         getAllFiles={getAllFiles}
         getAvailableSkills={getAvailableSkills}
         getAvailableCommands={getAvailableCommands}

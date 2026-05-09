@@ -48,7 +48,7 @@ export function getAIModel(config: AIProvider): LanguageModel {
         apiKey,
         baseURL: baseUrl,
         compatibility: 'compatible',
-      }).chat(model)
+      } as any).chat(model)
 
     case 'others': {
       if (compatibility === 'anthropic') {
@@ -62,7 +62,7 @@ export function getAIModel(config: AIProvider): LanguageModel {
         apiKey,
         baseURL: baseUrl,
         compatibility: 'compatible',
-      }).chat(model)
+      } as any).chat(model)
     }
 
     default:

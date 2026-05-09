@@ -83,15 +83,15 @@ export function LayoutVibeModal({
     >
       <div className="grid grid-cols-2 gap-4">
         {VIBES.map((vibe) => (
-          <button
+          <Button
             key={vibe.id}
-            type="button"
+            variant="ghost"
             onClick={() => setSelected(vibe.id)}
             className={cn(
-              'flex flex-col items-start p-5 rounded-xl border-2 transition-all text-left space-y-3',
+              'flex flex-col items-start p-5 rounded-xl border-2 transition-all text-left space-y-3 h-auto',
               vibe.color,
               selected === vibe.id
-                ? 'ring-2 ring-primary ring-offset-2 border-primary'
+                ? 'ring-2 ring-primary ring-offset-2 border-primary hover:bg-opacity-100'
                 : 'border-transparent',
             )}
           >
@@ -104,7 +104,7 @@ export function LayoutVibeModal({
                 {vibe.description}
               </p>
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     </Modal>

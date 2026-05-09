@@ -184,7 +184,11 @@ export function FileBrowserPage() {
       try {
         const isText = await window.aynite.checkIsTextFile(activePath)
         const info = await window.aynite.getFileInfo(activePath)
-        setFileInfo(info)
+        setFileInfo({
+          ...info,
+          createdAt: new Date(info.createdAt),
+          modifiedAt: new Date(info.modifiedAt),
+        })
 
         // Read all text files (including HTML/Markdown) as text
         if (isText) {
@@ -222,7 +226,11 @@ export function FileBrowserPage() {
             setContent(text)
           }
           const info = await window.aynite.getFileInfo(activePath)
-          setFileInfo(info)
+          setFileInfo({
+            ...info,
+            createdAt: new Date(info.createdAt),
+            modifiedAt: new Date(info.modifiedAt),
+          })
         } catch (e) {
           console.error('Failed to refresh file on disk change', e)
         }

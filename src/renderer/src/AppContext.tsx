@@ -71,6 +71,14 @@ interface AppContextType {
   showSettings: boolean
   settingsTab: string | null
   setShowSettings: (show: boolean, tab?: string) => void
+
+  // Notifications
+  activeNotification: {
+    type: 'error' | 'warning' | 'info'
+    title: string
+    message: string
+  } | null
+  dismissNotification: () => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -104,6 +112,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
+
+  const [activeNotification, setActiveNotification] = useState<{
+    type: 'error' | 'warning' | 'info'
+    title: string
+    message: string
+  } | null>(null)
+
+  const dismissNotification = useCallback(() => setActiveNotification(null), [])
 
   const activeTileIdRef = useRef(activeTileId)
 
@@ -276,6 +292,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           return
         case 'SWITCH_FILE':
           setShowFileSwitcher((prev) => !prev)
+          return
+        case 'SHOW_NOTIFICATION':
+          setActiveNotification(payload as any)
+          setTimeout(() => setActiveNotification(null), 5000)
           return
         case 'SETTINGS':
           if (payload && (payload as any).tab) {
@@ -518,6 +538,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           if (tab) setSettingsTab(tab)
           else if (!show) setSettingsTab(null)
         },
+        activeNotification,
+        dismissNotification,
       }}
     >
       {children}

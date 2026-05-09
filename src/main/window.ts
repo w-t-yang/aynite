@@ -143,6 +143,10 @@ function setupAiListeners() {
       }
     },
   )
+
+  ipcMain.on(AppOperationChannel, (_, operation: string, data?: unknown) => {
+    sendAppOperation(operation, data)
+  })
 }
 
 // ─── Window Event Helpers ──────────────────────────────────────────────────

@@ -75,10 +75,10 @@ export const useAppEventSubscriber = () => {
  */
 export const useAppOperation = () => {
   return useCallback((operation: string, data?: unknown) => {
-    window.parent.postMessage(
-      { type: 'aynite:operation', operation, data },
-      '*',
-    )
+    const w = window as any
+    if (w.aynite?.executeAppOperation) {
+      w.aynite.executeAppOperation(operation, data)
+    }
   }, [])
 }
 

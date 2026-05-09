@@ -31,7 +31,6 @@ const AppContent: React.FC = () => {
       closeFileSwitcher: () => setShowFileSwitcher(false),
       isFileSwitcherOpen: () => showFileSwitcher,
     }
-    // @ts-expect-error - settings structure is slightly different now but types match
     KeyManager.init({ keybindings: { app: {}, view: {} } }, api)
     return () => KeyManager.cleanup()
   }, [showFileSwitcher, setShowFileSwitcher])

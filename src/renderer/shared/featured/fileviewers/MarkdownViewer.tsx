@@ -3,6 +3,7 @@ import type React from 'react'
 import { useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Button } from '../../basic/Button'
 import type { FileInfo } from '../../lib/file-handlers'
 import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
@@ -29,10 +30,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, value }) => {
         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
           {language || 'code'}
         </span>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={copyToClipboard}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground h-auto border-none"
         >
           {copied ? (
             <Check size={12} className="text-green-500" />
@@ -40,7 +41,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, value }) => {
             <Clipboard size={12} />
           )}
           <span className="font-medium">{copied ? 'Copied' : 'Copy'}</span>
-        </button>
+        </Button>
       </div>
       <div className="overflow-auto p-4 font-mono text-[13px] leading-relaxed">
         <pre

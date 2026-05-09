@@ -191,7 +191,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
                 searchable
                 activeId={editingTheme.fonts?.fontFamily || 'Inter'}
                 items={systemFonts.map((f) => ({ id: f, label: f }))}
-                onSelect={(v) =>
+                onSelect={(v: string) =>
                   handleUpdateTheme({
                     ...editingTheme,
                     fonts: { ...(editingTheme.fonts || {}), fontFamily: v },
@@ -203,7 +203,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
                 searchable
                 activeId={editingTheme.fonts?.fontMono || 'JetBrains Mono'}
                 items={systemFonts.map((f) => ({ id: f, label: f }))}
-                onSelect={(v) =>
+                onSelect={(v: string) =>
                   handleUpdateTheme({
                     ...editingTheme,
                     fonts: { ...(editingTheme.fonts || {}), fontMono: v },
@@ -222,7 +222,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
                   { id: '18px', label: '18px' },
                   { id: '20px', label: '20px' },
                 ]}
-                onSelect={(v) =>
+                onSelect={(v: string) =>
                   handleUpdateTheme({
                     ...editingTheme,
                     fonts: { ...(editingTheme.fonts || {}), fontSize: v },

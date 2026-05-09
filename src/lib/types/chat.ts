@@ -7,6 +7,7 @@ export interface ChatMessage {
   id: string
   role: MessageRole
   parts: any[]
+  content?: string | any[]
   createdAt?: Date
 }
 

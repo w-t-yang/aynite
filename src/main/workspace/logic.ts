@@ -13,7 +13,10 @@ import {
   readJson,
   writeJson,
 } from '../../lib/path'
-import type { WorkspacesConfig } from '../../lib/types/workspace'
+import type {
+  AddFolderResult,
+  WorkspacesConfig,
+} from '../../lib/types/workspace'
 
 async function getWorkspacesConfig(): Promise<WorkspacesConfig> {
   const configPath = getWorkspacesConfigPath()
@@ -76,18 +79,6 @@ async function resolveWorkspace(workspaceName?: string) {
   const targetWs = workspaceName || wsConfig.active
   const data = await getWorkspaceData(targetWs)
   return { targetWs, data }
-}
-
-export interface AddFolderResult {
-  success: boolean
-  added: string
-  removed: string[]
-  reason:
-    | 'already_exists'
-    | 'is_child_of_existing'
-    | 'is_parent_of_existing'
-    | 'new'
-  parentPath?: string
 }
 
 export async function addWorkspaceFolder(

@@ -1,5 +1,6 @@
 import { AlertCircle, X } from 'lucide-react'
 import { forwardRef } from 'react'
+import { Button } from '../../../shared/basic/Button'
 import { useAppOperation } from '../../ViewContext'
 import { type ChatInputHandle, InputEditor } from './InputEditor'
 
@@ -9,7 +10,6 @@ interface InputAreaProps {
   onAbort: () => void
   onClear: () => void
   workspaceFolders: string[]
-  getFiles: (path: string) => Promise<any>
   getAllFiles: () => Promise<any>
   getAvailableSkills: () => Promise<any>
   getAvailableCommands: () => Promise<any>
@@ -25,7 +25,6 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       onAbort,
       onClear,
       workspaceFolders,
-      getFiles,
       getAllFiles,
       getAvailableSkills,
       getAvailableCommands,
@@ -49,21 +48,22 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
                 <p className="text-xs text-foreground/90 leading-relaxed font-medium">
                   {error.redacted}
                 </p>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={() => executeOperation('SETTINGS', { tab: 'ai' })}
-                  className="text-[11px] font-bold text-primary hover:text-primary/80 transition-colors mt-1 block"
+                  className="text-[11px] font-bold text-primary hover:text-primary/80 transition-colors mt-1 p-0 h-auto inline-flex"
                 >
                   Update AI Provider Settings →
-                </button>
+                </Button>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setError(null)}
                 className="text-muted-foreground/40 hover:text-foreground transition-colors p-1"
               >
                 <X size={14} />
-              </button>
+              </Button>
             </div>
           )}
           <InputEditor
@@ -74,7 +74,6 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
             onAbort={onAbort}
             onClear={onClear}
             workspaceFolders={workspaceFolders}
-            getFiles={getFiles}
             getAllFiles={getAllFiles}
             getAvailableSkills={getAvailableSkills}
             getAvailableCommands={getAvailableCommands}

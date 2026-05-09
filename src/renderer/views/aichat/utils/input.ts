@@ -1,18 +1,13 @@
 import { ReactRenderer } from '@tiptap/react'
 import tippy, { type Instance as TippyInstance } from 'tippy.js'
+import type { SuggestionItem } from '../../../../lib/types/ai'
+
+export type { SuggestionItem }
+
 import {
   SuggestionList,
   type SuggestionListHandle,
 } from '../components/SuggestionList'
-
-export interface SuggestionItem {
-  id: string
-  name?: string
-  isDirectory?: boolean
-  label?: string
-  error?: string
-  subtitle?: string
-}
 
 type GetFilesFn = (
   path: string,

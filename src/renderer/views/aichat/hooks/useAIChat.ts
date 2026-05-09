@@ -412,11 +412,10 @@ export function useAIChat() {
       .catch((err) => console.error('[useAIChat] Failed to copy', err))
   }, [])
 
-  const revertToMessage = useCallback((id: string) => {
+  const revertToMessage = useCallback((index: number) => {
     setMessages((prev) => {
-      const idx = prev.findIndex((m) => m.id === id)
-      if (idx === -1) return prev
-      return prev.slice(0, idx + 1)
+      if (index < 0 || index >= prev.length) return prev
+      return prev.slice(0, index)
     })
   }, [])
 
