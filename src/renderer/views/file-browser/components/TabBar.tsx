@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
 import { cn } from '../../../shared/lib/utils'
 
@@ -31,6 +31,22 @@ export function TabBar({
       scrollRef.current.scrollBy({ left: amount, behavior: 'smooth' })
     }
   }
+
+  // Ensure active tab is visible
+  useEffect(() => {
+    if (activePath && scrollRef.current) {
+      const activeTabEl = scrollRef.current.querySelector(
+        '[aria-selected="true"]',
+      )
+      if (activeTabEl) {
+        activeTabEl.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest',
+        })
+      }
+    }
+  }, [activePath])
 
   return (
     <div className="h-10 shrink-0 bg-sidebar border-b border-border flex items-center overflow-hidden">

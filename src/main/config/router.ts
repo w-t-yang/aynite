@@ -27,6 +27,7 @@ import { deleteTheme, getTheme, getThemesList, saveTheme } from '../theme'
 import {
   getWorkspaceState,
   getWorkspacesList,
+  saveWorkspaceState,
   switchWorkspace,
 } from '../workspace'
 import { loadConfig } from './logic'
@@ -128,6 +129,16 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
     case ConfigKey.VERSION: {
       return app.getVersion()
     }
+    case ConfigKey.ACTIVE_FILE: {
+      const wsConfig = await getWorkspacesList()
+      const state = await getWorkspaceState(wsConfig.active)
+      return state.activeFile || null
+    }
+    case ConfigKey.OPENED_FILES: {
+      const wsConfig = await getWorkspacesList()
+      const state = await getWorkspaceState(wsConfig.active)
+      return state.files || []
+    }
 
     default:
       console.warn(`[ConfigRouter] Unknown getConfig key: ${key}`)
@@ -219,6 +230,18 @@ export async function routeSetConfig(
       const existing = (mainConfig[key] || {}) as Record<string, unknown>
       mainConfig[key] = { ...existing, ...payload }
       await writeJson(getMainConfigPath(), mainConfig)
+      return true
+    }
+    case ConfigKey.ACTIVE_FILE: {
+      const path = payload as string
+      const wsConfig = await getWorkspacesList()
+      await saveWorkspaceState(wsConfig.active, { activeFile: path })
+      return true
+    }
+    case ConfigKey.OPENED_FILES: {
+      const files = payload as string[]
+      const wsConfig = await getWorkspacesList()
+      await saveWorkspaceState(wsConfig.active, { files })
       return true
     }
 

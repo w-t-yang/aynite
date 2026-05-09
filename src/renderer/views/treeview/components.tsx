@@ -24,6 +24,7 @@ export function NodeRenderer({
   onSelectFile,
   setContextMenu,
   dirtyFiles,
+  activeFilePath,
 }: NodeRendererProps<FileNode> & {
   onSelectFile: (file: {
     name: string
@@ -38,9 +39,11 @@ export function NodeRenderer({
     } | null,
   ) => void
   dirtyFiles: string[]
+  activeFilePath?: string | null
 }) {
   const { name, isDirectory, id } = node.data
   const isSelected = node.isSelected
+  const isActive = id === activeFilePath
   const isDirty = dirtyFiles.includes(id)
 
   return (
@@ -49,7 +52,7 @@ export function NodeRenderer({
       ref={dragHandle}
       className={cn(
         'flex items-center cursor-pointer hover:bg-accent text-sm select-none px-0.5 py-0.5 bg-card',
-        isSelected
+        isSelected || isActive
           ? 'bg-primary/10 text-primary font-medium hover:bg-primary/20'
           : 'text-muted-foreground',
       )}

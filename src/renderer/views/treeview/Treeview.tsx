@@ -5,7 +5,7 @@ import { Button } from '../../shared/basic/Button'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
-import { sendAppEvent } from '../ViewContext'
+import { useAppEvent } from '../ViewContext'
 import {
   ConfirmModal,
   type FileNode,
@@ -16,15 +16,15 @@ import { expandPathIteratively } from './tree-expand'
 import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
 
 export function Treeview() {
-  const [activeTabPath, _setActiveTabPath] = useState<string>('')
-  const [dirtyFiles, _setDirtyFiles] = useState<string[]>([])
+  const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
+  const lastExpandedPathRef = useRef<string | null>(null)
   const onWorkspaceChange = () => {}
   const onSelectFile = (file: {
     name: string
     isDirectory: boolean
     path: string
   }) => {
-    sendAppEvent('file-open', { path: file.path })
+    window.aynite.setConfig('activeFile', file.path)
   }
   const _onOpenSettings = () => {}
   const _onClose = () => {}
@@ -173,10 +173,31 @@ export function Treeview() {
   }, [loadWorkspaceData])
 
   useEffect(() => {
-    if (activeTabPath && treeRef.current) {
-      expandPathIteratively(activeTabPath, treeData, setTreeData, treeRef)
+    if (activeFilePath && treeRef.current && treeData.length > 0) {
+      if (lastExpandedPathRef.current !== activeFilePath) {
+        expandPathIteratively(activeFilePath, treeData, setTreeData, treeRef)
+        lastExpandedPathRef.current = activeFilePath
+      }
     }
-  }, [activeTabPath, treeData.length, treeData])
+  }, [activeFilePath, treeData.length, treeData])
+
+  // Listen for active-file-changed broadcast from main
+  useAppEvent('active-file-changed', (data: { path: string }) => {
+    if (data?.path) {
+      setActiveFilePath(data.path)
+    } else {
+      setActiveFilePath(null)
+    }
+  })
+
+  // Initial load of active file
+  useEffect(() => {
+    window.aynite.getConfig('activeFile').then((path: string) => {
+      if (path) {
+        setActiveFilePath(path)
+      }
+    })
+  }, [])
 
   useEffect(() => {
     const handleReload = async (e: any) => {
@@ -488,7 +509,8 @@ export function Treeview() {
                 {...props}
                 onSelectFile={onSelectFile}
                 setContextMenu={setContextMenu}
-                dirtyFiles={dirtyFiles}
+                dirtyFiles={[]}
+                activeFilePath={activeFilePath}
               />
             )}
           </Tree>

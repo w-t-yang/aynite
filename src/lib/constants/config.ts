@@ -19,4 +19,6 @@ export enum ConfigKey {
   TOOLS = 'tools',
   THEME_DELETE = 'theme-delete',
   VERSION = 'version',
+  ACTIVE_FILE = 'activeFile',
+  OPENED_FILES = 'openedFiles',
 }

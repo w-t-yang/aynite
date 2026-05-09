@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileInfo } from '../../../lib/types/files'
 import { useAppEvent } from '../ViewContext'
 import { FileContent } from './components/FileContent'
@@ -13,6 +13,8 @@ interface Tab {
 export function FileBrowserPage() {
   const [tabs, setTabs] = useState<Tab[]>([])
   const [activePath, setActivePath] = useState<string | null>(null)
+  // History of active paths for "last active" closing logic
+  const [history, setHistory] = useState<string[]>([])
 
   // Content state
   const [content, setContent] = useState<string | null>(null)
@@ -20,41 +22,120 @@ export function FileBrowserPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Track if we are currently handling a broadcast to avoid infinite loops
+  const isBroadcastingRef = useRef(false)
+  const isInitializedRef = useRef(false)
+
   const openFile = useCallback((path: string) => {
     const name = path.split(/[/\\]/).pop() || path
     setTabs((prev) => {
       if (prev.some((t) => t.path === path)) return prev
       return [...prev, { name, path }]
     })
+
+    // Update history: remove if exists, then add to end (most recent)
+    setHistory((prev) => {
+      const filtered = prev.filter((p) => p !== path)
+      return [...filtered, path]
+    })
+
     setActivePath(path)
   }, [])
 
-  const closeTab = useCallback(
+  const handleTabSelect = useCallback(
     (path: string) => {
-      setTabs((prev) => {
-        const newTabs = prev.filter((t) => t.path !== path)
-        if (activePath === path) {
-          if (newTabs.length > 0) {
-            setActivePath(newTabs[newTabs.length - 1].path)
-          } else {
-            setActivePath(null)
-          }
-        }
-        return newTabs
+      if (activePath === path) return
+
+      // Notify main about active file change
+      isBroadcastingRef.current = true
+      window.aynite.setConfig('activeFile', path).finally(() => {
+        isBroadcastingRef.current = false
+      })
+
+      setActivePath(path)
+      setHistory((prev) => {
+        const filtered = prev.filter((p) => p !== path)
+        return [...filtered, path]
       })
     },
     [activePath],
   )
 
+  const closeTab = useCallback(
+    (path: string) => {
+      setTabs((prev) => {
+        const newTabs = prev.filter((t) => t.path !== path)
+        const newHistory = history.filter((p) => p !== path)
+        setHistory(newHistory)
+
+        if (activePath === path) {
+          if (newHistory.length > 0) {
+            const nextActive = newHistory[newHistory.length - 1]
+            handleTabSelect(nextActive)
+          } else {
+            setActivePath(null)
+            window.aynite.setConfig('activeFile', null)
+          }
+        }
+        return newTabs
+      })
+    },
+    [activePath, history, handleTabSelect],
+  )
+
   const closeAll = useCallback(() => {
     setTabs([])
     setActivePath(null)
+    setHistory([])
+    window.aynite.setConfig('activeFile', null)
   }, [])
 
-  // Listen for file-open events from other views
-  useAppEvent('file-open', (data: { path: string }) => {
+  // Initial load of active file and opened files
+  useEffect(() => {
+    const init = async () => {
+      const paths = await window.aynite.getConfig('openedFiles')
+      if (paths && Array.isArray(paths) && paths.length > 0) {
+        const initialTabs = paths.map((p: string) => ({
+          name: p.split(/[/\\]/).pop() || p,
+          path: p,
+        }))
+        setTabs(initialTabs)
+        setHistory(paths)
+      }
+
+      const active = await window.aynite.getConfig('activeFile')
+      if (active) {
+        setActivePath(active)
+        // Ensure it's in the tabs
+        setTabs((prev) => {
+          if (prev.some((t) => t.path === active)) return prev
+          return [
+            ...prev,
+            { name: active.split(/[/\\]/).pop() || active, path: active },
+          ]
+        })
+      }
+      isInitializedRef.current = true
+    }
+    init()
+  }, [])
+
+  // Persist tabs to main
+  useEffect(() => {
+    if (!isInitializedRef.current) return
+    window.aynite.setConfig(
+      'openedFiles',
+      tabs.map((t) => t.path),
+    )
+  }, [tabs])
+
+  // Listen for active-file-changed broadcast from main
+  useAppEvent('active-file-changed', (data: { path: string }) => {
+    if (isBroadcastingRef.current) return
     if (data?.path) {
       openFile(data.path)
+    } else {
+      setActivePath(null)
     }
   })
 
@@ -66,6 +147,10 @@ export function FileBrowserPage() {
       return
     }
 
+    // Clear state immediately to show loading for the new file
+    setContent(null)
+    setFileInfo(null)
+
     const loadFile = async () => {
       setLoading(true)
       setError(null)
@@ -74,6 +159,7 @@ export function FileBrowserPage() {
         const info = await window.aynite.getFileInfo(activePath)
         setFileInfo(info)
 
+        // Read all text files (including HTML/Markdown) as text
         if (isText) {
           const text = await window.aynite.readFile(activePath)
           setContent(text)
@@ -90,12 +176,38 @@ export function FileBrowserPage() {
     loadFile()
   }, [activePath])
 
+  // Reload active file if it changes on disk
+  useAppEvent('fs-change', (data: { event: string; path: string }) => {
+    if (!activePath || isBroadcastingRef.current) return
+    const normalizedChanged = data.path.replace(/\\/g, '/')
+    const normalizedActive = activePath.replace(/\\/g, '/')
+
+    if (normalizedChanged === normalizedActive && data.event === 'change') {
+      // Re-trigger the load effect by just calling loadFile logic or slightly updating state
+      // For simplicity, we just trigger a refresh
+      const refresh = async () => {
+        try {
+          const isText = await window.aynite.checkIsTextFile(activePath)
+          if (isText) {
+            const text = await window.aynite.readFile(activePath)
+            setContent(text)
+          }
+          const info = await window.aynite.getFileInfo(activePath)
+          setFileInfo(info)
+        } catch (e) {
+          console.error('Failed to refresh file on disk change', e)
+        }
+      }
+      refresh()
+    }
+  })
+
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden">
       <TabBar
         tabs={tabs}
         activePath={activePath}
-        onTabSelect={setActivePath}
+        onTabSelect={handleTabSelect}
         onTabClose={closeTab}
         onCloseAll={closeAll}
       />

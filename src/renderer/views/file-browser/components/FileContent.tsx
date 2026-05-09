@@ -54,7 +54,7 @@ export function FileContent({
     fileInfo.path,
   )
 
-  if (category === 'text') {
+  if (category === 'text' || category === 'html' || category === 'markdown') {
     return (
       <TextViewer content={content || ''} file={fileInfo} className="flex-1" />
     )

@@ -29,6 +29,7 @@ export const AppEvents = {
   FS_CHANGE: 'fs-change',
   FILE_RENAMED: 'file-renamed',
   FILE_DELETED: 'file-deleted',
+  ACTIVE_FILE_CHANGED: 'active-file-changed',
 
   // App Config/State
   CONFIG_ERROR: 'config-error',

@@ -54,14 +54,6 @@ export const useAppEvent = (
 }
 
 /**
- * Standardized helper for Views to dispatch events to other tiles.
- * Events are relayed through the parent window.
- */
-export const sendAppEvent = (type: string, data: any) => {
-  window.parent.postMessage({ type: `aynite:${type}`, data }, '*')
-}
-
-/**
  * Hook that returns a subscription function for relayed system events.
  * Useful for non-React code (like agent loops) that need to manage listeners.
  */

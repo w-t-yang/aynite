@@ -55,6 +55,8 @@ export function setupConfigIpc() {
         ].includes(key as ConfigKey)
       ) {
         sendAppEvent(AppEvents.CONFIG_CHANGED, { key })
+      } else if (key === ConfigKey.ACTIVE_FILE) {
+        sendAppEvent(AppEvents.ACTIVE_FILE_CHANGED, { path: payload })
       }
       return result
     },
