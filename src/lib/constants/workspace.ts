@@ -8,7 +8,7 @@ export const DEFAULT_WORKSPACE_CONFIG: WorkspaceConfig = {
     {
       id: 'layout-1',
       name: 'Single',
-      layout: { type: 'leaf', id: 'tile-1', content: 'Main', size: 100 },
+      layout: { type: 'leaf', id: 'tile-1', size: 100 },
     },
     {
       id: 'layout-2',
@@ -22,10 +22,9 @@ export const DEFAULT_WORKSPACE_CONFIG: WorkspaceConfig = {
           {
             type: 'leaf',
             id: 'tile-sidebar-left',
-            content: 'Sidebar',
             size: 25,
           },
-          { type: 'leaf', id: 'tile-sidebar-main', content: 'Main', size: 75 },
+          { type: 'leaf', id: 'tile-sidebar-main', size: 75 },
         ],
       },
     },
@@ -38,9 +37,9 @@ export const DEFAULT_WORKSPACE_CONFIG: WorkspaceConfig = {
         id: 'split-3col',
         size: 100,
         children: [
-          { type: 'leaf', id: 'tile-3col-1', content: 'Left', size: 20 },
-          { type: 'leaf', id: 'tile-3col-2', content: 'Center', size: 60 },
-          { type: 'leaf', id: 'tile-3col-3', content: 'Right', size: 20 },
+          { type: 'leaf', id: 'tile-3col-1', size: 20 },
+          { type: 'leaf', id: 'tile-3col-2', size: 60 },
+          { type: 'leaf', id: 'tile-3col-3', size: 20 },
         ],
       },
     },

@@ -1,11 +1,21 @@
-import { LayoutGrid, Moon, Settings, Sun } from 'lucide-react'
+import {
+  LayoutGrid,
+  Moon,
+  MoreHorizontal,
+  Plus,
+  Settings,
+  Sun,
+  Trash2,
+} from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import { Button } from '../../shared/basic/Button'
 import { FormModal } from '../../shared/featured/FormModal'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
+import { cn } from '../../shared/lib/utils'
 import { useApp } from '../AppContext'
+import { LayoutVibeModal } from './LayoutVibeModal'
 
 const TitleBar: React.FC = () => {
   const {
@@ -14,6 +24,8 @@ const TitleBar: React.FC = () => {
     switchWorkspace,
     addWorkspace,
     switchLayout,
+    addLayout,
+    removeLayout,
     themes,
     activeTheme,
     setTheme,
@@ -22,6 +34,7 @@ const TitleBar: React.FC = () => {
     setShowSettings,
   } = useApp()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
+  const [showVibeModal, setShowVibeModal] = useState(false)
 
   const workspaceOptions = useMemo(
     () =>
@@ -53,22 +66,67 @@ const TitleBar: React.FC = () => {
     <>
       <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2 relative z-layout">
         {/* Left: Layout switcher (dynamic from workspace config) */}
-        <div className="flex items-center gap-1 no-drag">
-          {workspaceConfig.layouts.map((layout) => (
-            <Button
-              key={layout.id}
-              variant={
-                workspaceConfig.activeLayoutId === layout.id
-                  ? 'secondary'
-                  : 'ghost'
+        <div className="flex items-center gap-1.5 no-drag group/layouts relative px-1">
+          {workspaceConfig.layouts.map((layout) => {
+            const isActive = workspaceConfig.activeLayoutId === layout.id
+            return (
+              <button
+                type="button"
+                key={layout.id}
+                onClick={() => switchLayout(layout.id)}
+                title={layout.name}
+                className={cn(
+                  'w-5 h-5 rounded-md flex items-center justify-center transition-all',
+                  isActive ? 'bg-primary/10' : 'hover:bg-accent',
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-2 h-2 rounded-[3px] transition-all duration-300',
+                    isActive
+                      ? 'bg-primary scale-125'
+                      : 'bg-muted-foreground/40 scale-100',
+                  )}
+                />
+              </button>
+            )
+          })}
+
+          {/* Management Menu (Only visible on hover or if one is active) */}
+          <div className="opacity-0 group-hover/layouts:opacity-100 transition-opacity ml-1 flex items-center gap-0.5">
+            <SelectionMenu
+              items={[
+                {
+                  id: 'add-vibe',
+                  label: 'Add Vibe',
+                  icon: <Plus size={14} />,
+                  disabled: workspaceConfig.layouts.length >= 9,
+                },
+                {
+                  id: 'remove-vibe',
+                  label: 'Remove Current',
+                  icon: <Trash2 size={14} />,
+                  disabled: workspaceConfig.layouts.length <= 1,
+                  type: 'danger' as any,
+                },
+              ]}
+              onSelect={(id) => {
+                if (id === 'add-vibe') setShowVibeModal(true)
+                else if (id === 'remove-vibe')
+                  removeLayout(workspaceConfig.activeLayoutId)
+              }}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-7 h-7 hover:bg-accent"
+                >
+                  <MoreHorizontal size={14} />
+                </Button>
               }
-              size="sm"
-              onClick={() => switchLayout(layout.id)}
-              title={layout.name}
-            >
-              {layout.name}
-            </Button>
-          ))}
+              title="Layout Vibes"
+            />
+          </div>
         </div>
 
         {/* Center: Workspace switcher */}
@@ -186,6 +244,14 @@ const TitleBar: React.FC = () => {
           }}
         />
       )}
+
+      <LayoutVibeModal
+        isOpen={showVibeModal}
+        onClose={() => setShowVibeModal(false)}
+        onConfirm={(name, layout) => {
+          addLayout(name, layout)
+        }}
+      />
     </>
   )
 }

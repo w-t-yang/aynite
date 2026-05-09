@@ -40,6 +40,8 @@ interface AppContextType {
   switchWorkspace: (id: string) => void
   addWorkspace: (name: string) => void
   switchLayout: (id: string) => void
+  addLayout: (name: string, layout: LayoutNode) => void
+  removeLayout: (id: string) => void
   updateLayout: (newLayout: LayoutNode) => void
   updateTileView: (nodeId: string, updates: Partial<LeafNode>) => void
   executeAppOperation: (operation: string) => void
@@ -199,6 +201,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     setWorkspaceConfig((prev) => {
       if (!prev) return null
       return { ...prev, activeLayoutId: id }
+    })
+  }, [])
+
+  const addLayout = useCallback((name: string, layout: LayoutNode) => {
+    setWorkspaceConfig((prev) => {
+      if (!prev) return null
+      if (prev.layouts.length >= 9) return prev
+      const newLayoutId = Math.random().toString(36).slice(2, 10)
+      const newLayout = { id: newLayoutId, name, layout }
+      return {
+        ...prev,
+        layouts: [...prev.layouts, newLayout],
+        activeLayoutId: newLayoutId,
+      }
+    })
+  }, [])
+
+  const removeLayout = useCallback((id: string) => {
+    setWorkspaceConfig((prev) => {
+      if (!prev) return null
+      if (prev.layouts.length <= 1) return prev
+      const newLayouts = prev.layouts.filter((l) => l.id !== id)
+      let newActiveId = prev.activeLayoutId
+      if (prev.activeLayoutId === id) {
+        newActiveId = newLayouts[0].id
+      }
+      return {
+        ...prev,
+        layouts: newLayouts,
+        activeLayoutId: newActiveId,
+      }
     })
   }, [])
 
@@ -446,6 +479,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         switchWorkspace,
         addWorkspace,
         switchLayout,
+        addLayout,
+        removeLayout,
         updateLayout,
         updateTileView,
         executeAppOperation,

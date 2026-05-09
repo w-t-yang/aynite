@@ -13,8 +13,7 @@ export interface SplitNode extends BaseNode {
 
 export interface LeafNode extends BaseNode {
   type: 'leaf'
-  content: string
-  url?: string
+  name?: string
 }
 
 export type LayoutNode = SplitNode | LeafNode

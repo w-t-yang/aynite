@@ -22,7 +22,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     isResizing,
     showTileControls,
   } = useApp()
-  const { id, content: title, size, url } = node
+  const { id, name, size } = node
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -33,12 +33,9 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     if (selectedUrl === 'close') {
       executeAppOperation(AppOperation.TILE_CLOSE)
     } else {
-      const view = viewOptions.find((v) => v.id === selectedUrl)
+      const _view = viewOptions.find((v) => v.id === selectedUrl)
       console.log(`[Tile] updating tile ${id} to ${selectedUrl}`)
-      updateTileView(id, {
-        url: selectedUrl,
-        content: view?.label || 'New View',
-      })
+      updateTileView(id, { name: selectedUrl })
     }
   }
 
@@ -69,7 +66,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       >
         <SelectionMenu
           items={menuItems}
-          activeId={url || ''}
+          activeId={name || ''}
           onSelect={handleSelectView}
           align="right"
           trigger={
@@ -99,13 +96,13 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       </div>
 
       <div className="tile-content h-full p-0 relative overflow-hidden">
-        {url ? (
+        {name ? (
           <iframe
             ref={iframeRef}
-            src={`${url}#tileId=${id}`}
+            src={`aynite://${name}/index.html#tileId=${id}`}
             className="w-full h-full border-none"
             style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
-            title={title}
+            title={name}
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             allow="clipboard-read; clipboard-write"
           />

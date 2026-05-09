@@ -58,7 +58,7 @@ export async function getAvailableViews(): Promise<
           .replace('Treeview', 'File Explorer')
 
         views.push({
-          id: `aynite://${entry.name}/index.html`,
+          id: entry.name,
           name,
         })
       }

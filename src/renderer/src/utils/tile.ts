@@ -48,7 +48,6 @@ export const splitActiveTile = (
           updatedChildren.splice(targetIndex + 1, 0, {
             type: 'leaf',
             id: newId,
-            content: 'New Tile',
             size: halfSize,
           })
           return { ...n, children: updatedChildren }
@@ -73,7 +72,7 @@ export const splitActiveTile = (
         size: n.size,
         children: [
           { ...n, size: 50 },
-          { type: 'leaf', id: newId, content: 'New Tile', size: 50 },
+          { type: 'leaf', id: newId, size: 50 },
         ],
       }
     }
