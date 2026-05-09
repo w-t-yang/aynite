@@ -187,12 +187,7 @@ export async function aiChat({
       return result
     })
 
-    console.log('[AI Chat] FINAL MESSAGES TO PROVIDER:', JSON.stringify(finalMessages, null, 2))
-
     const toolNames = Object.keys(enabledTools)
-    console.log(
-      `[AI] Starting stream [${requestId}] with tools: [${toolNames.join(', ')}]`,
-    )
 
     ;(async () => {
       try {
