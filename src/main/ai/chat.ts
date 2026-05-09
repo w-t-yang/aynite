@@ -183,18 +183,40 @@ export async function aiChat({
     // Use official SDK helper to get CoreMessage[]
     const coreMessages = await convertToModelMessages(standardized)
 
-    // FINAL PASS: Ensure that messages containing tool results have the 'tool' role.
-    // The SDK's convertToModelMessages sometimes fails to switch the role if the input UIMessage was 'assistant'.
+    // FINAL PASS: Ensure compatibility with all providers (especially local ones like Ollama)
     const finalMessages = coreMessages.map((msg) => {
+      let currentMsg = { ...msg }
+
+      // 1. Ensure that messages containing tool results have the 'tool' role.
+      // The SDK's convertToModelMessages sometimes fails to switch the role if the input UIMessage was 'assistant'.
       if (
         msg.role === 'assistant' &&
         Array.isArray(msg.content) &&
         msg.content.some((p: any) => p.type === 'tool-result')
       ) {
-        return { ...msg, role: 'tool' }
+        currentMsg = { ...currentMsg, role: 'tool' } as any
       }
-      return msg
+
+      // 2. Ollama/Local Provider Fix: Flatten reasoning parts into text parts.
+      // Many local providers do not support the 'reasoning' part type in the content array.
+      if (Array.isArray(currentMsg.content)) {
+        currentMsg.content = currentMsg.content.map((part: any) => {
+          if (part.type === 'reasoning') {
+            return { type: 'text', text: `Thinking:\n${part.text}` }
+          }
+          return part
+        })
+      }
+
+      // 3. Ensure content is never empty/null to avoid <nil> errors
+      if (!currentMsg.content || (Array.isArray(currentMsg.content) && currentMsg.content.length === 0)) {
+        currentMsg.content = ''
+      }
+
+      return currentMsg
     })
+
+    console.log('[AI Chat] FINAL MESSAGES TO PROVIDER:', JSON.stringify(finalMessages, null, 2))
 
     const toolNames = Object.keys(enabledTools)
     console.log(
