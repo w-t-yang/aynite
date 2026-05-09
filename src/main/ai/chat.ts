@@ -105,114 +105,86 @@ export async function aiChat({
       sendAppEvent(AppEvents.AI_CHAT_DELTA, { requestId, part })
     }
 
-    /**
-     * Minimal standardization before official SDK conversion.
-     * Sanitizes our custom 'dynamic-tool' parts into standard 'tool-call'/'tool-result' parts
-     * so that convertToModelMessages doesn't get confused and duplicate segments.
-     */
-    const standardizeMessages = (msgs: ChatMessage[]): any[] => {
-      return msgs.map((msg) => {
-        let currentMsg = { ...msg }
+    // Directly map our ChatMessage[] to CoreMessage[] for maximum reliability and compatibility.
+    // This bypasses the unreliable convertToModelMessages helper which was stripping tool parts.
+    const finalMessages: any[] = messages.flatMap((msg) => {
+      // 1. Handle command results for user messages
+      let currentParts = [...msg.parts]
+      if (
+        msg.role === 'user' &&
+        'commandResults' in msg &&
+        (msg as any).commandResults &&
+        (msg as any).commandResults.length > 0
+      ) {
+        const resultsText = ((msg as any).commandResults as any[])
+          .map(
+            (res) =>
+              `> Command: ${res.command}\n${res.result ?? res.output}${res.exitCode ? `\n(Exit Code: ${res.exitCode})` : ''}`,
+          )
+          .join('\n\n---\n\n')
 
-        // 1. Handle command results (inject into text)
-        if (
-          msg.role === 'user' &&
-          'commandResults' in msg &&
-          (msg as any).commandResults &&
-          (msg as any).commandResults.length > 0
-        ) {
-          const resultsText = ((msg as any).commandResults as any[])
-            .map(
-              (res) =>
-                `> Command: ${res.command}\n${res.result ?? res.output}${res.exitCode ? `\n(Exit Code: ${res.exitCode})` : ''}`,
-            )
-            .join('\n\n---\n\n')
+        const text = msg.parts.map((p: any) => p.text || '').join('')
+        currentParts = [
+          {
+            type: 'text',
+            text: `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`,
+          },
+        ]
+      }
 
-          const text = msg.parts.map((p: any) => p.text || '').join('')
-          currentMsg = {
-            ...msg,
-            parts: [
-              {
-                type: 'text',
-                text: `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`,
-              },
-            ],
-          }
-        }
-
-        // 2. Bridge dynamic-tool parts to standard SDK parts
-        if (currentMsg.parts && currentMsg.parts.length > 0) {
-          const sanitizedParts = currentMsg.parts.map((p: any) => {
-            if (p.type === 'dynamic-tool') {
-              const isResult =
-                p.state === 'output-available' || p.state === 'output-error'
-              if (isResult) {
-                return {
-                  type: 'tool-result',
-                  toolCallId: p.toolCallId,
-                  toolName: p.toolName,
-                  result: p.output,
-                }
-              } else {
-                return {
-                  type: 'tool-call',
-                  toolCallId: p.toolCallId,
-                  toolName: p.toolName,
-                  args: p.input,
-                }
+      // 2. Map internal parts to standard SDK parts
+      const coreParts = currentParts
+        .map((p: any) => {
+          if (p.type === 'dynamic-tool') {
+            const isResult =
+              p.state === 'output-available' || p.state === 'output-error'
+            if (isResult) {
+              return {
+                type: 'tool-result',
+                toolCallId: p.toolCallId,
+                toolName: p.toolName,
+                result: p.output,
+              }
+            } else {
+              return {
+                type: 'tool-call',
+                toolCallId: p.toolCallId,
+                toolName: p.toolName,
+                args: p.input,
               }
             }
-            return p
-          })
-
-          // OLLAMA FIX: Ensure we have at least an empty text part
-          if (!sanitizedParts.some((p: any) => p.type === 'text')) {
-            sanitizedParts.push({ type: 'text', text: '' })
           }
+          if (p.type === 'reasoning') {
+            // Flatten reasoning for local providers (Ollama)
+            return { type: 'text', text: `Thinking:\n${p.text}` }
+          }
+          return p
+        })
+        .filter(Boolean)
 
-          return { ...currentMsg, parts: sanitizedParts }
-        }
-
-        return currentMsg
-      })
-    }
-
-    const standardized = standardizeMessages(messages)
-
-    // Use official SDK helper to get CoreMessage[]
-    const coreMessages = await convertToModelMessages(standardized)
-
-    // FINAL PASS: Ensure compatibility with all providers (especially local ones like Ollama)
-    const finalMessages = coreMessages.map((msg) => {
-      let currentMsg = { ...msg }
-
-      // 1. Ensure that messages containing tool results have the 'tool' role.
-      // The SDK's convertToModelMessages sometimes fails to switch the role if the input UIMessage was 'assistant'.
-      if (
-        msg.role === 'assistant' &&
-        Array.isArray(msg.content) &&
-        msg.content.some((p: any) => p.type === 'tool-result')
-      ) {
-        currentMsg = { ...currentMsg, role: 'tool' } as any
+      // 3. Ensure no empty content for Ollama
+      if (coreParts.length === 0) {
+        coreParts.push({ type: 'text', text: '' })
       }
 
-      // 2. Ollama/Local Provider Fix: Flatten reasoning parts into text parts.
-      // Many local providers do not support the 'reasoning' part type in the content array.
-      if (Array.isArray(currentMsg.content)) {
-        currentMsg.content = currentMsg.content.map((part: any) => {
-          if (part.type === 'reasoning') {
-            return { type: 'text', text: `Thinking:\n${part.text}` }
-          }
-          return part
+      // 4. Split into Assistant (calls) and Tool (results) messages if needed
+      const toolResultParts = coreParts.filter((p) => p.type === 'tool-result')
+      const otherParts = coreParts.filter((p) => p.type !== 'tool-result')
+
+      const result: any[] = []
+      if (otherParts.length > 0) {
+        // Use string content if there are only text parts (more compatible)
+        const allText = otherParts.every((p) => p.type === 'text')
+        result.push({
+          role: msg.role,
+          content: allText ? otherParts.map((p) => p.text).join('') : otherParts,
         })
       }
-
-      // 3. Ensure content is never empty/null to avoid <nil> errors
-      if (!currentMsg.content || (Array.isArray(currentMsg.content) && currentMsg.content.length === 0)) {
-        currentMsg.content = ''
+      if (toolResultParts.length > 0) {
+        result.push({ role: 'tool', content: toolResultParts })
       }
 
-      return currentMsg
+      return result
     })
 
     console.log('[AI Chat] FINAL MESSAGES TO PROVIDER:', JSON.stringify(finalMessages, null, 2))
