@@ -164,9 +164,11 @@ export async function aiChat({
           if (toolInvocations.length > 0) {
             // We move tool data to toolInvocations and remove it from parts 
             // to prevent the SDK helper from duplicating the calls/results.
+            // OLLAMA FIX: Some local models reject messages with empty content. 
+            // We ensure at least one empty text part if remainingParts is empty.
             return {
               ...currentMsg,
-              parts: remainingParts,
+              parts: remainingParts.length > 0 ? remainingParts : [{ type: 'text', text: '' }],
               toolInvocations,
             }
           }
