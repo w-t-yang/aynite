@@ -36,45 +36,38 @@ export function getAIModel(config: AIProvider): LanguageModel {
         baseURL: baseUrl,
       })(model)
 
-    case 'ollama':
-    case 'others':
-    case 'openai-compatible': {
-      const actualCompatibility =
-        provider === 'others' ? compatibility : 'openai'
-
-      if (actualCompatibility === 'anthropic') {
-        return createAnthropic({
-          apiKey,
-          baseURL: baseUrl,
-        })(model)
-      }
-
-      if (actualCompatibility === 'google') {
-        return createGoogleGenerativeAI({
-          apiKey,
-          baseURL: baseUrl,
-        })(model)
-      }
-
-      // Default to OpenAI-compatible
+    case 'ollama': {
       let finalBaseUrl = baseUrl
-      if (
-        provider === 'ollama' &&
-        finalBaseUrl &&
-        !finalBaseUrl.endsWith('/v1') &&
-        !finalBaseUrl.endsWith('/v1/')
-      ) {
+      if (finalBaseUrl && !finalBaseUrl.endsWith('/v1') && !finalBaseUrl.endsWith('/v1/')) {
         finalBaseUrl = `${finalBaseUrl.replace(/\/$/, '')}/v1`
       }
-
-      const customOpenAI = createOpenAI({
+      return createOpenAI({
         apiKey: apiKey || 'no-key',
         baseURL: finalBaseUrl,
-        compatibility: 'compatible', // Relaxed checks for non-OpenAI providers
-      })
+        compatibility: 'compatible',
+      }).chat(model)
+    }
 
-      // We must use .chat() here too for standard OpenAI-compatible proxies (Ollama, DeepSeek, etc)
-      return customOpenAI.chat(model)
+    case 'openai-compatible':
+      return createOpenAI({
+        apiKey,
+        baseURL: baseUrl,
+        compatibility: 'compatible',
+      }).chat(model)
+
+    case 'others': {
+      if (compatibility === 'anthropic') {
+        return createAnthropic({ apiKey, baseURL: baseUrl })(model)
+      }
+      if (compatibility === 'google') {
+        return createGoogleGenerativeAI({ apiKey, baseURL: baseUrl })(model)
+      }
+      // Default others to OpenAI-compatible
+      return createOpenAI({
+        apiKey,
+        baseURL: baseUrl,
+        compatibility: 'compatible',
+      }).chat(model)
     }
 
     default:
