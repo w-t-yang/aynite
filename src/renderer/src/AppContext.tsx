@@ -57,6 +57,9 @@ interface AppContextType {
   updateProgress: number
   updateError: string | null
   setUpdateStatus: (status: UpdateStatus) => void
+
+  showTileControls: boolean
+  setShowTileControls: (show: boolean) => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -84,6 +87,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const [updateInfo, setUpdateInfo] = useState<any>(null)
   const [updateProgress, setUpdateProgress] = useState<number>(0)
   const [updateError, setUpdateError] = useState<string | null>(null)
+
+  const [showTileControls, setShowTileControls] = useState(false)
 
   const activeTileIdRef = useRef(activeTileId)
 
@@ -420,6 +425,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         updateProgress,
         updateError,
         setUpdateStatus,
+        showTileControls,
+        setShowTileControls,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import { Moon, Sun } from 'lucide-react'
+import { LayoutGrid, Moon, Sun } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
@@ -17,6 +17,8 @@ const TitleBar: React.FC = () => {
     themes,
     activeTheme,
     setTheme,
+    showTileControls,
+    setShowTileControls,
   } = useApp()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
 
@@ -142,11 +144,15 @@ const TitleBar: React.FC = () => {
             title="Themes"
           />
 
-          <div className="flex items-center gap-2 px-3 py-1 border-l border-border ml-1">
-            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">
-              Aynite
-            </span>
-          </div>
+          <Button
+            variant={showTileControls ? 'secondary' : 'ghost'}
+            size="icon"
+            onClick={() => setShowTileControls(!showTileControls)}
+            title="Toggle Tile Controls"
+            className={showTileControls ? 'text-primary' : ''}
+          >
+            <LayoutGrid size={16} />
+          </Button>
         </div>
       </div>
 

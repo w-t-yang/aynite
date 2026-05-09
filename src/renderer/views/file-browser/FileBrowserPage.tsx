@@ -204,13 +204,15 @@ export function FileBrowserPage() {
 
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden">
-      <TabBar
-        tabs={tabs}
-        activePath={activePath}
-        onTabSelect={handleTabSelect}
-        onTabClose={closeTab}
-        onCloseAll={closeAll}
-      />
+      {activePath && (
+        <TabBar
+          tabs={tabs}
+          activePath={activePath}
+          onTabSelect={handleTabSelect}
+          onTabClose={closeTab}
+          onCloseAll={closeAll}
+        />
+      )}
       <div className="flex-1 overflow-hidden flex flex-col relative">
         <FileContent
           path={activePath}
@@ -220,7 +222,7 @@ export function FileBrowserPage() {
           error={error}
         />
       </div>
-      <StatusBar />
+      {activePath && <StatusBar />}
     </div>
   )
 }

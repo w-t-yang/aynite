@@ -20,6 +20,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     updateTileView,
     availableViews,
     isResizing,
+    showTileControls,
   } = useApp()
   const { id, content: title, size, url } = node
   const isActive = activeTileId === id
@@ -63,7 +64,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       <div
         className={cn(
           'absolute top-2 right-2 z-layout transition-opacity',
-          url ? 'opacity-0 hover:opacity-100' : 'opacity-100',
+          showTileControls ? 'opacity-100' : 'opacity-0 pointer-events-none',
         )}
       >
         <SelectionMenu

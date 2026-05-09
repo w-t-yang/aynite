@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
+import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
 import { cn } from '../../../shared/lib/utils'
 
 interface Tab {
@@ -25,12 +26,40 @@ export function TabBar({
 }: TabBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const scroll = (direction: 'left' | 'right') => {
+  const _scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const amount = direction === 'left' ? -200 : 200
       scrollRef.current.scrollBy({ left: amount, behavior: 'smooth' })
     }
   }
+
+  const handleMenuSelect = (id: string) => {
+    if (id === 'close-all') {
+      onCloseAll()
+    } else if (id === 'prev') {
+      const currentIndex = tabs.findIndex((t) => t.path === activePath)
+      if (currentIndex > 0) {
+        onTabSelect(tabs[currentIndex - 1].path)
+      }
+    } else if (id === 'next') {
+      const currentIndex = tabs.findIndex((t) => t.path === activePath)
+      if (currentIndex >= 0 && currentIndex < tabs.length - 1) {
+        onTabSelect(tabs[currentIndex + 1].path)
+      }
+    }
+  }
+
+  const menuItems = [
+    { id: 'prev', label: 'Previous Tab', icon: <ChevronLeft size={14} /> },
+    { id: 'next', label: 'Next Tab', icon: <ChevronRight size={14} /> },
+    { id: 'divider-1', type: 'divider' },
+    {
+      id: 'close-all',
+      label: 'Close All Tabs',
+      icon: <X size={14} />,
+      className: 'text-destructive',
+    },
+  ]
 
   // Ensure active tab is visible
   useEffect(() => {
@@ -49,7 +78,7 @@ export function TabBar({
   }, [activePath])
 
   return (
-    <div className="h-10 shrink-0 bg-sidebar border-b border-border flex items-center overflow-hidden">
+    <div className="h-10 shrink-0 bg-sidebar border-b border-border flex items-center">
       {/* Tabs Area */}
       <div
         ref={scrollRef}
@@ -102,36 +131,23 @@ export function TabBar({
         })}
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="flex items-center gap-0.5 px-2 bg-sidebar border-l border-border h-full shadow-[-4px_0_8px_rgba(0,0,0,0.1)]">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => scroll('left')}
-          className="h-7 w-7 rounded"
-          title="Scroll tabs left"
-        >
-          <ChevronLeft size={16} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => scroll('right')}
-          className="h-7 w-7 rounded"
-          title="Scroll tabs right"
-        >
-          <ChevronRight size={16} />
-        </Button>
-        <div className="w-px h-4 bg-border mx-1" />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onCloseAll}
-          className="h-7 w-7 rounded hover:text-destructive transition-colors"
-          title="Close all tabs"
-        >
-          <X size={16} />
-        </Button>
+      {/* Tab Menu */}
+      <div className="px-2 border-l border-border h-full flex items-center bg-sidebar">
+        <SelectionMenu
+          items={menuItems}
+          onSelect={handleMenuSelect}
+          align="right"
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded hover:bg-accent/50 transition-colors"
+              title="Tab options"
+            >
+              <Menu size={16} />
+            </Button>
+          }
+        />
       </div>
     </div>
   )
