@@ -36,12 +36,12 @@ import { type ChartData, ChartType } from './types'
 
 const COLORS = [
   'var(--primary)',
-  '#06b6d4',
+  'var(--info)',
+  'var(--success)',
+  'var(--warning)',
+  'var(--destructive)',
   '#8b5cf6',
   '#ec4899',
-  '#f59e0b',
-  '#10b981',
-  '#ef4444',
   '#6366f1',
 ]
 
@@ -177,7 +177,7 @@ export function DataChartPage() {
 
     const gridColor =
       themeType === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
-    const textColor = themeType === 'dark' ? '#94a3b8' : '#64748b'
+    const textColor = 'var(--muted-foreground)'
 
     switch (chartType) {
       case ChartType.BAR:

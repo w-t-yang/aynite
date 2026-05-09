@@ -12,14 +12,14 @@ import { useView } from '../ViewContext'
 import type { GraphData, GraphNode } from './types'
 
 const COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
+  'var(--info)',
+  'var(--success)',
+  'var(--warning)',
+  'var(--destructive)',
+  'var(--primary)',
   '#8b5cf6', // violet
   '#ec4899', // pink
   '#06b6d4', // cyan
-  '#6366f1', // indigo
 ]
 
 const MOCK_DATA: GraphData = {
@@ -433,9 +433,7 @@ export function GraphPage() {
                     stroke={
                       isHighlighted
                         ? 'var(--primary)'
-                        : isDark
-                          ? '#334155'
-                          : '#cbd5e1'
+                        : 'var(--border)'
                     }
                     strokeWidth={isHighlighted ? 2 : 1}
                     strokeOpacity={isHighlighted ? 1 : 0.4}
@@ -481,7 +479,7 @@ export function GraphPage() {
                       r={isHovered ? radius * 1.5 : radius}
                       fill={color}
                       fillOpacity={isHovered || isConnected ? 1 : 0.6}
-                      stroke={isHovered ? 'white' : 'transparent'}
+                      stroke={isHovered ? 'var(--primary-foreground)' : 'transparent'}
                       strokeWidth={2}
                       className="transition-all duration-300"
                     />
@@ -490,7 +488,7 @@ export function GraphPage() {
                         x={node.x}
                         y={node.y + radius + 15}
                         textAnchor="middle"
-                        fill={isDark ? '#e2e8f0' : '#1e293b'}
+                        fill="var(--card-foreground)"
                         fontSize={12 / zoom}
                         className="font-bold pointer-events-none select-none drop-shadow-sm"
                       >

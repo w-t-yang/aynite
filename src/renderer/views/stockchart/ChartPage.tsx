@@ -80,29 +80,27 @@ const CustomTooltip = ({
 
   return (
     <div
-      className={`p-3 border rounded shadow-xl backdrop-blur-md text-xs font-mono z-50
-      ${theme === 'dark' ? 'bg-[#1e293b]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'}
-    `}
+      className="p-3 border rounded shadow-xl backdrop-blur-md text-xs font-mono z-50 bg-popover/95 border-border text-popover-foreground"
     >
-      <div className="font-bold mb-2 border-b border-slate-500/20 pb-1 text-slate-500 dark:text-slate-400">
+      <div className="font-bold mb-2 border-b border-border/20 pb-1 text-muted-foreground">
         {label}
       </div>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-3">
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500 dark:text-slate-400">Open</span>{' '}
+          <span className="text-muted-foreground">Open</span>{' '}
           <span>{data.open.toFixed(2)}</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500 dark:text-slate-400">High</span>{' '}
+          <span className="text-muted-foreground">High</span>{' '}
           <span>{data.high.toFixed(2)}</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500 dark:text-slate-400">Low</span>{' '}
+          <span className="text-muted-foreground">Low</span>{' '}
           <span>{data.low.toFixed(2)}</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500 dark:text-slate-400">Close</span>{' '}
+          <span className="text-muted-foreground">Close</span>{' '}
           <span
             style={{ color: data.close >= data.open ? upColor : downColor }}
           >
@@ -111,8 +109,8 @@ const CustomTooltip = ({
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-2 border-b border-slate-500/20 pb-2">
-        <span className="text-slate-500 dark:text-slate-400">Volume</span>
+      <div className="flex justify-between items-center mb-2 border-b border-border/20 pb-2">
+        <span className="text-muted-foreground">Volume</span>
         <span>{(data.volume / 1000000).toFixed(2)}M</span>
       </div>
 
@@ -401,8 +399,8 @@ OR
   const rafRef = useRef<number | null>(null)
 
   // Colors based on theme
-  const textColor = themeType === 'dark' ? '#94a3b8' : '#64748b'
-  const gridColor = themeType === 'dark' ? '#1e293b' : '#e2e8f0'
+  const textColor = 'var(--muted-foreground)'
+  const gridColor = 'var(--border)'
 
   const COLOR_UP = 'var(--success)'
   const COLOR_DOWN = 'var(--destructive)'
