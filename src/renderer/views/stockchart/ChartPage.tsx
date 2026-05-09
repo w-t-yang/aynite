@@ -79,9 +79,7 @@ const CustomTooltip = ({
   const data = payload[0].payload
 
   return (
-    <div
-      className="p-3 border rounded shadow-xl backdrop-blur-md text-xs font-mono z-50 bg-popover/95 border-border text-popover-foreground"
-    >
+    <div className="p-3 border rounded shadow-xl backdrop-blur-md text-xs font-mono z-50 bg-popover/95 border-border text-popover-foreground">
       <div className="font-bold mb-2 border-b border-border/20 pb-1 text-muted-foreground">
         {label}
       </div>

@@ -95,7 +95,7 @@ export function GraphPage() {
   }, [])
 
   const currentTheme = themes.find((t) => t.id === activeThemeId)
-  const isDark = currentTheme?.type === 'dark'
+  const _isDark = currentTheme?.type === 'dark'
 
   const initializeNodes = useCallback((graphData: GraphData) => {
     const width = containerRef.current?.clientWidth || 800
@@ -430,11 +430,7 @@ export function GraphPage() {
                     y1={s.y}
                     x2={t.x}
                     y2={t.y}
-                    stroke={
-                      isHighlighted
-                        ? 'var(--primary)'
-                        : 'var(--border)'
-                    }
+                    stroke={isHighlighted ? 'var(--primary)' : 'var(--border)'}
                     strokeWidth={isHighlighted ? 2 : 1}
                     strokeOpacity={isHighlighted ? 1 : 0.4}
                     className="transition-all duration-300"
@@ -479,7 +475,9 @@ export function GraphPage() {
                       r={isHovered ? radius * 1.5 : radius}
                       fill={color}
                       fillOpacity={isHovered || isConnected ? 1 : 0.6}
-                      stroke={isHovered ? 'var(--primary-foreground)' : 'transparent'}
+                      stroke={
+                        isHovered ? 'var(--primary-foreground)' : 'transparent'
+                      }
                       strokeWidth={2}
                       className="transition-all duration-300"
                     />
