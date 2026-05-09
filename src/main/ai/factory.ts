@@ -2,7 +2,6 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
-import { createOllama } from 'ollama-ai-provider'
 import type { LanguageModel } from 'ai'
 
 import type { AIProvider } from '../../lib/types/ai'
@@ -38,9 +37,15 @@ export function getAIModel(config: AIProvider): LanguageModel {
       })(model)
 
     case 'ollama': {
-      return createOllama({
-        baseURL: baseUrl || 'http://localhost:11434/api',
-      })(model)
+      let finalBaseUrl = baseUrl || 'http://localhost:11434'
+      if (!finalBaseUrl.endsWith('/v1') && !finalBaseUrl.endsWith('/v1/')) {
+        finalBaseUrl = `${finalBaseUrl.replace(/\/$/, '')}/v1`
+      }
+      return createOpenAI({
+        apiKey: apiKey || 'no-key',
+        baseURL: finalBaseUrl,
+        compatibility: 'compatible',
+      }).chat(model)
     }
 
     case 'openai-compatible':
