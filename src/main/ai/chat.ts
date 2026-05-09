@@ -140,38 +140,37 @@ export async function aiChat({
           }
         }
 
-        // 2. Bridge dynamic-tool parts to SDK toolInvocations
+        // 2. Bridge dynamic-tool parts to standard SDK parts
         if (currentMsg.parts && currentMsg.parts.length > 0) {
-          const toolInvocations: any[] = []
-          const remainingParts: any[] = []
-
-          currentMsg.parts.forEach((p: any) => {
+          const sanitizedParts = currentMsg.parts.map((p: any) => {
             if (p.type === 'dynamic-tool') {
               const isResult =
                 p.state === 'output-available' || p.state === 'output-error'
-              toolInvocations.push({
-                state: isResult ? 'result' : 'call',
-                toolCallId: p.toolCallId,
-                toolName: p.toolName,
-                args: p.input,
-                result: isResult ? p.output : undefined,
-              })
-            } else {
-              remainingParts.push(p)
+              if (isResult) {
+                return {
+                  type: 'tool-result',
+                  toolCallId: p.toolCallId,
+                  toolName: p.toolName,
+                  result: p.output,
+                }
+              } else {
+                return {
+                  type: 'tool-call',
+                  toolCallId: p.toolCallId,
+                  toolName: p.toolName,
+                  args: p.input,
+                }
+              }
             }
+            return p
           })
 
-          if (toolInvocations.length > 0) {
-            // We move tool data to toolInvocations and remove it from parts 
-            // to prevent the SDK helper from duplicating the calls/results.
-            // OLLAMA FIX: Some local models reject messages with empty content. 
-            // We ensure at least one empty text part if remainingParts is empty.
-            return {
-              ...currentMsg,
-              parts: remainingParts.length > 0 ? remainingParts : [{ type: 'text', text: '' }],
-              toolInvocations,
-            }
+          // OLLAMA FIX: Ensure we have at least an empty text part
+          if (!sanitizedParts.some((p: any) => p.type === 'text')) {
+            sanitizedParts.push({ type: 'text', text: '' })
           }
+
+          return { ...currentMsg, parts: sanitizedParts }
         }
 
         return currentMsg
