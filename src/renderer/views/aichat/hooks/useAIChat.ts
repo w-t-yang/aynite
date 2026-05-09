@@ -105,18 +105,33 @@ export function useAIChat() {
   })
 
   useEffect(() => {
-    const lastSession = localStorage.getItem('lastSession')
-    if (lastSession) {
-      try {
-        const { id, date } = JSON.parse(lastSession)
-        window.aynite.loadSession(id, date).then((res: any) => {
+    const loadInitialSession = async () => {
+      // Try last session from localStorage first
+      const lastSession = localStorage.getItem('lastSession')
+      if (lastSession) {
+        try {
+          const { id, date } = JSON.parse(lastSession)
+          const res = await window.aynite.loadSession(id, date)
           if (res) {
             setMessages(res)
             setSessionId(id || null)
+            return
           }
-        })
-      } catch (_e) {}
+        } catch (_e) {}
+      }
+
+      // Fallback: load from config's activeSessionId
+      const configSessionId = await window.aynite.getConfig('activeSessionId')
+      if (configSessionId) {
+        const res = await window.aynite.loadSession(configSessionId)
+        if (res) {
+          setMessages(res)
+          setSessionId(configSessionId)
+        }
+      }
     }
+
+    loadInitialSession()
   }, [])
 
   useEffect(() => {
