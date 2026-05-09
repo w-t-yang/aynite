@@ -70,6 +70,7 @@ export function getAIModel(config: AIProvider): LanguageModel {
       const customOpenAI = createOpenAI({
         apiKey: apiKey || 'no-key',
         baseURL: finalBaseUrl,
+        compatibility: 'compatible', // Relaxed checks for non-OpenAI providers
       })
 
       // We must use .chat() here too for standard OpenAI-compatible proxies (Ollama, DeepSeek, etc)
