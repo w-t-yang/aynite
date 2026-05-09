@@ -79,6 +79,7 @@
     "@tiptap/starter-kit": "^3.22.4",
     "@types/prismjs": "^1.26.6",
     "ai": "^6.0.176",
+    "ai-sdk-ollama": "^3.8.3",
     "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
