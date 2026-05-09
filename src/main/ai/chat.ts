@@ -48,9 +48,43 @@ export async function saveSession(
   }
 }
 
-export async function loadSession(id: string, date: string) {
-  const path = getSessionPath(id, date)
-  return readJson(path).catch(() => null)
+export async function loadSession(id: string, date?: string) {
+  if (date) {
+    const path = getSessionPath(id, date)
+    return readJson(path).catch(() => null)
+  }
+
+  // Find session across all dates
+  const dir = getAyniteSessionsDir()
+  const dates = await readdir(dir).catch(() => [])
+  for (const d of dates) {
+    if (!d.isDirectory()) continue
+    const dateDir = d.name
+    const path = getSessionPath(id, dateDir)
+    const content = await readJson(path).catch(() => null)
+    if (content) return content
+  }
+  return null
+}
+
+export async function deleteSession(id: string) {
+  const dir = getAyniteSessionsDir()
+  const dates = await readdir(dir).catch(() => [])
+  const { unlink } = await import('node:fs/promises')
+
+  for (const d of dates) {
+    if (!d.isDirectory()) continue
+    const dateDir = d.name
+    const path = getSessionPath(id, dateDir)
+    const metaPath = getSessionMetadataPath(id, dateDir)
+
+    if (await stat(path).catch(() => null)) {
+      await unlink(path).catch(() => {})
+      if (await stat(metaPath).catch(() => null)) {
+        await unlink(metaPath).catch(() => {})
+      }
+    }
+  }
 }
 
 export async function listSessions() {
@@ -101,7 +135,19 @@ export async function listSessions() {
       }
     }
   }
-  return all.sort((a, b) => b.lastModified.localeCompare(a.lastModified))
+
+  // De-duplicate by id, keeping the most recent one
+  const unique = new Map<string, any>()
+  for (const s of all) {
+    const existing = unique.get(s.id)
+    if (!existing || s.lastModified > existing.lastModified) {
+      unique.set(s.id, s)
+    }
+  }
+
+  return Array.from(unique.values()).sort((a, b) =>
+    b.lastModified.localeCompare(a.lastModified),
+  )
 }
 
 export async function aiChat({

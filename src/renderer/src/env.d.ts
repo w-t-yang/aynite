@@ -12,8 +12,10 @@ interface ChatSessionEntry {
   id: string
   date: string
   lastModified: string
-  size: number
+  size?: number
   preview: string
+  title: string
+  messageCount: number
 }
 
 interface SkillEntry {
@@ -109,8 +111,8 @@ interface AyniteWindow {
     (payload: { id: string; messages: any[] }): Promise<void>
   }
   loadSession: {
-    (sessionId: string, date: string): Promise<any>
-    (payload: { id: string; date: string }): Promise<any>
+    (sessionId: string, date?: string): Promise<any>
+    (payload: { id: string; date?: string }): Promise<any>
   }
   runDirectCommand: (
     payload: DirectCommandPayload,

@@ -71,6 +71,7 @@ export interface FileNode {
 export interface MainConfig {
   lastUsed?: string
   activeTheme?: string
+  activeSessionId?: string
   aiTools?: Record<string, boolean>
   agents?: {
     activeId: string

@@ -51,6 +51,8 @@ export const AppEvents = {
   // AI
   AI_CHAT_DELTA: 'ai-chat-delta',
   AI_APPROVAL_REQUEST: 'ai-approval-request',
+  ACTIVE_SESSION_CHANGED: 'active-session-changed',
+  SESSION_DELETED: 'session-deleted',
 
   // Tile
   TILE_ACTIVATED: 'tile-activated',

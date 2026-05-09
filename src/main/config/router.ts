@@ -6,6 +6,7 @@
  */
 import { app } from 'electron'
 import { DEFAULT_AI_TOOLS } from '../../lib/constants/ai'
+import { AppEvents } from '../../lib/constants/app'
 import { ConfigKey } from '../../lib/constants/config'
 import type { MainConfig, WorkspaceConfig } from '../../lib/constants/types'
 import {
@@ -17,6 +18,7 @@ import {
   writeJson,
 } from '../../lib/path'
 import {
+  deleteSession,
   getMergedSystemPrompt,
   getToolsMetadata,
   listSessions,
@@ -24,6 +26,7 @@ import {
   saveSession,
 } from '../ai'
 import { deleteTheme, getTheme, getThemesList, saveTheme } from '../theme'
+import { sendAppEvent } from '../window'
 import {
   getWorkspaceState,
   getWorkspacesList,
@@ -139,6 +142,10 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
       const state = await getWorkspaceState(wsConfig.active)
       return state.files || []
     }
+    case ConfigKey.ACTIVE_SESSION_ID: {
+      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
+      return mainConfig.activeSessionId || null
+    }
 
     default:
       console.warn(`[ConfigRouter] Unknown getConfig key: ${key}`)
@@ -242,6 +249,18 @@ export async function routeSetConfig(
       const files = payload as string[]
       const wsConfig = await getWorkspacesList()
       await saveWorkspaceState(wsConfig.active, { files })
+      return true
+    }
+    case ConfigKey.ACTIVE_SESSION_ID: {
+      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
+      mainConfig.activeSessionId = payload
+      await writeJson(getMainConfigPath(), mainConfig)
+      return true
+    }
+    case ConfigKey.SESSION_DELETE: {
+      const id = payload as string
+      await deleteSession(id)
+      sendAppEvent(AppEvents.SESSION_DELETED, { id })
       return true
     }
 

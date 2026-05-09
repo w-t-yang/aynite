@@ -87,6 +87,15 @@ export function useAIChat() {
     if (event.type === 'config-changed') loadSettings()
     if (event.type === 'workspace-changed') loadWorkspaceFolders()
     if (event.type === 'active-tab-changed') setActiveTabPath(event.data.path)
+    if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
+      const { id } = event.data as { id: string }
+      window.aynite.loadSession(id).then((res: any) => {
+        if (res) {
+          setMessages(res)
+          setSessionId(id)
+        }
+      })
+    }
     if (event.type === AppEvents.AI_APPROVAL_REQUEST) {
       const { id, command, cwd } = event.data as any
       approvalIdRef.current = id

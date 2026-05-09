@@ -57,6 +57,8 @@ export function setupConfigIpc() {
         sendAppEvent(AppEvents.CONFIG_CHANGED, { key })
       } else if (key === ConfigKey.ACTIVE_FILE) {
         sendAppEvent(AppEvents.ACTIVE_FILE_CHANGED, { path: payload })
+      } else if (key === ConfigKey.ACTIVE_SESSION_ID) {
+        sendAppEvent(AppEvents.ACTIVE_SESSION_CHANGED, { id: payload })
       }
       return result
     },

@@ -17,8 +17,6 @@ export function AIChat() {
     sendMessage,
     clearChat,
     loadSessions,
-    setMessages,
-    setSessionId,
     copyToClipboard,
     revertToMessage,
     switchAgent,
@@ -31,7 +29,12 @@ export function AIChat() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      // Use requestAnimationFrame to ensure the DOM has updated
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        }
+      })
     }
   }, [])
 
@@ -40,27 +43,6 @@ export function AIChat() {
     ;(window as any).focusChatInput = (prefix?: string) => {
       if (prefix) inputRef.current?.trigger(prefix)
       else inputRef.current?.focus()
-    }
-    ;(window as any).setChatSession = (id: string, date?: string) => {
-      const dateStr = date || new Date().toISOString().split('T')[0]
-      window.aynite.loadSession(id, dateStr).then((res: any) => {
-        if (res) {
-          setMessages(res)
-          setSessionId(id)
-          localStorage.setItem(
-            'lastSession',
-            JSON.stringify({ id, date: dateStr }),
-          )
-        } else {
-          setSessionId(id)
-          setMessages([])
-          localStorage.setItem(
-            'lastSession',
-            JSON.stringify({ id, date: dateStr }),
-          )
-        }
-        setTimeout(() => inputRef.current?.focus(), 100)
-      })
     }
     ;(window as any).showChatHistory = async () => {
       const res = await loadSessions()
@@ -73,20 +55,11 @@ export function AIChat() {
 
     return () => {
       delete (window as any).focusChatInput
-      delete (window as any).setChatSession
       delete (window as any).showChatHistory
       delete (window as any).clearChat
       delete (window as any).copyChat
     }
-  }, [
-    messages,
-    clearChat,
-    copyToClipboard,
-    loadSessions,
-    inputRef,
-    setMessages,
-    setSessionId,
-  ])
+  }, [messages, clearChat, copyToClipboard, loadSessions, inputRef])
 
   const getFiles = useCallback(
     (path: string) => window.aynite.listFolder(path),
@@ -155,7 +128,7 @@ export function AIChat() {
       {showHistory && (
         <SessionsModal
           sessions={sessions}
-          onSelect={(id, date) => (window as any).setChatSession(id, date)}
+          onSelect={(id) => window.aynite.setConfig('activeSessionId', id)}
           onClose={() => setShowHistory(false)}
         />
       )}

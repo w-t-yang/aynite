@@ -38,6 +38,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/file-browser/index.html',
         ),
+        'views/session-view/index': resolve(
+          __dirname,
+          'src/renderer/views/session-view/index.html',
+        ),
       },
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',

@@ -21,4 +21,6 @@ export enum ConfigKey {
   VERSION = 'version',
   ACTIVE_FILE = 'activeFile',
   OPENED_FILES = 'openedFiles',
+  ACTIVE_SESSION_ID = 'activeSessionId',
+  SESSION_DELETE = 'session-delete',
 }
