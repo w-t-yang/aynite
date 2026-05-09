@@ -1,0 +1,12 @@
+{
+  "name": "aynite-demo-slides",
+  "version": "1.0.0",
+  "description": "A professional slide deck for Aynite demonstration",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": ["slides", "revealjs", "demo"],
+  "author": "Antigravity",
+  "license": "MIT"
+}

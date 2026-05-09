@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Aynite Demo Slides</title>
+
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.min.css">
+    
+    <style>
+      :root {
+        --r-main-color: #fafafa;
+        --r-heading-color: #fafafa;
+        --r-link-color: #3b82f6;
+        --r-selection-background: #264f78;
+      }
+      .reveal {
+        background-color: #09090b;
+      }
+      .slide-gradient {
+        background: radial-gradient(circle at center, #1e293b 0%, #09090b 100%);
+      }
+      .reveal h1, .reveal h2, .reveal h3 {
+        text-transform: none;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .highlight-box {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+        border-radius: 1rem;
+        backdrop-filter: blur(10px);
+      }
+      .accent-text {
+        color: #3b82f6;
+      }
+    </style>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section data-background-color="#09090b" class="slide-gradient">
+          <h1 class="accent-text">Aynite</h1>
+          <h3>The Next-Generation Workspace</h3>
+          <p style="opacity: 0.6; font-size: 0.8em; margin-top: 2rem;">Dynamic Micro-Apps & AI-First Design</p>
+        </section>
+
+				<section>
+          <h2>Core Architecture</h2>
+          <div class="highlight-box">
+            <ul>
+              <li class="fragment"><strong>Main Process</strong>: Secure system bridge</li>
+              <li class="fragment"><strong>Renderer Hub</strong>: Orchestrates tiles and views</li>
+              <li class="fragment"><strong>IPC Preload</strong>: Strict boundary enforcement</li>
+              <li class="fragment"><strong>Micro-Apps</strong>: Isolated, high-performance views</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <section>
+            <h2>Visualization Toolkit</h2>
+            <p>Built for data-driven exploration</p>
+          </section>
+          <section>
+            <h3>StockChart</h3>
+            <p>Real-time financial analysis with technical indicators.</p>
+          </section>
+          <section>
+            <h3>Graph Explorer</h3>
+            <p>Force-directed physics simulation for complex networks.</p>
+          </section>
+          <section>
+            <h3>MindMap View</h3>
+            <p>Hierarchical information mapping with collapsible branches.</p>
+          </section>
+        </section>
+
+        <section>
+          <h2>AI Integration</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div class="highlight-box">
+              <h4 class="accent-text">Context Aware</h4>
+              <p style="font-size: 0.6em;">The AI understands your active files, terminal output, and workspace layout.</p>
+            </div>
+            <div class="highlight-box">
+              <h4 class="accent-text">Tool Use</h4>
+              <p style="font-size: 0.6em;">Securely executes commands and filesystem operations with user approval.</p>
+            </div>
+          </div>
+        </section>
+
+				<section>
+          <h2>Try it now</h2>
+          <pre><code class="language-bash" data-trim data-noescape>
+            npm run dev
+            # Explore the future
+          </code></pre>
+        </section>
+
+        <section data-background-color="#3b82f6">
+          <h2 style="color: white;">Thank You</h2>
+          <p style="color: white; opacity: 0.8;">Questions? Check the RFCs in the repo.</p>
+        </section>
+			</div>
+		</div>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.js"></script>
+		<script>
+			Reveal.initialize({
+				hash: true,
+        center: true,
+        transition: 'convex', // none/fade/slide/convex/concave/zoom
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+			});
+		</script>
+	</body>
+</html>
