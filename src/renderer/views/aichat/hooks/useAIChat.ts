@@ -106,27 +106,12 @@ export function useAIChat() {
 
   useEffect(() => {
     const loadInitialSession = async () => {
-      // Try last session from localStorage first
-      const lastSession = localStorage.getItem('lastSession')
-      if (lastSession) {
-        try {
-          const { id, date } = JSON.parse(lastSession)
-          const res = await window.aynite.loadSession(id, date)
-          if (res) {
-            setMessages(res)
-            setSessionId(id || null)
-            return
-          }
-        } catch (_e) {}
-      }
-
-      // Fallback: load from config's activeSessionId
-      const configSessionId = await window.aynite.getConfig('activeSessionId')
-      if (configSessionId) {
-        const res = await window.aynite.loadSession(configSessionId)
+      const activeSessionId = await window.aynite.getConfig('activeSessionId')
+      if (activeSessionId) {
+        const res = await window.aynite.loadSession(activeSessionId)
         if (res) {
           setMessages(res)
-          setSessionId(configSessionId)
+          setSessionId(activeSessionId)
         }
       }
     }
@@ -137,12 +122,7 @@ export function useAIChat() {
   useEffect(() => {
     if (messages.length > 0 && !sessionId) {
       const newId = Date.now().toString()
-      const dateStr = new Date().toISOString().split('T')[0]
       setSessionId(newId)
-      localStorage.setItem(
-        'lastSession',
-        JSON.stringify({ id: newId, date: dateStr }),
-      )
     }
   }, [messages, sessionId])
 
@@ -422,7 +402,6 @@ export function useAIChat() {
   const clearChat = useCallback(() => {
     setMessages([])
     setSessionId(null)
-    localStorage.removeItem('lastSession')
     abortRef.current?.abort()
   }, [])
 
