@@ -414,7 +414,7 @@ export function useAIChat() {
   const revertToMessage = useCallback((index: number) => {
     setMessages((prev) => {
       if (index < 0 || index >= prev.length) return prev
-      return prev.slice(0, index)
+      return prev.slice(0, index + 1)
     })
   }, [])
 
