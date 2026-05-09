@@ -27,12 +27,13 @@ export function getToolsMetadata() {
 }
 
 export function createTools(context: ToolContext) {
+  const domains = [...context.workspaceFolders, getAyniteDir()]
   const tools: any = {
     read_file: {
       description: TOOL_METADATA.read_file.description,
       inputSchema: jsonSchema(TOOL_METADATA.read_file.inputSchema),
       execute: async ({ path: filePath }: { path: string }) => {
-        return await secureReadText(filePath, context.workspaceFolders)
+        return await secureReadText(filePath, domains)
       },
     },
     write_file: {
@@ -45,18 +46,14 @@ export function createTools(context: ToolContext) {
         path: string
         content: string
       }) => {
-        return await secureWriteText(
-          filePath,
-          content,
-          context.workspaceFolders,
-        )
+        return await secureWriteText(filePath, content, domains)
       },
     },
     list_files: {
       description: TOOL_METADATA.list_files.description,
       inputSchema: jsonSchema(TOOL_METADATA.list_files.inputSchema),
       execute: async ({ path: dirPath }: { path: string }) => {
-        return await secureListDir(dirPath, context.workspaceFolders)
+        return await secureListDir(dirPath, domains)
       },
     },
     run_command: {
@@ -115,11 +112,7 @@ export function createTools(context: ToolContext) {
         pattern: string
         folderPath: string
       }) => {
-        return await secureGrepSearch(
-          folderPath,
-          pattern,
-          context.workspaceFolders,
-        )
+        return await secureGrepSearch(folderPath, pattern, domains)
       },
     },
     read_url: {
@@ -160,20 +153,12 @@ export function createTools(context: ToolContext) {
         depth?: number
       }) => {
         if (dirPath) {
-          return await secureGetFileTree(
-            dirPath,
-            context.workspaceFolders,
-            depth,
-          )
+          return await secureGetFileTree(dirPath, domains, depth)
         } else {
           let fullOutput = ''
           for (const folder of context.workspaceFolders) {
             fullOutput += `Workspace Folder: ${folder}\n`
-            fullOutput += await secureGetFileTree(
-              folder,
-              context.workspaceFolders,
-              depth,
-            )
+            fullOutput += await secureGetFileTree(folder, domains, depth)
             fullOutput += '\n'
           }
           return fullOutput || ERROR_MESSAGES.WORKSPACE_EMPTY
