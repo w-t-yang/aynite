@@ -41,7 +41,7 @@
     "audit:simplify": "tsx scripts/audit-simplify.ts",
     "audit:ast-grep": "ast-grep scan",
     "audit:deadcode": "knip",
-    "build:views": "npm run audit && vite build --config vite.views.config.ts && mkdir -p ~/.aynite && cp -rv dist-views/* ~/.aynite/",
+    "build:views": "vite build --config vite.views.config.ts",
     "build:views-dev": "VITE_VIEWS_DEV=true vite build --config vite.views.config.ts && mkdir -p ~/.aynite && cp -rv dist-views/* ~/.aynite/",
     "serve:views": "npm run build:views && npx serve dist-views",
     "patch-tag": "npm version patch && git push && git push --tags",
