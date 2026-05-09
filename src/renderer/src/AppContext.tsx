@@ -44,7 +44,7 @@ interface AppContextType {
   removeLayout: (id: string) => void
   updateLayout: (newLayout: LayoutNode) => void
   updateTileView: (nodeId: string, updates: Partial<LeafNode>) => void
-  executeAppOperation: (operation: string) => void
+  executeAppOperation: (operation: string, payload?: unknown) => void
 
   handleResizeStart: () => void
   handleResizeEnd: () => void
@@ -69,7 +69,8 @@ interface AppContextType {
   activeFile: string | null
 
   showSettings: boolean
-  setShowSettings: (show: boolean) => void
+  settingsTab: string | null
+  setShowSettings: (show: boolean, tab?: string) => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -102,6 +103,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const [showFileSwitcher, setShowFileSwitcher] = useState(false)
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<string | null>(null)
 
   const activeTileIdRef = useRef(activeTileId)
 
@@ -262,7 +264,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   )
 
   const executeAppOperation = useCallback(
-    (operation: string) => {
+    (operation: string, payload?: unknown) => {
       // 1. Handle Global/Non-Layout Operations
       switch (operation) {
         case 'REFRESH_APP':
@@ -276,7 +278,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           setShowFileSwitcher((prev) => !prev)
           return
         case 'SETTINGS':
-          setShowSettings((prev) => !prev)
+          if (payload && (payload as any).tab) {
+            setSettingsTab((payload as any).tab)
+            setShowSettings(true)
+          } else {
+            setShowSettings((prev) => {
+              const next = !prev
+              if (!next) setSettingsTab(null)
+              return next
+            })
+          }
           return
         // Add other global cases as needed...
       }
@@ -501,7 +512,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         setShowFileSwitcher,
         activeFile,
         showSettings,
-        setShowSettings,
+        settingsTab,
+        setShowSettings: (show: boolean, tab?: string) => {
+          setShowSettings(show)
+          if (tab) setSettingsTab(tab)
+          else if (!show) setSettingsTab(null)
+        },
       }}
     >
       {children}

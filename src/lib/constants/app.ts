@@ -53,6 +53,7 @@ export const AppEvents = {
   AI_APPROVAL_REQUEST: 'ai-approval-request',
   ACTIVE_SESSION_CHANGED: 'active-session-changed',
   SESSION_DELETED: 'session-deleted',
+  SESSION_SAVED: 'session-saved',
 
   // Tile
   TILE_ACTIVATED: 'tile-activated',

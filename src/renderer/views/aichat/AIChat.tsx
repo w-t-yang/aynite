@@ -21,6 +21,8 @@ export function AIChat() {
     revertToMessage,
     switchAgent,
     switchProvider,
+    error,
+    setError,
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -123,6 +125,8 @@ export function AIChat() {
         getAllFiles={getAllFiles}
         getAvailableSkills={getAvailableSkills}
         getAvailableCommands={getAvailableCommands}
+        error={error}
+        setError={setError}
       />
 
       {showHistory && (

@@ -136,6 +136,13 @@ export function Settings() {
   useEffect(() => {
     loadSettings()
     loadVersion()
+
+    // Handle initial tab from hash
+    const hash = window.location.hash
+    if (hash.startsWith('#tab=')) {
+      const tab = hash.replace('#tab=', '')
+      setActiveTab(tab)
+    }
   }, [loadVersion, loadSettings])
 
   // Reload settings when theme changes externally (e.g. from title bar)

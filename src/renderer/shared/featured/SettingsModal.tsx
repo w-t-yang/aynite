@@ -2,7 +2,7 @@ import { useApp } from '../../src/AppContext'
 import { Modal } from '../basic/Modal'
 
 export function SettingsModal() {
-  const { showSettings, setShowSettings } = useApp()
+  const { showSettings, settingsTab, setShowSettings } = useApp()
 
   return (
     <Modal
@@ -15,7 +15,7 @@ export function SettingsModal() {
     >
       <div className="w-full h-full bg-background rounded-b-2xl overflow-hidden">
         <iframe
-          src="/views/settings/index.html"
+          src={`/views/settings/index.html${settingsTab ? `#tab=${settingsTab}` : ''}`}
           className="w-full h-full border-none"
           title="Settings"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"

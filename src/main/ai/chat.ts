@@ -46,6 +46,8 @@ export async function saveSession(
       await writeJson(metaPath, metadata)
     }
   }
+
+  sendAppEvent(AppEvents.SESSION_SAVED, id)
 }
 
 export async function loadSession(id: string, date?: string) {

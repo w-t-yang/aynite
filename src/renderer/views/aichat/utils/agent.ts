@@ -160,15 +160,7 @@ export async function runAgentLoop(
               unsubscribe()
               flushAssistant()
               onEvent(part)
-              const errorMsg: ChatMessage = {
-                id: genId(),
-                role: 'assistant',
-                parts: [
-                  { type: 'text', text: `**AI Stream Error**: ${part.error}` },
-                ],
-                createdAt: new Date(),
-              }
-              fulfill([...messages, ...loopMessages, errorMsg])
+              fulfill([...messages, ...loopMessages])
               break
             }
 

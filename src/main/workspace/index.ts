@@ -1,11 +1,11 @@
 import { ipcMain } from 'electron'
-import { AppEvents } from '../../lib/constants/app'
+import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import type { WorkspaceTab } from '../../lib/types/workspace'
 import { getIgnorePatterns } from '../config'
-import { sendAppEvent, showOpenDialog } from '../window'
+import { sendAppEvent, sendAppOperation, showOpenDialog } from '../window'
 import {
   addWorkspaceFolder,
   createWorkspace,
@@ -52,10 +52,34 @@ export function setupWorkspaceIpc(): void {
     })
     if (canceled || filePaths.length === 0) return null
     const folderPath = filePaths[0]
-    const success = await addWorkspaceFolder(folderPath)
-    if (success) {
+    const result = await addWorkspaceFolder(folderPath)
+
+    if (result.success) {
       const folders = await getWorkspaceFolders()
       notifyChanged(folders)
+
+      // Send detailed update event
+      sendAppEvent(AppEvents.WORKSPACE_UPDATED, result)
+
+      if (result.reason === 'is_child_of_existing') {
+        sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+          type: 'info',
+          title: 'Folder already covered',
+          message: `The folder is already covered by parent: ${result.parentPath}`,
+        })
+      } else if (result.reason === 'is_parent_of_existing') {
+        sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+          type: 'success',
+          title: 'Workspace updated',
+          message: `Replaced ${result.removed.length} subfolder(s) with parent folder.`,
+        })
+      } else if (result.reason === 'already_exists') {
+        sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+          type: 'info',
+          title: 'Folder already exists',
+          message: 'The selected folder is already in the workspace.',
+        })
+      }
     }
     return folderPath
   })

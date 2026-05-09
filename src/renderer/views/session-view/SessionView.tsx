@@ -53,6 +53,10 @@ export function SessionView() {
     loadData()
   })
 
+  useAppEvent('session-saved', () => {
+    loadData()
+  })
+
   const handleSelectSession = async (id: string) => {
     try {
       await window.aynite.setConfig('activeSessionId', id)

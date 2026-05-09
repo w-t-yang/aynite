@@ -35,6 +35,10 @@ export function useAIChat() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState<StreamPart | null>(null)
+  const [error, setError] = useState<{
+    message: string
+    redacted: string
+  } | null>(null)
 
   const inputRef = useRef<ChatInputHandle>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -197,6 +201,7 @@ export function useAIChat() {
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || loadingRef.current) return
+      setError(null)
 
       const commandMentionRegex = />cmd\[(.*?)\]\((.*?)\)/g
       const skillMentionRegex = /\/skill\[(.*?)\]\((.*?)\)/g
@@ -358,17 +363,15 @@ export function useAIChat() {
                 setMessages((prev) => appendToolMessage(prev, event))
                 break
               case 'error':
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: genId(),
-                    role: 'assistant',
-                    parts: [
-                      { type: 'text', text: `**Error**: ${event.error}` },
-                    ],
-                    createdAt: new Date(),
-                  },
-                ])
+                setError({
+                  message: event.error,
+                  redacted: event.error.includes('fetch failed')
+                    ? 'Connection failed. Please check if your AI provider service is running.'
+                    : event.error.includes('401') ||
+                        event.error.includes('invalid_api_key')
+                      ? 'Authentication failed. Please check your API key.'
+                      : 'An error occurred while communicating with the AI provider.',
+                })
                 break
               case 'finish':
                 setCurrentStep(null)
@@ -381,20 +384,12 @@ export function useAIChat() {
         )
         setMessages(resultHistory)
       } catch (e: unknown) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: genId(),
-            role: 'assistant',
-            parts: [
-              {
-                type: 'text',
-                text: `❌ **System Error**: ${e instanceof Error ? e.message : String(e)}`,
-              },
-            ],
-            createdAt: new Date(),
-          },
-        ])
+        const msg = e instanceof Error ? e.message : String(e)
+        setError({
+          message: msg,
+          redacted:
+            'A system error occurred. Please check your configuration and try again.',
+        })
       } finally {
         setLoading(false)
         setCurrentStep(null)
@@ -453,5 +448,7 @@ export function useAIChat() {
     revertToMessage,
     switchAgent,
     switchProvider,
+    error,
+    setError,
   }
 }

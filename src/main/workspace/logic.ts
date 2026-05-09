@@ -78,10 +78,22 @@ async function resolveWorkspace(workspaceName?: string) {
   return { targetWs, data }
 }
 
+export interface AddFolderResult {
+  success: boolean
+  added: string
+  removed: string[]
+  reason:
+    | 'already_exists'
+    | 'is_child_of_existing'
+    | 'is_parent_of_existing'
+    | 'new'
+  parentPath?: string
+}
+
 export async function addWorkspaceFolder(
   folderPath: string,
   workspaceName?: string,
-): Promise<boolean> {
+): Promise<AddFolderResult> {
   const { targetWs, data } = await resolveWorkspace(workspaceName)
 
   // Normalize paths for comparison (ensure trailing slash consistency)
@@ -89,27 +101,74 @@ export async function addWorkspaceFolder(
   const normalize = (p: string) => (p.endsWith(sep) ? p : p + sep)
   const newPath = normalize(folderPath)
 
+  const toRemove: string[] = []
+  let isChild = false
+  let parentPath = ''
+
   for (const existing of data.folders) {
     const existingPath = normalize(existing)
 
-    // Check if newPath is a parent of existingPath or vice versa
-    if (existingPath.startsWith(newPath)) {
-      throw new Error(
-        `Cannot add folder: "${folderPath}" is a parent of the already added folder "${existing}".`,
-      )
+    if (existingPath === newPath) {
+      return {
+        success: true,
+        added: folderPath,
+        removed: [],
+        reason: 'already_exists',
+      }
     }
+
+    // Check if newPath is a parent of existingPath
+    if (existingPath.startsWith(newPath)) {
+      toRemove.push(existing)
+    }
+
+    // Check if existingPath is a parent of newPath
     if (newPath.startsWith(existingPath)) {
-      throw new Error(
-        `Cannot add folder: "${folderPath}" is already contained within "${existing}".`,
-      )
+      isChild = true
+      parentPath = existing
+      break
+    }
+  }
+
+  if (isChild) {
+    return {
+      success: true,
+      added: parentPath,
+      removed: [],
+      reason: 'is_child_of_existing',
+      parentPath,
+    }
+  }
+
+  if (toRemove.length > 0) {
+    data.folders = data.folders.filter((f) => !toRemove.includes(f))
+    data.folders.push(folderPath)
+    await writeJson(getWorkspaceDataPath(targetWs), data)
+    return {
+      success: true,
+      added: folderPath,
+      removed: toRemove,
+      reason: 'is_parent_of_existing',
     }
   }
 
   if (!data.folders.includes(folderPath)) {
     data.folders.push(folderPath)
     await writeJson(getWorkspaceDataPath(targetWs), data)
+    return {
+      success: true,
+      added: folderPath,
+      removed: [],
+      reason: 'new',
+    }
   }
-  return true
+
+  return {
+    success: true,
+    added: folderPath,
+    removed: [],
+    reason: 'already_exists',
+  }
 }
 
 export async function removeWorkspaceFolder(
