@@ -54,6 +54,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/graph/index.html',
         ),
+        'views/mindmap/index': resolve(
+          __dirname,
+          'src/renderer/views/mindmap/index.html',
+        ),
       },
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',
