@@ -99,7 +99,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
         {name ? (
           <iframe
             ref={iframeRef}
-            src={`aynite://${name}/index.html#tileId=${id}`}
+            src={`aynite://${name}/index.html#tileId=${id}${node.data ? `&data=${encodeURIComponent(JSON.stringify(node.data))}` : ''}`}
             className="w-full h-full border-none"
             style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
             title={name}

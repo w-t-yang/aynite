@@ -168,4 +168,5 @@ export {
   reorderWorkspaceFolders,
   saveWorkspaceState,
   switchWorkspace,
+  updateTileData,
 } from './logic'

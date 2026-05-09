@@ -234,3 +234,37 @@ export async function renameWorkspaceFolder(oldPath: string, newPath: string) {
     console.error('Error renaming workspace folders:', e)
   }
 }
+export async function updateTileData(
+  tileId: string,
+  data: Record<string, any>,
+  workspaceName?: string,
+): Promise<void> {
+  const { targetWs, data: wsConfig } = await resolveWorkspace(workspaceName)
+
+  const updateNode = (node: any) => {
+    if (node.id === tileId && node.type === 'leaf') {
+      node.data = { ...(node.data || {}), ...data }
+      return true
+    }
+    if (node.type === 'split' && node.children) {
+      let modified = false
+      for (const child of node.children) {
+        if (updateNode(child)) modified = true
+      }
+      return modified
+    }
+    return false
+  }
+
+  let anyModified = false
+  for (const layout of wsConfig.layouts) {
+    if (updateNode(layout.layout)) {
+      anyModified = true
+    }
+  }
+
+  if (anyModified) {
+    await writeJson(getWorkspaceDataPath(targetWs), wsConfig)
+    sendAppEvent(AppEvents.WORKSPACE_UPDATED, { id: targetWs })
+  }
+}

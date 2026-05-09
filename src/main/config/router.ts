@@ -32,6 +32,7 @@ import {
   getWorkspacesList,
   saveWorkspaceState,
   switchWorkspace,
+  updateTileData,
 } from '../workspace'
 import { loadConfig } from './logic'
 
@@ -255,6 +256,14 @@ export async function routeSetConfig(
       const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
       mainConfig.activeSessionId = payload
       await writeJson(getMainConfigPath(), mainConfig)
+      return true
+    }
+    case ConfigKey.TILE_DATA: {
+      const { tileId, data } = payload as {
+        tileId: string
+        data: Record<string, any>
+      }
+      await updateTileData(tileId, data)
       return true
     }
     case ConfigKey.SESSION_DELETE: {

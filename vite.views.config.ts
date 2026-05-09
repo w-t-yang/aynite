@@ -42,6 +42,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/session-view/index.html',
         ),
+        'views/stockchart/index': resolve(
+          __dirname,
+          'src/renderer/views/stockchart/index.html',
+        ),
       },
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',
