@@ -1,4 +1,4 @@
-import { Copy, History, Plus, User, Cpu } from 'lucide-react'
+import { Copy, Cpu, History, Plus, User } from 'lucide-react'
 import { Button } from '../../../shared/basic/Button'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
 import type { SettingsState } from '../../../shared/lib/types'
@@ -54,19 +54,27 @@ export function Header({
             activeId={settings.agents?.activeId}
             onSelect={onSwitchAgent}
             trigger={
-              <button type="button" className="hover:text-primary transition-colors focus:outline-none">
+              <button
+                type="button"
+                className="hover:text-primary transition-colors focus:outline-none"
+              >
                 {agentName}
               </button>
             }
             title="Switch Agent"
           />
-          <span className="text-muted-foreground/20 font-normal select-none">/</span>
+          <span className="text-muted-foreground/20 font-normal select-none">
+            /
+          </span>
           <SelectionMenu
             items={providerItems}
             activeId={settings.ai?.activeId}
             onSelect={onSwitchProvider}
             trigger={
-              <button type="button" className="text-muted-foreground/60 hover:text-primary transition-colors focus:outline-none">
+              <button
+                type="button"
+                className="text-muted-foreground/60 hover:text-primary transition-colors focus:outline-none"
+              >
                 {modelName}
               </button>
             }

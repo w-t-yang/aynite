@@ -33,7 +33,7 @@ const MarkdownRenderer = memo(
       className={cn(
         'markdown-body prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed selection:bg-primary/30',
         isStreaming &&
-        "after:content-['▋'] after:ml-0.5 after:animate-pulse after:text-primary",
+          "after:content-['▋'] after:ml-0.5 after:animate-pulse after:text-primary",
       )}
     >
       <Markdown
@@ -78,16 +78,22 @@ const MarkdownRenderer = memo(
 const ToolPartRenderer = memo(({ part }: { part: any }) => {
   const { toolName, state, input, errorText } = part
   const output = part.output ?? part.result
+  const isStreaming = state === 'input-streaming'
+  const isCall = state === 'input-available' || isStreaming
   const isResult = state === 'output-available' || state === 'output-error'
-  
-  // Per user request: tool call is not necessary for display
-  if (!isResult) return null
+
+  if (!isResult && !isCall) return null
+  if (isCall && !input) return null // Don't show empty call blocks yet
 
   const isError = state === 'output-error' || isErrorMessage(output)
-  
+
   let toolArgs = input
   if (typeof toolArgs === 'string') {
-    try { toolArgs = JSON.parse(toolArgs) } catch { /* ignore */ }
+    try {
+      toolArgs = JSON.parse(toolArgs)
+    } catch {
+      /* ignore */
+    }
   }
 
   let Icon = Terminal
@@ -100,7 +106,15 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
     // 1. Try to find a command-like string in direct or nested args
     const getCmd = (obj: any): string | null => {
       if (!obj || typeof obj !== 'object') return null
-      return obj.command || obj.path || obj.pattern || obj.url || obj.query || obj.name || null
+      return (
+        obj.command ||
+        obj.path ||
+        obj.pattern ||
+        obj.url ||
+        obj.query ||
+        obj.name ||
+        null
+      )
     }
 
     const actualArgs = toolArgs?.args || toolArgs?.input || toolArgs
@@ -118,25 +132,45 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
       title={title}
       icon={isError ? AlertTriangle : Icon}
       colorClass={cn(
-        isError ? 'border-destructive/20 bg-destructive/[0.01]' : 'border-green-500/10 bg-green-500/[0.01]'
+        isError
+          ? 'border-destructive/20 bg-destructive/[0.01]'
+          : 'border-green-500/10 bg-green-500/[0.01]',
       )}
       defaultExpanded={false}
       compact
     >
       <div className="space-y-2">
-        <pre className={cn(
-          'text-[12px] font-mono whitespace-pre-wrap max-h-96 overflow-auto py-2 px-3 rounded bg-black/10',
-          isError ? 'text-destructive/90' : 'text-muted-foreground/80'
-        )}>
-          {output !== undefined && output !== null && output !== ''
-            ? (typeof output === 'string' ? output : JSON.stringify(output, null, 2))
-            : (errorText || '(No output)')}
+        <pre
+          className={cn(
+            'text-[12px] font-mono whitespace-pre-wrap max-h-96 overflow-auto py-2 px-3 rounded bg-black/10',
+            isError ? 'text-destructive/90' : 'text-muted-foreground/80',
+          )}
+        >
+          {isResult ? (
+            output !== undefined && output !== null && output !== '' ? (
+              typeof output === 'string' ? (
+                output
+              ) : (
+                JSON.stringify(output, null, 2)
+              )
+            ) : (
+              errorText || '(No output)'
+            )
+          ) : (
+            <div className="flex items-center gap-2 text-primary animate-pulse">
+              <span>{isStreaming ? 'Streaming Input...' : 'Executing...'}</span>
+            </div>
+          )}
         </pre>
         {toolName !== 'run_command' && toolArgs && (
           <div className="px-1 opacity-40 hover:opacity-100 transition-opacity">
-            <div className="text-[10px] font-bold mb-1 opacity-50 uppercase tracking-wider">Arguments</div>
+            <div className="text-[10px] font-bold mb-1 opacity-50 uppercase tracking-wider">
+              Arguments
+            </div>
             <pre className="text-[10px] font-mono px-2 py-1 bg-black/5 rounded overflow-auto max-h-20">
-              {typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs, null, 2)}
+              {typeof toolArgs === 'string'
+                ? toolArgs
+                : JSON.stringify(toolArgs, null, 2)}
             </pre>
           </div>
         )}
@@ -174,12 +208,20 @@ const CommandResultRenderer = memo(
 
 function SystemMessage({ msg }: { msg: ChatMessage }) {
   const parts = msg.parts || []
-  const content = parts.length > 0 
-    ? parts.map(p => (p as any).text || '').join('')
-    : (typeof msg.content === 'string' ? msg.content : '')
+  const content =
+    parts.length > 0
+      ? parts.map((p) => (p as any).text || '').join('')
+      : typeof msg.content === 'string'
+        ? msg.content
+        : ''
   return (
     <div className="opacity-30 hover:opacity-100 transition-opacity mb-3">
-      <Collapsible title="System" icon={Terminal} colorClass="border-muted/20" compact>
+      <Collapsible
+        title="System"
+        icon={Terminal}
+        colorClass="border-muted/20"
+        compact
+      >
         <div className="text-[12px] font-mono text-muted-foreground whitespace-pre-wrap leading-tight">
           {content}
         </div>
@@ -188,12 +230,21 @@ function SystemMessage({ msg }: { msg: ChatMessage }) {
   )
 }
 
-function UserMessage({ msg, onRevert }: { msg: ChatMessage; onRevert: (id: string) => void }) {
+function UserMessage({
+  msg,
+  onRevert,
+}: {
+  msg: ChatMessage
+  onRevert: (id: string) => void
+}) {
   const { parts, id } = msg
-  const text = (parts && parts.length > 0)
-    ? parts.map(p => (p as any).text || '').join('')
-    : (typeof msg.content === 'string' ? msg.content : '')
-  
+  const text =
+    parts && parts.length > 0
+      ? parts.map((p) => (p as any).text || '').join('')
+      : typeof msg.content === 'string'
+        ? msg.content
+        : ''
+
   const formatMentions = (t: string) => {
     // Split by any mention pattern, keeping the mentions in the result array
     const segments = t.split(
@@ -241,7 +292,7 @@ function UserMessage({ msg, onRevert }: { msg: ChatMessage; onRevert: (id: strin
           </span>
         )
       }
-      // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for these static segments
+      // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable
       return <span key={`${keyPrefix}-text`}>{part}</span>
     })
   }
@@ -255,12 +306,23 @@ function UserMessage({ msg, onRevert }: { msg: ChatMessage; onRevert: (id: strin
         {(msg as any).commandResults?.length > 0 && (
           <div className="space-y-2 mt-2">
             {(msg as any).commandResults.map((res: any) => (
-              <CommandResultRenderer key={res.command} command={res.command} result={res.result} exitCode={res.exitCode} />
+              <CommandResultRenderer
+                key={res.command}
+                command={res.command}
+                result={res.result}
+                exitCode={res.exitCode}
+              />
             ))}
           </div>
         )}
         <div className="absolute bottom-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
-          <Button variant="ghost" size="sm" onClick={() => onRevert(id)} title="Revert to here" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRevert(id)}
+            title="Revert to here"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
+          >
             <RotateCcw size={14} />
           </Button>
         </div>
@@ -285,30 +347,53 @@ function AssistantMessage({
   onRevert: (id: string) => void
 }) {
   const parts = msg.parts || []
-  const fullText = parts.length > 0
-    ? parts.filter(p => p.type === 'text').map(p => (p as any).text).join('')
-    : (typeof msg.content === 'string' ? msg.content : '')
+  const fullText =
+    parts.length > 0
+      ? parts
+          .filter((p) => p.type === 'text')
+          .map((p) => (p as any).text)
+          .join('')
+      : typeof msg.content === 'string'
+        ? msg.content
+        : ''
 
   const hasNoParts = !parts || parts.length === 0
-  const hasToolParts = parts.some(p => 
-    (p.type as string) === 'tool' || (p.type as string).startsWith('tool-') || (p.type as string) === 'dynamic-tool'
+  const hasToolParts = parts.some(
+    (p) =>
+      (p.type as string) === 'tool' ||
+      (p.type as string).startsWith('tool-') ||
+      (p.type as string) === 'dynamic-tool',
   )
 
-  const hasVisibleParts = parts.some(p => {
+  const hasVisibleParts = parts.some((p) => {
     if (p.type === 'text' || p.type === 'reasoning') return true
-    if ((p.type as string) === 'dynamic-tool' || (p.type as string).startsWith('tool')) {
-      return p.state === 'output-available' || p.state === 'output-error'
+    if (
+      (p.type as string) === 'dynamic-tool' ||
+      (p.type as string).startsWith('tool')
+    ) {
+      const isCall =
+        p.state === 'input-available' || p.state === 'input-streaming'
+      const hasInput = !!(p as any).input
+      return (
+        p.state === 'output-available' ||
+        p.state === 'output-error' ||
+        (isCall && hasInput)
+      )
     }
     return false
   })
 
   if (!hasVisibleParts && !fullText && !isStreaming) return null
-  
+
   return (
     <div className="group/assistant relative mb-3">
       <div className="space-y-4 py-3 px-6">
         {hasNoParts && fullText && (
-          <MarkdownRenderer content={fullText} isStreaming={isStreaming} onOpenFile={onOpenFile} />
+          <MarkdownRenderer
+            content={fullText}
+            isStreaming={isStreaming}
+            onOpenFile={onOpenFile}
+          />
         )}
         {parts.map((part, i) => {
           const isPartLast = i === parts.length - 1
@@ -316,23 +401,53 @@ function AssistantMessage({
 
           switch (part.type) {
             case 'text':
-              // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for streaming parts
-              return <MarkdownRenderer key={`text-${msg.id}-${i}`} content={part.text} isStreaming={isPartStreaming} onOpenFile={onOpenFile} />
-            case 'reasoning':
-              // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for streaming parts
               return (
-                <Collapsible key={`reasoning-${msg.id}-${i}`} title="Thinking" icon={Bot} colorClass="border-primary/10 bg-primary/[0.01]" defaultExpanded={isLast} compact>
-                  <div className={cn("text-[12px] leading-snug text-muted-foreground/60 italic whitespace-pre-wrap font-serif", isPartStreaming && "after:content-['...'] after:ml-0.5 after:animate-pulse after:text-primary")}>
+                <MarkdownRenderer
+                  // biome-ignore lint/suspicious/noArrayIndexKey: stable
+                  key={`text-${msg.id}-${i}`}
+                  content={part.text}
+                  isStreaming={isPartStreaming}
+                  onOpenFile={onOpenFile}
+                />
+              )
+            case 'reasoning':
+              return (
+                <Collapsible
+                  // biome-ignore lint/suspicious/noArrayIndexKey: stable
+                  key={`reasoning-${msg.id}-${i}`}
+                  title="Thinking"
+                  icon={Bot}
+                  colorClass="border-primary/10 bg-primary/[0.01]"
+                  defaultExpanded={isLast}
+                  compact
+                >
+                  <div
+                    className={cn(
+                      'text-[12px] leading-snug text-muted-foreground/60 italic whitespace-pre-wrap font-serif',
+                      isPartStreaming &&
+                        "after:content-['...'] after:ml-0.5 after:animate-pulse after:text-primary",
+                    )}
+                  >
                     {part.text}
                   </div>
                 </Collapsible>
               )
             case 'tool' as any:
             case 'dynamic-tool' as any:
-              return <ToolPartRenderer key={part.toolCallId || `tool-${i}`} part={part} />
+              return (
+                <ToolPartRenderer
+                  key={part.toolCallId || `tool-${i}`}
+                  part={part}
+                />
+              )
             default:
               if (part.type.startsWith('tool-')) {
-                 return <ToolPartRenderer key={part.toolCallId || `tool-${i}`} part={part} />
+                return (
+                  <ToolPartRenderer
+                    key={part.toolCallId || `tool-${i}`}
+                    part={part}
+                  />
+                )
               }
               return null
           }
@@ -341,11 +456,23 @@ function AssistantMessage({
 
       {!isStreaming && !hasToolParts && (
         <div className="absolute bottom-1 right-8 flex gap-1 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
-          <Button variant="ghost" size="sm" onClick={() => onRevert(msg.id)} title="Revert to here" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRevert(msg.id)}
+            title="Revert to here"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
+          >
             <RotateCcw size={14} />
           </Button>
           {fullText && (
-            <Button variant="ghost" size="sm" onClick={() => onCopy(fullText)} title="Copy response" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onCopy(fullText)}
+              title="Copy response"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
+            >
               <Clipboard size={14} />
             </Button>
           )}
@@ -368,25 +495,52 @@ interface MessageItemProps {
 }
 
 export const MessageItem = memo(
-  ({ msg, idx, total, isStreaming, onOpenFile, onCopy, onRevert }: MessageItemProps) => {
+  ({
+    msg,
+    idx,
+    total,
+    isStreaming,
+    onOpenFile,
+    onCopy,
+    onRevert,
+  }: MessageItemProps) => {
     const isLast = idx === total - 1
     switch (msg.role) {
-      case 'system': return <SystemMessage msg={msg} />
-      case 'user': return <UserMessage msg={msg} onRevert={onRevert} />
-      case 'assistant': return <AssistantMessage msg={msg} isLast={isLast} isStreaming={isStreaming} onCopy={onCopy} onOpenFile={onOpenFile} onRevert={onRevert} />
+      case 'system':
+        return <SystemMessage msg={msg} />
+      case 'user':
+        return <UserMessage msg={msg} onRevert={onRevert} />
+      case 'assistant':
+        return (
+          <AssistantMessage
+            msg={msg}
+            isLast={isLast}
+            isStreaming={isStreaming}
+            onCopy={onCopy}
+            onOpenFile={onOpenFile}
+            onRevert={onRevert}
+          />
+        )
       case 'tool' as any: {
-        const visibleParts = (msg.parts || []).filter((p: any) => p.state === 'output-available' || p.state === 'output-error')
+        const visibleParts = (msg.parts || []).filter(
+          (p: any) =>
+            p.state === 'output-available' || p.state === 'output-error',
+        )
         if (visibleParts.length === 0) return null
         return (
           <div className="opacity-90 mb-3 px-6 space-y-2">
             {visibleParts.map((p: any, i: number) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: indices are stable for tool results
-              <ToolPartRenderer key={p.toolCallId || `tool-res-${i}`} part={p} />
+              <ToolPartRenderer
+                // biome-ignore lint/suspicious/noArrayIndexKey: stable
+                key={p.toolCallId || `tool-res-${i}`}
+                part={p}
+              />
             ))}
           </div>
         )
       }
-      default: return null
+      default:
+        return null
     }
   },
 )

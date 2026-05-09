@@ -157,7 +157,7 @@ export async function loadConfig() {
     ai.providers = DEFAULT_AI_CONFIG.providers
     if (!ai.activeId) ai.activeId = DEFAULT_AI_CONFIG.activeId
   }
-  
+
   // Normalize provider URLs: fill in defaults for known providers that have no URL set
   if (ai.providers) {
     for (const p of ai.providers) {
@@ -202,7 +202,7 @@ export async function loadConfig() {
       return filename ? !filename.startsWith('agent-') : true
     })
   }
-  
+
   // Repair agents if lists are missing
   if (!mainConfig.agents?.list || !Array.isArray(mainConfig.agents.list)) {
     mainConfig.agents = createDefaultAgentConfig(getAynitePromptPath)

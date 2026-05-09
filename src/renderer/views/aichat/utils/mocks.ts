@@ -10,7 +10,12 @@ export const MOCK_MESSAGES: ChatMessage[] = [
   {
     id: 'm2',
     role: 'user',
-    parts: [{ type: 'text', text: 'Hey! Show me all the types of messages you support.' }],
+    parts: [
+      {
+        type: 'text',
+        text: 'Hey! Show me all the types of messages you support.',
+      },
+    ],
     createdAt: new Date(Date.now() - 90000),
   },
   {
@@ -59,10 +64,10 @@ export const MOCK_MESSAGES: ChatMessage[] = [
     id: 'm5',
     role: 'assistant',
     parts: [
-      { 
-        type: 'text', 
-        text: 'I found several directories. Now, let me try a command that might fail to show you an error state:' 
-      }
+      {
+        type: 'text',
+        text: 'I found several directories. Now, let me try a command that might fail to show you an error state:',
+      },
     ],
     createdAt: new Date(Date.now() - 60000),
   },
@@ -85,10 +90,10 @@ export const MOCK_MESSAGES: ChatMessage[] = [
     id: 'm7',
     role: 'assistant',
     parts: [
-      { 
-        type: 'text', 
-        text: 'And finally, here is some markdown code blocks and formatting:\n\n```typescript\nconst message = "Hello from Aynite!";\nconsole.log(message);\n```\n\n- Bullet points\n- **Bold text**\n- *Italics*' 
-      }
+      {
+        type: 'text',
+        text: 'And finally, here is some markdown code blocks and formatting:\n\n```typescript\nconst message = "Hello from Aynite!";\nconsole.log(message);\n```\n\n- Bullet points\n- **Bold text**\n- *Italics*',
+      },
     ],
     createdAt: new Date(Date.now() - 40000),
   },

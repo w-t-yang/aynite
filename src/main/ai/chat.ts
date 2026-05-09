@@ -290,22 +290,14 @@ function toCoreMessages(messages: ChatMessage[]): any[] {
       coreParts.push({ type: 'text', text: '' })
     }
 
-    // 4. Group parts by message (split tool results into their own messages)
-    const toolResults = coreParts.filter((p) => p.type === 'tool-result')
-    const others = coreParts.filter((p) => p.type !== 'tool-result')
-
-    const result: any[] = []
-    if (others.length > 0) {
-      const allText = others.every((p) => p.type === 'text')
-      result.push({
+    const allText = coreParts.every((p: any) => p.type === 'text')
+    return [
+      {
         role: msg.role,
-        content: allText ? others.map((p) => p.text).join('') : others,
-      })
-    }
-    if (toolResults.length > 0) {
-      result.push({ role: 'tool', content: toolResults })
-    }
-
-    return result
+        content: allText
+          ? coreParts.map((p: any) => p.text).join('')
+          : coreParts,
+      },
+    ]
   })
 }

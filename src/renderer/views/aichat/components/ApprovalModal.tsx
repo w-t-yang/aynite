@@ -14,7 +14,6 @@ export function ApprovalModal({
 }) {
   return (
     <div className="relative group/approval overflow-hidden rounded-md border border-warning/30 bg-warning/5 backdrop-blur-md shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 mb-3 px-6 py-4 mx-4">
-
       <div className="relative space-y-3">
         <div className="flex items-center gap-2 text-warning">
           <div className="w-6 h-6 rounded bg-warning/20 flex items-center justify-center shrink-0">

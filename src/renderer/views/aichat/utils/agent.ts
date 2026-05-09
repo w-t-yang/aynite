@@ -1,8 +1,5 @@
 import type { AIProvider } from '../../../../lib/types/ai'
-import type {
-  ChatMessage,
-  StreamPart,
-} from '../../../../lib/types/chat'
+import type { ChatMessage, StreamPart } from '../../../../lib/types/chat'
 import { genId } from './message'
 
 export interface AgentLoopConfig extends AIProvider {
@@ -22,7 +19,7 @@ export async function runAgentLoop(
   const loopMessages: ChatMessage[] = []
   let reasoningAccum = ''
   let textAccum = ''
-  
+
   // Track all tool calls in this loop to preserve their inputs for results
   const allToolCalls = new Map<string, any>()
   // Current step's tool calls for the next assistant message
@@ -31,23 +28,23 @@ export async function runAgentLoop(
   const flushAssistant = () => {
     if (textAccum || reasoningAccum || currentStepToolCalls.length > 0) {
       const parts: any[] = []
-      
+
       if (reasoningAccum) {
         parts.push({ type: 'reasoning', text: reasoningAccum })
       }
-      
+
       if (textAccum) {
         parts.push({ type: 'text', text: textAccum })
       }
-      
+
       if (currentStepToolCalls.length > 0) {
-        currentStepToolCalls.forEach(tc => {
+        currentStepToolCalls.forEach((tc) => {
           parts.push({
             type: 'dynamic-tool',
             toolCallId: tc.toolCallId,
             toolName: tc.toolName,
             state: 'input-available',
-            input: tc.args || tc.input
+            input: tc.args || tc.input,
           })
         })
       }
@@ -58,7 +55,7 @@ export async function runAgentLoop(
         parts,
         createdAt: new Date(),
       }
-      
+
       loopMessages.push(assistantMsg)
       textAccum = ''
       reasoningAccum = ''
@@ -134,19 +131,21 @@ export async function runAgentLoop(
             case 'tool-result': {
               const matchingCall = allToolCalls.get(part.toolCallId)
               const args = matchingCall?.args || matchingCall?.input || {}
-              
+
               flushAssistant()
               loopMessages.push({
                 id: genId(),
                 role: 'assistant',
-                parts: [{
-                  type: 'dynamic-tool',
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  state: 'output-available',
-                  input: args,
-                  output: part.result ?? (part as any).output
-                } as any],
+                parts: [
+                  {
+                    type: 'dynamic-tool',
+                    toolCallId: part.toolCallId,
+                    toolName: part.toolName,
+                    state: 'output-available',
+                    input: args,
+                    output: part.result ?? (part as any).output,
+                  } as any,
+                ],
                 createdAt: new Date(),
               })
               onEvent(part)
@@ -164,7 +163,9 @@ export async function runAgentLoop(
               const errorMsg: ChatMessage = {
                 id: genId(),
                 role: 'assistant',
-                parts: [{ type: 'text', text: `**AI Stream Error**: ${part.error}` }],
+                parts: [
+                  { type: 'text', text: `**AI Stream Error**: ${part.error}` },
+                ],
                 createdAt: new Date(),
               }
               fulfill([...messages, ...loopMessages, errorMsg])

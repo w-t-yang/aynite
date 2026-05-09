@@ -33,7 +33,7 @@ export function AIChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, loading])
+  }, [])
 
   // Global actions for micro-app bridge
   useEffect(() => {

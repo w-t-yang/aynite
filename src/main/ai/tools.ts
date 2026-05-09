@@ -75,7 +75,7 @@ export function createTools(context: ToolContext) {
         try {
           const { stdout, stderr } = await execAsync(command, { cwd: runCwd })
           let output = stdout
-          if (stderr && stderr.trim()) {
+          if (stderr?.trim()) {
             output += `\n\nSTDERR:\n${stderr}`
           }
 

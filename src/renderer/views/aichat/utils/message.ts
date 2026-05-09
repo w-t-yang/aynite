@@ -153,12 +153,35 @@ export function appendPartToAssistant(
           toolName: part.toolName,
           state:
             part.type === 'tool-call' ? 'input-available' : 'output-available',
-          input: (part as any).args,
-          output: (part as any).result,
+          input: (part as any).args || (part as any).input,
+          output: (part as any).result || (part as any).output,
         } as any,
       ],
       createdAt: new Date(),
-    } as UIMessage,
+    } as ChatMessage,
+  ]
+}
+
+export function appendToolMessage(
+  prev: ChatMessage[],
+  part: StreamPart & { type: 'tool-result' },
+): ChatMessage[] {
+  return [
+    ...prev,
+    {
+      id: genId(),
+      role: 'tool',
+      parts: [
+        {
+          type: 'dynamic-tool',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          state: 'output-available',
+          output: part.result ?? (part as any).output,
+        } as any,
+      ],
+      createdAt: new Date(),
+    } as ChatMessage,
   ]
 }
 

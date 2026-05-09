@@ -17,6 +17,7 @@ import {
   appendReasoningToAssistant,
   appendToAssistant,
   appendToolInputDeltaToAssistant,
+  appendToolMessage,
   genId,
 } from '../utils/message'
 
@@ -345,7 +346,7 @@ export function useAIChat() {
                 setMessages((prev) => appendPartToAssistant(prev, event))
                 break
               case 'tool-result':
-                setMessages((prev) => appendPartToAssistant(prev, event))
+                setMessages((prev) => appendToolMessage(prev, event))
                 break
               case 'error':
                 setMessages((prev) => [

@@ -2,8 +2,8 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
-import { createOllama } from 'ai-sdk-ollama'
 import type { LanguageModel } from 'ai'
+import { createOllama } from 'ai-sdk-ollama'
 
 import type { AIProvider } from '../../lib/types/ai'
 
