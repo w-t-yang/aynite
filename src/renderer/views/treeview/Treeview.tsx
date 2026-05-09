@@ -38,7 +38,7 @@ export function Treeview() {
   const [contextMenu, setContextMenu] = useState<{
     x: number
     y: number
-    file: FileNode
+    file: FileNode | null
   } | null>(null)
 
   const [clipboard, setClipboard] = useState<{
@@ -267,6 +267,11 @@ export function Treeview() {
     }
   }
 
+  const handleContainerContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, file: null })
+  }
+
   const onMove: MoveHandler<FileNode> = async ({
     dragIds,
     parentId,
@@ -481,7 +486,12 @@ export function Treeview() {
       className="sidebar-container w-full h-full bg-card flex flex-col shrink-0 overflow-hidden outline-none px-2 py-3"
       tabIndex={-1}
     >
-      <div ref={containerRef} className="flex-1 overflow-hidden outline-none">
+      <section
+        ref={containerRef}
+        aria-label="File Tree Container"
+        className="flex-1 overflow-hidden outline-none"
+        onContextMenu={handleContainerContextMenu}
+      >
         {treeData.length > 0 ? (
           <Tree
             ref={treeRef}
@@ -525,7 +535,7 @@ export function Treeview() {
             </Button>
           </div>
         )}
-      </div>
+      </section>
 
       {showNewWorkspaceModal && (
         <PromptModal

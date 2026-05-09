@@ -3,6 +3,7 @@ import { AppOperation } from '../../../../lib/constants/app'
 import { FileHandlerComponents } from '../../../../lib/constants/renderer/ui'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
+import { MarkdownViewer } from '../../../shared/featured/fileviewers/MarkdownViewer'
 import { TextViewer } from '../../../shared/featured/fileviewers/TextViewer'
 import { getFileCategory } from '../../../shared/lib/file-handlers'
 import { useAppOperation } from '../../ViewContext'
@@ -74,7 +75,11 @@ export function FileContent({
     fileInfo.path,
   )
 
-  if (category === 'text' || category === 'html' || category === 'markdown') {
+  if (category === 'markdown') {
+    return <MarkdownViewer content={content || ''} file={fileInfo} />
+  }
+
+  if (category === 'text' || category === 'html') {
     return (
       <TextViewer content={content || ''} file={fileInfo} className="flex-1" />
     )

@@ -35,7 +35,7 @@ export function NodeRenderer({
     menu: {
       x: number
       y: number
-      file: FileNode
+      file: FileNode | null
     } | null,
   ) => void
   dirtyFiles: string[]

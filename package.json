@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "npm run build:views && electron-vite build",
     "preview": "electron-vite preview",
     "test:ai": "tsx scripts/test-ai-providers.ts",
     "dev:views": "vite --config vite.views.config.ts",
@@ -46,12 +46,12 @@
     "serve:views": "npm run build:views && npx serve dist-views",
     "patch-tag": "npm version patch && git push && git push --tags",
     "patch-beta": "npm version prerelease --preid=beta && git push && git push --tags",
-    "build:linux": "electron-vite build && electron-builder --linux",
-    "build:appimage": "electron-vite build && electron-builder --linux AppImage",
-    "build:deb": "electron-vite build && electron-builder --linux deb",
-    "build:pacman": "electron-vite build && electron-builder --linux pacman",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:win": "electron-vite build && electron-builder --win",
+    "build:linux": "npm run build:views && electron-vite build && electron-builder --linux",
+    "build:appimage": "npm run build:views && electron-vite build && electron-builder --linux AppImage",
+    "build:deb": "npm run build:views && electron-vite build && electron-builder --linux deb",
+    "build:pacman": "npm run build:views && electron-vite build && electron-builder --linux pacman",
+    "build:mac": "npm run build:views && electron-vite build && electron-builder --mac",
+    "build:win": "npm run build:views && electron-vite build && electron-builder --win",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
@@ -144,6 +144,13 @@
     ],
     "extraResources": [
       {
+        "from": "dist-views",
+        "to": "dist-views",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
         "from": "resources/skills",
         "to": "skills",
         "filter": [
@@ -167,7 +174,6 @@
     ],
     "mac": {
       "target": [
-        "dmg",
         "zip"
       ],
       "category": "public.app-category.developer-tools"
@@ -179,10 +185,7 @@
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb",
-        "rpm",
-        "pacman"
+        "AppImage"
       ],
       "maintainer": "Wentao <winterock.yang@gmail.com>",
       "category": "Development"

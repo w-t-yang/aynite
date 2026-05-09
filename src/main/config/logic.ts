@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import {
   createDefaultAgentConfig,
   DEFAULT_AI_CONFIG,
@@ -26,6 +27,7 @@ import {
   getWorkspacesConfigPath,
   joinPaths,
   readJson,
+  remove,
   unlink,
   writeJson,
   writeText,
@@ -42,8 +44,72 @@ import {
 import { initThemes } from '../theme'
 import { getIgnorePatterns } from './ignore'
 
+/**
+ * Helper to compare versions.
+ * Returns true if oldV is lower than newV.
+ */
+function isLowerVersion(oldV: string, newV: string): boolean {
+  try {
+    const parse = (v: string) => v.split('-')[0].split('.').map(Number)
+    const [maj1, min1, pat1] = parse(oldV)
+    const [maj2, min2, pat2] = parse(newV)
+
+    if (maj1 < maj2) return true
+    if (maj1 > maj2) return false
+    if (min1 < min2) return true
+    if (min1 > min2) return false
+    if (pat1 < pat2) return true
+    if (pat1 > pat2) return false
+
+    // Handle beta suffix (e.g., 1.0.0-beta.5 vs 1.0.0-beta.6)
+    if (oldV.includes('beta') && newV.includes('beta')) {
+      const b1 = parseInt(oldV.split('beta.')[1] || '0', 10)
+      const b2 = parseInt(newV.split('beta.')[1] || '0', 10)
+      return b1 < b2
+    }
+    // beta is lower than stable
+    if (oldV.includes('beta') && !newV.includes('beta')) return true
+  } catch (_e) {
+    return true // Assume lower if parsing fails
+  }
+  return false
+}
+
 export async function initAppFolders() {
+  const currentVersion = app.getVersion()
   const baseDir = getAyniteDir()
+  const mainConfigPath = getMainConfigPath()
+
+  let shouldWipe = false
+  if (await exists(mainConfigPath)) {
+    try {
+      const config = await readJson(mainConfigPath)
+      const configVersion = config.version
+      if (!configVersion) {
+        shouldWipe = true
+      } else if (isLowerVersion(configVersion, currentVersion)) {
+        if (currentVersion.includes('beta')) {
+          shouldWipe = true
+        }
+      }
+    } catch (_e) {
+      shouldWipe = true
+    }
+  } else if (await exists(baseDir)) {
+    // If baseDir exists but config doesn't, it's a broken state
+    shouldWipe = true
+  }
+
+  if (shouldWipe) {
+    console.log(`[Init] Version mismatch or missing. Wiping ${baseDir}...`)
+    try {
+      await remove(baseDir, { recursive: true, force: true })
+    } catch (e) {
+      console.error(`[Init] Failed to wipe directory:`, e)
+    }
+  }
+
+  await ensureDir(baseDir)
   const folders = Object.values(AYNITE_SUBDIRS)
   for (const folder of folders) {
     await ensureDir(joinPaths(baseDir, folder))
@@ -53,6 +119,7 @@ export async function initAppFolders() {
   const keybindingsDefault = DEFAULT_KEYBINDINGS
 
   const configDefault = {
+    version: currentVersion,
     lastUsed: new Date().toISOString(),
     activeTheme: 'light',
     skills: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS)] },
@@ -134,16 +201,11 @@ export async function initAppFolders() {
 
   await ensureDefaultPromptFiles()
 
-  // Copy bundled views to ~/.aynite/views
-  const bundledViewsDir = joinPaths(
-    getBundledResourcesPath(),
-    'renderer',
-    'views',
-  )
-  const targetViewsDir = joinPaths(baseDir, AYNITE_SUBDIRS.VIEWS)
-  if (await exists(bundledViewsDir)) {
+  // Copy bundled views to ~/.aynite (contains views/ and assets/)
+  const bundledDir = joinPaths(getBundledResourcesPath(), 'dist-views')
+  if (await exists(bundledDir)) {
     try {
-      await copy(bundledViewsDir, targetViewsDir, { recursive: true })
+      await copy(bundledDir, baseDir, { recursive: true })
     } catch (e) {
       console.error(`[Init] Error copying bundled views:`, e)
     }
@@ -235,7 +297,11 @@ export async function saveConfig(settings: any) {
     ignore,
     ...rest
   } = settings
-  const mainConfig = { ...rest, updatedAt: new Date().toISOString() }
+  const mainConfig = {
+    ...rest,
+    version: app.getVersion(),
+    updatedAt: new Date().toISOString(),
+  }
 
   await writeJson(getAIConfigPath(), ai)
   await writeJson(getKeybindingsConfigPath(), keybindings)

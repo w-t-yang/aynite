@@ -111,6 +111,59 @@ export const UnifiedViewer: React.FC<{
     [src, srcDoc, initializedDocs],
   )
 
+  // biome-ignore lint/correctness/noUnusedVariables: Used as a trigger for useEffect
+  const { activeThemeId } = useView()
+
+  const syncStyles = React.useCallback((doc: Document) => {
+    // Clear previous styles to avoid duplication and conflicts
+    const existingStyles = Array.from(
+      doc.head.querySelectorAll('link[rel="stylesheet"], style'),
+    )
+    for (const style of existingStyles) {
+      style.remove()
+    }
+
+    // Sync stylesheets from parent to iframe
+    const parentStyles = Array.from(
+      window.document.querySelectorAll('link[rel="stylesheet"], style'),
+    )
+    for (const style of parentStyles) {
+      doc.head.appendChild(style.cloneNode(true))
+    }
+
+    // Sync theme variables (colors, fonts)
+    const rootStyle = window.getComputedStyle(window.document.documentElement)
+    const vars = Array.from(rootStyle).filter((prop) => prop.startsWith('--'))
+    for (const prop of vars) {
+      doc.documentElement.style.setProperty(
+        prop,
+        rootStyle.getPropertyValue(prop),
+      )
+    }
+
+    // Sync dark mode class and data-theme
+    doc.documentElement.className = window.document.documentElement.className
+    const themeAttr = window.document.documentElement.getAttribute('data-theme')
+    if (themeAttr) doc.documentElement.setAttribute('data-theme', themeAttr)
+
+    // Force scrollability on iframe body
+    doc.body.style.overflow = 'auto'
+    doc.body.style.height = 'auto'
+    doc.body.style.minHeight = '100%'
+  }, [])
+
+  // Re-sync styles when theme actually changes in the parent
+  React.useEffect(() => {
+    const doc =
+      contentRef?.contentDocument || contentRef?.contentWindow?.document
+    if (doc && ready) {
+      // Small delay to ensure parent styles have been applied
+      const timer = setTimeout(() => syncStyles(doc), 50)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [contentRef, syncStyles, ready])
+
   const handleLoad = React.useCallback(() => {
     if (!contentRef) return
     let doc: Document | null = null
@@ -125,12 +178,13 @@ export const UnifiedViewer: React.FC<{
     if (!doc) return
 
     try {
+      syncStyles(doc)
       attachListeners(doc)
       setReady(true)
     } catch (_e) {
       setReady(true)
     }
-  }, [contentRef, attachListeners])
+  }, [contentRef, attachListeners, syncStyles])
 
   React.useEffect(() => {
     if (contentRef) handleLoad()
