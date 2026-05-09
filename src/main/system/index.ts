@@ -115,7 +115,7 @@ export function setupSystemIpc() {
 
 export function setupProtocol() {
   // aynite:// protocol for internal views
-  protocol.handle('aynite', (request) => {
+  protocol.handle('aynite', async (request) => {
     const url = request.url.replace('aynite://', '')
     try {
       const decodedPath = decodeURIComponent(url)
@@ -128,8 +128,22 @@ export function setupProtocol() {
           filePath = expandHome(joinPaths('~/.aynite', 'assets', assetPath))
         }
       } else {
-        // Standard view request
-        filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))
+        // In dev mode, prefer the project root dist-views directory
+        if (!app.isPackaged) {
+          const devPath = joinPaths(
+            process.cwd(),
+            'dist-views',
+            'views',
+            decodedPath,
+          )
+          if (await exists(devPath)) {
+            filePath = devPath
+          } else {
+            filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))
+          }
+        } else {
+          filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))
+        }
       }
 
       const fileUrl = `file://${filePath.startsWith('/') ? '' : '/'}${filePath}`
