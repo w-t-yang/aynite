@@ -86,6 +86,10 @@ export function setupFileIpc() {
     return await readText(filePath)
   })
 
+  ipcMain.handle(FileChannels.CHECK_TEXT, async (_event, filePath: string) => {
+    return await checkIsTextFile(expandHome(filePath))
+  })
+
   ipcMain.handle(FileChannels.INFO, async (_event, filePath: string) => {
     const expandedPath = expandHome(filePath)
     const s = await stat(expandedPath)

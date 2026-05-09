@@ -5,6 +5,7 @@ import {
   ImageViewer,
   MarkdownViewer,
   PdfViewer,
+  TextViewer,
   UnsupportedViewer,
   VideoViewer,
 } from '../../../renderer/shared/featured/fileviewers'
@@ -24,6 +25,6 @@ export const FileHandlerComponents: Record<
   video: VideoViewer,
   audio: AudioViewer,
   pdf: PdfViewer,
-  text: () => null,
+  text: TextViewer as any,
   unsupported: UnsupportedViewer,
 }

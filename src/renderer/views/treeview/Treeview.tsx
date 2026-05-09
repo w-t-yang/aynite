@@ -5,6 +5,7 @@ import { Button } from '../../shared/basic/Button'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
+import { sendAppEvent } from '../ViewContext'
 import {
   ConfirmModal,
   type FileNode,
@@ -22,7 +23,9 @@ export function Treeview() {
     name: string
     isDirectory: boolean
     path: string
-  }) => console.log('Selecting file:', file.path)
+  }) => {
+    sendAppEvent('file-open', { path: file.path })
+  }
   const _onOpenSettings = () => {}
   const _onClose = () => {}
 

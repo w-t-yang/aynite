@@ -40,6 +40,8 @@ const aynite = {
     ipcRenderer.invoke(FileChannels.COPY, { srcPath, destPath }),
   deleteFile: (path: string) => ipcRenderer.invoke(FileChannels.DELETE, path),
   getFileInfo: (path: string) => ipcRenderer.invoke(FileChannels.INFO, path),
+  checkIsTextFile: (path: string) =>
+    ipcRenderer.invoke(FileChannels.CHECK_TEXT, path),
   refreshWatcher: () => ipcRenderer.invoke(FileChannels.WATCHER_REFRESH),
 
   // ── Workspace operations ────────────────────────────────────────────────

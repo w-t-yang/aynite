@@ -20,6 +20,7 @@ export const FileChannels = {
   COPY: 'aynite:file-copy',
   DELETE: 'aynite:file-delete',
   INFO: 'aynite:file-info',
+  CHECK_TEXT: 'aynite:file-check-text',
   WATCHER_REFRESH: 'aynite:file-watcher-refresh',
 } as const
 

@@ -34,6 +34,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/aichat/index.html',
         ),
+        'views/file-browser/index': resolve(
+          __dirname,
+          'src/renderer/views/file-browser/index.html',
+        ),
       },
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',

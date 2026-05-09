@@ -1,5 +1,4 @@
 import { AlertCircle, Eye, Pencil, Save } from 'lucide-react'
-import { highlight, languages } from 'prismjs'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Editor from 'react-simple-code-editor'
 import { AppEvents } from '../../../../lib/constants/app'
@@ -13,18 +12,10 @@ import {
   getFileCategory,
 } from '../../lib/file-handlers'
 import { KeyManager } from '../../lib/key-handlers'
+import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
 import { FileHandlerComponents } from './index'
-import 'prismjs/components/prism-typescript'
-import 'prismjs/components/prism-javascript'
-import 'prismjs/components/prism-css'
-import 'prismjs/components/prism-json'
-import 'prismjs/components/prism-markdown'
-import 'prismjs/components/prism-bash'
-import 'prismjs/components/prism-python'
-import 'prismjs/components/prism-rust'
-import 'prismjs/components/prism-yaml'
-import 'prism-themes/themes/prism-vsc-dark-plus.css'
+import { TextViewer } from './TextViewer'
 
 interface FileViewerProps {
   filename: string
@@ -623,51 +614,39 @@ function FileViewer({
                     lineNumRef.current.scrollTop = e.currentTarget.scrollTop
                 }}
               >
-                <Editor
-                  value={localContent}
-                  onValueChange={(content) => {
-                    if (!isEditing) return
-                    setLocalContent(content)
-                    if (onChange) {
-                      isLocalChange.current = true
-                      lastLocalWriteTime.current = Date.now()
-                      onChange(content)
-                    }
-                  }}
-                  highlight={(code) => {
-                    const langMap: any = {
-                      js: languages.js,
-                      ts: languages.typescript,
-                      tsx: languages.typescript,
-                      jsx: languages.js,
-                      json: languages.json,
-                      css: languages.css,
-                      html: languages.html,
-                      py: languages.python,
-                      rs: languages.rust,
-                      sh: languages.bash,
-                      bash: languages.bash,
-                      yaml: languages.yaml,
-                      yml: languages.yaml,
-                      md: languages.markdown,
-                    }
-                    const lang =
-                      langMap[fileInfo?.extension || ''] ||
-                      languages.clike ||
-                      languages.plain
-                    return highlight(code, lang, fileInfo?.extension || 'text')
-                  }}
-                  padding={16}
-                  className="min-h-full font-mono text-sm leading-relaxed outline-none"
-                  style={{
-                    fontFamily: '"Fira Code", monospace',
-                    minHeight: '100%',
-                  }}
-                  readOnly={!isEditing}
-                  textareaId="file-editor-textarea"
-                  textareaClassName="outline-none focus:ring-0 !caret-primary"
-                  preClassName="selection:bg-primary/30"
-                />
+                {isEditing ? (
+                  <Editor
+                    value={localContent}
+                    onValueChange={(content) => {
+                      if (!isEditing) return
+                      setLocalContent(content)
+                      if (onChange) {
+                        isLocalChange.current = true
+                        lastLocalWriteTime.current = Date.now()
+                        onChange(content)
+                      }
+                    }}
+                    highlight={(code) => {
+                      return highlightCode(code, fileInfo?.extension || 'text')
+                    }}
+                    padding={16}
+                    className="min-h-full font-mono text-sm leading-relaxed outline-none"
+                    style={{
+                      fontFamily: '"Fira Code", monospace',
+                      minHeight: '100%',
+                    }}
+                    readOnly={!isEditing}
+                    textareaId="file-editor-textarea"
+                    textareaClassName="outline-none focus:ring-0 !caret-primary"
+                    preClassName="selection:bg-primary/30"
+                  />
+                ) : (
+                  <TextViewer
+                    content={localContent}
+                    file={fileInfo as any}
+                    showLineNumbers={false} // FileViewer has its own line numbers sidebar
+                  />
+                )}
               </div>
             </div>
 
