@@ -19,6 +19,7 @@ export const AppOperation = {
   FOCUS_SKILLS: 'FOCUS_SKILLS',
   FOCUS_COMMANDS: 'FOCUS_COMMANDS',
   SHOW_NOTIFICATION: 'SHOW_NOTIFICATION',
+  SWITCH_FILE: 'SWITCH_FILE',
 } as const
 
 export const AppEvents = {

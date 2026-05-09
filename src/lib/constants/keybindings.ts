@@ -31,6 +31,7 @@ export const DEFAULT_KEYBINDINGS = {
     [AppOperation.FOCUS_CHAT]: { ctrl: true, key: 'l' },
     [AppOperation.FOCUS_SKILLS]: { ctrl: true, shift: true, key: 's' },
     [AppOperation.FOCUS_COMMANDS]: { ctrl: true, shift: true, key: 'c' },
+    [AppOperation.SWITCH_FILE]: { ctrl: true, key: 'tab' },
   },
   view: {
     [ViewOperation.BEGINNING_OF_LINE]: { ctrl: true, key: 'a' },

@@ -2,10 +2,10 @@ import type { Keybinding } from '../../../renderer/shared/lib/types'
 import type {
   ChatAPI,
   EditorAPI,
+  FileSwitcherAPI,
   GlobalAPI,
   SettingsAPI,
   SidebarAPI,
-  TabSwitcherAPI,
 } from '../../types/bridge'
 import { AppOperation, ViewOperation } from '../app'
 
@@ -21,7 +21,7 @@ export type {
 // Internal State
 let globalApi: GlobalAPI | null = null
 const tabApis = new Map<string, EditorAPI>()
-let tabSwitcherApi: TabSwitcherAPI | null = null
+let fileSwitcherApi: FileSwitcherAPI | null = null
 let settingsApi: SettingsAPI | null = null
 let sidebarApi: SidebarAPI | null = null
 let chatApi: ChatAPI | null = null
@@ -196,18 +196,18 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
     return
   }
 
-  // 3. Tab Switcher Delegation
+  // 3. File Switcher Delegation
   const el = e.target as HTMLElement
-  if (globalApi.isTabSwitcherOpen() && tabSwitcherApi) {
+  if (globalApi.isFileSwitcherOpen() && fileSwitcherApi) {
     if (e.key === 'Escape' || (isCmd && key === 'G')) {
       e.preventDefault()
-      globalApi.closeTabSwitcher()
+      globalApi.closeFileSwitcher()
       return
     }
 
     if (e.key === 'Enter' || (e.key === 'Tab' && !isCmd)) {
       e.preventDefault()
-      tabSwitcherApi.confirmSelection()
+      fileSwitcherApi.confirmSelection()
       return
     }
 
@@ -217,7 +217,7 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
       (isCmd && e.key === 'Tab' && e.shiftKey)
     ) {
       e.preventDefault()
-      tabSwitcherApi.moveSelection('up')
+      fileSwitcherApi.moveSelection('up')
       return
     }
 
@@ -227,7 +227,7 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
       (isCmd && e.key === 'Tab' && !e.shiftKey)
     ) {
       e.preventDefault()
-      tabSwitcherApi.moveSelection('down')
+      fileSwitcherApi.moveSelection('down')
       return
     }
 
@@ -343,12 +343,12 @@ export const KeyManager = {
     tabApis.delete(tabId)
   },
 
-  registerTabSwitcher(api: TabSwitcherAPI) {
-    tabSwitcherApi = api
+  registerFileSwitcher(api: FileSwitcherAPI) {
+    fileSwitcherApi = api
   },
 
-  unregisterTabSwitcher() {
-    tabSwitcherApi = null
+  unregisterFileSwitcher() {
+    fileSwitcherApi = null
   },
 
   registerSettings(api: SettingsAPI) {

@@ -9,11 +9,11 @@ export interface GlobalAPI {
   closeTab: () => void
   switchTab: () => void
   focusContent: () => void
-  closeTabSwitcher: () => void
-  isTabSwitcherOpen: () => boolean
+  closeFileSwitcher: () => void
+  isFileSwitcherOpen: () => boolean
 }
 
-export interface TabSwitcherAPI {
+export interface FileSwitcherAPI {
   moveSelection: (dir: 'up' | 'down') => void
   confirmSelection: () => void
 }

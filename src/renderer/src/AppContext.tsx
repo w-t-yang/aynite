@@ -60,6 +60,11 @@ interface AppContextType {
 
   showTileControls: boolean
   setShowTileControls: (show: boolean) => void
+
+  showFileSwitcher: boolean
+  setShowFileSwitcher: (show: boolean) => void
+
+  activeFile: string | null
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -89,6 +94,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const [updateError, setUpdateError] = useState<string | null>(null)
 
   const [showTileControls, setShowTileControls] = useState(false)
+  const [showFileSwitcher, setShowFileSwitcher] = useState(false)
+  const [activeFile, setActiveFile] = useState<string | null>(null)
 
   const activeTileIdRef = useRef(activeTileId)
 
@@ -143,6 +150,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       }
       setWorkspaces(workspaceList.map((w) => w.id))
     })
+
+    ayniteConfig.getActiveFile().then(setActiveFile)
 
     if (window.aynite.getAvailableViews) {
       window.aynite.getAvailableViews().then(setAvailableViews)
@@ -226,6 +235,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           // We could add state for panels here later
           console.log('[App] Toggle Left Panel')
           return
+        case 'SWITCH_FILE':
+          setShowFileSwitcher((prev) => !prev)
+          return
         // Add other global cases as needed...
       }
 
@@ -288,6 +300,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           case AppEvents.WORKSPACE_UPDATED:
             ld()
             break
+          case AppEvents.ACTIVE_FILE_CHANGED:
+            if (event.data)
+              setActiveFile((event.data as any).path || (event.data as string))
+            break
           case AppEvents.TILE_ACTIVATED:
             if (event.data) setActiveTileId(event.data as string)
             break
@@ -328,6 +344,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       unbindOp()
     }
   }, [])
+
+  // Listen for messages from iframes (views)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const msg = event.data
+      if (msg?.type === 'aynite:operation' && msg.operation) {
+        executeAppOperation(msg.operation, msg.data)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [executeAppOperation])
 
   // Persistence
   useEffect(() => {
@@ -427,6 +455,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         setUpdateStatus,
         showTileControls,
         setShowTileControls,
+        showFileSwitcher,
+        setShowFileSwitcher,
+        activeFile,
       }}
     >
       {children}

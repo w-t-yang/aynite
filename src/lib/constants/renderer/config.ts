@@ -26,6 +26,10 @@ class AyniteConfig {
     })
   }
 
+  async getActiveFile(): Promise<string | null> {
+    return window.aynite.getConfig(ConfigKey.ACTIVE_FILE)
+  }
+
   // AI
   async getAI(): Promise<any> {
     return window.aynite.getConfig(ConfigKey.AI)

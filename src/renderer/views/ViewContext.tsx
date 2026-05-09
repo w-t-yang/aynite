@@ -70,6 +70,18 @@ export const useAppEventSubscriber = () => {
   }, [])
 }
 
+/**
+ * Hook to trigger a global app operation from a view.
+ */
+export const useAppOperation = () => {
+  return useCallback((operation: string, data?: unknown) => {
+    window.parent.postMessage(
+      { type: 'aynite:operation', operation, data },
+      '*',
+    )
+  }, [])
+}
+
 // ─── View Provider ─────────────────────────────────────────────────────────
 
 /**

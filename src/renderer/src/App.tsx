@@ -1,11 +1,34 @@
 import type React from 'react'
+import { useEffect } from 'react'
+import { FileSwitcher } from '../shared/featured/FileSwitcher'
+import { KeyManager } from '../shared/lib/key-handlers'
 import { AppProvider, useApp } from './AppContext'
 import TileNode from './layout/TileNode'
 import TitleBar from './layout/TitleBar'
 import { NotificationProvider } from './NotificationProvider'
 
 const AppContent: React.FC = () => {
-  const { workspaceConfig } = useApp()
+  const { workspaceConfig, showFileSwitcher, setShowFileSwitcher } = useApp()
+
+  useEffect(() => {
+    const api = {
+      saveActiveTab: () => {}, // TODO
+      reload: () => window.location.reload(),
+      toggleLeftPanel: () => {},
+      toggleRightPanel: () => {},
+      focusChat: () => {},
+      focusSkills: () => {},
+      focusCommands: () => {},
+      closeTab: () => {},
+      switchTab: () => {},
+      focusContent: () => {},
+      closeFileSwitcher: () => setShowFileSwitcher(false),
+      isFileSwitcherOpen: () => showFileSwitcher,
+    }
+    // @ts-expect-error - settings structure is slightly different now but types match
+    KeyManager.init({ keybindings: { app: {}, view: {} } }, api)
+    return () => KeyManager.cleanup()
+  }, [showFileSwitcher, setShowFileSwitcher])
 
   if (!workspaceConfig)
     return (
@@ -24,6 +47,7 @@ const AppContent: React.FC = () => {
       <div id="layout-container" className="flex-1 flex overflow-hidden p-0.5">
         {activeLayout && <TileNode isRoot node={activeLayout.layout} />}
       </div>
+      {showFileSwitcher && <FileSwitcher />}
     </div>
   )
 }

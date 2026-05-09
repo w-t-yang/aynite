@@ -1,7 +1,11 @@
+import { Plus } from 'lucide-react'
+import { AppOperation } from '../../../../lib/constants/app'
 import { FileHandlerComponents } from '../../../../lib/constants/renderer/ui'
 import type { FileInfo } from '../../../../lib/types/files'
+import { Button } from '../../../shared/basic/Button'
 import { TextViewer } from '../../../shared/featured/fileviewers/TextViewer'
 import { getFileCategory } from '../../../shared/lib/file-handlers'
+import { useAppOperation } from '../../ViewContext'
 
 interface FileContentProps {
   path: string | null
@@ -18,11 +22,27 @@ export function FileContent({
   loading,
   error,
 }: FileContentProps) {
+  const execOp = useAppOperation()
+
   if (!path) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground opacity-30 select-none">
-        <div className="text-4xl font-bold mb-2">Aynite</div>
-        <div className="text-xs tracking-widest uppercase">No file open</div>
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground select-none">
+        <div className="text-4xl font-bold mb-2 opacity-20">Aynite</div>
+        <div className="text-xs tracking-widest uppercase opacity-20 mb-8">
+          No file open
+        </div>
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => execOp(AppOperation.SWITCH_FILE)}
+          className="gap-2 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
+        >
+          <Plus size={16} />
+          <span>Select File</span>
+          <span className="ml-2 text-[10px] opacity-40 px-1.5 py-0.5 rounded border border-border bg-muted/50">
+            Ctrl+Tab
+          </span>
+        </Button>
       </div>
     )
   }
