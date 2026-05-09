@@ -124,7 +124,23 @@ export function useAIChat() {
     if (sessionId && messages.length > 0) {
       const timer = setTimeout(async () => {
         try {
-          await window.aynite.saveSession(sessionId, messages)
+          const activeId = settingsRef.current.ai?.activeId
+          const activeProvider =
+            settingsRef.current.ai?.providers?.find((p) => p.id === activeId) ||
+            settingsRef.current.ai?.providers?.[0]
+
+          const activeAgent = settingsRef.current.agents?.list?.find(
+            (a) => a.id === settingsRef.current.agents?.activeId,
+          )
+
+          const metadata = {
+            agentName: activeAgent?.name || 'Chat',
+            modelName: activeProvider?.name || activeProvider?.model || 'AI',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+
+          await window.aynite.saveSession(sessionId, messages, metadata)
         } catch (_err) {}
       }, 1000)
       return () => clearTimeout(timer)

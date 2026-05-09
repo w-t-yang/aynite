@@ -39,6 +39,15 @@ export function getSessionPath(sessionId: string, date?: string) {
   return path.join(getAyniteSessionsDir(), dateStr, `${sessionId}.json`)
 }
 
+export function getSessionMetadataPath(sessionId: string, date?: string) {
+  const dateStr = date || new Date().toISOString().split('T')[0]
+  return path.join(
+    getAyniteSessionsDir(),
+    dateStr,
+    `${sessionId}-metadata.json`,
+  )
+}
+
 export function getSessionsDateDir(date: string) {
   return path.join(getAyniteSessionsDir(), date)
 }

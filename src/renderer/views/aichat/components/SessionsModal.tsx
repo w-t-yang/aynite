@@ -12,6 +12,7 @@ export function SessionsModal({
     date: string
     lastModified: string
     preview: string
+    title?: string
   }[]
   onSelect: (id: string, date: string) => void
   onClose: () => void
@@ -71,7 +72,7 @@ export function SessionsModal({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-bold text-foreground/80 group-hover:text-primary transition-colors uppercase tracking-tight">
-                      Session {s.id.slice(-6)}
+                      {s.title || `Session ${s.id.slice(-6)}`}
                     </span>
                     <div className="flex items-center gap-2 text-[9px] text-muted-foreground/60 font-medium">
                       <Clock size={10} />

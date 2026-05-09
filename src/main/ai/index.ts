@@ -18,6 +18,7 @@ interface AiChatPayload {
 interface SessionSavePayload {
   sessionId: string
   messages: ChatMessage[]
+  metadata?: any
 }
 
 interface SessionLoadPayload {
@@ -60,8 +61,8 @@ export function setupAiIpc() {
 
   ipcMain.handle(
     AiChannels.SESSION_SAVE,
-    async (_event, { sessionId, messages }: SessionSavePayload) => {
-      return await saveSession(sessionId, messages)
+    async (_event, { sessionId, messages, metadata }: SessionSavePayload) => {
+      return await saveSession(sessionId, messages, metadata)
     },
   )
 

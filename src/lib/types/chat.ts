@@ -1,9 +1,12 @@
-import type { UIMessage } from 'ai'
-
 /**
  * ChatMessage extends the SDK's UIMessage to include optional createdAt.
  */
-export type ChatMessage = UIMessage & {
+export type MessageRole = 'user' | 'assistant' | 'system' | 'tool'
+
+export interface ChatMessage {
+  id: string
+  role: MessageRole
+  parts: any[]
   createdAt?: Date
 }
 
@@ -19,6 +22,13 @@ export interface CommandResultPart {
 export interface LocalCommandMessage extends ChatMessage {
   role: 'user'
   commandResults?: CommandResultPart[]
+}
+
+export interface SessionMetadata {
+  agentName: string
+  modelName: string
+  createdAt: string
+  updatedAt: string
 }
 
 export type StreamPart =

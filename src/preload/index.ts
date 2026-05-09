@@ -62,8 +62,12 @@ const aynite = {
     ipcRenderer.invoke(AiChannels.PROMPT_GET_MERGED, globalFiles, agentFiles),
   restorePrompts: () => ipcRenderer.invoke(AiChannels.PROMPT_RESTORE),
   listSessions: () => ipcRenderer.invoke(AiChannels.SESSION_LIST),
-  saveSession: (sessionId: string, messages: any[]) =>
-    ipcRenderer.invoke(AiChannels.SESSION_SAVE, { sessionId, messages }),
+  saveSession: (sessionId: string, messages: any[], metadata?: any) =>
+    ipcRenderer.invoke(AiChannels.SESSION_SAVE, {
+      sessionId,
+      messages,
+      metadata,
+    }),
   loadSession: (sessionId: string, date: string) =>
     ipcRenderer.invoke(AiChannels.SESSION_LOAD, { sessionId, date }),
   runDirectCommand: (payload: any) =>

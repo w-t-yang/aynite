@@ -4,6 +4,7 @@ import {
   appendText,
   getAyniteSessionsDir,
   getLogPath,
+  getSessionMetadataPath,
   getSessionPath,
   getSessionsDateDir,
   readdir,
@@ -11,7 +12,11 @@ import {
   stat,
   writeJson,
 } from '../../lib/path'
-import type { ChatMessage, StreamPart } from '../../lib/types/chat'
+import type {
+  ChatMessage,
+  SessionMetadata,
+  StreamPart,
+} from '../../lib/types/chat'
 import { sendAppEvent } from '../window'
 import type { AIProvider } from './factory'
 import { getAIModel } from './factory'
@@ -26,9 +31,21 @@ export async function initAiFolders() {
   }
 }
 
-export async function saveSession(id: string, messages: ChatMessage[]) {
+export async function saveSession(
+  id: string,
+  messages: ChatMessage[],
+  metadata?: SessionMetadata,
+) {
   const path = getSessionPath(id)
   await writeJson(path, messages)
+
+  if (metadata) {
+    const metaPath = getSessionMetadataPath(id)
+    const exists = await stat(metaPath).catch(() => null)
+    if (!exists) {
+      await writeJson(metaPath, metadata)
+    }
+  }
 }
 
 export async function loadSession(id: string, date: string) {
@@ -46,29 +63,45 @@ export async function listSessions() {
     const dPath = getSessionsDateDir(date)
     const files = await readdir(dPath).catch(() => [])
     for (const f of files) {
-      if (f.isFile() && f.name.endsWith('.json')) {
+      if (
+        f.isFile() &&
+        f.name.endsWith('.json') &&
+        !f.name.endsWith('-metadata.json')
+      ) {
         const id = f.name.replace('.json', '')
-        const content = await readJson(getSessionPath(id, date)).catch(
-          () => null,
-        )
+        const sessionPath = getSessionPath(id, date)
+        const metaPath = getSessionMetadataPath(id, date)
+
+        const [content, metadata, stats] = await Promise.all([
+          readJson(sessionPath).catch(() => null),
+          readJson(metaPath).catch(() => null),
+          stat(sessionPath).catch(() => null),
+        ])
+
         if (content && Array.isArray(content)) {
           const firstUser = content.find((m) => m.role === 'user')
-          const text =
+          const preview =
             (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') ||
-            'Untitled Chat'
+            'No content'
+
+          const title = metadata
+            ? `${metadata.agentName} - ${metadata.modelName}`
+            : `Session ${id.slice(-6)}`
 
           all.push({
             id,
             date,
-            title: text || 'Untitled Chat',
-            lastMessage: '',
+            title,
+            preview,
+            lastModified:
+              stats?.mtime.toISOString() || new Date().toISOString(),
             messageCount: content.length,
           })
         }
       }
     }
   }
-  return all.sort((a, b) => b.id.localeCompare(a.id))
+  return all.sort((a, b) => b.lastModified.localeCompare(a.lastModified))
 }
 
 export async function aiChat({
