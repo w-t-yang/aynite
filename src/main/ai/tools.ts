@@ -341,7 +341,9 @@ export function createTools(context: ToolContext) {
           '',
           '## 💡 Key Decisions & Context',
           '- (Record important architectural or narrative decisions here)',
-        ].filter(Boolean).join('\n')
+        ]
+          .filter(Boolean)
+          .join('\n')
 
         await writeText(memoryPath, content)
         return `Project memory initialized at ${memoryPath}. You should now update it with specific project secrets or conventions.`
