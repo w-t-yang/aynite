@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import { homedir } from 'node:os'
 import path from 'node:path'
+import glob from 'fast-glob'
 import { ERROR_MESSAGES } from './constants/messages'
 
 const AYNITE_DIR = path.join(homedir(), '.aynite')
@@ -91,6 +92,14 @@ export function getWorkspaceDir(name: string) {
 
 export function getWorkspaceSessionsDir(name: string) {
   return path.join(getWorkspacesDir(), name, 'sessions')
+}
+
+export function getWorkspaceArtifactsDir(name: string) {
+  return path.join(getWorkspacesDir(), name, 'artifacts')
+}
+
+export function getWorkspaceTaskPath(name: string, filename = 'task.md') {
+  return path.join(getWorkspaceArtifactsDir(name), filename)
 }
 
 export function getAIConfigPath() {
@@ -359,6 +368,34 @@ export async function secureWriteText(
   )
 }
 
+export async function secureEditFile(
+  filePath: string,
+  targetContent: string,
+  replacementContent: string,
+  domainFolders: string[],
+): Promise<string> {
+  return secureFileOp(
+    filePath,
+    domainFolders,
+    async () => {
+      const content = await readText(filePath)
+      const parts = content.split(targetContent)
+
+      if (parts.length === 1) {
+        return ERROR_MESSAGES.FILE_EDIT_NOT_UNIQUE(0)
+      }
+      if (parts.length > 2) {
+        return ERROR_MESSAGES.FILE_EDIT_NOT_UNIQUE(parts.length - 1)
+      }
+
+      const newContent = parts.join(replacementContent)
+      await writeText(filePath, newContent)
+      return ERROR_MESSAGES.FILE_EDIT_SUCCESS(filePath)
+    },
+    ERROR_MESSAGES.FILE_EDIT_ERROR,
+  )
+}
+
 export async function secureListDir(
   dirPath: string,
   domainFolders: string[],
@@ -400,6 +437,30 @@ export async function secureGrepSearch(
   }
   const results = await grepSearch(folderPath, pattern)
   return results.slice(0, 50).join('\n') || ERROR_MESSAGES.NO_MATCHES_FOUND
+}
+
+export async function secureGlobSearch(
+  pattern: string,
+  domainFolders: string[],
+  cwd?: string,
+): Promise<string> {
+  const searchCwd = cwd || domainFolders[0]
+  if (!isPathWithinDomain(searchCwd, domainFolders)) {
+    return ERROR_MESSAGES.ACCESS_DENIED(searchCwd)
+  }
+
+  try {
+    const files = await glob(pattern, {
+      cwd: expandHome(searchCwd),
+      onlyFiles: true,
+      absolute: true,
+      ignore: ['**/node_modules/**', '**/.git/**'],
+    })
+    return files.join('\n') || ERROR_MESSAGES.NO_MATCHES_FOUND
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    return ERROR_MESSAGES.DIR_LIST_ERROR(message)
+  }
 }
 
 // --- Internal Implementation Helpers ---

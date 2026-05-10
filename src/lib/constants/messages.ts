@@ -13,4 +13,8 @@ export const ERROR_MESSAGES = {
   URL_FETCH_ERROR: (status: string) => `Error fetching URL: ${status}`,
   URL_GENERIC_ERROR: (msg: string) => `Error: ${msg}`,
   WORKSPACE_EMPTY: '(empty workspace)',
+  FILE_EDIT_SUCCESS: (path: string) => `Successfully edited ${path}`,
+  FILE_EDIT_ERROR: (msg: string) => `Error editing file: ${msg}`,
+  FILE_EDIT_NOT_UNIQUE: (count: number) =>
+    `Error: Expected exactly one match for the target content, but found ${count}.`,
 }

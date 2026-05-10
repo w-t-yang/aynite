@@ -49,6 +49,26 @@ export const TOOL_METADATA: Record<
       required: ['path', 'content'],
     },
   },
+  edit_file: {
+    name: 'Edit File',
+    description:
+      'Perform a surgical edit on a file by replacing a specific block of code. This is the preferred way to modify existing files as it is faster and more reliable than rewriting the whole file.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Absolute path to the file' },
+        targetContent: {
+          type: 'string',
+          description: 'The exact block of code you want to replace',
+        },
+        replacementContent: {
+          type: 'string',
+          description: 'The new code to replace the target block with',
+        },
+      },
+      required: ['path', 'targetContent', 'replacementContent'],
+    },
+  },
   list_files: {
     name: 'List Files',
     description:
@@ -104,6 +124,127 @@ export const TOOL_METADATA: Record<
         url: { type: 'string', description: 'The URL to fetch' },
       },
       required: ['url'],
+    },
+  },
+  glob_search: {
+    name: 'Glob Search',
+    description:
+      'Search for files matching a glob pattern across the workspace. Useful for finding files by extension or naming convention (e.g., "**/*.test.ts").',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pattern: {
+          type: 'string',
+          description: 'Glob pattern (e.g., "src/**/*.css")',
+        },
+        cwd: {
+          type: 'string',
+          description: 'Optional directory to start the search from',
+        },
+      },
+      required: ['pattern'],
+    },
+  },
+  create_task: {
+    name: 'Create Task',
+    description:
+      'Initialize a new task list or implementation plan in the workspace artifacts directory. Use this at the start of complex operations to track goals.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tasks: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of task items to initialize',
+        },
+        filename: {
+          type: 'string',
+          description: 'Optional filename (defaults to task.md)',
+        },
+      },
+      required: ['tasks'],
+    },
+  },
+  update_task: {
+    name: 'Update Task',
+    description:
+      'Update the status of tasks in the task list. Use this to mark items as completed or add new sub-tasks as you progress.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskIndex: {
+          type: 'number',
+          description: 'The index of the task to update (0-based)',
+        },
+        status: {
+          type: 'string',
+          enum: ['todo', 'in_progress', 'done'],
+          description: 'New status for the task',
+        },
+        filename: {
+          type: 'string',
+          description: 'Optional filename (defaults to task.md)',
+        },
+      },
+      required: ['taskIndex', 'status'],
+    },
+  },
+  get_tasks: {
+    name: 'Get Tasks',
+    description:
+      'Read the current task list from the workspace artifacts directory.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filename: {
+          type: 'string',
+          description: 'Optional filename (defaults to task.md)',
+        },
+      },
+    },
+  },
+  propose_plan: {
+    name: 'Propose Plan',
+    description:
+      'Create a detailed implementation plan in the workspace artifacts directory. This is MANDATORY for complex tasks and must be approved by the user before execution starts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        problemStatement: {
+          type: 'string',
+          description: 'Detailed description of the problem to be solved',
+        },
+        investigationResults: {
+          type: 'string',
+          description:
+            'Findings from exploring the workspace (files, components, logic)',
+        },
+        proposedArchitecture: {
+          type: 'string',
+          description: 'High-level technical approach and trade-offs',
+        },
+        implementationSteps: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Step-by-step breakdown of surgical edits to be made',
+        },
+        verificationPlan: {
+          type: 'string',
+          description: 'How the changes will be verified',
+        },
+        openQuestions: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Anything still uncertain or requiring user feedback',
+        },
+      },
+      required: [
+        'problemStatement',
+        'investigationResults',
+        'proposedArchitecture',
+        'implementationSteps',
+        'verificationPlan',
+      ],
     },
   },
   get_file_tree: {
@@ -183,6 +324,16 @@ You have access to the local filesystem. You can read, create, and modify files 
 The user can mention files or directories in the chat:
 - \`@file[name](path)\`: Refers to a file at \`path\`.
 - \`@dir[name](path)\`: Refers to a directory at \`path\`.`,
+  },
+  PLAN: {
+    filename: 'about-plan.md',
+    content: `# About Planning
+For any complex task, you MUST follow a structured planning-first workflow:
+1. **Investigate**: Use \`glob_search\`, \`read_file\`, and \`grep_search\` to understand the codebase.
+2. **Plan**: Use \`propose_plan\` to create a detailed \`implementation_plan.md\` in the artifacts directory.
+3. **Approve**: Wait for the user to explicitly approve the plan before proceeding.
+4. **Taskify**: Use \`create_task\` to break down the approved plan into a checklist in \`task.md\`.
+5. **Execute**: Use \`edit_file\` for surgical modifications. Update \`task.md\` as you progress.`,
   },
 }
 
