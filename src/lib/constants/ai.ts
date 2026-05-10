@@ -247,6 +247,39 @@ export const TOOL_METADATA: Record<
       ],
     },
   },
+  initialize_memory: {
+    name: 'Initialize Memory',
+    description:
+      'Scan the codebase and generate an initial memory.md file in the artifacts directory. This file stores long-term project knowledge (tech stack, architecture, naming conventions).',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  update_memory: {
+    name: 'Update Memory',
+    description:
+      'Update the project memory with new architectural decisions, learned patterns, or important context. Use this to ensure future AI sessions understand the current state of the project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        update: {
+          type: 'string',
+          description: 'The information to add or update in memory.md',
+        },
+      },
+      required: ['update'],
+    },
+  },
+  get_memory: {
+    name: 'Get Memory',
+    description:
+      'Read the project memory (memory.md) to understand architecture, naming conventions, and previous decisions.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
   get_file_tree: {
     name: 'Get File Tree',
     description:
@@ -320,8 +353,11 @@ The user can mention files or directories in the chat:
     filename: 'about-plan.md',
     content: `# About Planning
 For any complex task, you MUST follow a structured planning-first workflow:
-1. **Investigate**: Use \`glob_search\`, \`read_file\`, and \`grep_search\` to understand the codebase.
+1. **Investigate**: Use \`glob_search\`, \`read_file\`, and \`grep_search\` to understand the codebase. 
+   - **MANDATORY**: Call \`get_memory\` FIRST to understand project conventions.
+   - If \`get_memory\` returns that no memory exists, suggest to the user that you should call \`initialize_memory\` to create it.
 2. **Plan**: Use \`propose_plan\` to create a detailed \`implementation_plan.md\` in the artifacts directory.
+   - **MANDATORY**: Your plan must include a step at the very end to call \`update_memory\` with any new architectural changes or patterns learned during the task.
 3. **Approve**: Wait for the user to explicitly approve the plan before proceeding.
 4. **Taskify**: Use \`create_task\` to break down the approved plan into a checklist in \`task.md\`.
 5. **Execute**: Use \`edit_file\` for surgical modifications. Update \`task.md\` as you progress.`,

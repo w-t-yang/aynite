@@ -102,6 +102,10 @@ export function getWorkspaceTaskPath(name: string, filename = 'task.md') {
   return path.join(getWorkspaceArtifactsDir(name), filename)
 }
 
+export function getWorkspaceMemoryPath(name: string) {
+  return path.join(getWorkspaceArtifactsDir(name), 'memory.md')
+}
+
 export function getAIConfigPath() {
   return path.join(getAyniteConfigDir(), 'ai.json')
 }

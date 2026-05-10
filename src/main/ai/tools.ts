@@ -5,6 +5,7 @@ import { TOOL_METADATA } from '../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../lib/constants/messages'
 import {
   getAyniteDir,
+  getWorkspaceMemoryPath,
   getWorkspaceTaskPath,
   secureEditFile,
   secureGetFileTree,
@@ -287,6 +288,97 @@ export function createTools(context: ToolContext) {
 
         await writeText(planPath, content)
         return `Implementation plan proposed at ${planPath}. Please review the file and type "Approved" to proceed.`
+      },
+    },
+    initialize_memory: {
+      description: TOOL_METADATA.initialize_memory.description,
+      inputSchema: jsonSchema(TOOL_METADATA.initialize_memory.inputSchema),
+      execute: async () => {
+        const { active } = await getWorkspacesList()
+        const memoryPath = getWorkspaceMemoryPath(active)
+
+        // Gather intelligence
+        const pkgPath = domains[0] ? `${domains[0]}/package.json` : null
+        const readmePath = domains[0] ? `${domains[0]}/README.md` : null
+
+        let pkgInfo = 'Unknown'
+        if (pkgPath) {
+          const content = await secureReadText(pkgPath, domains)
+          if (!content.startsWith('Error')) {
+            try {
+              const pkg = JSON.parse(content)
+              pkgInfo = `Project: ${pkg.name}\nVersion: ${pkg.version}\nDependencies: ${Object.keys(
+                pkg.dependencies || {},
+              ).join(', ')}`
+            } catch (e) {
+              pkgInfo = 'Invalid package.json'
+            }
+          }
+        }
+
+        let readmeInfo = ''
+        if (readmePath) {
+          const content = await secureReadText(readmePath, domains)
+          if (!content.startsWith('Error')) {
+            readmeInfo = content.slice(0, 1000) // First 1000 chars
+          }
+        }
+
+        const tree = await secureGetFileTree(domains[0], domains, 2)
+
+        const content = [
+          '# Project Memory',
+          '',
+          '## 🛠️ Tech Stack',
+          pkgInfo,
+          '',
+          '## 📂 Project Structure (Summary)',
+          `\`\`\`\n${tree}\n\`\`\``,
+          '',
+          '## 📖 README Snippet',
+          readmeInfo || 'No README found.',
+          '',
+          '## 🏗️ Architectural Decisions & Patterns',
+          '- (No patterns recorded yet)',
+          '',
+          '## 🧪 Naming Conventions',
+          '- (No conventions recorded yet)',
+        ].join('\n')
+
+        await writeText(memoryPath, content)
+        return `Project memory initialized at ${memoryPath}. You should now update it with specific project secrets or conventions.`
+      },
+    },
+    update_memory: {
+      description: TOOL_METADATA.update_memory.description,
+      inputSchema: jsonSchema(TOOL_METADATA.update_memory.inputSchema),
+      execute: async ({ update }: { update: string }) => {
+        const { active } = await getWorkspacesList()
+        const memoryPath = getWorkspaceMemoryPath(active)
+        try {
+          const current = await secureReadText(memoryPath, domains)
+          const content = current.startsWith('Error')
+            ? `# Project Memory\n\n${update}`
+            : `${current}\n\n### Update (${new Date().toLocaleDateString()})\n${update}`
+
+          await writeText(memoryPath, content)
+          return `Project memory updated at ${memoryPath}`
+        } catch (e) {
+          return `Error updating memory: ${e instanceof Error ? e.message : String(e)}`
+        }
+      },
+    },
+    get_memory: {
+      description: TOOL_METADATA.get_memory.description,
+      inputSchema: jsonSchema(TOOL_METADATA.get_memory.inputSchema),
+      execute: async () => {
+        const { active } = await getWorkspacesList()
+        const memoryPath = getWorkspaceMemoryPath(active)
+        const content = await secureReadText(memoryPath, domains)
+        if (content.startsWith('Error')) {
+          return 'No project memory found. You can initialize it using "initialize_memory".'
+        }
+        return content
       },
     },
     get_file_tree: {

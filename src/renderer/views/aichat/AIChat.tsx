@@ -81,7 +81,8 @@ export function AIChat() {
     [],
   )
 
-  const hasProviders = settings.ai?.providers && settings.ai.providers.length > 0
+  const hasProviders =
+    settings.ai?.providers && settings.ai.providers.length > 0
 
   const openAISettings = () => {
     window.parent.postMessage(
@@ -148,7 +149,9 @@ export function AIChat() {
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse">
             <Bot size={40} className="text-primary" />
           </div>
-          <h3 className="text-2xl font-bold mb-2">No AI Providers Configured</h3>
+          <h3 className="text-2xl font-bold mb-2">
+            No AI Providers Configured
+          </h3>
           <p className="text-muted-foreground max-w-sm mb-8 leading-relaxed">
             To start using the AI assistant, you need to configure at least one
             provider (Ollama, OpenAI, Anthropic, etc.) in the settings.
