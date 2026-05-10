@@ -271,8 +271,8 @@ export const TOOL_METADATA: Record<
       required: ['update'],
     },
   },
-  get_memory: {
-    name: 'Get Memory',
+  read_memory: {
+    name: 'Read Memory',
     description:
       'Read the project memory (memory.md) to understand architecture, naming conventions, and previous decisions.',
     inputSchema: {
@@ -354,8 +354,8 @@ The user can mention files or directories in the chat:
     content: `# About Planning
 For any complex task, you MUST follow a structured planning-first workflow:
 1. **Investigate**: Use \`glob_search\`, \`read_file\`, and \`grep_search\` to understand the codebase. 
-   - **MANDATORY**: Call \`get_memory\` FIRST to understand project conventions.
-   - If \`get_memory\` returns that no memory exists, suggest to the user that you should call \`initialize_memory\` to create it.
+   - **MANDATORY**: Call \`read_memory\` FIRST to understand project conventions.
+   - If \`read_memory\` returns that no memory exists, suggest to the user that you should call \`initialize_memory\` to create it.
 2. **Plan**: Use \`propose_plan\` to create a detailed \`implementation_plan.md\` in the artifacts directory.
    - **MANDATORY**: Your plan must include a step at the very end to call \`update_memory\` with any new architectural changes or patterns learned during the task.
 3. **Approve**: Wait for the user to explicitly approve the plan before proceeding.

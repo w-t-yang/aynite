@@ -310,7 +310,7 @@ export function createTools(context: ToolContext) {
               pkgInfo = `Project: ${pkg.name}\nVersion: ${pkg.version}\nDependencies: ${Object.keys(
                 pkg.dependencies || {},
               ).join(', ')}`
-            } catch (e) {
+            } catch (_e) {
               pkgInfo = 'Invalid package.json'
             }
           }
@@ -368,9 +368,9 @@ export function createTools(context: ToolContext) {
         }
       },
     },
-    get_memory: {
-      description: TOOL_METADATA.get_memory.description,
-      inputSchema: jsonSchema(TOOL_METADATA.get_memory.inputSchema),
+    read_memory: {
+      description: TOOL_METADATA.read_memory.description,
+      inputSchema: jsonSchema(TOOL_METADATA.read_memory.inputSchema),
       execute: async () => {
         const { active } = await getWorkspacesList()
         const memoryPath = getWorkspaceMemoryPath(active)
