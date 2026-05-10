@@ -78,6 +78,7 @@ const aynite = {
     ipcRenderer.invoke(SpellChannels.COMMAND_RUN_DIRECT, payload),
   respondToAiApproval: (id: string, approved: boolean) =>
     ipcRenderer.send(AiEventChannels.APPROVAL_RESPONSE, { id, approved }),
+  getArtifactsStatus: () => ipcRenderer.invoke(AiChannels.ARTIFACTS_STATUS),
 
   // ── System ──────────────────────────────────────────────────────────────
   openExternal: (url: string) =>

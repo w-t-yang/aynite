@@ -41,6 +41,21 @@ export function useAIChat() {
   const abortRef = useRef<AbortController | null>(null)
   const loadingRef = useRef(loading)
 
+  const [artifactStatus, setArtifactStatus] = useState<{
+    memory: { exists: boolean; path: string }
+    task: { exists: boolean; path: string }
+    plan: { exists: boolean; path: string }
+  } | null>(null)
+
+  const loadArtifactStatus = useCallback(async () => {
+    const status = await window.aynite.getArtifactsStatus()
+    setArtifactStatus(status)
+  }, [])
+
+  useEffect(() => {
+    loadArtifactStatus()
+  }, [loadArtifactStatus])
+
   useEffect(() => {
     loadingRef.current = loading
   }, [loading])
@@ -171,20 +186,21 @@ export function useAIChat() {
     setPendingApproval(null)
   }, [])
 
-  const messagesRef = useRef(messages)
-  useEffect(() => {
-    messagesRef.current = messages
-  }, [messages])
-
   const settingsRef = useRef(settings)
   useEffect(() => {
     settingsRef.current = settings
   }, [settings])
 
+  const messagesRef = useRef(messages)
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
   const workspaceFoldersRef = useRef(workspaceFolders)
   useEffect(() => {
     workspaceFoldersRef.current = workspaceFolders
   }, [workspaceFolders])
+
 
   const activeTabPathRef = useRef(activeTabPath)
   useEffect(() => {
@@ -362,6 +378,7 @@ export function useAIChat() {
                     output: event.output,
                   }),
                 )
+                loadArtifactStatus()
                 break
               case 'error':
                 setError({
@@ -397,7 +414,7 @@ export function useAIChat() {
         abortRef.current = null
       }
     },
-    [subscribeToAppEvents],
+    [subscribeToAppEvents, loadArtifactStatus],
   )
 
   const clearChat = useCallback(() => {
@@ -425,7 +442,14 @@ export function useAIChat() {
 
   const switchProvider = useCallback(async (providerId: string) => {
     await window.aynite.setConfig('ai', { activeId: providerId })
-  }, [])
+    loadArtifactStatus()
+  }, [loadArtifactStatus])
+
+  // Simple token estimator: (chars / 4) * 1.1
+  const tokenCount = messages.reduce((acc, m) => {
+    const text = m.parts.map((p) => (p.type === 'text' ? p.text : '')).join('')
+    return acc + Math.ceil((text.length / 4) * 1.1)
+  }, 0)
 
   return {
     settings,
@@ -449,5 +473,8 @@ export function useAIChat() {
     switchProvider,
     error,
     setError,
+    artifactStatus,
+    loadArtifactStatus,
+    tokenCount,
   }
 }

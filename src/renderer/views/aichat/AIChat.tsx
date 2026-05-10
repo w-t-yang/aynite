@@ -24,6 +24,8 @@ export function AIChat() {
     switchProvider,
     error,
     setError,
+    artifactStatus,
+    tokenCount,
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -113,6 +115,8 @@ export function AIChat() {
         }}
         onSwitchAgent={switchAgent}
         onSwitchProvider={switchProvider}
+        artifactStatus={artifactStatus}
+        tokenCount={tokenCount}
       />
 
       {hasProviders ? (

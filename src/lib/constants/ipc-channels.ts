@@ -47,6 +47,7 @@ export const AiChannels = {
   SESSION_LIST: 'aynite:ai-session-list',
   PROMPT_RESTORE: 'aynite:ai-prompt-restore',
   PROMPT_PICK_FILE: 'aynite:ai-prompt-pick-file',
+  ARTIFACTS_STATUS: 'aynite:ai-artifacts-status',
 } as const
 
 export const AiEventChannels = {

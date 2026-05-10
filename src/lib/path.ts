@@ -106,6 +106,10 @@ export function getWorkspaceMemoryPath(name: string) {
   return path.join(getWorkspaceArtifactsDir(name), 'memory.md')
 }
 
+export function getWorkspacePlanPath(name: string) {
+  return path.join(getWorkspaceArtifactsDir(name), 'implementation_plan.md')
+}
+
 export function getAIConfigPath() {
   return path.join(getAyniteConfigDir(), 'ai.json')
 }

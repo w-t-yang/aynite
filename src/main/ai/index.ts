@@ -93,6 +93,31 @@ export function setupAiIpc() {
     if (canceled || filePaths.length === 0) return null
     return filePaths[0]
   })
+  ipcMain.handle(AiChannels.ARTIFACTS_STATUS, async () => {
+    const { active } = await getWorkspacesList()
+    const {
+      exists,
+      getWorkspaceMemoryPath,
+      getWorkspaceTaskPath,
+      getWorkspacePlanPath,
+    } = await import('../../lib/path')
+
+    const memoryPath = getWorkspaceMemoryPath(active)
+    const taskPath = getWorkspaceTaskPath(active)
+    const planPath = getWorkspacePlanPath(active)
+
+    const [memoryExists, taskExists, planExists] = await Promise.all([
+      exists(memoryPath),
+      exists(taskPath),
+      exists(planPath),
+    ])
+
+    return {
+      memory: { exists: memoryExists, path: memoryPath },
+      task: { exists: taskExists, path: taskPath },
+      plan: { exists: planExists, path: planPath },
+    }
+  })
 }
 
 export {
