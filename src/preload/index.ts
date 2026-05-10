@@ -86,6 +86,7 @@ const aynite = {
   selectFolder: () => ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FOLDER),
   selectFile: (options?: any) =>
     ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FILE, options),
+  saveFileDialog: () => ipcRenderer.invoke(SystemChannels.DIALOG_SAVE_FILE),
   activateTile: (tileId: string) =>
     ipcRenderer.invoke(SystemChannels.TILE_ACTIVATE, tileId),
 

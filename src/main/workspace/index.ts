@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron'
 import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
-import type { WorkspaceConfig } from '../../lib/constants/types'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
 import { sendAppEvent, sendAppOperation, showOpenDialog } from '../window'
@@ -13,7 +12,6 @@ import {
   getWorkspacesList,
   removeWorkspaceFolder,
   reorderWorkspaceFolders,
-  saveWorkspaceState,
   switchWorkspace,
 } from './logic'
 

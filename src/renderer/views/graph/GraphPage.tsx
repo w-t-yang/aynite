@@ -1,10 +1,11 @@
 import {
   AlertCircle,
-  Maximize2,
-  Minimize2,
+  FolderOpen,
   RefreshCw,
   Share2,
-  Upload,
+  Undo2,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -95,6 +96,8 @@ export function GraphPage() {
     return match ? match[1] : null
   }, [])
 
+  const currentFile = useRef<string | null>(null)
+
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const _isDark = currentTheme?.type === 'dark'
 
@@ -131,6 +134,7 @@ export function GraphPage() {
         setError(null)
         setData(json)
         initializeNodes(json)
+        currentFile.current = path
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load graph file:', err)
@@ -288,6 +292,14 @@ export function GraphPage() {
     }
   }
 
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      loadInitialFile(currentFile.current)
+    } else {
+      loadMockData()
+    }
+  }, [loadInitialFile, loadMockData])
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return // Only left click
     setIsDragging(true)
@@ -334,7 +346,7 @@ export function GraphPage() {
           className={iconBtn()}
           title="Zoom In"
         >
-          <Maximize2 size={14} />
+          <ZoomIn size={14} />
         </button>
         <button
           type="button"
@@ -342,7 +354,7 @@ export function GraphPage() {
           className={iconBtn()}
           title="Zoom Out"
         >
-          <Minimize2 size={14} />
+          <ZoomOut size={14} />
         </button>
         <button
           type="button"
@@ -353,6 +365,14 @@ export function GraphPage() {
           className={iconBtn()}
           title="Reset Zoom"
         >
+          <Undo2 size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className={iconBtn()}
+          title="Reload"
+        >
           <RefreshCw size={14} />
         </button>
         <button
@@ -361,7 +381,7 @@ export function GraphPage() {
           className={iconBtn()}
           title="Load graph file"
         >
-          <Upload size={14} />
+          <FolderOpen size={14} />
         </button>
       </ViewHeader>
 

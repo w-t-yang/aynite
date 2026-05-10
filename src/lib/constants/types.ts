@@ -14,6 +14,7 @@ export interface SplitNode extends BaseNode {
 export interface LeafNode extends BaseNode {
   type: 'leaf'
   name?: string
+  data?: Record<string, any>
 }
 
 export type LayoutNode = SplitNode | LeafNode

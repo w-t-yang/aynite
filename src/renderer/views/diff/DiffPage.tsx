@@ -1,6 +1,14 @@
 import { diffLines } from 'diff'
-import { AlertCircle, Columns2, FileText, Upload } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  AlertCircle,
+  Columns2,
+  FileText,
+  FolderOpen,
+  RefreshCw,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
 import type { DiffData } from './types'
@@ -58,6 +66,8 @@ export function DiffPage() {
     expected: string
   } | null>(null)
   const [isMock, setIsMock] = useState(false)
+  const [fontSize, setFontSize] = useState(11)
+  const currentFile = useRef<string | null>(null)
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
@@ -90,6 +100,7 @@ export function DiffPage() {
 
         setError(null)
         setData(json)
+        currentFile.current = path
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load diff file:', err)
@@ -147,6 +158,14 @@ export function DiffPage() {
       })
     }
   }
+
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      loadInitialFile(currentFile.current)
+    } else {
+      loadMockData()
+    }
+  }, [loadInitialFile, loadMockData])
 
   const diffLinesResult = useMemo(() => {
     if (!data) return []
@@ -214,7 +233,8 @@ export function DiffPage() {
     return (
       <div
         key={`${side}-${lineNum ?? ''}-${line.value.slice(0, 20)}`}
-        className={`flex font-mono text-[11px] leading-[22px] min-h-[22px] ${bgColor}`}
+        className={`flex font-mono leading-[22px] min-h-[22px] ${bgColor}`}
+        style={{ fontSize: `${fontSize}px` }}
       >
         <span className="w-10 text-right pr-2 text-muted-foreground/50 select-none shrink-0 border-r border-border/30">
           {lineNum || ''}
@@ -241,11 +261,35 @@ export function DiffPage() {
         )}
         <button
           type="button"
+          onClick={() => setFontSize((s) => Math.min(s + 2, 24))}
+          className={iconBtn()}
+          title="Increase Font Size"
+        >
+          <ZoomIn size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setFontSize((s) => Math.max(s - 2, 7))}
+          className={iconBtn()}
+          title="Decrease Font Size"
+        >
+          <ZoomOut size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className={iconBtn()}
+          title="Reload"
+        >
+          <RefreshCw size={14} />
+        </button>
+        <button
+          type="button"
           onClick={handleSelectFile}
           className={iconBtn()}
           title="Load diff file"
         >
-          <Upload size={14} />
+          <FolderOpen size={14} />
         </button>
       </ViewHeader>
 

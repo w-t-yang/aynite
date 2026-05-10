@@ -48,7 +48,12 @@ const VIBE_LAYOUTS: Record<VibeType, LayoutNode> = {
         direction: 'horizontal',
         size: 75,
         children: [
-          { id: 'vibe-surp-browser', type: 'leaf', name: 'file-browser', size: 50 },
+          {
+            id: 'vibe-surp-browser',
+            type: 'leaf',
+            name: 'file-browser',
+            size: 50,
+          },
           { id: 'vibe-surp-ai', type: 'leaf', name: 'aichat', size: 50 },
         ],
       },

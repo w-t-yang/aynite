@@ -95,7 +95,13 @@ export function setupAiIpc() {
   })
 }
 
-export { deleteSession, initWorkspaceFolders, listSessions, loadSession, saveSession } from './chat'
+export {
+  deleteSession,
+  initWorkspaceFolders,
+  listSessions,
+  loadSession,
+  saveSession,
+} from './chat'
 export {
   ensureDefaultPromptFiles,
   getDefaultGlobalPrompts,

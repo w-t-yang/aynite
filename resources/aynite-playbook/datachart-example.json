@@ -1,0 +1,13 @@
+{
+  "title": "Sample Business Performance",
+  "keys": ["Revenue", "Profit", "Expenses"],
+  "data": [
+    { "name": "Mon", "Revenue": 4000, "Profit": 2400, "Expenses": 1600 },
+    { "name": "Tue", "Revenue": 3000, "Profit": 1398, "Expenses": 1602 },
+    { "name": "Wed", "Revenue": 2000, "Profit": 9800, "Expenses": 2200 },
+    { "name": "Thu", "Revenue": 2780, "Profit": 3908, "Expenses": 2000 },
+    { "name": "Fri", "Revenue": 1890, "Profit": 4800, "Expenses": 2181 },
+    { "name": "Sat", "Revenue": 2390, "Profit": 3800, "Expenses": 2500 },
+    { "name": "Sun", "Revenue": 3490, "Profit": 4300, "Expenses": 2100 }
+  ]
+}

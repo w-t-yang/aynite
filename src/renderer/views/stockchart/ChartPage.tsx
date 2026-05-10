@@ -3,8 +3,11 @@ import {
   AlertCircle,
   Check,
   ChevronDown,
-  Upload,
+  FolderOpen,
+  RefreshCw,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -201,6 +204,7 @@ export function StockChart() {
     expected: string
   } | null>(null)
   const _fileInputRef = useRef<HTMLInputElement>(null)
+  const currentFile = useRef<string | null>(null)
 
   const EXPECTED_FORMAT = `{
   "symbol": "AAPL",
@@ -258,6 +262,7 @@ OR
 
         setSymbol(parsedSymbol)
         setRawHistory(parsedData)
+        currentFile.current = path
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load initial file:', err)
@@ -342,6 +347,7 @@ OR
         setError(null)
         setSymbol(parsedSymbol)
         setRawHistory(parsedData)
+        currentFile.current = path
         setIsMock(false)
 
         // Save to tile config for persistence
@@ -384,6 +390,25 @@ OR
       loadMockData()
     }
   }
+
+  const handleZoomIn = () => {
+    if (!data || data.length === 0) return
+    setVisibleCount((c) => Math.max(20, Math.floor(c / 1.3)))
+  }
+
+  const handleZoomOut = () => {
+    if (!data || data.length === 0) return
+    setVisibleCount((c) => Math.min(500, Math.floor(c * 1.3)))
+  }
+
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      // Re-trigger load from current file path
+      loadInitialFile(currentFile.current)
+    } else {
+      loadMockData()
+    }
+  }, [loadInitialFile, loadMockData])
 
   const toggleIndicator = (key: keyof typeof indicators) => {
     setIndicators((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -616,6 +641,30 @@ OR
           ))}
         </div>
 
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          className={iconBtn()}
+          title="Zoom In"
+        >
+          <ZoomIn size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          className={iconBtn()}
+          title="Zoom Out"
+        >
+          <ZoomOut size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className={iconBtn()}
+          title="Reload"
+        >
+          <RefreshCw size={14} />
+        </button>
         {/* Indicators Dropdown */}
         <div className="relative">
           <button
@@ -720,7 +769,7 @@ OR
           className={iconBtn()}
           title="Load chart data"
         >
-          <Upload size={14} />
+          <FolderOpen size={14} />
         </button>
       </ViewHeader>
 
@@ -779,7 +828,7 @@ OR
                   onClick={handleSelectSystemFile}
                   className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-bold hover:opacity-90 transition-opacity flex items-center gap-2"
                 >
-                  <Upload size={16} /> LOAD ANOTHER FILE
+                  <FolderOpen size={16} /> LOAD ANOTHER FILE
                 </button>
               </div>
             </div>

@@ -71,6 +71,7 @@ export const SystemChannels = {
   APP_QUIT: 'aynite:system-app-quit',
   DIALOG_SELECT_FILE: 'aynite:dialog-select-file',
   DIALOG_SELECT_FOLDER: 'aynite:dialog-select-folder',
+  DIALOG_SAVE_FILE: 'aynite:dialog-save-file',
   WINDOW_MINIMIZE: 'aynite:window-minimize',
   WINDOW_MAXIMIZE: 'aynite:window-maximize',
   WINDOW_CLOSE: 'aynite:window-close',

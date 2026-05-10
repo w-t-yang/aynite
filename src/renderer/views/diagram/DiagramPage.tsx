@@ -1,16 +1,17 @@
 import {
   AlertCircle,
   FileType,
-  Maximize2,
-  Minimize2,
+  FolderOpen,
   RefreshCw,
-  Upload,
+  Undo2,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import mermaid from 'mermaid'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
-import type { DiagramData, DiagramType } from './types'
+import type { DiagramData } from './types'
 
 const MOCK_DATA: DiagramData = {
   title: 'System Architecture',
@@ -30,16 +31,6 @@ const EXPECTED_FORMAT = `{
   "type": "flowchart | sequenceDiagram | classDiagram | stateDiagram | gantt | pie | erDiagram",
   "definition": "graph TD\\n  A[Node] --> B[Other Node]"
 }`
-
-const DIAGRAM_TYPES: DiagramType[] = [
-  'flowchart',
-  'sequenceDiagram',
-  'classDiagram',
-  'stateDiagram',
-  'gantt',
-  'pie',
-  'erDiagram',
-]
 
 // Initialize mermaid once
 let initialized = false
@@ -66,6 +57,8 @@ export function DiagramPage() {
   const [svgHtml, setSvgHtml] = useState<string>('')
   const [renderError, setRenderError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
+  const currentFile = useRef<string | null>(null)
+
   const [isRendering, setIsRendering] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -95,6 +88,7 @@ export function DiagramPage() {
 
         setError(null)
         setData(json)
+        currentFile.current = path
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load diagram file:', err)
@@ -153,6 +147,14 @@ export function DiagramPage() {
     }
   }
 
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      loadInitialFile(currentFile.current)
+    } else {
+      loadMockData()
+    }
+  }, [loadInitialFile, loadMockData])
+
   // Render diagram whenever data or theme changes
   useEffect(() => {
     if (!data) {
@@ -202,7 +204,7 @@ export function DiagramPage() {
           className={iconBtn()}
           title="Zoom In"
         >
-          <Maximize2 size={14} />
+          <ZoomIn size={14} />
         </button>
         <button
           type="button"
@@ -210,7 +212,7 @@ export function DiagramPage() {
           className={iconBtn()}
           title="Zoom Out"
         >
-          <Minimize2 size={14} />
+          <ZoomOut size={14} />
         </button>
         <button
           type="button"
@@ -218,28 +220,23 @@ export function DiagramPage() {
           className={iconBtn()}
           title="Reset Zoom"
         >
+          <Undo2 size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className={iconBtn()}
+          title="Reload"
+        >
           <RefreshCw size={14} />
         </button>
-        <select
-          value={data?.type || 'flowchart'}
-          onChange={(e) => {
-            if (data) setData({ ...data, type: e.target.value as DiagramType })
-          }}
-          className="text-[10px] bg-muted border border-border rounded px-2 py-1.5 text-foreground font-medium outline-none"
-        >
-          {DIAGRAM_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
         <button
           type="button"
           onClick={handleSelectFile}
           className={iconBtn()}
           title="Load diagram file"
         >
-          <Upload size={14} />
+          <FolderOpen size={14} />
         </button>
       </ViewHeader>
 
@@ -287,12 +284,14 @@ export function DiagramPage() {
             )}
 
             {svgHtml && !renderError && (
-              <div
-                className="transition-transform duration-200 origin-top-left"
-                style={{ transform: `scale(${zoom})` }}
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: intentional, rendering generated SVG
-                dangerouslySetInnerHTML={{ __html: svgHtml }}
-              />
+              <div className="w-full h-full flex items-center justify-center">
+                <div
+                  className="transition-transform duration-200"
+                  style={{ transform: `scale(${zoom})` }}
+                  // biome-ignore lint/security/noDangerouslySetInnerHtml: intentional, rendering generated SVG
+                  dangerouslySetInnerHTML={{ __html: svgHtml }}
+                />
+              </div>
             )}
           </div>
         )}

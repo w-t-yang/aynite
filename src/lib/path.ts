@@ -34,20 +34,34 @@ export function getAyniteSessionsDir() {
   return path.join(AYNITE_DIR, AYNITE_SUBDIRS.SESSIONS)
 }
 
-export function getSessionPath(sessionId: string, date?: string, workspace?: string) {
+export function getSessionPath(
+  sessionId: string,
+  date?: string,
+  workspace?: string,
+) {
   const dateStr = date || new Date().toISOString().split('T')[0]
-  const base = workspace ? getWorkspaceSessionsDir(workspace) : getAyniteSessionsDir()
+  const base = workspace
+    ? getWorkspaceSessionsDir(workspace)
+    : getAyniteSessionsDir()
   return path.join(base, dateStr, `${sessionId}.json`)
 }
 
-export function getSessionMetadataPath(sessionId: string, date?: string, workspace?: string) {
+export function getSessionMetadataPath(
+  sessionId: string,
+  date?: string,
+  workspace?: string,
+) {
   const dateStr = date || new Date().toISOString().split('T')[0]
-  const base = workspace ? getWorkspaceSessionsDir(workspace) : getAyniteSessionsDir()
+  const base = workspace
+    ? getWorkspaceSessionsDir(workspace)
+    : getAyniteSessionsDir()
   return path.join(base, dateStr, `${sessionId}-metadata.json`)
 }
 
 export function getSessionsDateDir(date: string, workspace?: string) {
-  const base = workspace ? getWorkspaceSessionsDir(workspace) : getAyniteSessionsDir()
+  const base = workspace
+    ? getWorkspaceSessionsDir(workspace)
+    : getAyniteSessionsDir()
   return path.join(base, date)
 }
 

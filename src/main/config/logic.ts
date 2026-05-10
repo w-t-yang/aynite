@@ -6,7 +6,6 @@ import {
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import type { MainConfig, WorkspaceConfig } from '../../lib/constants/types'
-import type { WorkspacesConfig } from '../../lib/types/workspace'
 import {
   PLAYBOOK_WORKSPACE_CONFIG,
   TRADER_WORKSPACE_CONFIG,
@@ -36,7 +35,12 @@ import {
   writeJson,
   writeText,
 } from '../../lib/path'
-import { ensureDefaultPromptFiles, getDefaultGlobalPrompts, initWorkspaceFolders } from '../ai'
+import type { WorkspacesConfig } from '../../lib/types/workspace'
+import {
+  ensureDefaultPromptFiles,
+  getDefaultGlobalPrompts,
+  initWorkspaceFolders,
+} from '../ai'
 import {
   getBundledResourcesPath,
   getCommandsConfig,
@@ -169,16 +173,49 @@ export async function initAppFolders() {
   // Ensure each default workspace has its config and session directory
   const playbookPath = getPlaybookPath()
   const defaultWorkspaces: Array<[string, WorkspaceConfig]> = [
-    ['Aynite Playbook', { ...PLAYBOOK_WORKSPACE_CONFIG, folders: [playbookPath], activeFile: getWelcomeMdPath() }],
-    ['Market Lens', { ...TRADER_WORKSPACE_CONFIG, folders: [playbookPath], activeFile: getWelcomeMdPath() }],
-    ['The Quill', { ...WRITER_WORKSPACE_CONFIG, folders: [playbookPath], activeFile: getWelcomeMdPath() }],
+    [
+      'Aynite Playbook',
+      {
+        ...PLAYBOOK_WORKSPACE_CONFIG,
+        folders: [playbookPath],
+        activeFile: getWelcomeMdPath(),
+      },
+    ],
+    [
+      'Market Lens',
+      {
+        ...TRADER_WORKSPACE_CONFIG,
+        folders: [playbookPath],
+        activeFile: getWelcomeMdPath(),
+      },
+    ],
+    [
+      'The Quill',
+      {
+        ...WRITER_WORKSPACE_CONFIG,
+        folders: [playbookPath],
+        activeFile: getWelcomeMdPath(),
+      },
+    ],
   ]
   for (const [name, config] of defaultWorkspaces) {
     const wsPath = getWorkspaceDataPath(name)
     if (!(await exists(wsPath))) {
       await ensureDir(getWorkspaceDir(name))
-      await writeJson(wsPath, config)
       await initWorkspaceFolders(name)
+    }
+    // Always patch leaf nodes with example file data, whether new or existing
+    const existing = (await exists(wsPath)) ? await readJson(wsPath) : null
+    if (existing) {
+      for (const layout of existing.layouts || []) {
+        setExampleTileData(layout.layout, playbookPath)
+      }
+      await writeJson(wsPath, existing)
+    } else {
+      for (const layout of config.layouts) {
+        setExampleTileData(layout.layout, playbookPath)
+      }
+      await writeJson(wsPath, config)
     }
   }
 
@@ -317,5 +354,53 @@ export async function saveConfig(settings: any) {
 }
 
 async function restoreAynitePlaybook() {
-  return restoreSpell('', 'aynite-playbook', getPlaybookPath(), 'Welcome.md')
+  await restoreSpell('', 'aynite-playbook', getPlaybookPath(), 'Welcome.md')
+  // Ensure example JSON files exist even if the spell restore was skipped
+  const srcDir = joinPaths(getBundledResourcesPath(), 'aynite-playbook')
+  const destDir = getPlaybookPath()
+  const exampleFiles = [
+    'canvas-example.json',
+    'mindmap-example.json',
+    'flow-example.json',
+    'diagram-example.json',
+    'graph-example.json',
+    'datachart-example.json',
+    'stockchart-example.json',
+    'diff-example.json',
+  ]
+  for (const file of exampleFiles) {
+    const srcPath = joinPaths(srcDir, file)
+    const destPath = joinPaths(destDir, file)
+    if ((await exists(srcPath)) && !(await exists(destPath))) {
+      try {
+        await copy(srcPath, destPath)
+      } catch (e) {
+        console.error(`[Init] Error copying example file ${file}:`, e)
+      }
+    }
+  }
+}
+
+const EXAMPLE_FILE_MAP: Record<string, string> = {
+  canvas: 'canvas-example.json',
+  mindmap: 'mindmap-example.json',
+  flow: 'flow-example.json',
+  diagram: 'diagram-example.json',
+  graph: 'graph-example.json',
+  datachart: 'datachart-example.json',
+  stockchart: 'stockchart-example.json',
+  diff: 'diff-example.json',
+}
+
+function setExampleTileData(node: any, playbookPath: string) {
+  if (node.type === 'leaf') {
+    const exampleFile = node.name ? EXAMPLE_FILE_MAP[node.name] : undefined
+    if (exampleFile) {
+      node.data = { file: joinPaths(playbookPath, exampleFile) }
+    }
+  } else if (node.type === 'split' && node.children) {
+    for (const child of node.children) {
+      setExampleTileData(child, playbookPath)
+    }
+  }
 }

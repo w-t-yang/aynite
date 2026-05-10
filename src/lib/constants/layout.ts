@@ -1,4 +1,4 @@
-import type { LayoutConfig, LayoutNode } from './types'
+import type { LayoutConfig } from './types'
 
 // ─── Aynite Playbook Layouts ──────────────────────────────────────────────
 
@@ -57,7 +57,12 @@ export const PLAYBOOK_LAYOUTS: LayoutConfig[] = [
           direction: 'horizontal',
           size: 50,
           children: [
-            { id: 'tile-pb-datachart', type: 'leaf', name: 'datachart', size: 50 },
+            {
+              id: 'tile-pb-datachart',
+              type: 'leaf',
+              name: 'datachart',
+              size: 50,
+            },
             { id: 'tile-pb-graph', type: 'leaf', name: 'graph', size: 50 },
           ],
         },
@@ -126,8 +131,18 @@ export const TRADER_LAYOUTS: LayoutConfig[] = [
       direction: 'horizontal',
       size: 100,
       children: [
-        { id: 'tile-trader-res-tree', type: 'leaf', name: 'treeview', size: 25 },
-        { id: 'tile-trader-res-browser', type: 'leaf', name: 'file-browser', size: 50 },
+        {
+          id: 'tile-trader-res-tree',
+          type: 'leaf',
+          name: 'treeview',
+          size: 25,
+        },
+        {
+          id: 'tile-trader-res-browser',
+          type: 'leaf',
+          name: 'file-browser',
+          size: 50,
+        },
         { id: 'tile-trader-res-chat', type: 'leaf', name: 'aichat', size: 25 },
       ],
     },
@@ -147,7 +162,12 @@ export const WRITER_LAYOUTS: LayoutConfig[] = [
       size: 100,
       children: [
         { id: 'tile-quill-tree', type: 'leaf', name: 'treeview', size: 20 },
-        { id: 'tile-quill-browser', type: 'leaf', name: 'file-browser', size: 50 },
+        {
+          id: 'tile-quill-browser',
+          type: 'leaf',
+          name: 'file-browser',
+          size: 50,
+        },
         { id: 'tile-quill-chat', type: 'leaf', name: 'aichat', size: 30 },
       ],
     },
@@ -167,7 +187,12 @@ export const WRITER_LAYOUTS: LayoutConfig[] = [
           direction: 'vertical',
           size: 60,
           children: [
-            { id: 'tile-quill-mindmap', type: 'leaf', name: 'mindmap', size: 50 },
+            {
+              id: 'tile-quill-mindmap',
+              type: 'leaf',
+              name: 'mindmap',
+              size: 50,
+            },
             { id: 'tile-quill-graph', type: 'leaf', name: 'graph', size: 50 },
           ],
         },

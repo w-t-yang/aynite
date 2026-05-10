@@ -1,0 +1,7 @@
+{
+  "title": "Configuration Migration",
+  "leftLabel": "v1 (legacy)",
+  "rightLabel": "v2 (refactored)",
+  "leftContent": "const express = require('express')\nconst app = express()\nconst PORT = 3000\n\napp.get('/', (req, res) => {\n  res.send('Hello World')\n})\n\napp.listen(PORT, () => {\n  console.log('Server running on port ' + PORT)\n})",
+  "rightContent": "import express from 'express'\nimport { config } from './config'\n\nconst app = express()\nconst PORT = config.port || 3000\n\napp.get('/', (req, res) => {\n  res.json({ message: 'Hello World' })\n})\n\napp.listen(PORT, () => {\n  console.log(`Server running on port ${PORT}`)\n})"
+}

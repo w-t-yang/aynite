@@ -3,13 +3,16 @@ import {
   AreaChart as AreaChartIcon,
   BarChart3,
   ChevronDown,
+  FolderOpen,
   LineChart,
   PieChart as PieChartIcon,
   Radar,
-  Upload,
+  RefreshCw,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -71,14 +74,17 @@ const EXPECTED_FORMAT = `{
 
 export function DataChartPage() {
   const { themes, activeThemeId } = useView()
-  const [chartType, setChartType] = useState<ChartType>(ChartType.BAR)
+  const [chartType, setChartType] = useState<ChartType>(ChartType.AREA)
   const [data, setData] = useState<ChartData | null>(null)
   const [error, setError] = useState<{
     message: string
     expected: string
   } | null>(null)
   const [isMock, setIsMock] = useState(false)
+  const [zoom, setZoom] = useState(1)
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false)
+
+  const currentFile = useRef<string | null>(null)
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
@@ -106,6 +112,7 @@ export function DataChartPage() {
 
         setError(null)
         setData(json)
+        currentFile.current = path
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load initial file:', err)
@@ -167,6 +174,14 @@ export function DataChartPage() {
       })
     }
   }
+
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      loadInitialFile(currentFile.current)
+    } else {
+      loadMockData()
+    }
+  }, [loadInitialFile, loadMockData])
 
   const renderChart = () => {
     if (!data) return null
@@ -333,8 +348,8 @@ export function DataChartPage() {
               cx="50%"
               cy="50%"
               outerRadius={80}
-              label={({ name, percent }) =>
-                `${name} ${(percent * 100).toFixed(0)}%`
+              label={(entry: any) =>
+                `${entry.name} ${((entry.percent ?? 0) * 100).toFixed(0)}%`
               }
               labelLine={false}
             >
@@ -443,11 +458,35 @@ export function DataChartPage() {
         </div>
         <button
           type="button"
+          onClick={() => setZoom((z) => Math.min(z * 1.3, 5))}
+          className={iconBtn()}
+          title="Zoom In"
+        >
+          <ZoomIn size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setZoom((z) => Math.max(z / 1.3, 0.3))}
+          className={iconBtn()}
+          title="Zoom Out"
+        >
+          <ZoomOut size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className={iconBtn()}
+          title="Reload"
+        >
+          <RefreshCw size={14} />
+        </button>
+        <button
+          type="button"
           onClick={handleSelectFile}
           className={iconBtn()}
           title="Load chart file"
         >
-          <Upload size={14} />
+          <FolderOpen size={14} />
         </button>
       </ViewHeader>
 
@@ -500,14 +539,17 @@ export function DataChartPage() {
                   onClick={handleSelectFile}
                   className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-bold hover:opacity-90 transition-opacity flex items-center gap-2"
                 >
-                  <Upload size={16} /> LOAD ANOTHER FILE
+                  <FolderOpen size={16} /> LOAD ANOTHER FILE
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="w-full h-full p-4">
+        <div
+          className="w-full h-full p-4 transition-transform duration-200 origin-center"
+          style={{ transform: `scale(${zoom})` }}
+        >
           <ResponsiveContainer width="100%" height="100%">
             {renderChart()}
           </ResponsiveContainer>

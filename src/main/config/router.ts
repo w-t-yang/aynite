@@ -110,7 +110,10 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
       const wsConfig = await getWorkspacesList()
       const workspaceState = await getWorkspaceState(wsConfig.active)
       return {
-        activeId: workspaceState.activeAgentId || mainConfig.agents?.activeId || 'aynite',
+        activeId:
+          workspaceState.activeAgentId ||
+          mainConfig.agents?.activeId ||
+          'aynite',
         list: mainConfig.agents?.list || [],
       }
     }
@@ -252,11 +255,16 @@ export async function routeSetConfig(
       // Split: activeId -> workspace config, list -> global config
       if (payload?.activeId) {
         const wsConfig = await getWorkspacesList()
-        await saveWorkspaceState(wsConfig.active, { activeAgentId: payload.activeId })
+        await saveWorkspaceState(wsConfig.active, {
+          activeAgentId: payload.activeId,
+        })
       }
       if (payload?.list) {
         const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
-        mainConfig.agents = { activeId: mainConfig.agents?.activeId || 'aynite', list: payload.list }
+        mainConfig.agents = {
+          activeId: mainConfig.agents?.activeId || 'aynite',
+          list: payload.list,
+        }
         await writeJson(getMainConfigPath(), mainConfig)
       }
       return true

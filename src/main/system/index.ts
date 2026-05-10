@@ -12,6 +12,7 @@ import {
   minimizeWindow,
   sendAppEvent,
   showOpenDialog,
+  showSaveDialog,
 } from '../window'
 import { getAvailableViews, getSystemFonts } from './logic'
 
@@ -53,6 +54,14 @@ export function setupSystemIpc() {
     })
     if (canceled || filePaths.length === 0) return null
     return filePaths
+  })
+
+  ipcMain.handle(SystemChannels.DIALOG_SAVE_FILE, async () => {
+    const { canceled, filePath } = await showSaveDialog({
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (canceled || !filePath) return null
+    return filePath
   })
 
   ipcMain.handle(SystemChannels.WINDOW_MINIMIZE, () => {

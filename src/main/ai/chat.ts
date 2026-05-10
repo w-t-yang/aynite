@@ -52,7 +52,11 @@ export async function saveSession(
   sendAppEvent(AppEvents.SESSION_SAVED, id)
 }
 
-export async function loadSession(workspace: string, id: string, date?: string) {
+export async function loadSession(
+  workspace: string,
+  id: string,
+  date?: string,
+) {
   if (date) {
     const path = getSessionPath(id, date, workspace)
     return readJson(path).catch(() => null)

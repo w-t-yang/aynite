@@ -1,11 +1,17 @@
 import { Excalidraw } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import { AlertCircle, Clipboard, Upload } from 'lucide-react'
+import {
+  AlertCircle,
+  FolderOpen,
+  RefreshCw,
+  Save,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@excalidraw/excalidraw/index.css'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useAppEvent, useView } from '../ViewContext'
-import type { CanvasData } from './types'
 
 const EXPECTED_FORMAT = `{
   "type": "excalidraw",
@@ -28,13 +34,30 @@ export function CanvasPage() {
     message: string
     expected: string
   } | null>(null)
-  const [copied, setCopied] = useState(false)
   const excRef = useRef<ExcalidrawImperativeAPI | null>(null)
+  const currentFile = useRef<string | null>(null)
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
     const match = hash.match(/tileId=([^&]+)/)
     return match ? match[1] : null
+  }, [])
+
+  // Parse initial file path from hash on mount
+  const initialFilePath = useMemo(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    const params = new URLSearchParams(hash)
+    let file = params.get('file')
+    const dataParam = params.get('data')
+    if (dataParam) {
+      try {
+        const tileData = JSON.parse(decodeURIComponent(dataParam))
+        if (tileData.file) file = tileData.file
+      } catch {
+        /* ignore */
+      }
+    }
+    return file
   }, [])
 
   const currentTheme = themes.find((t) => t.id === activeThemeId)
@@ -52,10 +75,27 @@ export function CanvasPage() {
 
   useEffect(() => {
     if (themes.length > 0) updateCanvasBg()
-  }, [themes, activeThemeId, updateCanvasBg])
+  }, [themes, updateCanvasBg])
+
+  // ─── Zoom handlers ──────────────────────────────────────────────────────
+  const handleZoomIn = useCallback(() => {
+    const api = excRef.current
+    if (!api) return
+    const zoom = api.getAppState().zoom
+    const newVal = ((zoom.value as unknown as number) * 1.2) as any
+    api.updateScene({ appState: { zoom: { value: newVal } } })
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    const api = excRef.current
+    if (!api) return
+    const zoom = api.getAppState().zoom
+    const newVal = ((zoom.value as unknown as number) / 1.2) as any
+    api.updateScene({ appState: { zoom: { value: newVal } } })
+  }, [])
 
   // ─── File loading ──────────────────────────────────────────────────────
-  const loadInitialFile = useCallback(async (path: string) => {
+  const loadFile = useCallback(async (path: string) => {
     try {
       const content = await (window as any).aynite.readFile(path)
       const json = JSON.parse(content)
@@ -65,11 +105,15 @@ export function CanvasPage() {
       }
 
       setError(null)
+      currentFile.current = path
       const api = excRef.current
       if (api) {
         api.updateScene({
           elements: json.elements as any,
-          appState: { ...(json.appState || {}), viewBackgroundColor: getThemeBg() },
+          appState: {
+            ...(json.appState || {}),
+            viewBackgroundColor: getThemeBg(),
+          },
         })
       }
     } catch (err) {
@@ -81,25 +125,13 @@ export function CanvasPage() {
     }
   }, [])
 
+  // Load initial file when Excalidraw API becomes available
+  const [excalidrawReady, setExcalidrawReady] = useState(false)
+
   useEffect(() => {
-    const hash = window.location.hash.replace(/^#/, '')
-    const params = new URLSearchParams(hash)
-    let initialFile = params.get('file')
-    const dataParam = params.get('data')
-
-    if (dataParam) {
-      try {
-        const tileData = JSON.parse(decodeURIComponent(dataParam))
-        if (tileData.file) initialFile = tileData.file
-      } catch {
-        /* ignore */
-      }
-    }
-
-    if (initialFile) {
-      loadInitialFile(initialFile)
-    }
-  }, [loadInitialFile])
+    if (!excalidrawReady || !initialFilePath) return
+    loadFile(initialFilePath)
+  }, [excalidrawReady, initialFilePath, loadFile])
 
   const handleSelectFile = async () => {
     try {
@@ -108,7 +140,7 @@ export function CanvasPage() {
         filters: [{ name: 'JSON', extensions: ['json'] }],
       })
       if (path) {
-        await loadInitialFile(path)
+        await loadFile(path)
         if (tileId) {
           ;(window as any).aynite.setConfig('tile-data', {
             tileId,
@@ -124,45 +156,59 @@ export function CanvasPage() {
     }
   }
 
-  const handleExport = async () => {
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      loadFile(currentFile.current)
+    }
+  }, [loadFile])
+
+  const handleSave = useCallback(async () => {
     const api = excRef.current
     if (!api) return
-
-    const elements = api.getSceneElements()
-    const appState = api.getAppState()
-
-    const exportData: CanvasData = {
-      type: 'excalidraw',
-      version: 2,
-      elements: elements as CanvasData['elements'],
-      appState: {
-        viewBackgroundColor: appState.viewBackgroundColor,
-        currentItemStrokeColor: appState.currentItemStrokeColor,
-        currentItemBackgroundColor: appState.currentItemBackgroundColor,
-        currentItemFillStyle: appState.currentItemFillStyle,
-        currentItemStrokeWidth: appState.currentItemStrokeWidth,
-        currentItemStrokeStyle: appState.currentItemStrokeStyle,
-        currentItemRoughness: appState.currentItemRoughness,
-        currentItemOpacity: appState.currentItemOpacity,
-        currentItemFontFamily: appState.currentItemFontFamily,
-        currentItemFontSize: appState.currentItemFontSize,
-        currentItemTextAlign: appState.currentItemTextAlign,
-        currentItemRoundness: appState.currentItemRoundness,
-        gridSize: appState.gridSize,
-      },
-    }
-
     try {
-      await navigator.clipboard.writeText(JSON.stringify(exportData, null, 2))
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      const path = await (window as any).aynite.saveFileDialog()
+      if (!path) return
+      const elements = api.getSceneElements()
+      const appState = api.getAppState()
+      const data = {
+        type: 'excalidraw',
+        version: 2,
+        elements,
+        appState: {
+          viewBackgroundColor: appState.viewBackgroundColor,
+          currentItemStrokeColor: appState.currentItemStrokeColor,
+          currentItemBackgroundColor: appState.currentItemBackgroundColor,
+          currentItemFillStyle: appState.currentItemFillStyle,
+          currentItemStrokeWidth: appState.currentItemStrokeWidth,
+          currentItemStrokeStyle: appState.currentItemStrokeStyle,
+          currentItemRoughness: appState.currentItemRoughness,
+          currentItemOpacity: appState.currentItemOpacity,
+          currentItemFontFamily: appState.currentItemFontFamily,
+          currentItemFontSize: appState.currentItemFontSize,
+          currentItemTextAlign: appState.currentItemTextAlign,
+          currentItemRoundness: appState.currentItemRoundness,
+          gridSize: appState.gridSize,
+        },
+      }
+      await (window as any).aynite.writeFile(
+        path,
+        JSON.stringify(data, null, 2),
+      )
     } catch (e) {
-      console.error('Failed to copy to clipboard:', e)
+      console.error('Failed to save canvas:', e)
     }
-  }
+  }, [])
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
+      <style>{`
+        .excalidraw .dropdown-menu-button,
+        .excalidraw .layer-ui__wrapper__top-right,
+        .excalidraw .App-bottom-bar,
+        .excalidraw .layer-ui__wrapper footer {
+          display: none !important;
+        }
+      `}</style>
       <ViewHeader
         icon={
           <svg
@@ -184,26 +230,35 @@ export function CanvasPage() {
       >
         <button
           type="button"
-          onClick={handleExport}
+          onClick={handleZoomIn}
           className={iconBtn()}
-          title="Export canvas as JSON"
+          title="Zoom In"
         >
-          {copied ? (
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-success"
-              aria-hidden="true"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          ) : (
-            <Clipboard size={14} />
-          )}
+          <ZoomIn size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          className={iconBtn()}
+          title="Zoom Out"
+        >
+          <ZoomOut size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          className={iconBtn()}
+          title="Save"
+        >
+          <Save size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className={iconBtn()}
+          title="Reload"
+        >
+          <RefreshCw size={14} />
         </button>
         <button
           type="button"
@@ -211,7 +266,7 @@ export function CanvasPage() {
           className={iconBtn()}
           title="Load canvas file"
         >
-          <Upload size={14} />
+          <FolderOpen size={14} />
         </button>
       </ViewHeader>
 
@@ -222,10 +277,23 @@ export function CanvasPage() {
             excRef.current = api
             const bg = getThemeBg()
             if (bg) api.updateScene({ appState: { viewBackgroundColor: bg } })
+            setExcalidrawReady(true)
           }}
           theme={isDark ? 'dark' : 'light'}
           autoFocus={false}
           detectScroll={false}
+          UIOptions={
+            {
+              canvasActions: {
+                loadScene: false,
+                saveToActiveFile: false,
+                export: false,
+                clearCanvas: false,
+                saveAsImage: false,
+                changeViewBackgroundColor: false,
+              },
+            } as any
+          }
         />
 
         {/* Error Overlay */}

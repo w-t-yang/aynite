@@ -1,8 +1,6 @@
 import {
   Background,
-  Controls,
   type Edge,
-  MiniMap,
   type Node,
   ReactFlow,
   ReactFlowProvider,
@@ -11,12 +9,14 @@ import {
 } from '@xyflow/react'
 import {
   AlertCircle,
+  FolderOpen,
   Maximize2,
-  Minimize2,
-  Upload,
+  RefreshCw,
   Workflow,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
@@ -115,6 +115,8 @@ function FlowCanvas() {
   } | null>(null)
   const [isMock, setIsMock] = useState(false)
 
+  const currentFile = useRef<string | null>(null)
+
   const tileId = useMemo(() => {
     const hash = window.location.hash
     const match = hash.match(/tileId=([^&]+)/)
@@ -141,6 +143,7 @@ function FlowCanvas() {
 
         setError(null)
         setData(json)
+        currentFile.current = path
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load flow file:', err)
@@ -207,6 +210,14 @@ function FlowCanvas() {
       })
     }
   }
+
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      loadInitialFile(currentFile.current)
+    } else {
+      loadMockData()
+    }
+  }, [loadInitialFile, loadMockData])
 
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
@@ -292,7 +303,7 @@ function FlowCanvas() {
           className={iconBtn()}
           title="Zoom In"
         >
-          <Maximize2 size={14} />
+          <ZoomIn size={14} />
         </button>
         <button
           type="button"
@@ -300,7 +311,7 @@ function FlowCanvas() {
           className={iconBtn()}
           title="Zoom Out"
         >
-          <Minimize2 size={14} />
+          <ZoomOut size={14} />
         </button>
         <button
           type="button"
@@ -312,11 +323,19 @@ function FlowCanvas() {
         </button>
         <button
           type="button"
+          onClick={handleRefresh}
+          className={iconBtn()}
+          title="Reload"
+        >
+          <RefreshCw size={14} />
+        </button>
+        <button
+          type="button"
           onClick={handleSelectFile}
           className={iconBtn()}
           title="Load flow file"
         >
-          <Upload size={14} />
+          <FolderOpen size={14} />
         </button>
       </ViewHeader>
 
@@ -340,23 +359,6 @@ function FlowCanvas() {
               color={isDark ? '#334155' : '#cbd5e1'}
               gap={20}
               size={1}
-            />
-            <Controls className="bg-popover border border-border rounded-lg shadow-lg" />
-            <MiniMap
-              style={{ background: isDark ? '#0f172a' : '#ffffff' }}
-              nodeColor={(n) =>
-                n.type === 'input'
-                  ? '#3b82f6'
-                  : n.type === 'output'
-                    ? '#10b981'
-                    : isDark
-                      ? '#334155'
-                      : '#e2e8f0'
-              }
-              maskColor={
-                isDark ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.7)'
-              }
-              className="border border-border rounded-lg shadow-lg"
             />
           </ReactFlow>
         ) : (

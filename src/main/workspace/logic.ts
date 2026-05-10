@@ -1,5 +1,5 @@
-import type { WorkspaceConfig } from '../../lib/constants/types'
 import { AppEvents } from '../../lib/constants/app'
+import type { WorkspaceConfig } from '../../lib/constants/types'
 import {
   getPathSep,
   getWorkspaceDataPath,
@@ -45,7 +45,10 @@ function defaultWorkspaceConfig(name: string): WorkspaceConfig {
 
 async function getWorkspaceData(name: string): Promise<WorkspaceConfig> {
   const workspacePath = getWorkspaceDataPath(name)
-  return await readJson<WorkspaceConfig>(workspacePath, defaultWorkspaceConfig(name))
+  return await readJson<WorkspaceConfig>(
+    workspacePath,
+    defaultWorkspaceConfig(name),
+  )
 }
 
 export async function getWorkspacesList(): Promise<WorkspacesConfig> {
