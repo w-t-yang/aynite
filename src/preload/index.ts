@@ -48,6 +48,8 @@ const aynite = {
   getWorkspacesList: () => ipcRenderer.invoke(WorkspaceChannels.LIST),
   createWorkspace: (name: string) =>
     ipcRenderer.invoke(WorkspaceChannels.CREATE, name),
+  deleteWorkspace: (name: string) =>
+    ipcRenderer.invoke(WorkspaceChannels.DELETE, name),
   switchWorkspace: (name: string) =>
     ipcRenderer.invoke(WorkspaceChannels.SWITCH, name),
   addWorkspaceFolder: () => ipcRenderer.invoke(WorkspaceChannels.ADD_FOLDER),
@@ -89,6 +91,10 @@ const aynite = {
   saveFileDialog: () => ipcRenderer.invoke(SystemChannels.DIALOG_SAVE_FILE),
   activateTile: (tileId: string) =>
     ipcRenderer.invoke(SystemChannels.TILE_ACTIVATE, tileId),
+  minimizeWindow: () => ipcRenderer.invoke(SystemChannels.WINDOW_MINIMIZE),
+  maximizeWindow: () => ipcRenderer.invoke(SystemChannels.WINDOW_MAXIMIZE),
+  closeWindow: () => ipcRenderer.invoke(SystemChannels.WINDOW_CLOSE),
+  openNewWindow: () => ipcRenderer.invoke(SystemChannels.WINDOW_NEW),
 
   // ── Theme operations ────────────────────────────────────────────────────
   getThemes: () => ipcRenderer.invoke(ThemeChannels.LIST),

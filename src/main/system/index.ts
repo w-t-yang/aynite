@@ -1,4 +1,12 @@
-import { app, clipboard, ipcMain, net, protocol, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  ipcMain,
+  net,
+  protocol,
+  shell,
+} from 'electron'
 import {
   exists,
   expandHome,
@@ -7,9 +15,7 @@ import {
   joinPaths,
 } from '../../lib/path'
 import {
-  closeWindow,
-  maximizeWindow,
-  minimizeWindow,
+  createNewWindow,
   sendAppEvent,
   showOpenDialog,
   showSaveDialog,
@@ -64,18 +70,33 @@ export function setupSystemIpc() {
     return filePath
   })
 
-  ipcMain.handle(SystemChannels.WINDOW_MINIMIZE, () => {
-    minimizeWindow()
+  ipcMain.handle(SystemChannels.WINDOW_MINIMIZE, (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
     return true
   })
 
-  ipcMain.handle(SystemChannels.WINDOW_MAXIMIZE, () => {
-    maximizeWindow()
+  ipcMain.handle(SystemChannels.WINDOW_MAXIMIZE, (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      if (win.isMaximized()) {
+        win.unmaximize()
+      } else {
+        win.maximize()
+      }
+    }
     return true
   })
 
-  ipcMain.handle(SystemChannels.WINDOW_CLOSE, () => {
-    closeWindow()
+  ipcMain.handle(SystemChannels.WINDOW_CLOSE, (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !win.isDestroyed()) {
+      win.close()
+    }
+    return true
+  })
+
+  ipcMain.handle(SystemChannels.WINDOW_NEW, () => {
+    createNewWindow()
     return true
   })
 

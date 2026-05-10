@@ -27,6 +27,7 @@ export const FileChannels = {
 export const WorkspaceChannels = {
   LIST: 'aynite:workspace-list',
   CREATE: 'aynite:workspace-create',
+  DELETE: 'aynite:workspace-delete',
   SWITCH: 'aynite:workspace-switch',
   ADD_FOLDER: 'aynite:workspace-add-folder',
   FOLDER_REMOVE: 'aynite:workspace-folder-remove',
@@ -75,6 +76,7 @@ export const SystemChannels = {
   WINDOW_MINIMIZE: 'aynite:window-minimize',
   WINDOW_MAXIMIZE: 'aynite:window-maximize',
   WINDOW_CLOSE: 'aynite:window-close',
+  WINDOW_NEW: 'aynite:window-new',
   CLIPBOARD_COPY: 'aynite:file-clipboard-copy',
   CLIPBOARD_PASTE: 'aynite:file-clipboard-paste',
   CLIPBOARD_WRITE_TEXT: 'aynite:clipboard-write-text',

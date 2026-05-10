@@ -12,11 +12,13 @@ export interface SelectionItem {
   disabled?: boolean
   className?: string
   type?: 'item' | 'divider' | 'danger' | string
+  submenu?: SelectionItem[]
 }
 
 export interface SelectionMenuProps {
   items: SelectionItem[]
   onSelect: (id: string) => void
+  onSelectSubmenu?: (parentId: string, childId: string) => void
   onClose?: () => void
   trigger?: React.ReactNode
   activeId?: string

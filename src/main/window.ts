@@ -17,6 +17,7 @@ import {
 import { getPreloadPath, getRendererHtmlPath } from '../lib/path'
 
 let mainWindow: BrowserWindow | null = null
+let appDirname: string = ''
 
 // Approval tracking
 const pendingApprovals = new Map<string, (approved: boolean) => void>()
@@ -26,6 +27,7 @@ const pendingApprovals = new Map<string, (approved: boolean) => void>()
  * This is the ONLY place where BrowserWindow should be instantiated.
  */
 export function createMainWindow(dirname: string): void {
+  appDirname = dirname
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -47,6 +49,21 @@ export function createMainWindow(dirname: string): void {
   }
 
   mainWindow.setMenuBarVisibility(false)
+
+  // Broadcast window state changes
+  mainWindow.on('maximize', () => {
+    sendAppEvent(AppEvents.WINDOW_MAXIMIZED_CHANGED, { isMaximized: true })
+  })
+  mainWindow.on('unmaximize', () => {
+    sendAppEvent(AppEvents.WINDOW_MAXIMIZED_CHANGED, { isMaximized: false })
+  })
+  // Track fullscreen via the webContents DOM event instead of typed event
+  mainWindow.webContents.on('enter-fullscreen' as any, () => {
+    sendAppEvent(AppEvents.FULLSCREEN_CHANGED, { isFullscreen: true })
+  })
+  mainWindow.webContents.on('leave-fullscreen' as any, () => {
+    sendAppEvent(AppEvents.FULLSCREEN_CHANGED, { isFullscreen: false })
+  })
 
   // Initialize listeners here to comply with "no listeners outside window.ts" rule
   setupUpdaterListeners()
@@ -107,6 +124,30 @@ export function maximizeWindow() {
 
 export function closeWindow() {
   getMainWindow().close()
+}
+
+export function createNewWindow() {
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    title: 'Aynite',
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    webPreferences: {
+      preload: getPreloadPath(appDirname),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegrationInSubFrames: true,
+    },
+  })
+
+  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+    win.loadURL(process.env.ELECTRON_RENDERER_URL)
+  } else {
+    win.loadFile(getRendererHtmlPath(appDirname))
+  }
+
+  win.setMenuBarVisibility(false)
 }
 
 // ─── AI Approval Helpers ───────────────────────────────────────────────────

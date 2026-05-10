@@ -1,5 +1,5 @@
 import { AppEvents } from '../../lib/constants/app'
-import type { WorkspaceConfig } from '../../lib/constants/types'
+import type { LayoutConfig, WorkspaceConfig } from '../../lib/constants/types'
 import {
   getPathSep,
   getWorkspaceDataPath,
@@ -31,11 +31,25 @@ async function saveWorkspacesConfig(config: WorkspacesConfig): Promise<void> {
   await writeJson(configPath, config)
 }
 
+function defaultLayout(name: string): LayoutConfig {
+  const id = name.toLowerCase().replace(/\s+/g, '-')
+  return {
+    id,
+    name: 'Default',
+    layout: {
+      id: `${id}-leaf`,
+      type: 'leaf',
+      size: 100,
+    },
+  }
+}
+
 function defaultWorkspaceConfig(name: string): WorkspaceConfig {
+  const layout = defaultLayout(name)
   return {
     id: name,
-    layouts: [],
-    activeLayoutId: '',
+    layouts: [layout],
+    activeLayoutId: layout.id,
     activeAgentId: 'aynite',
     activeSessionId: null,
     folders: [],
@@ -80,6 +94,19 @@ export async function switchWorkspace(name: string): Promise<WorkspacesConfig> {
   const wsConfig = await getWorkspacesConfig()
   if (!wsConfig.list.includes(name)) throw new Error('Workspace not found')
   wsConfig.active = name
+  await saveWorkspacesConfig(wsConfig)
+  return wsConfig
+}
+
+export async function deleteWorkspace(name: string): Promise<WorkspacesConfig> {
+  const wsConfig = await getWorkspacesConfig()
+  if (wsConfig.list.length <= 1) {
+    throw new Error('Cannot delete the last workspace')
+  }
+  wsConfig.list = wsConfig.list.filter((w) => w !== name)
+  if (wsConfig.active === name) {
+    wsConfig.active = wsConfig.list[0]
+  }
   await saveWorkspacesConfig(wsConfig)
   return wsConfig
 }

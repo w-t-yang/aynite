@@ -39,6 +39,8 @@ interface AppContextType {
   loadData: () => void
   switchWorkspace: (id: string) => void
   addWorkspace: (name: string) => void
+  deleteWorkspace: (name: string) => Promise<void>
+  openNewWindow: () => void
   switchLayout: (id: string) => void
   addLayout: (name: string, layout: LayoutNode) => void
   removeLayout: (id: string) => void
@@ -213,6 +215,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     },
     [loadData],
   )
+
+  const deleteWorkspace = useCallback(
+    async (name: string) => {
+      if (!window.aynite?.deleteWorkspace) return
+      await window.aynite.deleteWorkspace(name)
+      await loadData()
+    },
+    [loadData],
+  )
+
+  const openNewWindow = useCallback(() => {
+    window.aynite?.openNewWindow?.()
+  }, [])
 
   // 5. Layout & Tile Management
   const switchLayout = useCallback((id: string) => {
@@ -462,6 +477,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         loadData,
         switchWorkspace,
         addWorkspace,
+        deleteWorkspace,
+        openNewWindow,
         switchLayout,
         updateLayout,
         updateTileView,
@@ -496,6 +513,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     updateStatus,
     updateInfo,
     updateProgress,
+    openNewWindow,
+    deleteWorkspace,
   ])
 
   return (
@@ -509,6 +528,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         loadData,
         switchWorkspace,
         addWorkspace,
+        deleteWorkspace,
+        openNewWindow,
         switchLayout,
         addLayout,
         removeLayout,

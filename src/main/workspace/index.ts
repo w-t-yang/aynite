@@ -7,6 +7,7 @@ import { sendAppEvent, sendAppOperation, showOpenDialog } from '../window'
 import {
   addWorkspaceFolder,
   createWorkspace,
+  deleteWorkspace,
   getWorkspaceFolders,
   getWorkspaceState,
   getWorkspacesList,
@@ -26,6 +27,12 @@ export function setupWorkspaceIpc(): void {
 
   ipcMain.handle(WorkspaceChannels.CREATE, async (_event, name: string) => {
     return await createWorkspace(name)
+  })
+
+  ipcMain.handle(WorkspaceChannels.DELETE, async (_event, name: string) => {
+    const result = await deleteWorkspace(name)
+    sendAppEvent(AppEvents.WORKSPACE_CHANGED, { deleted: name })
+    return result
   })
 
   ipcMain.handle(WorkspaceChannels.SWITCH, async (_event, name: string) => {
@@ -140,6 +147,7 @@ export function setupWorkspaceIpc(): void {
 export {
   addWorkspaceFolder,
   createWorkspace,
+  deleteWorkspace,
   getWorkspaceFolders,
   getWorkspaceState,
   getWorkspacesList,

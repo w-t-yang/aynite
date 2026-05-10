@@ -15,6 +15,7 @@ import { cn } from '../lib/utils'
 export function SelectionMenu({
   items,
   onSelect,
+  onSelectSubmenu,
   onClose,
   trigger,
   activeId,
@@ -231,6 +232,7 @@ export function SelectionMenu({
               items={filteredItems}
               selectedIndex={selectedIndex}
               onSelect={(item: SelectionItem) => handleSelect(item.id)}
+              onSelectSubmenu={onSelectSubmenu}
               size={size}
               divided={divided}
               className="max-h-64 scrollbar-thin"

@@ -57,6 +57,10 @@ export const AppEvents = {
 
   // Tile
   TILE_ACTIVATED: 'tile-activated',
+
+  // Window state
+  WINDOW_MAXIMIZED_CHANGED: 'window-maximized-changed',
+  FULLSCREEN_CHANGED: 'fullscreen-changed',
 } as const
 
 export const ViewOperation = {

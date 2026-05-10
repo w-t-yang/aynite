@@ -1,14 +1,19 @@
 import {
-  LayoutGrid,
+  ExternalLink,
+  Minus,
   Moon,
   MoreHorizontal,
+  Palette,
   Plus,
   Settings,
+  Square,
   Sun,
   Trash2,
+  X,
 } from 'lucide-react'
 import type React from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { AppEvents } from '../../../lib/constants/app'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import { Button } from '../../shared/basic/Button'
 import { FormModal } from '../../shared/featured/FormModal'
@@ -17,12 +22,16 @@ import { cn } from '../../shared/lib/utils'
 import { useApp } from '../AppContext'
 import { LayoutVibeModal } from './LayoutVibeModal'
 
+const isMac = window.aynite?.platform === 'darwin'
+
 const TitleBar: React.FC = () => {
   const {
     workspaceConfig,
     workspaces,
     switchWorkspace,
     addWorkspace,
+    deleteWorkspace,
+    openNewWindow,
     switchLayout,
     addLayout,
     removeLayout,
@@ -35,6 +44,23 @@ const TitleBar: React.FC = () => {
   } = useApp()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
   const [showVibeModal, setShowVibeModal] = useState(false)
+  const [isMaximized, setIsMaximized] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // Listen for window state changes
+  useEffect(() => {
+    if (!window.aynite?.onAppEvent) return
+    const unsub = window.aynite.onAppEvent(
+      (event: { type: string; data: unknown }) => {
+        if (event.type === AppEvents.WINDOW_MAXIMIZED_CHANGED) {
+          setIsMaximized((event.data as any)?.isMaximized ?? false)
+        } else if (event.type === AppEvents.FULLSCREEN_CHANGED) {
+          setIsFullscreen((event.data as any)?.isFullscreen ?? false)
+        }
+      },
+    )
+    return unsub
+  }, [])
 
   const workspaceOptions = useMemo(
     () =>
@@ -56,15 +82,41 @@ const TitleBar: React.FC = () => {
             style={{ background: t.colors.primary }}
           />
         ),
+        isActive: t.id === activeTheme?.id,
       })),
-    [themes],
+    [themes, activeTheme],
   )
 
   if (!workspaceConfig) return null
 
+  const handleWindowAction = (action: 'minimize' | 'maximize' | 'close') => {
+    switch (action) {
+      case 'minimize':
+        window.aynite?.minimizeWindow?.()
+        break
+      case 'maximize':
+        window.aynite?.maximizeWindow?.()
+        break
+      case 'close':
+        window.aynite?.closeWindow?.()
+        break
+    }
+  }
+
+  const handleDeleteWorkspace = async () => {
+    if (workspaces.length <= 1) return
+    await deleteWorkspace(workspaceConfig.id)
+  }
+
   return (
     <>
-      <div className="h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag px-2 relative z-layout">
+      <div
+        className={cn(
+          'h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag relative z-layout',
+          isMac && !isFullscreen ? 'pl-[78px]' : 'px-2',
+          !isMac && 'px-2',
+        )}
+      >
         {/* Left: Layout switcher (dynamic from workspace config) */}
         <div className="flex items-center gap-1.5 no-drag group/layouts relative px-1">
           {workspaceConfig.layouts.map((layout) => {
@@ -183,26 +235,8 @@ const TitleBar: React.FC = () => {
           />
         </div>
 
-        {/* Right: Theme switcher + branding */}
-        <div className="flex items-center gap-1 no-drag">
-          <SelectionMenu
-            activeId={activeTheme?.id}
-            items={themeOptions}
-            onSelect={setTheme}
-            divided={false}
-            align="right"
-            trigger={
-              <Button variant="ghost" size="icon" title="Change Theme">
-                {activeTheme?.type === 'light' ? (
-                  <Sun size={16} />
-                ) : (
-                  <Moon size={16} />
-                )}
-              </Button>
-            }
-            title="Themes"
-          />
-
+        {/* Right: App options + Window controls */}
+        <div className="flex items-center gap-1 no-drag shrink-0">
           <SelectionMenu
             items={[
               {
@@ -210,26 +244,91 @@ const TitleBar: React.FC = () => {
                 label: 'Settings',
                 icon: <Settings size={14} />,
               },
-              { id: 'divider-settings', type: 'divider' },
+              { id: 'divider-0', type: 'divider' },
+              {
+                id: 'new-window',
+                label: 'New Window',
+                icon: <ExternalLink size={14} />,
+              },
+              { id: 'divider-1', type: 'divider' },
+              {
+                id: 'theme',
+                label: 'Theme',
+                icon:
+                  activeTheme?.type === 'light' ? (
+                    <Sun size={14} />
+                  ) : (
+                    <Moon size={14} />
+                  ),
+                submenu: themeOptions,
+              },
+              { id: 'divider-2', type: 'divider' },
               {
                 id: 'toggle-controls',
                 label: 'Show Tile Controls',
-                icon: <LayoutGrid size={14} />,
+                icon: <Palette size={14} />,
                 isActive: showTileControls,
+              },
+              { id: 'divider-3', type: 'divider' },
+              {
+                id: 'delete-workspace',
+                label: 'Delete Current Workspace',
+                icon: <Trash2 size={14} />,
+                type: 'danger' as any,
+                disabled: workspaces.length <= 1,
               },
             ]}
             onSelect={(id: string) => {
               if (id === 'settings') setShowSettings(true)
+              else if (id === 'new-window') openNewWindow()
               else if (id === 'toggle-controls')
                 setShowTileControls(!showTileControls)
+              else if (id === 'delete-workspace') handleDeleteWorkspace()
+            }}
+            onSelectSubmenu={(parentId: string, childId: string) => {
+              if (parentId === 'theme') setTheme(childId)
             }}
             align="right"
             trigger={
               <Button variant="ghost" size="icon" title="App Options">
-                <LayoutGrid size={16} />
+                <Palette size={16} />
               </Button>
             }
           />
+
+          {/* Window controls (Linux/Windows only) */}
+          {!isMac && (
+            <>
+              <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
+
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => handleWindowAction('minimize')}
+                  className="w-10 h-7 flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors rounded-md"
+                  title="Minimize"
+                >
+                  <Minus size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleWindowAction('maximize')}
+                  className="w-10 h-7 flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors rounded-md"
+                  title={isMaximized ? 'Restore' : 'Maximize'}
+                >
+                  <Square size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleWindowAction('close')}
+                  className="w-10 h-7 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground text-muted-foreground transition-colors rounded-md"
+                  title="Close"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

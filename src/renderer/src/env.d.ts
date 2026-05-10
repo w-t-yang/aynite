@@ -87,6 +87,7 @@ interface AyniteWindow {
   // Workspace
   getWorkspacesList: () => Promise<WorkspacesConfig>
   createWorkspace: (name: string) => Promise<WorkspacesConfig>
+  deleteWorkspace: (name: string) => Promise<WorkspacesConfig>
   switchWorkspace: (name: string) => Promise<WorkspacesConfig>
   addWorkspaceFolder: () => Promise<string | null>
   removeWorkspaceFolder: (path: string) => Promise<boolean>
@@ -128,6 +129,10 @@ interface AyniteWindow {
   selectFolder: () => Promise<string[] | null>
   selectFile: (options?: any) => Promise<string[] | null>
   activateTile: (tileId: string) => Promise<boolean>
+  minimizeWindow: () => Promise<boolean>
+  maximizeWindow: () => Promise<boolean>
+  closeWindow: () => Promise<boolean>
+  openNewWindow: () => Promise<boolean>
 
   onAppOperation: (
     callback: (operation: string, data?: unknown) => void,
