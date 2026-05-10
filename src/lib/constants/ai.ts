@@ -250,7 +250,7 @@ export const TOOL_METADATA: Record<
   initialize_memory: {
     name: 'Initialize Memory',
     description:
-      'Scan the codebase and generate an initial memory.md file in the artifacts directory. This file stores long-term project knowledge (tech stack, architecture, naming conventions).',
+      'Scan the project and generate an initial memory.md file in the artifacts directory. This file stores long-term knowledge (overview, structure, rules, and key context) that persists across AI sessions.',
     inputSchema: {
       type: 'object',
       properties: {},

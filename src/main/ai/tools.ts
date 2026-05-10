@@ -329,21 +329,19 @@ export function createTools(context: ToolContext) {
         const content = [
           '# Project Memory',
           '',
-          '## 🛠️ Tech Stack',
-          pkgInfo,
+          '## 🎯 Overview',
+          readmeInfo || 'No summary available yet.',
           '',
-          '## 📂 Project Structure (Summary)',
+          '## 📂 Structure',
           `\`\`\`\n${tree}\n\`\`\``,
           '',
-          '## 📖 README Snippet',
-          readmeInfo || 'No README found.',
+          '## 📜 Rules & Conventions',
+          pkgInfo !== 'Unknown' ? `- Tech Stack: ${pkgInfo}` : '',
+          '- (Record styles, patterns, or project rules here)',
           '',
-          '## 🏗️ Architectural Decisions & Patterns',
-          '- (No patterns recorded yet)',
-          '',
-          '## 🧪 Naming Conventions',
-          '- (No conventions recorded yet)',
-        ].join('\n')
+          '## 💡 Key Decisions & Context',
+          '- (Record important architectural or narrative decisions here)',
+        ].filter(Boolean).join('\n')
 
         await writeText(memoryPath, content)
         return `Project memory initialized at ${memoryPath}. You should now update it with specific project secrets or conventions.`
