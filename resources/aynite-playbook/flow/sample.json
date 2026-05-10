@@ -1,0 +1,49 @@
+{
+  "nodes": [
+    {
+      "id": "input-1",
+      "type": "input",
+      "position": { "x": 50, "y": 100 },
+      "data": { "label": "User Request" }
+    },
+    {
+      "id": "process-1",
+      "type": "default",
+      "position": { "x": 300, "y": 50 },
+      "data": { "label": "Validate Input" }
+    },
+    {
+      "id": "process-2",
+      "type": "default",
+      "position": { "x": 300, "y": 200 },
+      "data": { "label": "Process Data" }
+    },
+    {
+      "id": "decision-1",
+      "type": "default",
+      "position": { "x": 550, "y": 125 },
+      "data": { "label": "Quality Check?" }
+    },
+    {
+      "id": "output-1",
+      "type": "output",
+      "position": { "x": 800, "y": 50 },
+      "data": { "label": "Approved" }
+    },
+    {
+      "id": "output-2",
+      "type": "output",
+      "position": { "x": 800, "y": 200 },
+      "data": { "label": "Rejected" }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "input-1", "target": "process-1" },
+    { "id": "e2", "source": "input-1", "target": "process-2" },
+    { "id": "e3", "source": "process-1", "target": "decision-1" },
+    { "id": "e4", "source": "process-2", "target": "decision-1" },
+    { "id": "e5", "source": "decision-1", "target": "output-1", "label": "Pass" },
+    { "id": "e6", "source": "decision-1", "target": "output-2", "label": "Fail" }
+  ],
+  "viewport": { "x": 0, "y": 0, "zoom": 1 }
+}

@@ -70,7 +70,7 @@ const CustomTooltip = ({
   active,
   payload,
   label,
-  theme,
+  _theme,
   upColor,
   downColor,
 }: any) => {

@@ -1,0 +1,452 @@
+import {
+  Background,
+  Controls,
+  type Edge,
+  MiniMap,
+  type Node,
+  ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
+  type Viewport,
+} from '@xyflow/react'
+import {
+  AlertCircle,
+  Maximize2,
+  Minimize2,
+  Upload,
+  Workflow,
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import '@xyflow/react/dist/style.css'
+import { useView } from '../ViewContext'
+import type { FlowData } from './types'
+
+const MOCK_DATA: FlowData = {
+  nodes: [
+    {
+      id: 'input-1',
+      type: 'input',
+      position: { x: 50, y: 100 },
+      data: { label: 'User Request' },
+    },
+    {
+      id: 'process-1',
+      type: 'default',
+      position: { x: 300, y: 50 },
+      data: { label: 'Validate Input' },
+    },
+    {
+      id: 'process-2',
+      type: 'default',
+      position: { x: 300, y: 200 },
+      data: { label: 'Process Data' },
+    },
+    {
+      id: 'decision-1',
+      type: 'default',
+      position: { x: 550, y: 125 },
+      data: { label: 'Check Quality?' },
+    },
+    {
+      id: 'output-1',
+      type: 'output',
+      position: { x: 800, y: 50 },
+      data: { label: 'Approved' },
+    },
+    {
+      id: 'output-2',
+      type: 'output',
+      position: { x: 800, y: 200 },
+      data: { label: 'Rejected' },
+    },
+  ],
+  edges: [
+    { id: 'e-input-validate', source: 'input-1', target: 'process-1' },
+    { id: 'e-input-process', source: 'input-1', target: 'process-2' },
+    {
+      id: 'e-validate-decision',
+      source: 'process-1',
+      target: 'decision-1',
+    },
+    { id: 'e-process-decision', source: 'process-2', target: 'decision-1' },
+    {
+      id: 'e-decision-approved',
+      source: 'decision-1',
+      target: 'output-1',
+      label: 'Pass',
+    },
+    {
+      id: 'e-decision-rejected',
+      source: 'decision-1',
+      target: 'output-2',
+      label: 'Fail',
+    },
+  ],
+}
+
+const EXPECTED_FORMAT = `{
+  "nodes": [
+    {
+      "id": "node-1",
+      "type": "input | default | output",
+      "position": { "x": 0, "y": 0 },
+      "data": { "label": "Node Label" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-1-2",
+      "source": "node-1",
+      "target": "node-2",
+      "label": "optional label"
+    }
+  ],
+  "viewport": { "x": 0, "y": 0, "zoom": 1 }
+}`
+
+function FlowCanvas() {
+  const { themes, activeThemeId } = useView()
+  const reactFlow = useReactFlow()
+  const [data, setData] = useState<FlowData | null>(null)
+  const [error, setError] = useState<{
+    message: string
+    expected: string
+  } | null>(null)
+  const [isMock, setIsMock] = useState(false)
+
+  const tileId = useMemo(() => {
+    const hash = window.location.hash
+    const match = hash.match(/tileId=([^&]+)/)
+    return match ? match[1] : null
+  }, [])
+
+  const currentTheme = themes.find((t) => t.id === activeThemeId)
+  const isDark = currentTheme?.type === 'dark'
+
+  const loadMockData = useCallback(() => {
+    setData(MOCK_DATA)
+    setIsMock(true)
+  }, [])
+
+  const loadInitialFile = useCallback(
+    async (path: string) => {
+      try {
+        const content = await (window as any).aynite.readFile(path)
+        const json = JSON.parse(content)
+
+        if (!json.nodes || !Array.isArray(json.nodes)) {
+          throw new Error('Invalid flow format: missing nodes array')
+        }
+
+        setError(null)
+        setData(json)
+        setIsMock(false)
+      } catch (err) {
+        console.error('Failed to load flow file:', err)
+        setError({
+          message: `Failed to load file. File might be missing or invalid.`,
+          expected: EXPECTED_FORMAT,
+        })
+        loadMockData()
+      }
+    },
+    [loadMockData],
+  )
+
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    const params = new URLSearchParams(hash)
+    let initialFile = params.get('file')
+    const dataParam = params.get('data')
+
+    if (dataParam) {
+      try {
+        const tileData = JSON.parse(decodeURIComponent(dataParam))
+        if (tileData.file) initialFile = tileData.file
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (initialFile) {
+      loadInitialFile(initialFile)
+    } else {
+      loadMockData()
+    }
+  }, [loadInitialFile, loadMockData])
+
+  // Apply viewport when data changes
+  useEffect(() => {
+    if (data?.viewport) {
+      setTimeout(() => {
+        reactFlow.setViewport(data.viewport as Viewport, { duration: 200 })
+      }, 50)
+    }
+  }, [data, reactFlow])
+
+  const handleSelectFile = async () => {
+    try {
+      const path = await (window as any).aynite.selectFile({
+        title: 'Select Flow JSON',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      })
+      if (path) {
+        await loadInitialFile(path)
+        if (tileId) {
+          ;(window as any).aynite.setConfig('tile-data', {
+            tileId,
+            data: { file: path },
+          })
+        }
+      }
+    } catch {
+      setError({
+        message: 'Failed to select or parse file.',
+        expected: EXPECTED_FORMAT,
+      })
+    }
+  }
+
+  const [nodes, setNodes] = useState<Node[]>([])
+  const [edges, setEdges] = useState<Edge[]>([])
+
+  useEffect(() => {
+    if (!data) {
+      setNodes([])
+      setEdges([])
+      return
+    }
+
+    const defaultNodeStyle = (type?: string): React.CSSProperties => {
+      if (type === 'input')
+        return {
+          background: isDark ? '#1e40af' : '#3b82f6',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 8,
+          padding: '8px 16px',
+          fontWeight: 700,
+          fontSize: 12,
+        }
+      if (type === 'output')
+        return {
+          background: isDark ? '#065f46' : '#10b981',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 8,
+          padding: '8px 16px',
+          fontWeight: 700,
+          fontSize: 12,
+        }
+      return {
+        background: isDark ? '#1e293b' : '#f8fafc',
+        border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+        borderRadius: 8,
+        padding: '8px 16px',
+        fontSize: 12,
+        fontWeight: 600,
+      }
+    }
+
+    setNodes(
+      data.nodes.map((n) => ({
+        id: n.id,
+        type:
+          n.type === 'input'
+            ? 'input'
+            : n.type === 'output'
+              ? 'output'
+              : 'default',
+        position: n.position,
+        data: { label: (n.data?.label as string) || n.id },
+        style: defaultNodeStyle(n.type),
+      })),
+    )
+
+    setEdges(
+      data.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        type: 'smoothstep',
+        label: e.label,
+        animated: true,
+        style: { stroke: isDark ? '#475569' : '#94a3b8', strokeWidth: 2 },
+        labelStyle: { fontSize: 10, fontWeight: 600 },
+        labelBgStyle: { fill: isDark ? '#1e293b' : '#f8fafc' },
+        labelBgPadding: [4, 2] as [number, number],
+        labelBgBorderRadius: 4,
+      })),
+    )
+  }, [data, isDark])
+
+  return (
+    <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
+      {/* Toolbar */}
+      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-primary">
+            <Workflow size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              Flow Editor
+            </span>
+          </div>
+          <div className="h-4 w-px bg-border" />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => reactFlow.zoomIn()}
+              className="p-1 hover:bg-muted rounded"
+              title="Zoom In"
+            >
+              <Maximize2 size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => reactFlow.zoomOut()}
+              className="p-1 hover:bg-muted rounded"
+              title="Zoom Out"
+            >
+              <Minimize2 size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => reactFlow.fitView({ duration: 200 })}
+              className="p-1 hover:bg-muted rounded"
+              title="Fit View"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
+          >
+            <Upload size={14} />
+            <span className="text-[10px] font-bold uppercase">Load Flow</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Canvas */}
+      <section className="flex-1 relative">
+        {isMock && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-10">
+            <span className="text-[12vw] font-black rotate-12">FLOW MOCK</span>
+          </div>
+        )}
+
+        {data ? (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            fitView
+            attributionPosition="bottom-right"
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background
+              color={isDark ? '#334155' : '#cbd5e1'}
+              gap={20}
+              size={1}
+            />
+            <Controls className="bg-popover border border-border rounded-lg shadow-lg" />
+            <MiniMap
+              style={{ background: isDark ? '#0f172a' : '#ffffff' }}
+              nodeColor={(n) =>
+                n.type === 'input'
+                  ? '#3b82f6'
+                  : n.type === 'output'
+                    ? '#10b981'
+                    : isDark
+                      ? '#334155'
+                      : '#e2e8f0'
+              }
+              maskColor={
+                isDark ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.7)'
+              }
+              className="border border-border rounded-lg shadow-lg"
+            />
+          </ReactFlow>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <div className="text-center">
+              <Workflow size={48} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-medium opacity-40">
+                Load a flow JSON file to visualize
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Stats overlay */}
+        {data && (
+          <div className="absolute bottom-4 left-4 bg-popover/80 backdrop-blur-md border border-border p-2.5 rounded-xl shadow-2xl pointer-events-none z-20">
+            <div className="flex gap-4 text-[10px]">
+              <div>
+                <span className="text-primary font-bold">
+                  {data.nodes.length}
+                </span>{' '}
+                <span className="text-muted-foreground">Nodes</span>
+              </div>
+              <div>
+                <span className="text-primary font-bold">
+                  {data.edges.length}
+                </span>{' '}
+                <span className="text-muted-foreground">Edges</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Overlay */}
+        {error && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
+            <div className="max-w-md w-full bg-popover border border-destructive/20 rounded-xl shadow-2xl p-6">
+              <div className="flex items-center gap-3 text-destructive mb-4">
+                <AlertCircle size={24} />
+                <h3 className="font-bold">Flow Load Error</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                {error.message}
+              </p>
+              <div className="bg-muted p-3 rounded font-mono text-[10px] mb-4 overflow-auto max-h-40 whitespace-pre">
+                {error.expected}
+              </div>
+              <button
+                type="button"
+                onClick={handleSelectFile}
+                className="w-full bg-primary text-primary-foreground py-2 rounded font-bold text-[11px]"
+              >
+                LOAD DIFFERENT FILE
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+export function FlowPage() {
+  return (
+    <ReactFlowProvider>
+      <FlowCanvas />
+    </ReactFlowProvider>
+  )
+}

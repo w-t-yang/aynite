@@ -58,6 +58,26 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/mindmap/index.html',
         ),
+        'views/diff/index': resolve(
+          __dirname,
+          'src/renderer/views/diff/index.html',
+        ),
+        'views/flow/index': resolve(
+          __dirname,
+          'src/renderer/views/flow/index.html',
+        ),
+        'views/theme-studio/index': resolve(
+          __dirname,
+          'src/renderer/views/theme-studio/index.html',
+        ),
+        'views/diagram/index': resolve(
+          __dirname,
+          'src/renderer/views/diagram/index.html',
+        ),
+        'views/canvas/index': resolve(
+          __dirname,
+          'src/renderer/views/canvas/index.html',
+        ),
       },
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',

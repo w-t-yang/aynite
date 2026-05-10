@@ -1,0 +1,22 @@
+{
+  "id": "aurora-night",
+  "name": "Aurora Night",
+  "type": "dark",
+  "colors": {
+    "background": "#0f1729",
+    "foreground": "#e2e8f0",
+    "primary": "#38bdf8",
+    "primary-foreground": "#0f1729",
+    "muted": "#1e293b",
+    "muted-foreground": "#94a3b8",
+    "border": "#334155",
+    "card": "#1a2332",
+    "card-foreground": "#e2e8f0",
+    "info": "#60a5fa",
+    "success": "#34d399",
+    "warning": "#fbbf24",
+    "destructive": "#f87171",
+    "popover": "#1a2332",
+    "popover-foreground": "#e2e8f0"
+  }
+}
