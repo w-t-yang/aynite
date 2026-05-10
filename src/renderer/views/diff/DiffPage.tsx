@@ -1,5 +1,6 @@
 import { diffLines } from 'diff'
 import { AlertCircle, Columns2, FileText, Upload } from 'lucide-react'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useView } from '../ViewContext'
 import type { DiffData } from './types'
@@ -229,39 +230,24 @@ export function DiffPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      {/* Toolbar */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-primary">
-            <Columns2 size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              Diff Viewer
-            </span>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            <Upload size={14} />
-            <span className="text-[10px] font-bold uppercase">Load Diff</span>
-          </button>
-        </div>
-
+      <ViewHeader icon={<Columns2 size={16} />} title="Diff Viewer">
         {data && (
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-green-500/60" />
-              <span>{data.rightLabel || 'Added'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-red-500/60" />
-              <span>{data.leftLabel || 'Removed'}</span>
-            </div>
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mr-1">
+            <span className="w-2 h-2 rounded-full bg-green-500/60" />
+            <span>{data.rightLabel || 'Added'}</span>
+            <span className="w-2 h-2 rounded-full bg-red-500/60 ml-1" />
+            <span>{data.leftLabel || 'Removed'}</span>
           </div>
         )}
-      </div>
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load diff file"
+        >
+          <Upload size={14} />
+        </button>
+      </ViewHeader>
 
       {/* Diff Content */}
       <section className="flex-1 flex overflow-hidden relative bg-background">

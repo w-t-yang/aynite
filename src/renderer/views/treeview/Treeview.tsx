@@ -1,4 +1,4 @@
-import { Copy, Edit2, FilePlus, FolderPlus, Trash2, X } from 'lucide-react'
+import { Copy, Edit2, FilePlus, FolderPlus, FolderTree, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MoveHandler, Tree, type TreeApi } from 'react-arborist'
 import { Button } from '../../shared/basic/Button'
@@ -14,6 +14,7 @@ import {
 } from './components'
 import { expandPathIteratively } from './tree-expand'
 import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
+import { ViewHeader } from '../../shared/basic/ViewHeader'
 
 export function Treeview() {
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
@@ -483,9 +484,10 @@ export function Treeview() {
 
   return (
     <div
-      className="sidebar-container w-full h-full bg-card flex flex-col shrink-0 overflow-hidden outline-none px-2 py-3"
+      className="sidebar-container w-full h-full bg-card flex flex-col shrink-0 overflow-hidden outline-none"
       tabIndex={-1}
     >
+      <ViewHeader icon={<FolderTree size={16} />} title="File Explorer" />
       <section
         ref={containerRef}
         aria-label="File Tree Container"

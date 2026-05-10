@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@excalidraw/excalidraw/index.css'
 import { useView } from '../ViewContext'
 import type { CanvasData } from './types'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const EXPECTED_FORMAT = `{
   "type": "excalidraw",
@@ -137,68 +138,30 @@ export function CanvasPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      {/* Toolbar */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-primary"
-              aria-hidden="true"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="7.5" cy="7.5" r="1.5" />
-              <path d="m3 16 4.5-4.5a1 1 0 0 1 1.4 0l3.6 3.6" />
-              <path d="m14 12 1.5-1.5a1 1 0 0 1 1.4 0L21 16" />
+      <ViewHeader
+        icon={
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="7.5" cy="7.5" r="1.5" />
+            <path d="m3 16 4.5-4.5a1 1 0 0 1 1.4 0l3.6 3.6" />
+            <path d="m14 12 1.5-1.5a1 1 0 0 1 1.4 0L21 16" />
+          </svg>
+        }
+        title="Canvas"
+      >
+        <button type="button" onClick={handleExport} className={iconBtn()} title="Export canvas as JSON">
+          {copied ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-              Canvas
-            </span>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            <Upload size={14} />
-            <span className="text-[10px] font-bold uppercase">Load Canvas</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExport}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            {copied ? (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-success"
-                aria-hidden="true"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <Clipboard size={14} />
-            )}
-            <span className="text-[10px] font-bold uppercase">
-              {copied ? 'Copied' : 'Export'}
-            </span>
-          </button>
-        </div>
-      </div>
+          ) : (
+            <Clipboard size={14} />
+          )}
+        </button>
+        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load canvas file">
+          <Upload size={14} />
+        </button>
+      </ViewHeader>
 
       {/* Canvas Area */}
       <section className="flex-1 relative bg-background">

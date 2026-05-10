@@ -10,6 +10,7 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useView } from '../ViewContext'
 import type { GraphData, GraphNode } from './types'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const COLORS = [
   'var(--info)',
@@ -326,54 +327,20 @@ export function GraphPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      <div className="h-10 border-b border-border flex items-center px-4 gap-4 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-primary">
-            <Share2 size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              Graph Explorer
-            </span>
-          </div>
-          <div className="h-4 w-px bg-border"></div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setZoom((z) => z * 1.2)}
-              className="p-1 hover:bg-muted rounded"
-            >
-              <Maximize2 size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoom((z) => z / 1.2)}
-              className="p-1 hover:bg-muted rounded"
-            >
-              <Minimize2 size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setZoom(1)
-                setOffset({ x: 0, y: 0 })
-              }}
-              className="p-1 hover:bg-muted rounded"
-            >
-              <RefreshCw size={12} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            <Upload size={14} />{' '}
-            <span className="text-[10px] font-bold uppercase">Load Graph</span>
-          </button>
-        </div>
-      </div>
+      <ViewHeader icon={<Share2 size={16} />} title="Graph Explorer">
+        <button type="button" onClick={() => setZoom((z) => z * 1.2)} className={iconBtn()} title="Zoom In">
+          <Maximize2 size={14} />
+        </button>
+        <button type="button" onClick={() => setZoom((z) => z / 1.2)} className={iconBtn()} title="Zoom Out">
+          <Minimize2 size={14} />
+        </button>
+        <button type="button" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }) }} className={iconBtn()} title="Reset Zoom">
+          <RefreshCw size={14} />
+        </button>
+        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load graph file">
+          <Upload size={14} />
+        </button>
+      </ViewHeader>
 
       <section
         ref={containerRef}

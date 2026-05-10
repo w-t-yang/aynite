@@ -33,6 +33,7 @@ import {
 } from 'recharts'
 import { useView } from '../ViewContext'
 import { type ChartData, ChartType } from './types'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const COLORS = [
   'var(--primary)',
@@ -399,65 +400,51 @@ export function DataChartPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      {/* Toolbar */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-4 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              {chartIcons[chartType]} {chartType.toUpperCase()}{' '}
-              <ChevronDown size={12} />
-            </button>
+      <ViewHeader icon={<BarChart3 size={16} />} title="Chart">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            {chartIcons[chartType]} {chartType.toUpperCase()}{' '}
+            <ChevronDown size={12} />
+          </button>
 
-            {isTypeMenuOpen && (
-              <>
-                <button
-                  type="button"
-                  className="fixed inset-0 z-10 w-full h-full bg-transparent border-none cursor-default"
-                  onClick={() => setIsTypeMenuOpen(false)}
-                  aria-label="Close menu"
-                />
-                <div className="absolute top-full left-0 mt-1 w-40 bg-popover border border-border rounded-lg shadow-xl z-20 overflow-hidden py-1 backdrop-blur-md">
-                  {Object.values(ChartType).map((type) => (
-                    <button
-                      type="button"
-                      key={type}
-                      onClick={() => {
-                        setChartType(type)
-                        setIsTypeMenuOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors ${
-                        chartType === type
-                          ? 'text-primary'
-                          : 'text-popover-foreground'
-                      }`}
-                    >
-                      {chartIcons[type]} {type.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="text-xs font-bold text-muted-foreground tracking-tight truncate max-w-[200px]">
-            {data?.title || 'Data Chart'}
-          </div>
+          {isTypeMenuOpen && (
+            <>
+              <button
+                type="button"
+                className="fixed inset-0 z-10 w-full h-full bg-transparent border-none cursor-default"
+                onClick={() => setIsTypeMenuOpen(false)}
+                aria-label="Close menu"
+              />
+              <div className="absolute top-full left-0 mt-1 w-40 bg-popover border border-border rounded-lg shadow-xl z-20 overflow-hidden py-1 backdrop-blur-md">
+                {Object.values(ChartType).map((type) => (
+                  <button
+                    type="button"
+                    key={type}
+                    onClick={() => {
+                      setChartType(type)
+                      setIsTypeMenuOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors ${
+                      chartType === type
+                        ? 'text-primary'
+                        : 'text-popover-foreground'
+                    }`}
+                  >
+                    {chartIcons[type]} {type.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-
-        <button
-          type="button"
-          onClick={handleSelectFile}
-          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          title="Load JSON File"
-        >
-          <Upload size={14} />{' '}
-          <span className="text-[10px] font-bold uppercase">Load JSON</span>
+        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load chart file">
+          <Upload size={14} />
         </button>
-      </div>
+      </ViewHeader>
 
       <section
         aria-label="Data Chart"

@@ -1,4 +1,5 @@
 import { Folder, MessageSquare, Trash2 } from 'lucide-react'
+import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
@@ -83,7 +84,9 @@ export function SessionView() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden p-4 space-y-8">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <ViewHeader icon={<MessageSquare size={16} />} title="Sessions" />
+      <div className="flex-1 overflow-auto p-4 space-y-8">
       {/* Workspace Folders Group */}
       <section className="space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
@@ -223,6 +226,7 @@ export function SessionView() {
           )}
         </div>
       </Modal>
+      </div>
     </div>
   )
 }

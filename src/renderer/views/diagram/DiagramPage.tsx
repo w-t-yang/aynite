@@ -10,6 +10,7 @@ import mermaid from 'mermaid'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useView } from '../ViewContext'
 import type { DiagramData, DiagramType } from './types'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const MOCK_DATA: DiagramData = {
   title: 'System Architecture',
@@ -194,72 +195,29 @@ export function DiagramPage() {
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       {/* Toolbar */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-primary">
-            <FileType size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              Diagram
-            </span>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.min(z * 1.2, 5))}
-              className="p-1 hover:bg-muted rounded"
-              title="Zoom In"
-            >
-              <Maximize2 size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.max(z / 1.2, 0.1))}
-              className="p-1 hover:bg-muted rounded"
-              title="Zoom Out"
-            >
-              <Minimize2 size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoom(1)}
-              className="p-1 hover:bg-muted rounded"
-              title="Reset Zoom"
-            >
-              <RefreshCw size={12} />
-            </button>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          <select
-            value={data?.type || 'flowchart'}
-            onChange={(e) => {
-              if (data) {
-                setData({ ...data, type: e.target.value as DiagramType })
-              }
-            }}
-            className="text-[10px] bg-muted border border-border rounded px-2 py-1 text-foreground font-medium"
-          >
-            {DIAGRAM_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            <Upload size={14} />
-            <span className="text-[10px] font-bold uppercase">
-              Load Diagram
-            </span>
-          </button>
-        </div>
-      </div>
+      <ViewHeader icon={<FileType size={16} />} title="Diagram">
+        <button type="button" onClick={() => setZoom((z) => Math.min(z * 1.2, 5))} className={iconBtn()} title="Zoom In">
+          <Maximize2 size={14} />
+        </button>
+        <button type="button" onClick={() => setZoom((z) => Math.max(z / 1.2, 0.1))} className={iconBtn()} title="Zoom Out">
+          <Minimize2 size={14} />
+        </button>
+        <button type="button" onClick={() => setZoom(1)} className={iconBtn()} title="Reset Zoom">
+          <RefreshCw size={14} />
+        </button>
+        <select
+          value={data?.type || 'flowchart'}
+          onChange={(e) => { if (data) setData({ ...data, type: e.target.value as DiagramType }) }}
+          className="text-[10px] bg-muted border border-border rounded px-2 py-1.5 text-foreground font-medium outline-none"
+        >
+          {DIAGRAM_TYPES.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load diagram file">
+          <Upload size={14} />
+        </button>
+      </ViewHeader>
 
       {/* Diagram Area */}
       <section

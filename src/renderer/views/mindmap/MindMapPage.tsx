@@ -11,6 +11,7 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useView } from '../ViewContext'
 import type { MindMapData, MindMapNode } from './types'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const MOCK_DATA: MindMapData = {
   root: {
@@ -277,59 +278,20 @@ export function MindMapPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      <div className="h-10 border-b border-border flex items-center px-4 gap-4 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-primary">
-            <Network size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              MindMap View
-            </span>
-          </div>
-          <div className="h-4 w-px bg-border"></div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setZoom((z) => z * 1.1)}
-              title="Zoom In"
-              className="p-1 hover:bg-muted rounded"
-            >
-              <ZoomIn size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoom((z) => z / 1.1)}
-              title="Zoom Out"
-              className="p-1 hover:bg-muted rounded"
-            >
-              <ZoomOut size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setZoom(1)
-                setOffset({ x: 0, y: 0 })
-              }}
-              title="Reset"
-              className="p-1 hover:bg-muted rounded"
-            >
-              <RefreshCw size={14} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            <Upload size={14} />{' '}
-            <span className="text-[10px] font-bold uppercase">
-              Load MindMap
-            </span>
-          </button>
-        </div>
-      </div>
+      <ViewHeader icon={<Network size={16} />} title="MindMap">
+        <button type="button" onClick={() => setZoom((z) => z * 1.1)} className={iconBtn()} title="Zoom In">
+          <ZoomIn size={14} />
+        </button>
+        <button type="button" onClick={() => setZoom((z) => z / 1.1)} className={iconBtn()} title="Zoom Out">
+          <ZoomOut size={14} />
+        </button>
+        <button type="button" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }) }} className={iconBtn()} title="Reset Zoom">
+          <RefreshCw size={14} />
+        </button>
+        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load mindmap file">
+          <Upload size={14} />
+        </button>
+      </ViewHeader>
 
       <section
         ref={containerRef}

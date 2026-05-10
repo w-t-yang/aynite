@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import { useView } from '../ViewContext'
 import type { FlowData } from './types'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const MOCK_DATA: FlowData = {
   nodes: [
@@ -284,65 +285,20 @@ function FlowCanvas() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      {/* Toolbar */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-primary">
-            <Workflow size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              Flow Editor
-            </span>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => reactFlow.zoomIn()}
-              className="p-1 hover:bg-muted rounded"
-              title="Zoom In"
-            >
-              <Maximize2 size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => reactFlow.zoomOut()}
-              className="p-1 hover:bg-muted rounded"
-              title="Zoom Out"
-            >
-              <Minimize2 size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => reactFlow.fitView({ duration: 200 })}
-              className="p-1 hover:bg-muted rounded"
-              title="Fit View"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            <Upload size={14} />
-            <span className="text-[10px] font-bold uppercase">Load Flow</span>
-          </button>
-        </div>
-      </div>
+      <ViewHeader icon={<Workflow size={16} />} title="Flow Editor">
+        <button type="button" onClick={() => reactFlow.zoomIn()} className={iconBtn()} title="Zoom In">
+          <Maximize2 size={14} />
+        </button>
+        <button type="button" onClick={() => reactFlow.zoomOut()} className={iconBtn()} title="Zoom Out">
+          <Minimize2 size={14} />
+        </button>
+        <button type="button" onClick={() => reactFlow.fitView({ duration: 200 })} className={iconBtn()} title="Fit View">
+          <Maximize2 size={14} className="rotate-45" />
+        </button>
+        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load flow file">
+          <Upload size={14} />
+        </button>
+      </ViewHeader>
 
       {/* Canvas */}
       <section className="flex-1 relative">

@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useView } from '../ViewContext'
 import type { ThemeData } from './types'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const MOCK_DATA: ThemeData = {
   id: 'aurora-night',
@@ -213,61 +214,40 @@ export function ThemeStudioPage() {
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       {/* Toolbar */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-primary">
-            <Palette size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              Theme Studio
-            </span>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            <Upload size={14} />
-            <span className="text-[10px] font-bold uppercase">Load Theme</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowJson((v) => !v)}
-            className={`p-1.5 rounded-md transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase ${
-              showJson
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-            }`}
-          >
-            {showJson ? <EyeOff size={14} /> : <Eye size={14} />}
-            JSON
-          </button>
-          <button
-            type="button"
-            onClick={handleExportJson}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1.5"
-          >
-            {copied ? (
-              <Check size={14} className="text-success" />
-            ) : (
-              <Clipboard size={14} />
-            )}
-            <span className="text-[10px] font-bold uppercase">
-              {copied ? 'Copied' : 'Export'}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={handleApplyTheme}
-            className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-[10px] font-bold uppercase hover:opacity-90 transition-opacity"
-          >
-            Apply
-          </button>
-        </div>
-      </div>
+      <ViewHeader icon={<Palette size={16} />} title="Theme Studio">
+        <button
+          type="button"
+          onClick={() => setShowJson((v) => !v)}
+          className={iconBtn(showJson ? 'bg-primary text-primary-foreground' : '')}
+          title={showJson ? 'Hide JSON' : 'Show JSON'}
+        >
+          {showJson ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+        <button
+          type="button"
+          onClick={handleExportJson}
+          className={iconBtn()}
+          title="Export theme as JSON"
+        >
+          {copied ? <Check size={14} className="text-success" /> : <Clipboard size={14} />}
+        </button>
+        <button
+          type="button"
+          onClick={handleApplyTheme}
+          className={iconBtn('bg-primary text-primary-foreground hover:opacity-90')}
+          title="Apply theme"
+        >
+          <Check size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load theme file"
+        >
+          <Upload size={14} />
+        </button>
+      </ViewHeader>
 
       {/* Content */}
       <section className="flex-1 flex overflow-hidden relative bg-background">
