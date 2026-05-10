@@ -34,6 +34,7 @@ export function SelectionMenu({
   divided = false,
   size = 'sm',
   label,
+  side = 'bottom',
 }: SelectionMenuProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -105,6 +106,11 @@ export function SelectionMenu({
     left: 'left-0',
     center: 'left-1/2 -translate-x-1/2',
     right: 'right-0',
+  }
+
+  const sideStyles = {
+    bottom: 'top-full mt-2',
+    top: 'bottom-full mb-2',
   }
 
   const menuStyle: React.CSSProperties = isControlled
@@ -196,8 +202,9 @@ export function SelectionMenu({
             role="listbox"
             className={cn(
               'bg-sidebar border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col ring-1 ring-black/5 min-w-[200px]',
-              !isControlled && 'absolute top-full mt-2 z-popover',
+              !isControlled && 'absolute z-popover',
               !isControlled && alignStyles[align],
+              !isControlled && sideStyles[side],
               menuClassName,
             )}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}

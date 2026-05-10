@@ -85,6 +85,13 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       }
     }
 
+    const formatNumber = (num: number) => {
+      if (num >= 1000000000) return `${(num / 1000000000).toFixed(1)}B`
+      if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+      if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
+      return num.toString()
+    }
+
     return (
       <div className="absolute bottom-0 left-0 right-0 px-12 pb-10 bg-gradient-to-t from-background via-background to-transparent z-layout pointer-events-none">
         <div className="max-w-[900px] mx-auto relative group pointer-events-auto">
@@ -93,6 +100,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
               <SelectionMenu
                 items={artifactItems}
                 onSelect={onSelectArtifact}
+                side="top"
                 trigger={
                   <Button
                     variant="ghost"
@@ -109,10 +117,10 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
             {tokenCount > 0 && (
               <div
                 className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/[0.02] border border-border/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 cursor-help transition-all hover:bg-foreground/[0.04] hover:text-muted-foreground/60"
-                title="Estimated context tokens used in this session"
+                title={`Estimated context tokens used in this session: ${tokenCount.toLocaleString()}`}
               >
                 <div className="w-1 h-1 rounded-full bg-primary/30 animate-pulse" />
-                {tokenCount.toLocaleString()} tokens
+                {formatNumber(tokenCount)} tokens
               </div>
             )}
           </div>

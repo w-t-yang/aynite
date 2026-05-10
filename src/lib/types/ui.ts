@@ -25,6 +25,7 @@ export interface SelectionMenuProps {
   placeholder?: string
   disabled?: boolean
   align?: 'left' | 'center' | 'right'
+  side?: 'top' | 'bottom'
   x?: number
   y?: number
   title?: string
