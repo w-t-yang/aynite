@@ -201,7 +201,6 @@ export function useAIChat() {
     workspaceFoldersRef.current = workspaceFolders
   }, [workspaceFolders])
 
-
   const activeTabPathRef = useRef(activeTabPath)
   useEffect(() => {
     activeTabPathRef.current = activeTabPath
@@ -440,10 +439,13 @@ export function useAIChat() {
     await window.aynite.setConfig('agents', { activeId: agentId })
   }, [])
 
-  const switchProvider = useCallback(async (providerId: string) => {
-    await window.aynite.setConfig('ai', { activeId: providerId })
-    loadArtifactStatus()
-  }, [loadArtifactStatus])
+  const switchProvider = useCallback(
+    async (providerId: string) => {
+      await window.aynite.setConfig('ai', { activeId: providerId })
+      loadArtifactStatus()
+    },
+    [loadArtifactStatus],
+  )
 
   // Simple token estimator: (chars / 4) * 1.1
   const tokenCount = messages.reduce((acc, m) => {

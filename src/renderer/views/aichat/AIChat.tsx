@@ -146,6 +146,8 @@ export function AIChat() {
             getAvailableCommands={getAvailableCommands}
             error={error}
             setError={setError}
+            artifactStatus={artifactStatus}
+            tokenCount={tokenCount}
           />
         </>
       ) : (

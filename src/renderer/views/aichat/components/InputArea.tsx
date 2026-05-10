@@ -1,6 +1,14 @@
-import { AlertCircle, X } from 'lucide-react'
+import {
+  AlertCircle,
+  Brain,
+  ClipboardList,
+  FileCode,
+  Layers,
+  X,
+} from 'lucide-react'
 import { forwardRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
+import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
 import { useAppOperation } from '../../ViewContext'
 import { type ChatInputHandle, InputEditor } from './InputEditor'
 
@@ -15,6 +23,12 @@ interface InputAreaProps {
   getAvailableCommands: () => Promise<any>
   error: { message: string; redacted: string } | null
   setError: (err: { message: string; redacted: string } | null) => void
+  artifactStatus: {
+    memory: { exists: boolean; path: string }
+    task: { exists: boolean; path: string }
+    plan: { exists: boolean; path: string }
+  } | null
+  tokenCount: number
 }
 
 export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
@@ -30,14 +44,79 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       getAvailableCommands,
       error,
       setError,
+      artifactStatus,
+      tokenCount,
     },
     ref,
   ) => {
     const executeOperation = useAppOperation()
 
+    const artifactItems = [
+      {
+        id: artifactStatus?.memory?.path || 'memory',
+        label: 'Project Memory',
+        subtitle: artifactStatus?.memory?.exists
+          ? 'memory.md'
+          : 'Not initialized',
+        icon: <Brain size={14} />,
+        disabled: !artifactStatus?.memory?.exists,
+      },
+      {
+        id: artifactStatus?.plan?.path || 'plan',
+        label: 'Implementation Plan',
+        subtitle: artifactStatus?.plan?.exists
+          ? 'implementation_plan.md'
+          : 'Not proposed',
+        icon: <FileCode size={14} />,
+        disabled: !artifactStatus?.plan?.exists,
+      },
+      {
+        id: artifactStatus?.task?.path || 'task',
+        label: 'Task List',
+        subtitle: artifactStatus?.task?.exists ? 'task.md' : 'Not created',
+        icon: <ClipboardList size={14} />,
+        disabled: !artifactStatus?.task?.exists,
+      },
+    ]
+
+    const onSelectArtifact = (path: string) => {
+      if (path?.includes('/')) {
+        window.aynite.openFile(path)
+      }
+    }
+
     return (
       <div className="absolute bottom-0 left-0 right-0 px-12 pb-10 bg-gradient-to-t from-background via-background to-transparent z-layout pointer-events-none">
         <div className="max-w-[900px] mx-auto relative group pointer-events-auto">
+          <div className="flex items-center justify-between px-2 mb-2 animate-in fade-in slide-in-from-bottom-1 duration-500">
+            <div className="flex items-center gap-2">
+              <SelectionMenu
+                items={artifactItems}
+                onSelect={onSelectArtifact}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    className="text-muted-foreground/30 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[9px] hover:bg-transparent flex items-center gap-1.5"
+                  >
+                    <Layers size={13} />
+                    Artifacts
+                  </Button>
+                }
+                title="Project Artifacts"
+              />
+            </div>
+
+            {tokenCount > 0 && (
+              <div
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/[0.02] border border-border/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 cursor-help transition-all hover:bg-foreground/[0.04] hover:text-muted-foreground/60"
+                title="Estimated context tokens used in this session"
+              >
+                <div className="w-1 h-1 rounded-full bg-primary/30 animate-pulse" />
+                {tokenCount.toLocaleString()} tokens
+              </div>
+            )}
+          </div>
+
           {error && (
             <div className="mb-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 shadow-xl backdrop-blur-md">
               <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
