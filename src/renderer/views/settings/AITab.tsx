@@ -95,18 +95,20 @@ export function AITab({ state, actions }: AITabProps) {
       title="AI Providers"
       description="Manage multiple AI provider configurations and select the active one for your assistant."
       onRestore={actions.onRestore}
-      primaryAction={
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleAddProvider}
-          className={ADD_ITEM_BUTTON}
-        >
-          <Plus size={14} /> Add Provider
-        </Button>
-      }
     >
-      <Section title="Configured Providers">
+      <Section
+        title="Configured Providers"
+        action={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleAddProvider}
+            className={ADD_ITEM_BUTTON}
+          >
+            <Plus size={14} /> Add Provider
+          </Button>
+        }
+      >
         <div className="space-y-6">
           {(ai.providers || []).map((provider: AIProvider) => (
             <AIProviderCard

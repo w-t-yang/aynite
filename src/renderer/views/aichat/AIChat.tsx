@@ -1,3 +1,4 @@
+import { Bot, Plus } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Header, InputArea, List, SessionsModal } from './components'
 import { useAIChat } from './hooks/useAIChat'
@@ -80,6 +81,15 @@ export function AIChat() {
     [],
   )
 
+  const hasProviders = settings.ai?.providers && settings.ai.providers.length > 0
+
+  const openAISettings = () => {
+    window.parent.postMessage(
+      { type: 'aynite:operation', operation: 'SETTINGS', data: { tab: 'ai' } },
+      '*',
+    )
+  }
+
   return (
     <div className="chat-panel flex flex-col h-full bg-card relative overflow-hidden">
       <div className="absolute inset-0 bg-ambient-gradient z-base opacity-40" />
@@ -104,32 +114,54 @@ export function AIChat() {
         onSwitchProvider={switchProvider}
       />
 
-      <List
-        ref={scrollRef}
-        messages={messages}
-        loading={loading}
-        currentStep={currentStep}
-        pendingApproval={pendingApproval}
-        onApprove={handleApprove}
-        onReject={handleReject}
-        onOpenFile={(path) => window.aynite.openFile(path)}
-        onCopy={copyToClipboard}
-        onRevert={revertToMessage}
-      />
+      {hasProviders ? (
+        <>
+          <List
+            ref={scrollRef}
+            messages={messages}
+            loading={loading}
+            currentStep={currentStep}
+            pendingApproval={pendingApproval}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onOpenFile={(path) => window.aynite.openFile(path)}
+            onCopy={copyToClipboard}
+            onRevert={revertToMessage}
+          />
 
-      <InputArea
-        ref={inputRef}
-        workspaceFolders={workspaceFolders}
-        loading={loading}
-        onSend={sendMessage}
-        onAbort={() => {}}
-        onClear={clearChat}
-        getAllFiles={getAllFiles}
-        getAvailableSkills={getAvailableSkills}
-        getAvailableCommands={getAvailableCommands}
-        error={error}
-        setError={setError}
-      />
+          <InputArea
+            ref={inputRef}
+            workspaceFolders={workspaceFolders}
+            loading={loading}
+            onSend={sendMessage}
+            onAbort={() => {}}
+            onClear={clearChat}
+            getAllFiles={getAllFiles}
+            getAvailableSkills={getAvailableSkills}
+            getAvailableCommands={getAvailableCommands}
+            error={error}
+            setError={setError}
+          />
+        </>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center p-10 text-center z-10 relative">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse">
+            <Bot size={40} className="text-primary" />
+          </div>
+          <h3 className="text-2xl font-bold mb-2">No AI Providers Configured</h3>
+          <p className="text-muted-foreground max-w-sm mb-8 leading-relaxed">
+            To start using the AI assistant, you need to configure at least one
+            provider (Ollama, OpenAI, Anthropic, etc.) in the settings.
+          </p>
+          <button
+            type="button"
+            onClick={openAISettings}
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
+          >
+            <Plus size={18} /> Setup AI Providers
+          </button>
+        </div>
+      )}
 
       {showHistory && (
         <SessionsModal

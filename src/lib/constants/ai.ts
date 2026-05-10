@@ -281,17 +281,8 @@ export const DEFAULT_AI_TOOLS: Record<string, boolean> = Object.keys(
 )
 
 export const DEFAULT_AI_CONFIG = {
-  activeId: 'default-ollama',
-  providers: [
-    {
-      id: 'default-ollama',
-      name: `Ollama - ${DEFAULT_PROVIDER_MODELS.ollama}`,
-      provider: 'ollama' as const,
-      baseUrl: DEFAULT_PROVIDER_URLS.ollama,
-      model: DEFAULT_PROVIDER_MODELS.ollama,
-      contextWindow: 8192,
-    },
-  ],
+  activeId: '',
+  providers: [],
 }
 
 import type { PromptDefinition } from '../types/ai'
