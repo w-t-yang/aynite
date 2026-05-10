@@ -54,26 +54,24 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
     const artifactItems = [
       {
         id: artifactStatus?.memory?.path || 'memory',
-        label: 'Project Memory',
-        subtitle: artifactStatus?.memory?.exists
-          ? 'memory.md'
-          : 'Not initialized',
+        label: artifactStatus?.memory?.exists ? 'memory.md' : 'Not initialized',
+        subtitle: 'Project Memory',
         icon: <Brain size={14} />,
         disabled: !artifactStatus?.memory?.exists,
       },
       {
         id: artifactStatus?.plan?.path || 'plan',
-        label: 'Implementation Plan',
-        subtitle: artifactStatus?.plan?.exists
+        label: artifactStatus?.plan?.exists
           ? 'implementation_plan.md'
           : 'Not proposed',
+        subtitle: 'Implementation Plan',
         icon: <FileCode size={14} />,
         disabled: !artifactStatus?.plan?.exists,
       },
       {
         id: artifactStatus?.task?.path || 'task',
-        label: 'Task List',
-        subtitle: artifactStatus?.task?.exists ? 'task.md' : 'Not created',
+        label: artifactStatus?.task?.exists ? 'task.md' : 'Not created',
+        subtitle: 'Task List',
         icon: <ClipboardList size={14} />,
         disabled: !artifactStatus?.task?.exists,
       },
@@ -81,7 +79,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
 
     const onSelectArtifact = (path: string) => {
       if (path?.includes('/')) {
-        window.aynite.openFile(path)
+        executeOperation('SWITCH_FILE', { path })
       }
     }
 
