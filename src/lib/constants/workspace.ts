@@ -1,12 +1,32 @@
-import { DEFAULT_LAYOUTS } from './layout'
+import { PLAYBOOK_LAYOUTS, TRADER_LAYOUTS, WRITER_LAYOUTS } from './layout'
 import type { WorkspaceConfig } from './types'
 
-export const DEFAULT_WORKSPACE_ID = 'Aynite Playbook'
+export const PLAYBOOK_WORKSPACE_CONFIG: WorkspaceConfig = {
+  id: 'Aynite Playbook',
+  layouts: PLAYBOOK_LAYOUTS,
+  activeLayoutId: 'pb-welcome',
+  activeAgentId: 'aynite',
+  activeSessionId: null,
+  folders: [],
+  files: [],
+}
 
-export const DEFAULT_WORKSPACE_CONFIG: WorkspaceConfig = {
-  id: DEFAULT_WORKSPACE_ID,
-  layouts: DEFAULT_LAYOUTS,
-  activeLayoutId: 'layout-chat',
+export const TRADER_WORKSPACE_CONFIG: WorkspaceConfig = {
+  id: 'Market Lens',
+  layouts: TRADER_LAYOUTS,
+  activeLayoutId: 'trader-desk',
+  activeAgentId: 'aynite',
+  activeSessionId: null,
+  folders: [],
+  files: [],
+}
+
+export const WRITER_WORKSPACE_CONFIG: WorkspaceConfig = {
+  id: 'The Quill',
+  layouts: WRITER_LAYOUTS,
+  activeLayoutId: 'quill-desk',
+  activeAgentId: 'aynite',
+  activeSessionId: null,
   folders: [],
   files: [],
 }

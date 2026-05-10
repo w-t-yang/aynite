@@ -3,7 +3,6 @@ import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
-import type { WorkspaceTab } from '../../lib/types/workspace'
 import { getIgnorePatterns } from '../config'
 import { sendAppEvent, sendAppOperation, showOpenDialog } from '../window'
 import {
@@ -17,12 +16,6 @@ import {
   saveWorkspaceState,
   switchWorkspace,
 } from './logic'
-
-interface WorkspaceStatePayload {
-  workspaceName: string
-  tabs: WorkspaceTab[]
-  activeTabId: string
-}
 
 export function setupWorkspaceIpc(): void {
   const notifyChanged = (folders: string[]) => {
@@ -91,17 +84,6 @@ export function setupWorkspaceIpc(): void {
   ipcMain.handle(WorkspaceChannels.STATE_LOAD, async () => {
     return await getWorkspaceState()
   })
-
-  ipcMain.handle(
-    WorkspaceChannels.STATE_SAVE,
-    async (
-      _event,
-      { workspaceName, tabs, activeTabId }: WorkspaceStatePayload,
-    ) => {
-      const state: Partial<WorkspaceConfig> = { tabs, activeTabId }
-      return await saveWorkspaceState(workspaceName, state)
-    },
-  )
 
   ipcMain.handle(
     WorkspaceChannels.FOLDER_REORDER,

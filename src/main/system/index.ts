@@ -128,22 +128,7 @@ export function setupProtocol() {
           filePath = expandHome(joinPaths('~/.aynite', 'assets', assetPath))
         }
       } else {
-        // In dev mode, prefer the project root dist-views directory
-        if (!app.isPackaged) {
-          const devPath = joinPaths(
-            process.cwd(),
-            'dist-views',
-            'views',
-            decodedPath,
-          )
-          if (await exists(devPath)) {
-            filePath = devPath
-          } else {
-            filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))
-          }
-        } else {
-          filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))
-        }
+        filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))
       }
 
       const fileUrl = `file://${filePath.startsWith('/') ? '' : '/'}${filePath}`

@@ -8,9 +8,9 @@ import {
 } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
 import type { GraphData, GraphNode } from './types'
-import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const COLORS = [
   'var(--info)',
@@ -328,16 +328,39 @@ export function GraphPage() {
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       <ViewHeader icon={<Share2 size={16} />} title="Graph Explorer">
-        <button type="button" onClick={() => setZoom((z) => z * 1.2)} className={iconBtn()} title="Zoom In">
+        <button
+          type="button"
+          onClick={() => setZoom((z) => z * 1.2)}
+          className={iconBtn()}
+          title="Zoom In"
+        >
           <Maximize2 size={14} />
         </button>
-        <button type="button" onClick={() => setZoom((z) => z / 1.2)} className={iconBtn()} title="Zoom Out">
+        <button
+          type="button"
+          onClick={() => setZoom((z) => z / 1.2)}
+          className={iconBtn()}
+          title="Zoom Out"
+        >
           <Minimize2 size={14} />
         </button>
-        <button type="button" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }) }} className={iconBtn()} title="Reset Zoom">
+        <button
+          type="button"
+          onClick={() => {
+            setZoom(1)
+            setOffset({ x: 0, y: 0 })
+          }}
+          className={iconBtn()}
+          title="Reset Zoom"
+        >
           <RefreshCw size={14} />
         </button>
-        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load graph file">
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load graph file"
+        >
           <Upload size={14} />
         </button>
       </ViewHeader>

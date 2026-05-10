@@ -31,9 +31,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
 import { type ChartData, ChartType } from './types'
-import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const COLORS = [
   'var(--primary)',
@@ -441,7 +441,12 @@ export function DataChartPage() {
             </>
           )}
         </div>
-        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load chart file">
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load chart file"
+        >
           <Upload size={14} />
         </button>
       </ViewHeader>

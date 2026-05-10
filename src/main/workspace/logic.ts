@@ -1,8 +1,5 @@
 import type { WorkspaceConfig } from '../../lib/constants/types'
-import {
-  DEFAULT_WORKSPACE_CONFIG,
-  DEFAULT_WORKSPACE_ID,
-} from '../../lib/constants/workspace'
+import { AppEvents } from '../../lib/constants/app'
 import {
   getPathSep,
   getWorkspaceDataPath,
@@ -17,12 +14,15 @@ import type {
   AddFolderResult,
   WorkspacesConfig,
 } from '../../lib/types/workspace'
+import { sendAppEvent } from '../window'
+
+const FALLBACK_WORKSPACE_ID = 'Aynite Playbook'
 
 async function getWorkspacesConfig(): Promise<WorkspacesConfig> {
   const configPath = getWorkspacesConfigPath()
   return await readJson<WorkspacesConfig>(configPath, {
-    active: DEFAULT_WORKSPACE_ID,
-    list: [DEFAULT_WORKSPACE_ID],
+    active: FALLBACK_WORKSPACE_ID,
+    list: [FALLBACK_WORKSPACE_ID],
   })
 }
 
@@ -31,19 +31,31 @@ async function saveWorkspacesConfig(config: WorkspacesConfig): Promise<void> {
   await writeJson(configPath, config)
 }
 
+function defaultWorkspaceConfig(name: string): WorkspaceConfig {
+  return {
+    id: name,
+    layouts: [],
+    activeLayoutId: '',
+    activeAgentId: 'aynite',
+    activeSessionId: null,
+    folders: [],
+    files: [],
+  }
+}
+
 async function getWorkspaceData(name: string): Promise<WorkspaceConfig> {
   const workspacePath = getWorkspaceDataPath(name)
-  return await readJson<WorkspaceConfig>(workspacePath, {
-    ...DEFAULT_WORKSPACE_CONFIG,
-    id: name,
-  })
+  return await readJson<WorkspaceConfig>(workspacePath, defaultWorkspaceConfig(name))
 }
 
 export async function getWorkspacesList(): Promise<WorkspacesConfig> {
   return await getWorkspacesConfig()
 }
 
-export async function createWorkspace(name: string): Promise<WorkspacesConfig> {
+export async function createWorkspace(
+  name: string,
+  config?: Partial<WorkspaceConfig>,
+): Promise<WorkspacesConfig> {
   const wsConfig = await getWorkspacesConfig()
   if (wsConfig.list.includes(name)) throw new Error('Workspace already exists')
 
@@ -51,7 +63,12 @@ export async function createWorkspace(name: string): Promise<WorkspacesConfig> {
   wsConfig.active = name
 
   const newWorkspacePath = getWorkspaceDataPath(name)
-  await writeJson(newWorkspacePath, { ...DEFAULT_WORKSPACE_CONFIG, id: name })
+  const workspaceConfig = {
+    ...defaultWorkspaceConfig(name),
+    ...config,
+    id: name,
+  }
+  await writeJson(newWorkspacePath, workspaceConfig)
   await saveWorkspacesConfig(wsConfig)
   return wsConfig
 }

@@ -5,10 +5,12 @@ import {
   DEFAULT_PROVIDER_URLS,
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
-import type { MainConfig } from '../../lib/constants/types'
+import type { MainConfig, WorkspaceConfig } from '../../lib/constants/types'
+import type { WorkspacesConfig } from '../../lib/types/workspace'
 import {
-  DEFAULT_WORKSPACE_CONFIG,
-  DEFAULT_WORKSPACE_ID,
+  PLAYBOOK_WORKSPACE_CONFIG,
+  TRADER_WORKSPACE_CONFIG,
+  WRITER_WORKSPACE_CONFIG,
 } from '../../lib/constants/workspace'
 import {
   AYNITE_SUBDIRS,
@@ -23,7 +25,9 @@ import {
   getKeybindingsConfigPath,
   getMainConfigPath,
   getPlaybookPath,
+  getWelcomeMdPath,
   getWorkspaceDataPath,
+  getWorkspaceDir,
   getWorkspacesConfigPath,
   joinPaths,
   readJson,
@@ -32,7 +36,7 @@ import {
   writeJson,
   writeText,
 } from '../../lib/path'
-import { ensureDefaultPromptFiles, getDefaultGlobalPrompts } from '../ai'
+import { ensureDefaultPromptFiles, getDefaultGlobalPrompts, initWorkspaceFolders } from '../ai'
 import {
   getBundledResourcesPath,
   getCommandsConfig,
@@ -137,11 +141,6 @@ export async function initAppFolders() {
     'vendor',
     'venv',
   ].join('\n')
-  const workspacesDefault = {
-    active: DEFAULT_WORKSPACE_ID,
-    list: [DEFAULT_WORKSPACE_ID],
-  }
-
   if (!(await exists(getAIConfigPath()))) {
     await writeJson(getAIConfigPath(), aiDefault)
   }
@@ -152,7 +151,11 @@ export async function initAppFolders() {
     await writeJson(getMainConfigPath(), configDefault)
   }
   if (!(await exists(getWorkspacesConfigPath()))) {
-    await writeJson(getWorkspacesConfigPath(), workspacesDefault)
+    const wsConfig: WorkspacesConfig = {
+      active: 'Aynite Playbook',
+      list: ['Aynite Playbook', 'Market Lens', 'The Quill'],
+    }
+    await writeJson(getWorkspacesConfigPath(), wsConfig)
   }
 
   const ignorePath = getIgnoreConfigPath()
@@ -163,23 +166,20 @@ export async function initAppFolders() {
   await restoreAynitePlaybook()
   await initThemes()
 
-  // Initialize workspaces.json if missing
-  const workspacesJsonPath = getWorkspacesConfigPath()
-  if (!(await exists(workspacesJsonPath))) {
-    await writeJson(workspacesJsonPath, workspacesDefault)
-  }
-
-  // Ensure default workspace config exists
-  const defaultWorkspacePath = getWorkspaceDataPath(DEFAULT_WORKSPACE_ID)
-  if (!(await exists(defaultWorkspacePath))) {
-    const playbookPath = getPlaybookPath()
-    // Add playbook to default folders if it's the first time
-    const initialConfig = {
-      ...DEFAULT_WORKSPACE_CONFIG,
-      id: DEFAULT_WORKSPACE_ID,
-      folders: [playbookPath],
+  // Ensure each default workspace has its config and session directory
+  const playbookPath = getPlaybookPath()
+  const defaultWorkspaces: Array<[string, WorkspaceConfig]> = [
+    ['Aynite Playbook', { ...PLAYBOOK_WORKSPACE_CONFIG, folders: [playbookPath], activeFile: getWelcomeMdPath() }],
+    ['Market Lens', { ...TRADER_WORKSPACE_CONFIG, folders: [playbookPath], activeFile: getWelcomeMdPath() }],
+    ['The Quill', { ...WRITER_WORKSPACE_CONFIG, folders: [playbookPath], activeFile: getWelcomeMdPath() }],
+  ]
+  for (const [name, config] of defaultWorkspaces) {
+    const wsPath = getWorkspaceDataPath(name)
+    if (!(await exists(wsPath))) {
+      await ensureDir(getWorkspaceDir(name))
+      await writeJson(wsPath, config)
+      await initWorkspaceFolders(name)
     }
-    await writeJson(defaultWorkspacePath, initialConfig)
   }
 
   // Ensure default skills/commands

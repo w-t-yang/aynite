@@ -18,9 +18,9 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import '@xyflow/react/dist/style.css'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
 import type { FlowData } from './types'
-import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const MOCK_DATA: FlowData = {
   nodes: [
@@ -286,16 +286,36 @@ function FlowCanvas() {
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       <ViewHeader icon={<Workflow size={16} />} title="Flow Editor">
-        <button type="button" onClick={() => reactFlow.zoomIn()} className={iconBtn()} title="Zoom In">
+        <button
+          type="button"
+          onClick={() => reactFlow.zoomIn()}
+          className={iconBtn()}
+          title="Zoom In"
+        >
           <Maximize2 size={14} />
         </button>
-        <button type="button" onClick={() => reactFlow.zoomOut()} className={iconBtn()} title="Zoom Out">
+        <button
+          type="button"
+          onClick={() => reactFlow.zoomOut()}
+          className={iconBtn()}
+          title="Zoom Out"
+        >
           <Minimize2 size={14} />
         </button>
-        <button type="button" onClick={() => reactFlow.fitView({ duration: 200 })} className={iconBtn()} title="Fit View">
+        <button
+          type="button"
+          onClick={() => reactFlow.fitView({ duration: 200 })}
+          className={iconBtn()}
+          title="Fit View"
+        >
           <Maximize2 size={14} className="rotate-45" />
         </button>
-        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load flow file">
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load flow file"
+        >
           <Upload size={14} />
         </button>
       </ViewHeader>

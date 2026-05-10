@@ -1,9 +1,11 @@
+import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 const isDev = process.env.VITE_VIEWS_DEV === 'true'
+const ayniteDir = resolve(homedir(), '.aynite')
 
 export default defineConfig({
   root: 'src/renderer',
@@ -15,8 +17,8 @@ export default defineConfig({
   },
   plugins: [react(), tailwindcss()],
   build: {
-    outDir: '../../dist-views',
-    emptyOutDir: true,
+    outDir: isDev ? ayniteDir : '../../dist-views',
+    emptyOutDir: !isDev,
     minify: isDev ? false : 'esbuild',
     sourcemap: isDev,
     chunkSizeWarningLimit: 1000,

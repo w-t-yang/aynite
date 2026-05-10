@@ -81,12 +81,14 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
     }
 
     case ConfigKey.CHAT_LOGS: {
-      return await listSessions()
+      const wsConfig = await getWorkspacesList()
+      return await listSessions(wsConfig.active)
     }
 
     case ConfigKey.LOAD_CHAT_LOG: {
       if (payload?.id && payload.date) {
-        return await loadSession(payload.id, payload.date)
+        const wsConfig = await getWorkspacesList()
+        return await loadSession(wsConfig.active, payload.id, payload.date)
       }
       return null
     }
@@ -104,8 +106,13 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
     }
 
     case ConfigKey.AGENTS: {
-      const config = await loadConfig()
-      return config.agents || { activeId: 'aynite', list: [] }
+      const mainConfig = await loadConfig()
+      const wsConfig = await getWorkspacesList()
+      const workspaceState = await getWorkspaceState(wsConfig.active)
+      return {
+        activeId: workspaceState.activeAgentId || mainConfig.agents?.activeId || 'aynite',
+        list: mainConfig.agents?.list || [],
+      }
     }
 
     case ConfigKey.PROMPTS: {
@@ -144,8 +151,9 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
       return state.files || []
     }
     case ConfigKey.ACTIVE_SESSION_ID: {
-      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
-      return mainConfig.activeSessionId || null
+      const wsConfig = await getWorkspacesList()
+      const state = await getWorkspaceState(wsConfig.active)
+      return state.activeSessionId || null
     }
 
     default:
@@ -209,7 +217,8 @@ export async function routeSetConfig(
 
     case ConfigKey.SAVE_CHAT_LOG: {
       if (payload?.id && payload.messages) {
-        await saveSession(payload.id, payload.messages)
+        const wsConfig = await getWorkspacesList()
+        await saveSession(wsConfig.active, payload.id, payload.messages)
       }
       return true
     }
@@ -229,7 +238,6 @@ export async function routeSetConfig(
       return true
     }
 
-    case ConfigKey.AGENTS:
     case ConfigKey.PROMPTS:
     case ConfigKey.SKILLS:
     case ConfigKey.COMMANDS: {
@@ -238,6 +246,19 @@ export async function routeSetConfig(
       const existing = (mainConfig[key] || {}) as Record<string, unknown>
       mainConfig[key] = { ...existing, ...payload }
       await writeJson(getMainConfigPath(), mainConfig)
+      return true
+    }
+    case ConfigKey.AGENTS: {
+      // Split: activeId -> workspace config, list -> global config
+      if (payload?.activeId) {
+        const wsConfig = await getWorkspacesList()
+        await saveWorkspaceState(wsConfig.active, { activeAgentId: payload.activeId })
+      }
+      if (payload?.list) {
+        const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
+        mainConfig.agents = { activeId: mainConfig.agents?.activeId || 'aynite', list: payload.list }
+        await writeJson(getMainConfigPath(), mainConfig)
+      }
       return true
     }
     case ConfigKey.ACTIVE_FILE: {
@@ -253,9 +274,9 @@ export async function routeSetConfig(
       return true
     }
     case ConfigKey.ACTIVE_SESSION_ID: {
-      const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
-      mainConfig.activeSessionId = payload
-      await writeJson(getMainConfigPath(), mainConfig)
+      const wsConfig = await getWorkspacesList()
+      await saveWorkspaceState(wsConfig.active, { activeSessionId: payload })
+      sendAppEvent(AppEvents.ACTIVE_SESSION_CHANGED, { id: payload })
       return true
     }
     case ConfigKey.TILE_DATA: {
@@ -268,7 +289,8 @@ export async function routeSetConfig(
     }
     case ConfigKey.SESSION_DELETE: {
       const id = payload as string
-      await deleteSession(id)
+      const wsConfig = await getWorkspacesList()
+      await deleteSession(wsConfig.active, id)
       sendAppEvent(AppEvents.SESSION_DELETED, { id })
       return true
     }

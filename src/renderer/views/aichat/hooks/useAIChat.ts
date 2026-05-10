@@ -123,6 +123,7 @@ export function useAIChat() {
     if (messages.length > 0 && !sessionId) {
       const newId = Date.now().toString()
       setSessionId(newId)
+      window.aynite.setConfig('activeSessionId', newId)
     }
   }, [messages, sessionId])
 

@@ -13,7 +13,12 @@ export const ICON_BTN_CLS =
 
 export const iconBtn = (overrides?: string) => cn(ICON_BTN_CLS, overrides)
 
-export function ViewHeader({ icon, title, children, className }: ViewHeaderProps) {
+export function ViewHeader({
+  icon,
+  title,
+  children,
+  className,
+}: ViewHeaderProps) {
   return (
     <div
       className={cn(
@@ -28,9 +33,7 @@ export function ViewHeader({ icon, title, children, className }: ViewHeaderProps
         </span>
       </div>
       {children && (
-        <div className="flex items-center gap-1 shrink-0">
-          {children}
-        </div>
+        <div className="flex items-center gap-1 shrink-0">{children}</div>
       )}
     </div>
   )

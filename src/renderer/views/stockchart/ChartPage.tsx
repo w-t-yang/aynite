@@ -21,10 +21,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useAppEvent, useAppOperation, useView } from '../ViewContext'
 import { aggregateData, enrichDataWithIndicators } from './indicators'
 import { DEFAULT_INDICATORS, type StockData, TimeInterval } from './types'
-import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 // Custom Shape for Candlestick
 const CandlestickShape = (props: any) => {
@@ -714,7 +714,12 @@ OR
             </>
           )}
         </div>
-        <button type="button" onClick={handleSelectSystemFile} className={iconBtn()} title="Load chart data">
+        <button
+          type="button"
+          onClick={handleSelectSystemFile}
+          className={iconBtn()}
+          title="Load chart data"
+        >
           <Upload size={14} />
         </button>
       </ViewHeader>

@@ -1,8 +1,17 @@
-import { Copy, Edit2, FilePlus, FolderPlus, FolderTree, Trash2, X } from 'lucide-react'
+import {
+  Copy,
+  Edit2,
+  FilePlus,
+  FolderPlus,
+  FolderTree,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MoveHandler, Tree, type TreeApi } from 'react-arborist'
 import { Button } from '../../shared/basic/Button'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
+import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
 import { useAppEvent } from '../ViewContext'
@@ -14,7 +23,6 @@ import {
 } from './components'
 import { expandPathIteratively } from './tree-expand'
 import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
-import { ViewHeader } from '../../shared/basic/ViewHeader'
 
 export function Treeview() {
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null)

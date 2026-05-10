@@ -5,7 +5,7 @@
   "author": "Wentao Yang <winterock.yang@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "npm run build:views-dev && electron-vite dev",
     "build": "npm run build:views && electron-vite build",
     "preview": "electron-vite preview",
     "test:ai": "tsx scripts/test-ai-providers.ts",
@@ -42,7 +42,7 @@
     "audit:ast-grep": "ast-grep scan",
     "audit:deadcode": "knip",
     "build:views": "vite build --config vite.views.config.ts",
-    "build:views-dev": "VITE_VIEWS_DEV=true vite build --config vite.views.config.ts && mkdir -p ~/.aynite && cp -rv dist-views/* ~/.aynite/",
+    "build:views-dev": "VITE_VIEWS_DEV=true vite build --config vite.views.config.ts",
     "serve:views": "npm run build:views && npx serve dist-views",
     "patch-tag": "npm version patch && git push && git push --tags",
     "patch-beta": "npm version prerelease --preid=beta && git push && git push --tags",

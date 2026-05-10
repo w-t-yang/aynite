@@ -34,22 +34,21 @@ export function getAyniteSessionsDir() {
   return path.join(AYNITE_DIR, AYNITE_SUBDIRS.SESSIONS)
 }
 
-export function getSessionPath(sessionId: string, date?: string) {
+export function getSessionPath(sessionId: string, date?: string, workspace?: string) {
   const dateStr = date || new Date().toISOString().split('T')[0]
-  return path.join(getAyniteSessionsDir(), dateStr, `${sessionId}.json`)
+  const base = workspace ? getWorkspaceSessionsDir(workspace) : getAyniteSessionsDir()
+  return path.join(base, dateStr, `${sessionId}.json`)
 }
 
-export function getSessionMetadataPath(sessionId: string, date?: string) {
+export function getSessionMetadataPath(sessionId: string, date?: string, workspace?: string) {
   const dateStr = date || new Date().toISOString().split('T')[0]
-  return path.join(
-    getAyniteSessionsDir(),
-    dateStr,
-    `${sessionId}-metadata.json`,
-  )
+  const base = workspace ? getWorkspaceSessionsDir(workspace) : getAyniteSessionsDir()
+  return path.join(base, dateStr, `${sessionId}-metadata.json`)
 }
 
-export function getSessionsDateDir(date: string) {
-  return path.join(getAyniteSessionsDir(), date)
+export function getSessionsDateDir(date: string, workspace?: string) {
+  const base = workspace ? getWorkspaceSessionsDir(workspace) : getAyniteSessionsDir()
+  return path.join(base, date)
 }
 
 export function getAynitePromptsDir() {
@@ -70,6 +69,14 @@ export function getWorkspacesDir() {
 
 export function getWorkspaceDataPath(name: string) {
   return path.join(getWorkspacesDir(), name, 'config.json')
+}
+
+export function getWorkspaceDir(name: string) {
+  return path.join(getWorkspacesDir(), name)
+}
+
+export function getWorkspaceSessionsDir(name: string) {
+  return path.join(getWorkspacesDir(), name, 'sessions')
 }
 
 export function getAIConfigPath() {

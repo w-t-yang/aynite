@@ -1,7 +1,7 @@
 import { diffLines } from 'diff'
 import { AlertCircle, Columns2, FileText, Upload } from 'lucide-react'
-import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
 import type { DiffData } from './types'
 

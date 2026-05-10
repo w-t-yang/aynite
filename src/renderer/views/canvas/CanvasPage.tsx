@@ -3,9 +3,9 @@ import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { AlertCircle, Clipboard, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@excalidraw/excalidraw/index.css'
-import { useView } from '../ViewContext'
-import type { CanvasData } from './types'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
+import { useAppEvent, useView } from '../ViewContext'
+import type { CanvasData } from './types'
 
 const EXPECTED_FORMAT = `{
   "type": "excalidraw",
@@ -14,9 +14,16 @@ const EXPECTED_FORMAT = `{
   "appState": { ... }
 }`
 
+function getThemeBg(): string {
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--background')
+      .trim() || '#ffffff'
+  )
+}
+
 export function CanvasPage() {
   const { themes, activeThemeId } = useView()
-  const [data, setData] = useState<CanvasData | null>(null)
   const [error, setError] = useState<{
     message: string
     expected: string
@@ -33,6 +40,21 @@ export function CanvasPage() {
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const isDark = currentTheme?.type === 'dark'
 
+  // ─── Excalidraw background theming ─────────────────────────────────────
+  const updateCanvasBg = useCallback(() => {
+    const api = excRef.current
+    if (!api) return
+    const bg = getThemeBg()
+    if (bg) api.updateScene({ appState: { viewBackgroundColor: bg } })
+  }, [])
+
+  useAppEvent('theme-changed', updateCanvasBg)
+
+  useEffect(() => {
+    if (themes.length > 0) updateCanvasBg()
+  }, [themes, activeThemeId, updateCanvasBg])
+
+  // ─── File loading ──────────────────────────────────────────────────────
   const loadInitialFile = useCallback(async (path: string) => {
     try {
       const content = await (window as any).aynite.readFile(path)
@@ -43,7 +65,13 @@ export function CanvasPage() {
       }
 
       setError(null)
-      setData(json)
+      const api = excRef.current
+      if (api) {
+        api.updateScene({
+          elements: json.elements as any,
+          appState: { ...(json.appState || {}), viewBackgroundColor: getThemeBg() },
+        })
+      }
     } catch (err) {
       console.error('Failed to load canvas file:', err)
       setError({
@@ -70,9 +98,6 @@ export function CanvasPage() {
 
     if (initialFile) {
       loadInitialFile(initialFile)
-    } else {
-      // No mock data — start with empty canvas
-      setData(null)
     }
   }, [loadInitialFile])
 
@@ -140,7 +165,15 @@ export function CanvasPage() {
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       <ViewHeader
         icon={
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="7.5" cy="7.5" r="1.5" />
             <path d="m3 16 4.5-4.5a1 1 0 0 1 1.4 0l3.6 3.6" />
@@ -149,16 +182,35 @@ export function CanvasPage() {
         }
         title="Canvas"
       >
-        <button type="button" onClick={handleExport} className={iconBtn()} title="Export canvas as JSON">
+        <button
+          type="button"
+          onClick={handleExport}
+          className={iconBtn()}
+          title="Export canvas as JSON"
+        >
           {copied ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-success"
+              aria-hidden="true"
+            >
               <polyline points="20 6 9 17 4 12" />
             </svg>
           ) : (
             <Clipboard size={14} />
           )}
         </button>
-        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load canvas file">
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load canvas file"
+        >
           <Upload size={14} />
         </button>
       </ViewHeader>
@@ -168,15 +220,9 @@ export function CanvasPage() {
         <Excalidraw
           excalidrawAPI={(api) => {
             excRef.current = api
+            const bg = getThemeBg()
+            if (bg) api.updateScene({ appState: { viewBackgroundColor: bg } })
           }}
-          initialData={
-            data
-              ? {
-                  elements: data.elements as any,
-                  appState: data.appState as any,
-                }
-              : undefined
-          }
           theme={isDark ? 'dark' : 'light'}
           autoFocus={false}
           detectScroll={false}

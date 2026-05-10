@@ -1,59 +1,188 @@
 import type { LayoutConfig, LayoutNode } from './types'
 
-export const VIBE_LAYOUTS: Record<string, LayoutNode> = {
-  chat: {
-    id: 'split-chat',
-    type: 'split',
-    direction: 'horizontal',
-    size: 100,
-    children: [
-      { id: 'tile-chat-session', type: 'leaf', name: 'session-view', size: 30 },
-      { id: 'tile-chat-main', type: 'leaf', name: 'aichat', size: 70 },
-    ],
-  },
-  file: {
-    id: 'split-file',
-    type: 'split',
-    direction: 'horizontal',
-    size: 100,
-    children: [
-      { id: 'tile-file-tree', type: 'leaf', name: 'treeview', size: 30 },
-      { id: 'tile-file-browser', type: 'leaf', name: 'file-browser', size: 70 },
-    ],
-  },
-  code: {
-    id: 'split-code',
-    type: 'split',
-    direction: 'horizontal',
-    size: 100,
-    children: [
-      { id: 'tile-code-tree', type: 'leaf', name: 'treeview', size: 20 },
-      { id: 'tile-code-browser', type: 'leaf', name: 'file-browser', size: 50 },
-      { id: 'tile-code-chat', type: 'leaf', name: 'aichat', size: 30 },
-    ],
-  },
-  surprise: {
-    id: 'tile-surprise',
-    type: 'leaf',
-    name: '',
-    size: 100,
-  },
-}
+// ─── Aynite Playbook Layouts ──────────────────────────────────────────────
 
-export const DEFAULT_LAYOUTS: LayoutConfig[] = [
+export const PLAYBOOK_LAYOUTS: LayoutConfig[] = [
   {
-    id: 'layout-chat',
-    name: 'Chat Vibe',
-    layout: VIBE_LAYOUTS.chat,
+    id: 'pb-welcome',
+    name: 'Welcome',
+    layout: {
+      id: 'split-pb-welcome',
+      type: 'split',
+      direction: 'horizontal',
+      size: 100,
+      children: [
+        { id: 'tile-pb-tree', type: 'leaf', name: 'treeview', size: 20 },
+        { id: 'tile-pb-browser', type: 'leaf', name: 'file-browser', size: 50 },
+        { id: 'tile-pb-chat', type: 'leaf', name: 'aichat', size: 30 },
+      ],
+    },
   },
   {
-    id: 'layout-file',
-    name: 'File Vibe',
-    layout: VIBE_LAYOUTS.file,
+    id: 'pb-whiteboard',
+    name: 'Whiteboard',
+    layout: {
+      id: 'split-pb-whiteboard',
+      type: 'split',
+      direction: 'vertical',
+      size: 100,
+      children: [
+        { id: 'tile-pb-canvas', type: 'leaf', name: 'canvas', size: 60 },
+        { id: 'tile-pb-mindmap', type: 'leaf', name: 'mindmap', size: 40 },
+      ],
+    },
   },
   {
-    id: 'layout-code',
-    name: 'Code Vibe',
-    layout: VIBE_LAYOUTS.code,
+    id: 'pb-diagrams',
+    name: 'Diagrams',
+    layout: {
+      id: 'split-pb-diagrams',
+      type: 'split',
+      direction: 'vertical',
+      size: 100,
+      children: [
+        {
+          id: 'split-pb-diagrams-top',
+          type: 'split',
+          direction: 'horizontal',
+          size: 50,
+          children: [
+            { id: 'tile-pb-flow', type: 'leaf', name: 'flow', size: 50 },
+            { id: 'tile-pb-diagram', type: 'leaf', name: 'diagram', size: 50 },
+          ],
+        },
+        {
+          id: 'split-pb-diagrams-bot',
+          type: 'split',
+          direction: 'horizontal',
+          size: 50,
+          children: [
+            { id: 'tile-pb-datachart', type: 'leaf', name: 'datachart', size: 50 },
+            { id: 'tile-pb-graph', type: 'leaf', name: 'graph', size: 50 },
+          ],
+        },
+      ],
+    },
+  },
+]
+
+// ─── Market Lens (Trader) Layouts ─────────────────────────────────────────
+
+export const TRADER_LAYOUTS: LayoutConfig[] = [
+  {
+    id: 'trader-desk',
+    name: 'Trading Desk',
+    layout: {
+      id: 'split-trader-desk',
+      type: 'split',
+      direction: 'horizontal',
+      size: 100,
+      children: [
+        { id: 'tile-trader-stock', type: 'leaf', name: 'stockchart', size: 70 },
+        { id: 'tile-trader-chat', type: 'leaf', name: 'aichat', size: 30 },
+      ],
+    },
+  },
+  {
+    id: 'trader-portfolio',
+    name: 'Portfolio',
+    layout: {
+      id: 'split-trader-portfolio',
+      type: 'split',
+      direction: 'vertical',
+      size: 100,
+      children: [
+        {
+          id: 'split-tp-row1',
+          type: 'split',
+          direction: 'horizontal',
+          size: 50,
+          children: [
+            { id: 'tile-tp-s1', type: 'leaf', name: 'stockchart', size: 33.3 },
+            { id: 'tile-tp-s2', type: 'leaf', name: 'stockchart', size: 33.3 },
+            { id: 'tile-tp-s3', type: 'leaf', name: 'stockchart', size: 33.4 },
+          ],
+        },
+        {
+          id: 'split-tp-row2',
+          type: 'split',
+          direction: 'horizontal',
+          size: 50,
+          children: [
+            { id: 'tile-tp-s4', type: 'leaf', name: 'stockchart', size: 33.3 },
+            { id: 'tile-tp-s5', type: 'leaf', name: 'stockchart', size: 33.3 },
+            { id: 'tile-tp-s6', type: 'leaf', name: 'stockchart', size: 33.4 },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    id: 'trader-research',
+    name: 'Research',
+    layout: {
+      id: 'split-trader-research',
+      type: 'split',
+      direction: 'horizontal',
+      size: 100,
+      children: [
+        { id: 'tile-trader-res-tree', type: 'leaf', name: 'treeview', size: 25 },
+        { id: 'tile-trader-res-browser', type: 'leaf', name: 'file-browser', size: 50 },
+        { id: 'tile-trader-res-chat', type: 'leaf', name: 'aichat', size: 25 },
+      ],
+    },
+  },
+]
+
+// ─── The Quill (Writer) Layouts ───────────────────────────────────────────
+
+export const WRITER_LAYOUTS: LayoutConfig[] = [
+  {
+    id: 'quill-desk',
+    name: 'Writing Desk',
+    layout: {
+      id: 'split-quill-desk',
+      type: 'split',
+      direction: 'horizontal',
+      size: 100,
+      children: [
+        { id: 'tile-quill-tree', type: 'leaf', name: 'treeview', size: 20 },
+        { id: 'tile-quill-browser', type: 'leaf', name: 'file-browser', size: 50 },
+        { id: 'tile-quill-chat', type: 'leaf', name: 'aichat', size: 30 },
+      ],
+    },
+  },
+  {
+    id: 'quill-brainstorm',
+    name: 'Brainstorm',
+    layout: {
+      id: 'split-quill-brainstorm',
+      type: 'split',
+      direction: 'horizontal',
+      size: 100,
+      children: [
+        {
+          id: 'split-quill-bs-left',
+          type: 'split',
+          direction: 'vertical',
+          size: 60,
+          children: [
+            { id: 'tile-quill-mindmap', type: 'leaf', name: 'mindmap', size: 50 },
+            { id: 'tile-quill-graph', type: 'leaf', name: 'graph', size: 50 },
+          ],
+        },
+        { id: 'tile-quill-bs-chat', type: 'leaf', name: 'aichat', size: 40 },
+      ],
+    },
+  },
+  {
+    id: 'quill-sketch',
+    name: 'Sketch Pad',
+    layout: {
+      id: 'tile-quill-canvas',
+      type: 'leaf',
+      name: 'canvas',
+      size: 100,
+    },
   },
 ]

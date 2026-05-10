@@ -3,6 +3,7 @@ import { ipcMain } from 'electron'
 import { AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
 import { sendAppOperation, showOpenDialog } from '../window'
+import { getWorkspacesList } from '../workspace/logic'
 import { aiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
@@ -62,19 +63,22 @@ export function setupAiIpc() {
   ipcMain.handle(
     AiChannels.SESSION_SAVE,
     async (_event, { sessionId, messages, metadata }: SessionSavePayload) => {
-      return await saveSession(sessionId, messages, metadata)
+      const { active } = await getWorkspacesList()
+      return await saveSession(active, sessionId, messages, metadata)
     },
   )
 
   ipcMain.handle(
     AiChannels.SESSION_LOAD,
     async (_event, { sessionId, date }: SessionLoadPayload) => {
-      return await loadSession(sessionId, date)
+      const { active } = await getWorkspacesList()
+      return await loadSession(active, sessionId, date)
     },
   )
 
   ipcMain.handle(AiChannels.SESSION_LIST, async () => {
-    return await listSessions()
+    const { active } = await getWorkspacesList()
+    return await listSessions(active)
   })
 
   ipcMain.handle(AiChannels.PROMPT_RESTORE, async () => {
@@ -91,7 +95,7 @@ export function setupAiIpc() {
   })
 }
 
-export { deleteSession, listSessions, loadSession, saveSession } from './chat'
+export { deleteSession, initWorkspaceFolders, listSessions, loadSession, saveSession } from './chat'
 export {
   ensureDefaultPromptFiles,
   getDefaultGlobalPrompts,

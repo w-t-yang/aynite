@@ -9,9 +9,9 @@ import {
 } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
 import type { MindMapData, MindMapNode } from './types'
-import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const MOCK_DATA: MindMapData = {
   root: {
@@ -279,16 +279,39 @@ export function MindMapPage() {
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       <ViewHeader icon={<Network size={16} />} title="MindMap">
-        <button type="button" onClick={() => setZoom((z) => z * 1.1)} className={iconBtn()} title="Zoom In">
+        <button
+          type="button"
+          onClick={() => setZoom((z) => z * 1.1)}
+          className={iconBtn()}
+          title="Zoom In"
+        >
           <ZoomIn size={14} />
         </button>
-        <button type="button" onClick={() => setZoom((z) => z / 1.1)} className={iconBtn()} title="Zoom Out">
+        <button
+          type="button"
+          onClick={() => setZoom((z) => z / 1.1)}
+          className={iconBtn()}
+          title="Zoom Out"
+        >
           <ZoomOut size={14} />
         </button>
-        <button type="button" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }) }} className={iconBtn()} title="Reset Zoom">
+        <button
+          type="button"
+          onClick={() => {
+            setZoom(1)
+            setOffset({ x: 0, y: 0 })
+          }}
+          className={iconBtn()}
+          title="Reset Zoom"
+        >
           <RefreshCw size={14} />
         </button>
-        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load mindmap file">
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load mindmap file"
+        >
           <Upload size={14} />
         </button>
       </ViewHeader>

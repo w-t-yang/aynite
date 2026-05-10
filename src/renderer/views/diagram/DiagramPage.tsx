@@ -8,9 +8,9 @@ import {
 } from 'lucide-react'
 import mermaid from 'mermaid'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { useView } from '../ViewContext'
 import type { DiagramData, DiagramType } from './types'
-import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 
 const MOCK_DATA: DiagramData = {
   title: 'System Architecture',
@@ -196,25 +196,49 @@ export function DiagramPage() {
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       {/* Toolbar */}
       <ViewHeader icon={<FileType size={16} />} title="Diagram">
-        <button type="button" onClick={() => setZoom((z) => Math.min(z * 1.2, 5))} className={iconBtn()} title="Zoom In">
+        <button
+          type="button"
+          onClick={() => setZoom((z) => Math.min(z * 1.2, 5))}
+          className={iconBtn()}
+          title="Zoom In"
+        >
           <Maximize2 size={14} />
         </button>
-        <button type="button" onClick={() => setZoom((z) => Math.max(z / 1.2, 0.1))} className={iconBtn()} title="Zoom Out">
+        <button
+          type="button"
+          onClick={() => setZoom((z) => Math.max(z / 1.2, 0.1))}
+          className={iconBtn()}
+          title="Zoom Out"
+        >
           <Minimize2 size={14} />
         </button>
-        <button type="button" onClick={() => setZoom(1)} className={iconBtn()} title="Reset Zoom">
+        <button
+          type="button"
+          onClick={() => setZoom(1)}
+          className={iconBtn()}
+          title="Reset Zoom"
+        >
           <RefreshCw size={14} />
         </button>
         <select
           value={data?.type || 'flowchart'}
-          onChange={(e) => { if (data) setData({ ...data, type: e.target.value as DiagramType }) }}
+          onChange={(e) => {
+            if (data) setData({ ...data, type: e.target.value as DiagramType })
+          }}
           className="text-[10px] bg-muted border border-border rounded px-2 py-1.5 text-foreground font-medium outline-none"
         >
           {DIAGRAM_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>
+              {t}
+            </option>
           ))}
         </select>
-        <button type="button" onClick={handleSelectFile} className={iconBtn()} title="Load diagram file">
+        <button
+          type="button"
+          onClick={handleSelectFile}
+          className={iconBtn()}
+          title="Load diagram file"
+        >
           <Upload size={14} />
         </button>
       </ViewHeader>

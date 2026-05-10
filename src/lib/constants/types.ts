@@ -34,11 +34,11 @@ export interface WorkspaceConfig {
   id: string
   layouts: LayoutConfig[]
   activeLayoutId: string
+  activeAgentId: string
+  activeSessionId: string | null
   folders: string[]
   files: string[]
   activeFile?: string
-  tabs?: any[] // Legacy compatibility
-  activeTabId?: string // Legacy compatibility
 }
 
 export interface Keybinding {
@@ -70,7 +70,6 @@ export interface FileNode {
 export interface MainConfig {
   lastUsed?: string
   activeTheme?: string
-  activeSessionId?: string
   aiTools?: Record<string, boolean>
   agents?: {
     activeId: string

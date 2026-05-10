@@ -3,11 +3,11 @@ import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
-  getAyniteSessionsDir,
   getLogPath,
   getSessionMetadataPath,
   getSessionPath,
   getSessionsDateDir,
+  getWorkspaceSessionsDir,
   readdir,
   readJson,
   stat,
@@ -20,7 +20,11 @@ import { getAIModel } from './factory'
 import { createTools } from './tools'
 
 export async function initAiFolders() {
-  const dir = getAyniteSessionsDir()
+  // Global sessions dir is no longer used; workspace-scoped init happens in initWorkspaceFolders
+}
+
+export async function initWorkspaceFolders(workspace: string) {
+  const dir = getWorkspaceSessionsDir(workspace)
   const exists = await stat(dir).catch(() => null)
   if (!exists) {
     const fs = await import('node:fs/promises')
@@ -29,15 +33,16 @@ export async function initAiFolders() {
 }
 
 export async function saveSession(
+  workspace: string,
   id: string,
   messages: UIMessage[],
   metadata?: SessionMetadata,
 ) {
-  const path = getSessionPath(id)
+  const path = getSessionPath(id, undefined, workspace)
   await writeJson(path, messages)
 
   if (metadata) {
-    const metaPath = getSessionMetadataPath(id)
+    const metaPath = getSessionMetadataPath(id, undefined, workspace)
     const exists = await stat(metaPath).catch(() => null)
     if (!exists) {
       await writeJson(metaPath, metadata)
@@ -47,35 +52,35 @@ export async function saveSession(
   sendAppEvent(AppEvents.SESSION_SAVED, id)
 }
 
-export async function loadSession(id: string, date?: string) {
+export async function loadSession(workspace: string, id: string, date?: string) {
   if (date) {
-    const path = getSessionPath(id, date)
+    const path = getSessionPath(id, date, workspace)
     return readJson(path).catch(() => null)
   }
 
   // Find session across all dates
-  const dir = getAyniteSessionsDir()
+  const dir = getWorkspaceSessionsDir(workspace)
   const dates = await readdir(dir).catch(() => [])
   for (const d of dates) {
     if (!d.isDirectory()) continue
     const dateDir = d.name
-    const path = getSessionPath(id, dateDir)
+    const path = getSessionPath(id, dateDir, workspace)
     const content = await readJson(path).catch(() => null)
     if (content) return content
   }
   return null
 }
 
-export async function deleteSession(id: string) {
-  const dir = getAyniteSessionsDir()
+export async function deleteSession(workspace: string, id: string) {
+  const dir = getWorkspaceSessionsDir(workspace)
   const dates = await readdir(dir).catch(() => [])
   const { unlink } = await import('node:fs/promises')
 
   for (const d of dates) {
     if (!d.isDirectory()) continue
     const dateDir = d.name
-    const path = getSessionPath(id, dateDir)
-    const metaPath = getSessionMetadataPath(id, dateDir)
+    const path = getSessionPath(id, dateDir, workspace)
+    const metaPath = getSessionMetadataPath(id, dateDir, workspace)
 
     if (await stat(path).catch(() => null)) {
       await unlink(path).catch(() => {})
@@ -86,14 +91,14 @@ export async function deleteSession(id: string) {
   }
 }
 
-export async function listSessions() {
-  const dir = getAyniteSessionsDir()
+export async function listSessions(workspace: string) {
+  const dir = getWorkspaceSessionsDir(workspace)
   const dates = await readdir(dir).catch(() => [])
   const all: any[] = []
   for (const d of dates) {
     if (!d.isDirectory()) continue
     const date = d.name
-    const dPath = getSessionsDateDir(date)
+    const dPath = getSessionsDateDir(date, workspace)
     const files = await readdir(dPath).catch(() => [])
     for (const f of files) {
       if (
@@ -102,8 +107,8 @@ export async function listSessions() {
         !f.name.endsWith('-metadata.json')
       ) {
         const id = f.name.replace('.json', '')
-        const sessionPath = getSessionPath(id, date)
-        const metaPath = getSessionMetadataPath(id, date)
+        const sessionPath = getSessionPath(id, date, workspace)
+        const metaPath = getSessionMetadataPath(id, date, workspace)
 
         const [content, metadata, stats] = await Promise.all([
           readJson(sessionPath).catch(() => null),
