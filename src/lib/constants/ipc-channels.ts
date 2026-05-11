@@ -111,6 +111,27 @@ export const RssChannels = {
   DELETE_SOURCE_CONTENT: 'aynite:rss-delete-source-content',
 } as const
 
+export const SpotifyChannels = {
+  INIT_AUTH: 'aynite:spotify-init-auth',
+  CHECK_AUTH: 'aynite:spotify-check-auth',
+  CHECK_PROTOCOL: 'aynite:spotify-check-protocol',
+  LOGOUT: 'aynite:spotify-logout',
+  GET_CLIENT_ID: 'aynite:spotify-get-client-id',
+  LOAD_ALL: 'aynite:spotify-load-all',
+  FETCH_ALL: 'aynite:spotify-fetch-all',
+  GET_PLAYBACK_STATE: 'aynite:spotify-get-playback-state',
+  PLAY: 'aynite:spotify-play',
+  PAUSE: 'aynite:spotify-pause',
+  NEXT: 'aynite:spotify-next',
+  PREVIOUS: 'aynite:spotify-previous',
+  PLAY_TRACK: 'aynite:spotify-play-track',
+  PLAY_CONTEXT: 'aynite:spotify-play-context',
+  PLAY_TRACK_IN_CONTEXT: 'aynite:spotify-play-track-in-context',
+  PLAY_TRACKS: 'aynite:spotify-play-tracks',
+  GET_PLAYLIST_TRACKS: 'aynite:spotify-get-playlist-tracks',
+  LOAD_PLAYLIST_TRACKS: 'aynite:spotify-load-playlist-tracks',
+} as const
+
 export const ThemeChannels = {
   LIST: 'aynite:theme-list',
   READ: 'aynite:theme-read',

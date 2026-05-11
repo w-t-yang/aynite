@@ -76,6 +76,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/rss/index.html',
         ),
+        'views/spotify/index': resolve(
+          __dirname,
+          'src/renderer/views/spotify/index.html',
+        ),
         'views/canvas/index': resolve(
           __dirname,
           'src/renderer/views/canvas/index.html',

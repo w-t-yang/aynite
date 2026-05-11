@@ -64,8 +64,10 @@ export function useRSS() {
         autoFetchDone.current = true
         const stale = config.sources.filter((src: RssSource) => {
           const store = contents[src.id]
-          if (!store) return true // never fetched
-          const age = Date.now() - new Date(store.lastFetchedAt).getTime()
+          if (!store) return true
+          const lastFetched = src.lastFetchedAt || store.lastFetchedAt
+          if (!lastFetched) return true
+          const age = Date.now() - new Date(lastFetched).getTime()
           return age > STALE_MS
         })
         if (stale.length > 0) {

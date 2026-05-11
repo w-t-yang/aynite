@@ -8,6 +8,7 @@ import {
   FileChannels,
   GitChannels,
   RssChannels,
+  SpotifyChannels,
   SpellChannels,
   SystemChannels,
   ThemeChannels,
@@ -156,6 +157,34 @@ const aynite = {
     ipcRenderer.invoke(RssChannels.MARK_ALL_READ, sourceId),
   rssDeleteSourceContent: (sourceId: string) =>
     ipcRenderer.invoke(RssChannels.DELETE_SOURCE_CONTENT, sourceId),
+
+  // ── Spotify operations ────────────────────────────────────────────────
+  spotifyInitAuth: (clientId: string, useProtocol?: boolean) =>
+    ipcRenderer.invoke(SpotifyChannels.INIT_AUTH, clientId, useProtocol),
+  spotifyCheckAuth: () => ipcRenderer.invoke(SpotifyChannels.CHECK_AUTH),
+  spotifyCheckProtocol: () => ipcRenderer.invoke(SpotifyChannels.CHECK_PROTOCOL),
+  spotifyLogout: () => ipcRenderer.invoke(SpotifyChannels.LOGOUT),
+  spotifyGetClientId: () => ipcRenderer.invoke(SpotifyChannels.GET_CLIENT_ID),
+  spotifyLoadAll: () => ipcRenderer.invoke(SpotifyChannels.LOAD_ALL),
+  spotifyFetchAll: () => ipcRenderer.invoke(SpotifyChannels.FETCH_ALL),
+  spotifyGetPlaybackState: () =>
+    ipcRenderer.invoke(SpotifyChannels.GET_PLAYBACK_STATE),
+  spotifyPlay: () => ipcRenderer.invoke(SpotifyChannels.PLAY),
+  spotifyPause: () => ipcRenderer.invoke(SpotifyChannels.PAUSE),
+  spotifyNext: () => ipcRenderer.invoke(SpotifyChannels.NEXT),
+  spotifyPrevious: () => ipcRenderer.invoke(SpotifyChannels.PREVIOUS),
+  spotifyPlayTrack: (uri: string) =>
+    ipcRenderer.invoke(SpotifyChannels.PLAY_TRACK, uri),
+  spotifyPlayTrackInContext: (trackUri: string, contextUri: string) =>
+    ipcRenderer.invoke(SpotifyChannels.PLAY_TRACK_IN_CONTEXT, trackUri, contextUri),
+  spotifyPlayTracks: (trackUris: string[], startUri?: string) =>
+    ipcRenderer.invoke(SpotifyChannels.PLAY_TRACKS, trackUris, startUri),
+  spotifyPlayContext: (uri: string) =>
+    ipcRenderer.invoke(SpotifyChannels.PLAY_CONTEXT, uri),
+  spotifyGetPlaylistTracks: (playlistId: string) =>
+    ipcRenderer.invoke(SpotifyChannels.GET_PLAYLIST_TRACKS, playlistId),
+  spotifyLoadPlaylistTracks: (playlistId: string) =>
+    ipcRenderer.invoke(SpotifyChannels.LOAD_PLAYLIST_TRACKS, playlistId),
 
   // ── Unified Communication Channels (Listeners) ──────────────────────────
 

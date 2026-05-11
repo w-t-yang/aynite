@@ -146,12 +146,56 @@ export function getRssConfigPath() {
   return getAynitePath('rss', 'config.json')
 }
 
-export function getRssContentPath(sourceId: string) {
-  return getAynitePath('rss', 'contents', `${sourceId}.json`)
+export function getRssContentsDir() {
+  return getAynitePath('rss', 'contents')
+}
+
+export function getRssContentPath(date: string, sourceId: string) {
+  return getAynitePath('rss', 'contents', date, `${sourceId}.json`)
 }
 
 export function getRssBookmarksPath() {
   return getAynitePath('rss', 'bookmarks.json')
+}
+
+export function getSpotifyDir() {
+  return getAynitePath('spotify')
+}
+
+export function getSpotifyConfigPath() {
+  return getAynitePath('spotify', 'config.json')
+}
+
+export function getSpotifyProfilePath() {
+  return getAynitePath('spotify', 'profile.json')
+}
+
+export function getSpotifyRecentlyPlayedPath() {
+  return getAynitePath('spotify', 'recently-played.json')
+}
+
+export function getSpotifySavedTracksPath() {
+  return getAynitePath('spotify', 'saved-tracks.json')
+}
+
+export function getSpotifyTopArtistsPath() {
+  return getAynitePath('spotify', 'top-artists.json')
+}
+
+export function getSpotifyTopTracksPath() {
+  return getAynitePath('spotify', 'top-tracks.json')
+}
+
+export function getSpotifyPlaylistsPath() {
+  return getAynitePath('spotify', 'playlists.json')
+}
+
+export function getSpotifyPlaylistTracksPath(id: string) {
+  return getAynitePath('spotify', 'playlist-tracks', `${id}.json`)
+}
+
+export function getSpotifyMetadataPath() {
+  return getAynitePath('spotify', 'metadata.json')
 }
 
 export function getPlaybookPath() {

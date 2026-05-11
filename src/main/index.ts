@@ -7,6 +7,8 @@ import { setupFileIpc, setupWatcher } from './file/index'
 import { setupGitIpc } from './git/index'
 import { setupKeybindings } from './keybindings'
 import { setupRssIpc } from './rss/index'
+import { handleSpotifyAuthCode } from './spotify/logic'
+import { setupSpotifyIpc } from './spotify/index'
 import { setupSpellsIpc } from './spells/index'
 import { setupProtocol, setupSystemIpc } from './system/index'
 import { setupThemeIpc } from './theme/index'
@@ -37,6 +39,56 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
+/**
+ * OS-level protocol registration for aynite://
+ * Handles incoming URLs (e.g. aynite://auth/spotify/callback?code=xxx)
+ */
+
+// Route incoming aynite:// protocol URLs to the appropriate module
+function handleProtocolUrl(urlStr: string) {
+  try {
+    const url = new URL(urlStr)
+    // aynite://auth/spotify/callback?code=xxx
+    // parses as hostname=auth, pathname=/spotify/callback
+    const route = url.hostname + url.pathname
+
+    if (route === 'auth/spotify/callback') {
+      const code = url.searchParams.get('code')
+      if (code) handleSpotifyAuthCode(code)
+      return
+    }
+    // Future: route other aynite:// URLs here
+  } catch (err) {
+    console.error('[Protocol] Failed to handle URL:', urlStr, err)
+  }
+}
+
+// Single instance lock — required for second-instance protocol events on Linux/Windows
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (_event, argv) => {
+    // Focus the existing window
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isMinimized()) win.focus()
+    }
+    // Check for aynite:// protocol URL in the second instance's args
+    const url = argv.find((arg) => arg.startsWith('aynite://'))
+    if (url) handleProtocolUrl(url)
+  })
+}
+
+// Register aynite:// as an OS-level protocol handler
+// On Linux this creates a .desktop entry; returns false if unavailable (e.g. dev)
+const protocolAvailable = app.setAsDefaultProtocolClient('aynite')
+
+// macOS: handle open-url events
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  handleProtocolUrl(url)
+})
+
 app.whenReady().then(async () => {
   // 1. Essential System Setup
   setupProtocol()
@@ -65,6 +117,7 @@ app.whenReady().then(async () => {
     setupAiIpc()
     setupSpellsIpc()
     setupRssIpc()
+    setupSpotifyIpc(protocolAvailable)
     setupGitIpc()
   }
 

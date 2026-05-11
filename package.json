@@ -139,6 +139,10 @@
   "build": {
     "appId": "com.aynite.app",
     "productName": "Aynite",
+    "protocols": {
+      "name": "Aynite Protocol",
+      "schemes": ["aynite"]
+    },
     "directories": {
       "output": "dist"
     },

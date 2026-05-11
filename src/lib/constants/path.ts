@@ -9,4 +9,5 @@ export const AYNITE_SUBDIRS = {
   WORKSPACES: 'workspaces',
   SESSIONS: 'sessions',
   RSS: 'rss',
+  SPOTIFY: 'spotify',
 }
