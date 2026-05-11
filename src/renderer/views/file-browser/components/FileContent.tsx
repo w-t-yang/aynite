@@ -39,6 +39,11 @@ export function FileContent({
     setBaseContent(null)
     setLocalContent(null)
     if (!path) return
+
+    // Satisfy Biome's noUnusedVariables — used as deps for refetch triggers
+    void refreshKey
+    void isEditing
+
     let cancelled = false
     ;(async () => {
       try {

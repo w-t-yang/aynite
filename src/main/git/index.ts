@@ -121,10 +121,9 @@ class GitService {
             return stdout
           } catch {
             try {
-              const { stdout } = await execAsync(
-                `git show HEAD:${relative}`,
-                { cwd: root },
-              )
+              const { stdout } = await execAsync(`git show HEAD:${relative}`, {
+                cwd: root,
+              })
               return stdout
             } catch {
               return null
@@ -142,7 +141,11 @@ class GitService {
         if (!root) return { error: 'Not in a git repository' }
         const relative = getRelativePath(root, data.filePath)
         const patch = buildHunkPatch(relative, data)
-        await spawnGitPatch(['apply', '--cached', '--unidiff-zero'], patch, root)
+        await spawnGitPatch(
+          ['apply', '--cached', '--unidiff-zero'],
+          patch,
+          root,
+        )
         await this.refreshStatus(root, true)
         return { error: null }
       } catch (e: unknown) {
@@ -156,7 +159,11 @@ class GitService {
         if (!root) return { error: 'Not in a git repository' }
         const relative = getRelativePath(root, data.filePath)
         const patch = buildHunkPatch(relative, data)
-        await spawnGitPatch(['apply', '--reverse', '--unidiff-zero'], patch, root)
+        await spawnGitPatch(
+          ['apply', '--reverse', '--unidiff-zero'],
+          patch,
+          root,
+        )
         await this.refreshStatus(root, true)
         return { error: null }
       } catch (e: unknown) {
