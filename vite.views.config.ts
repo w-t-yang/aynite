@@ -60,10 +60,6 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/mindmap/index.html',
         ),
-        'views/diff/index': resolve(
-          __dirname,
-          'src/renderer/views/diff/index.html',
-        ),
         'views/flow/index': resolve(
           __dirname,
           'src/renderer/views/flow/index.html',
