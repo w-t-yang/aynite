@@ -14,7 +14,11 @@ import { cn } from '../../shared/lib/utils'
 
 // ─── File Tree Node ────────────────────────────────────────────────
 
-import type { FileNode, GitStatusType } from '../../../lib/types/files'
+import type {
+  DiffStats,
+  FileNode,
+  GitStatusType,
+} from '../../../lib/types/files'
 
 export type { FileNode }
 
@@ -28,6 +32,8 @@ export function NodeRenderer({
   activeFilePath,
   gitStatuses,
   gitRoots,
+  diffStats,
+  changesOnly,
 }: NodeRendererProps<FileNode> & {
   onSelectFile: (file: {
     name: string
@@ -45,6 +51,8 @@ export function NodeRenderer({
   activeFilePath?: string | null
   gitStatuses?: Record<string, GitStatusType>
   gitRoots?: Set<string>
+  diffStats?: Record<string, DiffStats>
+  changesOnly?: boolean
 }) {
   const { name, isDirectory, id } = node.data
   const isSelected = node.isSelected
@@ -53,6 +61,8 @@ export function NodeRenderer({
 
   const gitStatus = gitStatuses?.[id]
   const isGitRoot = gitRoots?.has(id)
+
+  const diffStat = changesOnly && !isDirectory ? diffStats?.[id] : undefined
 
   const statusLabel = (() => {
     switch (gitStatus) {
@@ -137,12 +147,25 @@ export function NodeRenderer({
         {name}
         {isDirty && ' •'}
       </span>
-      {(isGitRoot || statusLabel) && (
+      {(isGitRoot || statusLabel || diffStat) && (
         <span className="ml-auto flex items-center gap-1 mr-1">
           {isGitRoot && (
             <GitBranch size={12} className="text-muted-foreground shrink-0" />
           )}
-          {!isGitRoot && statusLabel && (
+          {!isGitRoot && diffStat && (
+            <span className="text-[10px] font-mono leading-none whitespace-nowrap">
+              {diffStat.additions > 0 && (
+                <span className="text-green-500">+{diffStat.additions}</span>
+              )}
+              {diffStat.additions > 0 && diffStat.deletions > 0 && (
+                <span className="text-muted-foreground/40"> </span>
+              )}
+              {diffStat.deletions > 0 && (
+                <span className="text-red-500">-{diffStat.deletions}</span>
+              )}
+            </span>
+          )}
+          {!isGitRoot && !diffStat && statusLabel && (
             <span
               className={`text-[10px] font-bold font-mono leading-none ${statusLabel.className}`}
             >

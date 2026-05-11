@@ -95,6 +95,7 @@ export const GitChannels = {
   INDEX_CONTENT: 'aynite:git-index-content',
   STAGE_HUNK: 'aynite:git-stage-hunk',
   DISCARD_HUNK: 'aynite:git-discard-hunk',
+  DIFF_STATS: 'aynite:git-diff-stats',
 } as const
 export const ThemeChannels = {
   LIST: 'aynite:theme-list',

@@ -10,7 +10,7 @@ import {
   getRelativePath,
   joinPaths,
 } from '../../lib/path'
-import type { GitStatusType } from '../../lib/types/files'
+import type { DiffStats, GitStatusType } from '../../lib/types/files'
 import { sendAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
 
@@ -168,6 +168,39 @@ class GitService {
         return { error: null }
       } catch (e: unknown) {
         return { error: e instanceof Error ? e.message : String(e) }
+      }
+    })
+
+    ipcMain.handle(GitChannels.DIFF_STATS, async (_event, root: string) => {
+      try {
+        const parseNumstat = (stdout: string): Record<string, DiffStats> => {
+          const result: Record<string, DiffStats> = {}
+          for (const line of stdout.split('\n')) {
+            if (!line.trim()) continue
+            const parts = line.split('\t')
+            if (parts.length < 3) continue
+            const addStr = parts[0]
+            const delStr = parts[1]
+            let filePath = parts.slice(2).join('\t')
+            if (filePath.startsWith('"') && filePath.endsWith('"')) {
+              filePath = filePath.slice(1, -1)
+            }
+            const absPath = joinPaths(root, filePath)
+            result[absPath] = {
+              additions: addStr === '-' ? 0 : parseInt(addStr, 10) || 0,
+              deletions: delStr === '-' ? 0 : parseInt(delStr, 10) || 0,
+            }
+          }
+          return result
+        }
+
+        const [{ stdout: unstaged }, { stdout: staged }] = await Promise.all([
+          execAsync('git diff --numstat', { cwd: root }),
+          execAsync('git diff --cached --numstat', { cwd: root }),
+        ])
+        return { ...parseNumstat(unstaged), ...parseNumstat(staged) }
+      } catch {
+        return {}
       }
     })
   }

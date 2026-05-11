@@ -9,11 +9,13 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MoveHandler, Tree, type TreeApi } from 'react-arborist'
+import type { DiffStats } from '../../../lib/types/files'
 import { Button } from '../../shared/basic/Button'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
+import { cn } from '../../shared/lib/utils'
 import { useAppEvent } from '../ViewContext'
 import {
   ConfirmModal,
@@ -65,6 +67,9 @@ export function Treeview() {
 
   const { gitStatuses, gitRoots, fetchStatus } = useGitStatus()
 
+  const [changesOnly, setChangesOnly] = useState(false)
+  const [diffStats, setDiffStats] = useState<Record<string, DiffStats>>({})
+
   // Fetch git status for workspace folders once they're loaded
   useEffect(() => {
     if (treeData.length > 0) {
@@ -73,6 +78,28 @@ export function Treeview() {
       }
     }
   }, [treeData.length, fetchStatus, treeData])
+
+  // Fetch diff stats when changes-only mode is active or git status updates
+  useEffect(() => {
+    if (!changesOnly) {
+      setDiffStats({})
+      return
+    }
+    // Reference gitStatuses to re-fetch diff stats on status change
+    void gitStatuses
+    let cancelled = false
+    ;(async () => {
+      const all: Record<string, DiffStats> = {}
+      for (const root of treeData) {
+        const stats = await (window as any).aynite.getGitDiffStats(root.id)
+        if (!cancelled && stats) Object.assign(all, stats)
+      }
+      if (!cancelled) setDiffStats(all)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [changesOnly, gitStatuses, treeData])
 
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean
@@ -150,6 +177,42 @@ export function Treeview() {
 
     return items
   }, [contextMenu, clipboard, rootFilesPaths])
+
+  const changesTreeData: FileNode[] = useMemo(() => {
+    if (!changesOnly) return []
+
+    const changedFiles = new Map<string, DiffStats | null>()
+    for (const [path, stats] of Object.entries(diffStats)) {
+      changedFiles.set(path, stats)
+    }
+    for (const [path, status] of Object.entries(gitStatuses)) {
+      if (status === 'untracked' && !changedFiles.has(path)) {
+        changedFiles.set(path, null)
+      }
+    }
+
+    return treeData
+      .map((root) => {
+        const children = Array.from(changedFiles.entries())
+          .filter(([path]) => path.startsWith(`${root.id}/`))
+          .map(([path]) => ({
+            id: path,
+            name: path.split('/').pop() || path,
+            isDirectory: false,
+            isLoaded: true,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        if (children.length === 0) return null
+        return {
+          id: root.id,
+          name: root.name,
+          isDirectory: true,
+          isLoaded: true,
+          children,
+        }
+      })
+      .filter(Boolean) as FileNode[]
+  }, [changesOnly, diffStats, gitStatuses, treeData])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -507,7 +570,20 @@ export function Treeview() {
       className="sidebar-container w-full h-full bg-card flex flex-col shrink-0 overflow-hidden outline-none"
       tabIndex={-1}
     >
-      <ViewHeader icon={<FolderTree size={16} />} title="File Explorer" />
+      <ViewHeader icon={<FolderTree size={16} />} title="File Explorer">
+        <button
+          type="button"
+          onClick={() => setChangesOnly(!changesOnly)}
+          className={cn(
+            'text-[10px] px-2 py-0.5 rounded font-medium transition-colors shrink-0',
+            changesOnly
+              ? 'bg-primary/20 text-primary'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+          )}
+        >
+          Changes
+        </button>
+      </ViewHeader>
       <section
         ref={containerRef}
         aria-label="File Tree Container"
@@ -515,39 +591,47 @@ export function Treeview() {
         onContextMenu={handleContainerContextMenu}
       >
         {treeData.length > 0 ? (
-          <Tree
-            ref={treeRef}
-            data={treeData}
-            width="100%"
-            height={treeHeight - 16}
-            indent={12}
-            rowHeight={28}
-            openByDefault={false}
-            onMove={onMove}
-            onToggle={handleToggle}
-            className="scrollbar-gutter-stable"
-            disableDrop={({ parentNode }) => {
-              if (
-                !parentNode ||
-                parentNode.isInternal ||
-                parentNode.level === -1
-              )
-                return false
-              return !parentNode.data?.isDirectory
-            }}
-          >
-            {(props) => (
-              <NodeRenderer
-                {...props}
-                onSelectFile={onSelectFile}
-                setContextMenu={setContextMenu}
-                dirtyFiles={[]}
-                activeFilePath={activeFilePath}
-                gitStatuses={gitStatuses}
-                gitRoots={gitRoots}
-              />
-            )}
-          </Tree>
+          changesOnly && changesTreeData.length === 0 ? (
+            <div className="p-4 text-xs text-muted-foreground text-center">
+              No changes
+            </div>
+          ) : (
+            <Tree
+              ref={treeRef}
+              data={changesOnly ? changesTreeData : treeData}
+              width="100%"
+              height={treeHeight - 16}
+              indent={12}
+              rowHeight={28}
+              openByDefault={false}
+              onMove={changesOnly ? undefined : onMove}
+              onToggle={changesOnly ? undefined : handleToggle}
+              className="scrollbar-gutter-stable"
+              disableDrop={({ parentNode }) => {
+                if (
+                  !parentNode ||
+                  parentNode.isInternal ||
+                  parentNode.level === -1
+                )
+                  return false
+                return !parentNode.data?.isDirectory
+              }}
+            >
+              {(props) => (
+                <NodeRenderer
+                  {...props}
+                  onSelectFile={onSelectFile}
+                  setContextMenu={setContextMenu}
+                  dirtyFiles={[]}
+                  activeFilePath={activeFilePath}
+                  gitStatuses={gitStatuses}
+                  gitRoots={gitRoots}
+                  diffStats={diffStats}
+                  changesOnly={changesOnly}
+                />
+              )}
+            </Tree>
+          )
         ) : (
           <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
             <Button

@@ -87,6 +87,8 @@ const aynite = {
     ipcRenderer.invoke(GitChannels.HEAD_CONTENT, path),
   getGitIndexContent: (path: string) =>
     ipcRenderer.invoke(GitChannels.INDEX_CONTENT, path),
+  getGitDiffStats: (root: string) =>
+    ipcRenderer.invoke(GitChannels.DIFF_STATS, root),
   checkIsGitRoot: (path: string) =>
     ipcRenderer.invoke('aynite:git-is-root', path),
   stageHunk: (data: {

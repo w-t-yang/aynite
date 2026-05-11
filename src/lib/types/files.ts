@@ -20,6 +20,11 @@ export type FileCategory =
   | 'html'
   | 'unsupported'
 
+export interface DiffStats {
+  additions: number
+  deletions: number
+}
+
 export type GitStatusType =
   | 'untracked'
   | 'ignored'
