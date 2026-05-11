@@ -4,17 +4,15 @@ import { ipcMain } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { GitChannels } from '../../lib/constants/ipc-channels'
 import {
-  appendText,
   exists,
   getAbsolutePath,
   getDirname,
+  getRelativePath,
   joinPaths,
 } from '../../lib/path'
 import type { GitStatusType } from '../../lib/types/files'
 import { sendAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
-
-const DEBUG_LOG = getAbsolutePath('git-debug.log', '/home/wentao/repos/aynite')
 
 const execAsync = promisify(exec)
 
@@ -29,10 +27,6 @@ class GitService {
 
   constructor() {
     this.setupIpc()
-    appendText(
-      DEBUG_LOG,
-      `[${new Date().toISOString()}] GitService instance constructed\n`,
-    ).catch(() => {})
   }
 
   private setupIpc() {
@@ -52,12 +46,24 @@ class GitService {
       const gitDir = joinPaths(getAbsolutePath(path), '.git')
       return await exists(gitDir)
     })
+
+    ipcMain.handle(GitChannels.HEAD_CONTENT, async (_event, filePath: string) => {
+      try {
+        const root = await this.findGitRoot(filePath)
+        if (!root) return null
+        const relative = getRelativePath(root, filePath)
+        const { stdout } = await execAsync(`git show HEAD:${relative}`, { cwd: root })
+        return stdout
+      } catch {
+        return null
+      }
+    })
   }
 
   async findGitRoot(path: string): Promise<string | null> {
     const resolvedPath = getAbsolutePath(path)
     if (this.rootCache.has(resolvedPath)) {
-      return this.rootCache.get(resolvedPath)!
+      return this.rootCache.get(resolvedPath) ?? null
     }
 
     let current = resolvedPath

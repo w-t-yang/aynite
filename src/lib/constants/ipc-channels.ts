@@ -91,6 +91,7 @@ export const UpdateChannels = {
 } as const
 export const GitChannels = {
   STATUS: 'aynite:git-status',
+  HEAD_CONTENT: 'aynite:git-head-content',
 } as const
 export const ThemeChannels = {
   LIST: 'aynite:theme-list',

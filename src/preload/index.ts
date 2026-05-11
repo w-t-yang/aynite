@@ -83,6 +83,8 @@ const aynite = {
 
   // ── Git operations ────────────────────────────────────────────────────────
   getGitStatus: (path: string) => ipcRenderer.invoke(GitChannels.STATUS, path),
+  getGitHeadContent: (path: string) =>
+    ipcRenderer.invoke(GitChannels.HEAD_CONTENT, path),
   checkIsGitRoot: (path: string) =>
     ipcRenderer.invoke('aynite:git-is-root', path),
 

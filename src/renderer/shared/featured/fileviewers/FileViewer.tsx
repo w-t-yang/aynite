@@ -15,6 +15,7 @@ import { KeyManager } from '../../lib/key-handlers'
 import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
 import { FileHandlerComponents } from './index'
+import { DiffViewer } from './DiffViewer'
 import { TextViewer } from './TextViewer'
 
 interface FileViewerProps {
@@ -56,6 +57,7 @@ function FileViewer({
   const [error, setError] = useState<string | null>(null)
   const [externalChangeDetected, setExternalChangeDetected] = useState(false)
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false)
+  const [headContent, setHeadContent] = useState<string | null>(null)
   const lastLocalWriteTime = useRef(0)
 
   const category = fileInfo
@@ -161,6 +163,20 @@ function FileViewer({
     fetchInfo()
     setIsEditing(false)
     setExternalChangeDetected(false)
+    setHeadContent(null)
+    // Fetch git diff data for this file
+    ;(async () => {
+      try {
+        const path = id.startsWith('file-') ? id.replace('file-', '') : id
+        const statusMap = await (window as any).aynite.getGitStatus(path)
+        if (statusMap?.[path]) {
+          const head = await (window as any).aynite.getGitHeadContent(path)
+          setHeadContent(head || null)
+        }
+      } catch {
+        // not a git file — no diff view
+      }
+    })()
     // Force focus to show cursor in View Mode
     setTimeout(() => {
       const el = document.getElementById('file-editor-textarea')
@@ -639,6 +655,13 @@ function FileViewer({
                     textareaId="file-editor-textarea"
                     textareaClassName="outline-none focus:ring-0 !caret-primary"
                     preClassName="selection:bg-primary/30"
+                  />
+                ) : headContent ? (
+                  <DiffViewer
+                    headContent={headContent}
+                    currentContent={localContent}
+                    extension={fileInfo?.extension}
+                    showLineNumbers={false}
                   />
                 ) : (
                   <TextViewer

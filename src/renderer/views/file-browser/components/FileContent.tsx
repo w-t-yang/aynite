@@ -1,8 +1,10 @@
 import { Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { AppOperation } from '../../../../lib/constants/app'
 import { FileHandlerComponents } from '../../../../lib/constants/renderer/ui'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
+import { DiffViewer } from '../../../shared/featured/fileviewers/DiffViewer'
 import { MarkdownViewer } from '../../../shared/featured/fileviewers/MarkdownViewer'
 import { TextEditor } from '../../../shared/featured/fileviewers/TextEditor'
 import { TextViewer } from '../../../shared/featured/fileviewers/TextViewer'
@@ -29,6 +31,26 @@ export function FileContent({
   onContentChange,
 }: FileContentProps) {
   const execOp = useAppOperation()
+  const [headContent, setHeadContent] = useState<string | null>(null)
+
+  useEffect(() => {
+    setHeadContent(null)
+    if (!path) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const statusMap = await (window as any).aynite.getGitStatus(path)
+        if (cancelled) return
+        if (statusMap?.[path]) {
+          const head = await (window as any).aynite.getGitHeadContent(path)
+          if (!cancelled) setHeadContent(head || null)
+        }
+      } catch {
+        // not a git file — no diff view
+      }
+    })()
+    return () => { cancelled = true }
+  }, [path])
 
   if (!path) {
     return (
@@ -101,6 +123,16 @@ export function FileContent({
           content={content || ''}
           onChange={onContentChange || (() => {})}
           file={fileInfo}
+          className="flex-1"
+        />
+      )
+    }
+    if (headContent) {
+      return (
+        <DiffViewer
+          headContent={headContent}
+          currentContent={content || ''}
+          extension={fileInfo.extension}
           className="flex-1"
         />
       )

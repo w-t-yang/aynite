@@ -1,4 +1,5 @@
 export * from './AudioViewer'
+export * from './DiffViewer'
 export * from './HtmlViewer'
 export * from './ImageViewer'
 export * from './MarkdownViewer'
