@@ -19,6 +19,7 @@ import {
   writeText,
 } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
+import { gitService } from '../git/index'
 import { sendAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
 
@@ -181,6 +182,7 @@ export async function setupWatcher(folders?: string[]) {
 
       watcher.on('all', (event, path) => {
         sendAppEvent(AppEventTypes.FS_CHANGE, { event, path })
+        gitService.handleFsChange(path)
       })
     } catch (e) {
       console.error('Error in setupWatcher ignore patterns:', e)

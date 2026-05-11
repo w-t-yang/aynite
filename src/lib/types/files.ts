@@ -20,6 +20,15 @@ export type FileCategory =
   | 'html'
   | 'unsupported'
 
+export type GitStatusType =
+  | 'untracked'
+  | 'ignored'
+  | 'added'
+  | 'modified'
+  | 'deleted'
+  | 'renamed'
+  | 'none'
+
 export interface FileNode {
   id: string
   name: string

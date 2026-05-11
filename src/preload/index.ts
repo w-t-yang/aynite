@@ -6,6 +6,7 @@ import {
   AppOperationChannel,
   ConfigChannels,
   FileChannels,
+  GitChannels,
   SpellChannels,
   SystemChannels,
   ThemeChannels,
@@ -79,6 +80,11 @@ const aynite = {
   respondToAiApproval: (id: string, approved: boolean) =>
     ipcRenderer.send(AiEventChannels.APPROVAL_RESPONSE, { id, approved }),
   getArtifactsStatus: () => ipcRenderer.invoke(AiChannels.ARTIFACTS_STATUS),
+
+  // ── Git operations ────────────────────────────────────────────────────────
+  getGitStatus: (path: string) => ipcRenderer.invoke(GitChannels.STATUS, path),
+  checkIsGitRoot: (path: string) =>
+    ipcRenderer.invoke('aynite:git-is-root', path),
 
   // ── System ──────────────────────────────────────────────────────────────
   openExternal: (url: string) =>

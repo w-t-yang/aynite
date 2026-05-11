@@ -4,6 +4,7 @@ import { app, BrowserWindow, protocol } from 'electron'
 import { setupAiIpc } from './ai/index'
 import { initAppFolders, setupConfigIpc } from './config/index'
 import { setupFileIpc, setupWatcher } from './file/index'
+import { setupGitIpc } from './git/index'
 import { setupKeybindings } from './keybindings'
 import { setupSpellsIpc } from './spells/index'
 import { setupProtocol, setupSystemIpc } from './system/index'
@@ -59,9 +60,10 @@ app.whenReady().then(async () => {
     // Initial watcher setup
     setupWatcher()
 
-    // 5. Feature Subsystems (AI, Spells)
+    // 5. Feature Subsystems (AI, Spells, Git)
     setupAiIpc()
     setupSpellsIpc()
+    setupGitIpc()
   }
 
   app.on('activate', () => {

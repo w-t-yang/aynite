@@ -89,6 +89,9 @@ export const UpdateChannels = {
   CHECK: 'aynite:update-check',
   INSTALL: 'aynite:update-install',
 } as const
+export const GitChannels = {
+  STATUS: 'aynite:git-status',
+} as const
 export const ThemeChannels = {
   LIST: 'aynite:theme-list',
   READ: 'aynite:theme-read',

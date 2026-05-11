@@ -4,6 +4,7 @@ import {
   File,
   Folder,
   FolderOpen,
+  GitBranch,
 } from 'lucide-react'
 import type React from 'react'
 import type { NodeRendererProps } from 'react-arborist'
@@ -13,7 +14,7 @@ import { cn } from '../../shared/lib/utils'
 
 // ─── File Tree Node ────────────────────────────────────────────────
 
-import type { FileNode } from '../../../lib/types/files'
+import type { FileNode, GitStatusType } from '../../../lib/types/files'
 
 export type { FileNode }
 
@@ -25,6 +26,8 @@ export function NodeRenderer({
   setContextMenu,
   dirtyFiles,
   activeFilePath,
+  gitStatuses,
+  gitRoots,
 }: NodeRendererProps<FileNode> & {
   onSelectFile: (file: {
     name: string
@@ -40,11 +43,33 @@ export function NodeRenderer({
   ) => void
   dirtyFiles: string[]
   activeFilePath?: string | null
+  gitStatuses?: Record<string, GitStatusType>
+  gitRoots?: Set<string>
 }) {
   const { name, isDirectory, id } = node.data
   const isSelected = node.isSelected
   const isActive = id === activeFilePath
   const isDirty = dirtyFiles.includes(id)
+
+  const gitStatus = gitStatuses?.[id]
+  const isGitRoot = gitRoots?.has(id)
+
+  const statusLabel = (() => {
+    switch (gitStatus) {
+      case 'modified':
+        return { letter: 'M', className: 'text-amber-400' }
+      case 'added':
+        return { letter: 'A', className: 'text-green-400' }
+      case 'untracked':
+        return { letter: 'U', className: 'text-blue-400' }
+      case 'deleted':
+        return { letter: 'D', className: 'text-red-400' }
+      case 'renamed':
+        return { letter: 'R', className: 'text-purple-400' }
+      default:
+        return null
+    }
+  })()
 
   return (
     <div
@@ -112,6 +137,20 @@ export function NodeRenderer({
         {name}
         {isDirty && ' •'}
       </span>
+      {(isGitRoot || statusLabel) && (
+        <span className="ml-auto flex items-center gap-1 mr-1">
+          {isGitRoot && (
+            <GitBranch size={12} className="text-muted-foreground shrink-0" />
+          )}
+          {!isGitRoot && statusLabel && (
+            <span
+              className={`text-[10px] font-bold font-mono leading-none ${statusLabel.className}`}
+            >
+              {statusLabel.letter}
+            </span>
+          )}
+        </span>
+      )}
     </div>
   )
 }

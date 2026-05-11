@@ -21,6 +21,7 @@ import {
   NodeRenderer,
   PromptModal,
 } from './components'
+import { useGitStatus } from './hooks/useGitStatus'
 import { expandPathIteratively } from './tree-expand'
 import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
 
@@ -61,6 +62,17 @@ export function Treeview() {
   const rootFilesPaths = treeData.map((node) => node.id)
   const rootFilesPathsRef = useRef(rootFilesPaths)
   rootFilesPathsRef.current = rootFilesPaths
+
+  const { gitStatuses, gitRoots, fetchStatus } = useGitStatus()
+
+  // Fetch git status for workspace folders once they're loaded
+  useEffect(() => {
+    if (treeData.length > 0) {
+      for (const root of treeData) {
+        fetchStatus(root.id)
+      }
+    }
+  }, [treeData.length, fetchStatus, treeData])
 
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean
@@ -531,6 +543,8 @@ export function Treeview() {
                 setContextMenu={setContextMenu}
                 dirtyFiles={[]}
                 activeFilePath={activeFilePath}
+                gitStatuses={gitStatuses}
+                gitRoots={gitRoots}
               />
             )}
           </Tree>
