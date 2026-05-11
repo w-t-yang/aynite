@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process'
+import { exec, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import { ipcMain } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
@@ -15,6 +15,45 @@ import { sendAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
 
 const execAsync = promisify(exec)
+
+interface HunkData {
+  filePath: string
+  oldStart: number
+  oldLines: string[]
+  newStart: number
+  newLines: string[]
+}
+
+function buildHunkPatch(relative: string, hunk: HunkData): string {
+  const oldCount = hunk.oldLines.length || 0
+  const newCount = hunk.newLines.length || 0
+  const removed = hunk.oldLines.map((l) => `-${l}`).join('\n')
+  const added = hunk.newLines.map((l) => `+${l}`).join('\n')
+  return [
+    `--- a/${relative}`,
+    `+++ b/${relative}`,
+    `@@ -${hunk.oldStart},${oldCount} +${hunk.newStart},${newCount} @@`,
+    removed,
+    added,
+    '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+function spawnGitPatch(args: string[], patch: string, cwd: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('git', args, { cwd })
+    let stderr = ''
+    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+    proc.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(stderr || `git exited with code ${code}`))
+    })
+    proc.on('error', reject)
+    proc.stdin.end(patch)
+  })
+}
 
 interface GitStatusMap {
   [path: string]: GitStatusType
@@ -47,15 +86,48 @@ class GitService {
       return await exists(gitDir)
     })
 
-    ipcMain.handle(GitChannels.HEAD_CONTENT, async (_event, filePath: string) => {
+    ipcMain.handle(
+      GitChannels.HEAD_CONTENT,
+      async (_event, filePath: string) => {
+        try {
+          const root = await this.findGitRoot(filePath)
+          if (!root) return null
+          const relative = getRelativePath(root, filePath)
+          const { stdout } = await execAsync(`git show HEAD:${relative}`, {
+            cwd: root,
+          })
+          return stdout
+        } catch {
+          return null
+        }
+      },
+    )
+
+    ipcMain.handle(GitChannels.STAGE_HUNK, async (_event, data: HunkData) => {
       try {
-        const root = await this.findGitRoot(filePath)
-        if (!root) return null
-        const relative = getRelativePath(root, filePath)
-        const { stdout } = await execAsync(`git show HEAD:${relative}`, { cwd: root })
-        return stdout
-      } catch {
-        return null
+        const root = await this.findGitRoot(data.filePath)
+        if (!root) return { error: 'Not in a git repository' }
+        const relative = getRelativePath(root, data.filePath)
+        const patch = buildHunkPatch(relative, data)
+        await spawnGitPatch(['apply', '--cached'], patch, root)
+        await this.refreshStatus(root, true)
+        return { error: null }
+      } catch (e: unknown) {
+        return { error: e instanceof Error ? e.message : String(e) }
+      }
+    })
+
+    ipcMain.handle(GitChannels.DISCARD_HUNK, async (_event, data: HunkData) => {
+      try {
+        const root = await this.findGitRoot(data.filePath)
+        if (!root) return { error: 'Not in a git repository' }
+        const relative = getRelativePath(root, data.filePath)
+        const patch = buildHunkPatch(relative, data)
+        await spawnGitPatch(['apply', '--reverse'], patch, root)
+        await this.refreshStatus(root, true)
+        return { error: null }
+      } catch (e: unknown) {
+        return { error: e instanceof Error ? e.message : String(e) }
       }
     })
   }

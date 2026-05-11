@@ -87,6 +87,20 @@ const aynite = {
     ipcRenderer.invoke(GitChannels.HEAD_CONTENT, path),
   checkIsGitRoot: (path: string) =>
     ipcRenderer.invoke('aynite:git-is-root', path),
+  stageHunk: (data: {
+    filePath: string
+    oldStart: number
+    oldLines: string[]
+    newStart: number
+    newLines: string[]
+  }) => ipcRenderer.invoke(GitChannels.STAGE_HUNK, data),
+  discardHunk: (data: {
+    filePath: string
+    oldStart: number
+    oldLines: string[]
+    newStart: number
+    newLines: string[]
+  }) => ipcRenderer.invoke(GitChannels.DISCARD_HUNK, data),
 
   // ── System ──────────────────────────────────────────────────────────────
   openExternal: (url: string) =>

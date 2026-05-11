@@ -49,7 +49,9 @@ export function FileContent({
         // not a git file — no diff view
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [path])
 
   if (!path) {
@@ -133,6 +135,7 @@ export function FileContent({
           headContent={headContent}
           currentContent={content || ''}
           extension={fileInfo.extension}
+          filePath={path}
           className="flex-1"
         />
       )
