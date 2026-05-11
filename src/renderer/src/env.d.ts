@@ -161,6 +161,19 @@ interface AyniteWindow {
   pickSkillFolder: () => Promise<string | null>
   pickCommandFolder: () => Promise<string | null>
 
+  // RSS
+  rssGetConfig: () => Promise<any>
+  rssSaveConfig: (config: any) => Promise<boolean>
+  rssFetchFeed: (sourceId: string) => Promise<any>
+  rssFetchAll: () => Promise<any>
+  rssGetContent: (sourceId: string) => Promise<any>
+  rssGetAllContents: () => Promise<Record<string, any>>
+  rssGetBookmarks: () => Promise<Record<string, any>>
+  rssToggleBookmark: (itemId: string, data: any) => Promise<Record<string, any>>
+  rssMarkRead: (sourceId: string, itemId: string) => Promise<boolean>
+  rssMarkAllRead: (sourceId: string) => Promise<boolean>
+  rssDeleteSourceContent: (sourceId: string) => Promise<boolean>
+
   checkIsTextFile: (path: string) => Promise<boolean>
   executeAppOperation: (operation: string, data?: unknown) => void
   writeClipboard: (text: string) => Promise<boolean>

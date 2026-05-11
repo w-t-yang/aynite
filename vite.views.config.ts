@@ -72,6 +72,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/diagram/index.html',
         ),
+        'views/rss/index': resolve(
+          __dirname,
+          'src/renderer/views/rss/index.html',
+        ),
         'views/canvas/index': resolve(
           __dirname,
           'src/renderer/views/canvas/index.html',

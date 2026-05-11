@@ -97,6 +97,20 @@ export const GitChannels = {
   DISCARD_HUNK: 'aynite:git-discard-hunk',
   DIFF_STATS: 'aynite:git-diff-stats',
 } as const
+export const RssChannels = {
+  GET_CONFIG: 'aynite:rss-get-config',
+  SAVE_CONFIG: 'aynite:rss-save-config',
+  FETCH_FEED: 'aynite:rss-fetch-feed',
+  FETCH_ALL: 'aynite:rss-fetch-all',
+  GET_CONTENT: 'aynite:rss-get-content',
+  GET_ALL_CONTENTS: 'aynite:rss-get-all-contents',
+  GET_BOOKMARKS: 'aynite:rss-get-bookmarks',
+  TOGGLE_BOOKMARK: 'aynite:rss-toggle-bookmark',
+  MARK_READ: 'aynite:rss-mark-read',
+  MARK_ALL_READ: 'aynite:rss-mark-all-read',
+  DELETE_SOURCE_CONTENT: 'aynite:rss-delete-source-content',
+} as const
+
 export const ThemeChannels = {
   LIST: 'aynite:theme-list',
   READ: 'aynite:theme-read',

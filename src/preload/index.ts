@@ -7,6 +7,7 @@ import {
   ConfigChannels,
   FileChannels,
   GitChannels,
+  RssChannels,
   SpellChannels,
   SystemChannels,
   ThemeChannels,
@@ -135,6 +136,26 @@ const aynite = {
   pickCommandFolder: () => ipcRenderer.invoke(SpellChannels.COMMAND_ADD_FOLDER),
   restoreSkills: () => ipcRenderer.invoke(SpellChannels.SKILL_RESTORE),
   restoreCommands: () => ipcRenderer.invoke(SpellChannels.COMMAND_RESTORE),
+
+  // ── RSS operations ──────────────────────────────────────────────────────
+  rssGetConfig: () => ipcRenderer.invoke(RssChannels.GET_CONFIG),
+  rssSaveConfig: (config: any) =>
+    ipcRenderer.invoke(RssChannels.SAVE_CONFIG, config),
+  rssFetchFeed: (sourceId: string) =>
+    ipcRenderer.invoke(RssChannels.FETCH_FEED, sourceId),
+  rssFetchAll: () => ipcRenderer.invoke(RssChannels.FETCH_ALL),
+  rssGetContent: (sourceId: string) =>
+    ipcRenderer.invoke(RssChannels.GET_CONTENT, sourceId),
+  rssGetAllContents: () => ipcRenderer.invoke(RssChannels.GET_ALL_CONTENTS),
+  rssGetBookmarks: () => ipcRenderer.invoke(RssChannels.GET_BOOKMARKS),
+  rssToggleBookmark: (itemId: string, data: any) =>
+    ipcRenderer.invoke(RssChannels.TOGGLE_BOOKMARK, { itemId, data }),
+  rssMarkRead: (sourceId: string, itemId: string) =>
+    ipcRenderer.invoke(RssChannels.MARK_READ, { sourceId, itemId }),
+  rssMarkAllRead: (sourceId: string) =>
+    ipcRenderer.invoke(RssChannels.MARK_ALL_READ, sourceId),
+  rssDeleteSourceContent: (sourceId: string) =>
+    ipcRenderer.invoke(RssChannels.DELETE_SOURCE_CONTENT, sourceId),
 
   // ── Unified Communication Channels (Listeners) ──────────────────────────
 

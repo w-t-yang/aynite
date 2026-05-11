@@ -8,4 +8,5 @@ export const AYNITE_SUBDIRS = {
   VIEWS: 'views',
   WORKSPACES: 'workspaces',
   SESSIONS: 'sessions',
+  RSS: 'rss',
 }

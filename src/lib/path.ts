@@ -138,6 +138,22 @@ export function getThemePath(name: string) {
   return getAynitePath('themes', `${name}.json`)
 }
 
+export function getRssDir() {
+  return getAynitePath('rss')
+}
+
+export function getRssConfigPath() {
+  return getAynitePath('rss', 'config.json')
+}
+
+export function getRssContentPath(sourceId: string) {
+  return getAynitePath('rss', 'contents', `${sourceId}.json`)
+}
+
+export function getRssBookmarksPath() {
+  return getAynitePath('rss', 'bookmarks.json')
+}
+
 export function getPlaybookPath() {
   return getAynitePath('aynite-playbook')
 }

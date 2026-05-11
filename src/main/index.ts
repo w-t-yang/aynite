@@ -6,6 +6,7 @@ import { initAppFolders, setupConfigIpc } from './config/index'
 import { setupFileIpc, setupWatcher } from './file/index'
 import { setupGitIpc } from './git/index'
 import { setupKeybindings } from './keybindings'
+import { setupRssIpc } from './rss/index'
 import { setupSpellsIpc } from './spells/index'
 import { setupProtocol, setupSystemIpc } from './system/index'
 import { setupThemeIpc } from './theme/index'
@@ -63,6 +64,7 @@ app.whenReady().then(async () => {
     // 5. Feature Subsystems (AI, Spells, Git)
     setupAiIpc()
     setupSpellsIpc()
+    setupRssIpc()
     setupGitIpc()
   }
 
