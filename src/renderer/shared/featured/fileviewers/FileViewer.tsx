@@ -14,8 +14,8 @@ import {
 import { KeyManager } from '../../lib/key-handlers'
 import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
-import { FileHandlerComponents } from './index'
 import { DiffViewer } from './DiffViewer'
+import { FileHandlerComponents } from './index'
 import { TextViewer } from './TextViewer'
 
 interface FileViewerProps {

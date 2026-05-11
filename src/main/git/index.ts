@@ -25,27 +25,30 @@ interface HunkData {
 }
 
 function buildHunkPatch(relative: string, hunk: HunkData): string {
-  const oldCount = hunk.oldLines.length || 0
-  const newCount = hunk.newLines.length || 0
-  const removed = hunk.oldLines.map((l) => `-${l}`).join('\n')
-  const added = hunk.newLines.map((l) => `+${l}`).join('\n')
-  return [
+  const oldCount = hunk.oldLines.length
+  const newCount = hunk.newLines.length
+  const parts: string[] = [
     `--- a/${relative}`,
     `+++ b/${relative}`,
     `@@ -${hunk.oldStart},${oldCount} +${hunk.newStart},${newCount} @@`,
-    removed,
-    added,
-    '',
   ]
-    .filter(Boolean)
-    .join('\n')
+  for (const l of hunk.oldLines) parts.push(`-${l}`)
+  for (const l of hunk.newLines) parts.push(`+${l}`)
+  parts.push('')
+  return parts.join('\n')
 }
 
-function spawnGitPatch(args: string[], patch: string, cwd: string): Promise<void> {
+function spawnGitPatch(
+  args: string[],
+  patch: string,
+  cwd: string,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const proc = spawn('git', args, { cwd })
     let stderr = ''
-    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+    proc.stderr.on('data', (d: Buffer) => {
+      stderr += d.toString()
+    })
     proc.on('close', (code) => {
       if (code === 0) resolve()
       else reject(new Error(stderr || `git exited with code ${code}`))

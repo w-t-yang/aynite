@@ -165,29 +165,37 @@ export function DiffViewer({
 
   const handleStage = async (hunk: DiffHunk) => {
     if (!filePath) return
-    const result = await (window as any).aynite.stageHunk({
-      filePath,
-      oldStart: hunk.oldStart,
-      oldLines: hunk.oldLines,
-      newStart: hunk.newStart,
-      newLines: hunk.newLines,
-    })
-    if (!result?.error) {
-      setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+    try {
+      const result = await (window as any).aynite.stageHunk({
+        filePath,
+        oldStart: hunk.oldStart,
+        oldLines: hunk.oldLines,
+        newStart: hunk.newStart,
+        newLines: hunk.newLines,
+      })
+      if (!result?.error) {
+        setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+      }
+    } catch (e) {
+      console.error('[DiffViewer] stage failed:', e)
     }
   }
 
   const handleDiscard = async (hunk: DiffHunk) => {
     if (!filePath) return
-    const result = await (window as any).aynite.discardHunk({
-      filePath,
-      oldStart: hunk.oldStart,
-      oldLines: hunk.oldLines,
-      newStart: hunk.newStart,
-      newLines: hunk.newLines,
-    })
-    if (!result?.error) {
-      setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+    try {
+      const result = await (window as any).aynite.discardHunk({
+        filePath,
+        oldStart: hunk.oldStart,
+        oldLines: hunk.oldLines,
+        newStart: hunk.newStart,
+        newLines: hunk.newLines,
+      })
+      if (!result?.error) {
+        setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+      }
+    } catch (e) {
+      console.error('[DiffViewer] discard failed:', e)
     }
   }
 
@@ -222,11 +230,7 @@ export function DiffViewer({
               prefix,
             )}
           >
-            {line.type === 'added'
-              ? '+'
-              : line.type === 'removed'
-                ? '-'
-                : ''}
+            {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ''}
           </span>
           <span
             className="flex-1 px-1 truncate"
@@ -236,9 +240,7 @@ export function DiffViewer({
             }}
             // biome-ignore lint/security/noDangerouslySetInnerHtml: Required for PrismJS highlighting
             dangerouslySetInnerHTML={{
-              __html: line.value
-                ? highlightCode(line.value, ext)
-                : '<br>',
+              __html: line.value ? highlightCode(line.value, ext) : '<br>',
             }}
           />
         </div>,
@@ -250,11 +252,8 @@ export function DiffViewer({
         elements.push(
           <div
             key={`${line.id}-actions`}
-            className="flex h-7 items-center gap-1.5 px-2 bg-accent/20 border-y border-border/30"
+            className="flex h-7 items-center justify-end gap-1.5 px-3 bg-accent/20 border-y border-border/30"
           >
-            <span className="text-[10px] text-muted-foreground/60 mr-1">
-              Hunk:
-            </span>
             <button
               type="button"
               onClick={() => handleStage(hunk)}
