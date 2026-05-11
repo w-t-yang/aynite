@@ -8,8 +8,8 @@ import {
   FileChannels,
   GitChannels,
   RssChannels,
-  SpotifyChannels,
   SpellChannels,
+  SpotifyChannels,
   SystemChannels,
   ThemeChannels,
   UpdateChannels,
@@ -162,7 +162,8 @@ const aynite = {
   spotifyInitAuth: (clientId: string, useProtocol?: boolean) =>
     ipcRenderer.invoke(SpotifyChannels.INIT_AUTH, clientId, useProtocol),
   spotifyCheckAuth: () => ipcRenderer.invoke(SpotifyChannels.CHECK_AUTH),
-  spotifyCheckProtocol: () => ipcRenderer.invoke(SpotifyChannels.CHECK_PROTOCOL),
+  spotifyCheckProtocol: () =>
+    ipcRenderer.invoke(SpotifyChannels.CHECK_PROTOCOL),
   spotifyLogout: () => ipcRenderer.invoke(SpotifyChannels.LOGOUT),
   spotifyGetClientId: () => ipcRenderer.invoke(SpotifyChannels.GET_CLIENT_ID),
   spotifyLoadAll: () => ipcRenderer.invoke(SpotifyChannels.LOAD_ALL),
@@ -176,7 +177,11 @@ const aynite = {
   spotifyPlayTrack: (uri: string) =>
     ipcRenderer.invoke(SpotifyChannels.PLAY_TRACK, uri),
   spotifyPlayTrackInContext: (trackUri: string, contextUri: string) =>
-    ipcRenderer.invoke(SpotifyChannels.PLAY_TRACK_IN_CONTEXT, trackUri, contextUri),
+    ipcRenderer.invoke(
+      SpotifyChannels.PLAY_TRACK_IN_CONTEXT,
+      trackUri,
+      contextUri,
+    ),
   spotifyPlayTracks: (trackUris: string[], startUri?: string) =>
     ipcRenderer.invoke(SpotifyChannels.PLAY_TRACKS, trackUris, startUri),
   spotifyPlayContext: (uri: string) =>

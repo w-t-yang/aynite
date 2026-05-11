@@ -1,24 +1,24 @@
 import { ipcMain } from 'electron'
 import { SpotifyChannels } from '../../lib/constants/ipc-channels'
 import {
-  initAuth,
   checkAuth,
-  logout,
-  getStoredClientId,
   fetchAllData,
-  loadAllFromDisk,
-  isStale,
+  fetchPlaylistTracks,
   getPlaybackState,
-  play,
-  pause,
+  getStoredClientId,
+  initAuth,
+  isStale,
+  loadAllFromDisk,
+  loadPlaylistTracksFromDisk,
+  logout,
   next,
-  previous,
+  pause,
+  play,
+  playContext,
   playTrack,
   playTrackInContext,
   playTracks,
-  playContext,
-  fetchPlaylistTracks,
-  loadPlaylistTracksFromDisk,
+  previous,
 } from './logic'
 
 export function setupSpotifyIpc(protocolAvailable: boolean = false) {
@@ -51,7 +51,10 @@ export function setupSpotifyIpc(protocolAvailable: boolean = false) {
       await logout()
       return { success: true }
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      }
     }
   })
 
@@ -206,22 +209,22 @@ export function setupSpotifyIpc(protocolAvailable: boolean = false) {
 }
 
 export {
-  initAuth,
   checkAuth,
-  logout,
-  getStoredClientId,
   fetchAllData,
-  loadAllFromDisk,
-  isStale,
+  fetchPlaylistTracks,
   getPlaybackState,
-  play,
-  pause,
+  getStoredClientId,
+  initAuth,
+  isStale,
+  loadAllFromDisk,
+  loadPlaylistTracksFromDisk,
+  logout,
   next,
-  previous,
+  pause,
+  play,
+  playContext,
   playTrack,
   playTrackInContext,
   playTracks,
-  playContext,
-  fetchPlaylistTracks,
-  loadPlaylistTracksFromDisk,
+  previous,
 }

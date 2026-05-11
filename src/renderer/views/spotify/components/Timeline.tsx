@@ -1,5 +1,4 @@
 import { ExternalLink, Play } from 'lucide-react'
-import { cn } from '../../../shared/lib/utils'
 import type {
   SpotifyRecentlyPlayedItem,
   SpotifySavedTrack,
@@ -53,7 +52,9 @@ function TrackRow({
     >
       <div className="w-10 h-10 rounded object-cover shrink-0 relative">
         <img
-          src={track.album.images?.[2]?.url || track.album.images?.[0]?.url || ''}
+          src={
+            track.album.images?.[2]?.url || track.album.images?.[0]?.url || ''
+          }
           alt={track.album.name}
           className="w-10 h-10 rounded object-cover"
         />
@@ -87,7 +88,11 @@ function TrackRow({
   )
 }
 
-export function Timeline({ recentlyPlayed, savedTracks, onPlayTrack }: TimelineProps) {
+export function Timeline({
+  recentlyPlayed,
+  savedTracks,
+  onPlayTrack,
+}: TimelineProps) {
   // Merge and sort by timestamp
   const merged: {
     type: 'played' | 'saved'
@@ -115,7 +120,9 @@ export function Timeline({ recentlyPlayed, savedTracks, onPlayTrack }: TimelineP
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 text-center">
         <ExternalLink size={32} className="text-muted-foreground/30 mb-3" />
-        <p className="text-sm text-muted-foreground">No listening history yet</p>
+        <p className="text-sm text-muted-foreground">
+          No listening history yet
+        </p>
         <p className="text-xs text-muted-foreground/50 mt-1">
           Refresh to fetch your recently played tracks and saved songs.
         </p>
@@ -132,7 +139,7 @@ export function Timeline({ recentlyPlayed, savedTracks, onPlayTrack }: TimelineP
         </p>
       </div>
       <div>
-        {merged.map((item, i) => (
+        {merged.map((item, _i) => (
           <TrackRow
             key={`${item.type}-${item.track.id}-${item.timestamp}`}
             track={item.track}

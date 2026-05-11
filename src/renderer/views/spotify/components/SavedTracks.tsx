@@ -1,5 +1,4 @@
 import { ExternalLink, Play } from 'lucide-react'
-import { cn } from '../../../shared/lib/utils'
 import type { SpotifySavedTrack } from '../../../../lib/types/spotify'
 
 interface SavedTracksProps {

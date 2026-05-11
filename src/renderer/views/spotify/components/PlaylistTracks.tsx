@@ -1,5 +1,8 @@
 import { ArrowLeft, ExternalLink, Loader2, Play } from 'lucide-react'
-import type { SpotifyPlaylist, SpotifyPlaylistTrackItem } from '../../../../lib/types/spotify'
+import type {
+  SpotifyPlaylist,
+  SpotifyPlaylistTrackItem,
+} from '../../../../lib/types/spotify'
 
 interface PlaylistTracksProps {
   playlist: SpotifyPlaylist | undefined

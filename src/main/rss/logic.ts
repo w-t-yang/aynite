@@ -4,11 +4,11 @@ import {
   exists,
   getRssBookmarksPath,
   getRssConfigPath,
-  getRssContentsDir,
   getRssContentPath,
+  getRssContentsDir,
   getRssDir,
-  readJson,
   readdir,
+  readJson,
   unlink,
   writeJson,
 } from '../../lib/path'
@@ -311,7 +311,7 @@ export async function fetchSource(
     for (const item of allItems) {
       const d = getDateStr(item.pubDate)
       if (!byDate.has(d)) byDate.set(d, [])
-      byDate.get(d)!.push(item)
+      byDate.get(d)?.push(item)
     }
 
     for (const [date, items] of byDate) {
@@ -341,7 +341,10 @@ export async function fetchSource(
     await saveConfig(config)
 
     // Return existing content even on error
-    return { content: { sourceId, items: existingItems, lastFetchedAt: '' }, error: message }
+    return {
+      content: { sourceId, items: existingItems, lastFetchedAt: '' },
+      error: message,
+    }
   }
 }
 
@@ -363,7 +366,7 @@ export async function getContent(
   sourceId: string,
 ): Promise<RssContentStore | null> {
   const dates = await listDateDirs()
-  let allItems: RssItem[] = []
+  const allItems: RssItem[] = []
   let found = false
 
   for (const date of dates) {
@@ -411,8 +414,7 @@ export async function getAllContents(
     const items = sourceItems.get(source.id) || []
     if (items.length > 0) {
       items.sort(
-        (a, b) =>
-          new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime(),
+        (a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime(),
       )
       result[source.id] = {
         sourceId: source.id,

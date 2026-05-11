@@ -188,39 +188,42 @@ export function useSpotify() {
     }
   }, [state.isAuthenticated, refreshPlayback])
 
-  const connect = useCallback(async (clientId: string, useProtocol?: boolean) => {
-    setState((s) => ({ ...s, fetching: true, error: null }))
-    try {
-      const result = await aw().spotifyInitAuth(clientId, useProtocol)
-      if (!result.success) {
-        throw new Error(result.error || 'Authorization failed')
-      }
-      setState((s) => ({ ...s, isAuthenticated: true, fetching: false }))
-      // Fetch data immediately after successful auth
-      const res = await aw().spotifyFetchAll()
-      if (res.success) {
-        const data = res.data as SpotifyStore
+  const connect = useCallback(
+    async (clientId: string, useProtocol?: boolean) => {
+      setState((s) => ({ ...s, fetching: true, error: null }))
+      try {
+        const result = await aw().spotifyInitAuth(clientId, useProtocol)
+        if (!result.success) {
+          throw new Error(result.error || 'Authorization failed')
+        }
+        setState((s) => ({ ...s, isAuthenticated: true, fetching: false }))
+        // Fetch data immediately after successful auth
+        const res = await aw().spotifyFetchAll()
+        if (res.success) {
+          const data = res.data as SpotifyStore
+          setState((s) => ({
+            ...s,
+            profile: data.profile,
+            recentlyPlayed: data.recentlyPlayed || [],
+            savedTracks: data.savedTracks || [],
+            topArtists: data.topArtists || {
+              shortTerm: [],
+              mediumTerm: [],
+              longTerm: [],
+            },
+            playlists: data.playlists || [],
+          }))
+        }
+      } catch (e: any) {
         setState((s) => ({
           ...s,
-          profile: data.profile,
-          recentlyPlayed: data.recentlyPlayed || [],
-          savedTracks: data.savedTracks || [],
-          topArtists: data.topArtists || {
-            shortTerm: [],
-            mediumTerm: [],
-            longTerm: [],
-          },
-          playlists: data.playlists || [],
+          fetching: false,
+          error: e?.message || 'Failed to connect to Spotify',
         }))
       }
-    } catch (e: any) {
-      setState((s) => ({
-        ...s,
-        fetching: false,
-        error: e?.message || 'Failed to connect to Spotify',
-      }))
-    }
-  }, [])
+    },
+    [],
+  )
 
   const logout = useCallback(async () => {
     await aw().spotifyLogout()

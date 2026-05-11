@@ -6,7 +6,6 @@ import {
   SkipBack,
   SkipForward,
 } from 'lucide-react'
-import { cn } from '../../../shared/lib/utils'
 import type { SpotifyPlaybackState } from '../../../../lib/types/spotify'
 
 interface PlayerBarProps {
@@ -43,9 +42,7 @@ export function PlayerBar({
       <div className="flex items-center gap-2.5 min-w-0 w-64">
         {track?.album.images?.[2]?.url || track?.album.images?.[0]?.url ? (
           <img
-            src={
-              track.album.images[2]?.url || track.album.images[0]?.url || ''
-            }
+            src={track.album.images[2]?.url || track.album.images[0]?.url || ''}
             alt={track?.album.name || ''}
             className="w-9 h-9 rounded object-cover shrink-0"
           />
@@ -84,7 +81,11 @@ export function PlayerBar({
           disabled={!track}
           title={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
+          {isPlaying ? (
+            <Pause size={16} />
+          ) : (
+            <Play size={16} className="ml-0.5" />
+          )}
         </button>
         <button
           type="button"

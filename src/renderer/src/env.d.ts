@@ -175,24 +175,45 @@ interface AyniteWindow {
   rssDeleteSourceContent: (sourceId: string) => Promise<boolean>
 
   // Spotify
-  spotifyInitAuth: (clientId: string, useProtocol?: boolean) => Promise<{ success: boolean; error?: string }>
+  spotifyInitAuth: (
+    clientId: string,
+    useProtocol?: boolean,
+  ) => Promise<{ success: boolean; error?: string }>
   spotifyCheckAuth: () => Promise<boolean>
   spotifyCheckProtocol: () => Promise<boolean>
   spotifyLogout: () => Promise<{ success: boolean; error?: string }>
   spotifyGetClientId: () => Promise<string>
   spotifyLoadAll: () => Promise<any>
-  spotifyFetchAll: () => Promise<{ success: boolean; data?: any; error?: string }>
+  spotifyFetchAll: () => Promise<{
+    success: boolean
+    data?: any
+    error?: string
+  }>
   spotifyGetPlaybackState: () => Promise<any>
   spotifyPlay: () => Promise<{ success: boolean; error?: string }>
   spotifyPause: () => Promise<{ success: boolean; error?: string }>
   spotifyNext: () => Promise<{ success: boolean; error?: string }>
   spotifyPrevious: () => Promise<{ success: boolean; error?: string }>
-  spotifyPlayTrack: (uri: string) => Promise<{ success: boolean; error?: string }>
-  spotifyPlayTrackInContext: (trackUri: string, contextUri: string) => Promise<{ success: boolean; error?: string }>
-  spotifyPlayTracks: (trackUris: string[], startUri?: string) => Promise<{ success: boolean; error?: string }>
-  spotifyPlayContext: (uri: string) => Promise<{ success: boolean; error?: string }>
-  spotifyGetPlaylistTracks: (playlistId: string) => Promise<{ success: boolean; data?: any; error?: string }>
-  spotifyLoadPlaylistTracks: (playlistId: string) => Promise<{ success: boolean; data?: any }>
+  spotifyPlayTrack: (
+    uri: string,
+  ) => Promise<{ success: boolean; error?: string }>
+  spotifyPlayTrackInContext: (
+    trackUri: string,
+    contextUri: string,
+  ) => Promise<{ success: boolean; error?: string }>
+  spotifyPlayTracks: (
+    trackUris: string[],
+    startUri?: string,
+  ) => Promise<{ success: boolean; error?: string }>
+  spotifyPlayContext: (
+    uri: string,
+  ) => Promise<{ success: boolean; error?: string }>
+  spotifyGetPlaylistTracks: (
+    playlistId: string,
+  ) => Promise<{ success: boolean; data?: any; error?: string }>
+  spotifyLoadPlaylistTracks: (
+    playlistId: string,
+  ) => Promise<{ success: boolean; data?: any }>
 
   checkIsTextFile: (path: string) => Promise<boolean>
   executeAppOperation: (operation: string, data?: unknown) => void

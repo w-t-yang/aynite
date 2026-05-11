@@ -1,37 +1,37 @@
-import { randomBytes, createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import http from 'node:http'
 import { shell } from 'electron'
 import {
+  ensureDir,
+  exists,
   getSpotifyConfigPath,
   getSpotifyDir,
+  getSpotifyMetadataPath,
+  getSpotifyPlaylistsPath,
+  getSpotifyPlaylistTracksPath,
   getSpotifyProfilePath,
   getSpotifyRecentlyPlayedPath,
   getSpotifySavedTracksPath,
   getSpotifyTopArtistsPath,
   getSpotifyTopTracksPath,
-  getSpotifyPlaylistsPath,
-  getSpotifyPlaylistTracksPath,
-  getSpotifyMetadataPath,
-  ensureDir,
   readJson,
-  writeJson,
-  exists,
   unlink,
+  writeJson,
 } from '../../lib/path'
 import type {
+  SpotifyArtist,
   SpotifyAuth,
   SpotifyConfig,
-  SpotifyStore,
   SpotifyPlaybackState,
+  SpotifyPlaylist,
   SpotifyPlaylistTrackItem,
   SpotifyProfile,
-  SpotifyTrack,
-  SpotifyArtist,
   SpotifyRecentlyPlayedItem,
   SpotifySavedTrack,
-  SpotifyPlaylist,
+  SpotifyStore,
   SpotifyTopArtists,
   SpotifyTopTracks,
+  SpotifyTrack,
 } from '../../lib/types/spotify'
 
 const STALE_MS = 24 * 60 * 60 * 1000
@@ -221,9 +221,7 @@ export async function initAuth(
   const codeChallenge = base64url(
     createHash('sha256').update(codeVerifier).digest(),
   )
-  const redirectUri = useProtocol
-    ? PROTOCOL_REDIRECT_URI
-    : SERVER_REDIRECT_URI
+  const redirectUri = useProtocol ? PROTOCOL_REDIRECT_URI : SERVER_REDIRECT_URI
 
   const state = base64url(randomBytes(16))
   const params = new URLSearchParams({
@@ -260,7 +258,14 @@ export async function initAuth(
 
     // Start local HTTP server as fallback (only used when useProtocol=false)
     if (!useProtocol) {
-      startCallbackServer(state, codeVerifier, clientId, redirectUri, resolve, timeout)
+      startCallbackServer(
+        state,
+        codeVerifier,
+        clientId,
+        redirectUri,
+        resolve,
+        timeout,
+      )
     }
 
     shell.openExternal(authUrl)
@@ -550,15 +555,21 @@ function transformArtist(item: any): SpotifyArtist {
 // ── Public Data Functions ──────────────────────────────────────────────
 
 export async function fetchAllData(): Promise<SpotifyStore> {
-  const [profile, recentlyPlayed, savedTracks, topArtists, topTracks, playlists] =
-    await Promise.all([
-      fetchProfile(),
-      fetchRecentlyPlayed(),
-      fetchSavedTracks(),
-      fetchTopArtists(),
-      fetchTopTracks(),
-      fetchPlaylists(),
-    ])
+  const [
+    profile,
+    recentlyPlayed,
+    savedTracks,
+    topArtists,
+    topTracks,
+    playlists,
+  ] = await Promise.all([
+    fetchProfile(),
+    fetchRecentlyPlayed(),
+    fetchSavedTracks(),
+    fetchTopArtists(),
+    fetchTopTracks(),
+    fetchPlaylists(),
+  ])
 
   const lastFetchedAt = new Date().toISOString()
 
@@ -584,22 +595,33 @@ export async function fetchAllData(): Promise<SpotifyStore> {
 }
 
 export async function loadAllFromDisk(): Promise<SpotifyStore | null> {
-  const [profile, recentlyPlayed, savedTracks, topArtists, topTracks, playlists, metadata] =
-    await Promise.all([
-      readJson<SpotifyProfile | null>(getSpotifyProfilePath(), null),
-      readJson<SpotifyRecentlyPlayedItem[]>(getSpotifyRecentlyPlayedPath(), []),
-      readJson<SpotifySavedTrack[]>(getSpotifySavedTracksPath(), []),
-      readJson<SpotifyTopArtists>(getSpotifyTopArtistsPath(), {
-        shortTerm: [], mediumTerm: [], longTerm: [],
-      }),
-      readJson<SpotifyTopTracks>(getSpotifyTopTracksPath(), {
-        shortTerm: [], mediumTerm: [], longTerm: [],
-      }),
-      readJson<SpotifyPlaylist[]>(getSpotifyPlaylistsPath(), []),
-      readJson<{ lastFetchedAt: string | null }>(getSpotifyMetadataPath(), {
-        lastFetchedAt: null,
-      }),
-    ])
+  const [
+    profile,
+    recentlyPlayed,
+    savedTracks,
+    topArtists,
+    topTracks,
+    playlists,
+    metadata,
+  ] = await Promise.all([
+    readJson<SpotifyProfile | null>(getSpotifyProfilePath(), null),
+    readJson<SpotifyRecentlyPlayedItem[]>(getSpotifyRecentlyPlayedPath(), []),
+    readJson<SpotifySavedTrack[]>(getSpotifySavedTracksPath(), []),
+    readJson<SpotifyTopArtists>(getSpotifyTopArtistsPath(), {
+      shortTerm: [],
+      mediumTerm: [],
+      longTerm: [],
+    }),
+    readJson<SpotifyTopTracks>(getSpotifyTopTracksPath(), {
+      shortTerm: [],
+      mediumTerm: [],
+      longTerm: [],
+    }),
+    readJson<SpotifyPlaylist[]>(getSpotifyPlaylistsPath(), []),
+    readJson<{ lastFetchedAt: string | null }>(getSpotifyMetadataPath(), {
+      lastFetchedAt: null,
+    }),
+  ])
 
   if (!profile) return null
 
@@ -735,10 +757,7 @@ export async function fetchPlaylistTracks(
   const data = await spotifyApiGet(`/playlists/${playlistId}`)
   const items = data.items?.items || []
   const tracks = items
-    .filter(
-      (entry: any) =>
-        entry.item?.type === 'track' && entry.item != null,
-    )
+    .filter((entry: any) => entry.item?.type === 'track' && entry.item != null)
     .map((entry: any) => ({
       track: transformTrack(entry.item),
       addedAt: entry.added_at,

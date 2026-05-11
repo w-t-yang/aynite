@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
-import { cn } from '../../../shared/lib/utils'
+import { useState } from 'react'
 import type { SpotifyTopArtists } from '../../../../lib/types/spotify'
+import { cn } from '../../../shared/lib/utils'
 
 interface TopArtistsProps {
   topArtists: SpotifyTopArtists
@@ -34,9 +34,7 @@ export function TopArtists({ topArtists }: TopArtistsProps) {
   return (
     <div className="max-w-3xl mx-auto py-4">
       <div className="px-4 mb-4">
-        <h2 className="text-base font-semibold text-foreground">
-          Top Artists
-        </h2>
+        <h2 className="text-base font-semibold text-foreground">Top Artists</h2>
         {/* Time range selector */}
         <div className="flex items-center gap-1 mt-2">
           {(Object.keys(timeRangeLabels) as TimeRange[]).map((key) => (

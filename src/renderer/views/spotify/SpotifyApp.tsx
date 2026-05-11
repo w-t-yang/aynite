@@ -145,8 +145,8 @@ export function SpotifyApp() {
                 and create an app (or use an existing one).
               </li>
               <li>
-                Add your <strong>email</strong> under "User Management" in the app
-                settings so the API works for your account.
+                Add your <strong>email</strong> under "User Management" in the
+                app settings so the API works for your account.
               </li>
               <li>
                 Add this redirect URI to the app's settings:

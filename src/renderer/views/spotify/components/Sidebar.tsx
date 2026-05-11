@@ -1,12 +1,12 @@
 import {
-  Disc3,
+  type Disc3,
   Headphones,
   Library,
   ListMusic,
   TrendingUp,
 } from 'lucide-react'
-import { cn } from '../../../shared/lib/utils'
 import type { SpotifyProfile } from '../../../../lib/types/spotify'
+import { cn } from '../../../shared/lib/utils'
 import type { Section } from '../SpotifyApp'
 
 interface SidebarProps {
