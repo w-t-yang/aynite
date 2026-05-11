@@ -11,6 +11,7 @@ interface DiffViewerProps {
   className?: string
   showLineNumbers?: boolean
   filePath?: string
+  onHunkProcessed?: () => void
 }
 
 interface DiffRenderLine {
@@ -141,6 +142,7 @@ export function DiffViewer({
   className,
   showLineNumbers = true,
   filePath,
+  onHunkProcessed,
 }: DiffViewerProps) {
   const { themes, activeThemeId } = useView()
   const currentTheme = themes.find((t) => t.id === activeThemeId)
@@ -175,9 +177,12 @@ export function DiffViewer({
       })
       if (!result?.error) {
         setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+        onHunkProcessed?.()
+      } else {
+        console.error('[DiffViewer] stageHunk returned error:', result.error)
       }
     } catch (e) {
-      console.error('[DiffViewer] stage failed:', e)
+      console.error('[DiffViewer] stageHunk threw:', e)
     }
   }
 
@@ -193,9 +198,12 @@ export function DiffViewer({
       })
       if (!result?.error) {
         setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+        onHunkProcessed?.()
+      } else {
+        console.error('[DiffViewer] discardHunk returned error:', result.error)
       }
     } catch (e) {
-      console.error('[DiffViewer] discard failed:', e)
+      console.error('[DiffViewer] discardHunk threw:', e)
     }
   }
 
@@ -257,14 +265,14 @@ export function DiffViewer({
             <button
               type="button"
               onClick={() => handleStage(hunk)}
-              className="text-[10px] px-2 py-0.5 rounded bg-green-600/15 text-green-700 dark:text-green-400 hover:bg-green-600/30 transition-colors"
+              className="text-[10px] px-2 py-0.5 rounded bg-green-600/15 text-green-700 dark:text-green-400 hover:bg-green-600/30 transition-colors cursor-pointer"
             >
               Accept
             </button>
             <button
               type="button"
               onClick={() => handleDiscard(hunk)}
-              className="text-[10px] px-2 py-0.5 rounded bg-red-600/15 text-red-700 dark:text-red-400 hover:bg-red-600/30 transition-colors"
+              className="text-[10px] px-2 py-0.5 rounded bg-red-600/15 text-red-700 dark:text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer"
             >
               Reject
             </button>

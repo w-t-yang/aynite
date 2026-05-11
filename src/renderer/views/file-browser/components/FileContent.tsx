@@ -31,10 +31,13 @@ export function FileContent({
   onContentChange,
 }: FileContentProps) {
   const execOp = useAppOperation()
-  const [headContent, setHeadContent] = useState<string | null>(null)
+  const [baseContent, setBaseContent] = useState<string | null>(null)
+  const [localContent, setLocalContent] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
-    setHeadContent(null)
+    setBaseContent(null)
+    setLocalContent(null)
     if (!path) return
     let cancelled = false
     ;(async () => {
@@ -42,8 +45,15 @@ export function FileContent({
         const statusMap = await (window as any).aynite.getGitStatus(path)
         if (cancelled) return
         if (statusMap?.[path]) {
-          const head = await (window as any).aynite.getGitHeadContent(path)
-          if (!cancelled) setHeadContent(head || null)
+          // Index content (staged) — shows only unstaged changes
+          const [base, current] = await Promise.all([
+            (window as any).aynite.getGitIndexContent(path),
+            (window as any).aynite.readFile(path),
+          ])
+          if (!cancelled) {
+            setBaseContent(base || null)
+            setLocalContent(current || null)
+          }
         }
       } catch {
         // not a git file — no diff view
@@ -52,7 +62,9 @@ export function FileContent({
     return () => {
       cancelled = true
     }
-  }, [path])
+  }, [path, refreshKey, isEditing])
+
+  const handleHunkProcessed = () => setRefreshKey((k) => k + 1)
 
   if (!path) {
     return (
@@ -129,14 +141,15 @@ export function FileContent({
         />
       )
     }
-    if (headContent) {
+    if (baseContent) {
       return (
         <DiffViewer
-          headContent={headContent}
-          currentContent={content || ''}
+          headContent={baseContent}
+          currentContent={localContent ?? content ?? ''}
           extension={fileInfo.extension}
           filePath={path}
           className="flex-1"
+          onHunkProcessed={handleHunkProcessed}
         />
       )
     }

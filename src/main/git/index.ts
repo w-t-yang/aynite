@@ -106,13 +106,43 @@ class GitService {
       },
     )
 
+    ipcMain.handle(
+      GitChannels.INDEX_CONTENT,
+      async (_event, filePath: string) => {
+        try {
+          const root = await this.findGitRoot(filePath)
+          if (!root) return null
+          const relative = getRelativePath(root, filePath)
+          // Index content (staged) — fall back to HEAD if not in index
+          try {
+            const { stdout } = await execAsync(`git show :${relative}`, {
+              cwd: root,
+            })
+            return stdout
+          } catch {
+            try {
+              const { stdout } = await execAsync(
+                `git show HEAD:${relative}`,
+                { cwd: root },
+              )
+              return stdout
+            } catch {
+              return null
+            }
+          }
+        } catch {
+          return null
+        }
+      },
+    )
+
     ipcMain.handle(GitChannels.STAGE_HUNK, async (_event, data: HunkData) => {
       try {
         const root = await this.findGitRoot(data.filePath)
         if (!root) return { error: 'Not in a git repository' }
         const relative = getRelativePath(root, data.filePath)
         const patch = buildHunkPatch(relative, data)
-        await spawnGitPatch(['apply', '--cached'], patch, root)
+        await spawnGitPatch(['apply', '--cached', '--unidiff-zero'], patch, root)
         await this.refreshStatus(root, true)
         return { error: null }
       } catch (e: unknown) {
@@ -126,7 +156,7 @@ class GitService {
         if (!root) return { error: 'Not in a git repository' }
         const relative = getRelativePath(root, data.filePath)
         const patch = buildHunkPatch(relative, data)
-        await spawnGitPatch(['apply', '--reverse'], patch, root)
+        await spawnGitPatch(['apply', '--reverse', '--unidiff-zero'], patch, root)
         await this.refreshStatus(root, true)
         return { error: null }
       } catch (e: unknown) {
