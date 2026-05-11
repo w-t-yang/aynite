@@ -286,12 +286,12 @@ export function DiffViewer({
   return (
     <div
       className={cn(
-        'flex h-full w-full bg-background font-mono text-sm overflow-hidden',
+        'flex h-full w-full bg-background font-mono text-sm overflow-auto',
         className,
       )}
     >
       {showLineNumbers && (
-        <div className="w-12 shrink-0 bg-sidebar border-r border-border overflow-hidden select-none">
+        <div className="w-12 shrink-0 bg-sidebar border-r border-border select-none">
           {diffLines.map((line, _i) => (
             <div
               key={line.id}
@@ -305,7 +305,7 @@ export function DiffViewer({
           ))}
         </div>
       )}
-      <div className="flex-1 overflow-auto">{renderContent()}</div>
+      <div className="flex-1">{renderContent()}</div>
     </div>
   )
 }

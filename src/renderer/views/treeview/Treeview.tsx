@@ -214,6 +214,28 @@ export function Treeview() {
       .filter(Boolean) as FileNode[]
   }, [changesOnly, diffStats, gitStatuses, treeData])
 
+  const changesCount = useMemo(() => {
+    const paths = Object.entries(gitStatuses)
+      .filter(([, status]) => status !== 'none' && status !== 'ignored')
+      .map(([path]) => path)
+    // Exclude parent directory entries (prefix of another entry)
+    return paths.filter(
+      (p) => !paths.some((other) => other !== p && other.startsWith(`${p}/`)),
+    ).length
+  }, [gitStatuses])
+
+  // Auto-expand root folders when entering changes-only mode
+  useEffect(() => {
+    if (!changesOnly || !treeRef.current || changesTreeData.length === 0) return
+    const ids = changesTreeData.map((n) => n.id)
+    const timer = setTimeout(() => {
+      for (const id of ids) {
+        treeRef.current?.open(id)
+      }
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [changesOnly, changesTreeData])
+
   useEffect(() => {
     if (!containerRef.current) return
     const observer = new ResizeObserver((entries) => {
@@ -581,7 +603,7 @@ export function Treeview() {
               : 'text-muted-foreground hover:text-foreground hover:bg-muted',
           )}
         >
-          Changes
+          Git Diff{changesCount > 0 ? ` (${changesCount})` : ''}
         </button>
       </ViewHeader>
       <section
