@@ -211,25 +211,37 @@ class GitService {
 
     // ─── Commit Message Generation ───────────────────────────────────────
 
-    const _COMMIT_DIFF_CHARS_LIMIT = 5000
+    const COMPACT_DIFF_MAX = 3000
 
     ipcMain.handle(
       GitChannels.COMMIT_GENERATE,
       async (_event, root: string) => {
         try {
-          // Get changed files list with stats
-          const [{ stdout: statusShort }, { stdout: statSummary }] =
-            await Promise.all([
-              execAsync('git status --short', { cwd: root }),
-              execAsync('git diff --stat', { cwd: root }),
-            ])
+          // Get changed files (staged + unstaged) and their stats
+          const results = await Promise.allSettled([
+            execAsync('git status --short', { cwd: root }),
+            execAsync('git diff --stat', { cwd: root }),
+            execAsync('git diff --cached --stat', { cwd: root }),
+          ])
+
+          const statusShort =
+            results[0].status === 'fulfilled' ? results[0].value.stdout : ''
+          const unstagedStat =
+            results[1].status === 'fulfilled' ? results[1].value.stdout : ''
+          const stagedStat =
+            results[2].status === 'fulfilled' ? results[2].value.stdout : ''
 
           const changedFiles = statusShort
             .split('\n')
             .filter(Boolean)
             .map((line: string) => {
-              const code = line.slice(0, 2).trim()
+              // XY <space> file
+              // X = staging area, Y = working tree
+              const X = line[0]
+              const Y = line[1]
               const file = line.slice(3).trim()
+              const prefix =
+                X !== ' ' && X !== '?' ? `[staged] ` : `[unstaged] `
               const typeMap: Record<string, string> = {
                 M: 'modified',
                 A: 'added',
@@ -237,29 +249,42 @@ class GitService {
                 R: 'renamed',
                 '?': 'untracked',
               }
-              return `${typeMap[code] || 'changed'}: ${file}`
+              const statusType =
+                X !== ' ' && X !== '?'
+                  ? typeMap[X] || 'changed'
+                  : typeMap[Y] || 'changed'
+              return `${prefix}${statusType}: ${file}`
             })
             .join('\n')
 
           if (!changedFiles) {
+            console.warn(
+              '[GitService] No changed files found. statusShort:',
+              JSON.stringify(statusShort),
+            )
             return { error: 'No changes to commit' }
           }
 
-          // Try to get a compact diff for extra context (only if small)
+          // Get compact diff excerpts (staged + unstaged) if small enough
           let detailContext = ''
-          try {
-            const { stdout: compactDiff } = await execAsync(
-              'git diff --unified=3',
-              { cwd: root, maxBuffer: 1024 * 10 },
-            )
-            if (compactDiff.length > 0 && compactDiff.length < 3000) {
-              detailContext = `\nKey diff excerpts:\n${compactDiff.slice(0, 3000)}`
+          for (const flag of ['--cached', '']) {
+            try {
+              const { stdout: diff } = await execAsync(
+                `git diff ${flag} --unified=2`,
+                { cwd: root, maxBuffer: 1024 * 10 },
+              )
+              if (diff.length > 0 && diff.length < COMPACT_DIFF_MAX) {
+                detailContext += `\n${flag ? 'Staged' : 'Unstaged'} diff:\n${diff.slice(0, COMPACT_DIFF_MAX)}`
+              }
+            } catch {
+              // skip if too large
             }
-          } catch {
-            // diff too large, skip detail
           }
 
-          const diffContent = `Files changed:\n${changedFiles}\n${statSummary.trim()}${detailContext}`
+          const statBlock = [stagedStat?.trim(), unstagedStat?.trim()]
+            .filter(Boolean)
+            .join('\n')
+          const diffContent = `Files changed:\n${changedFiles}\n\nStats:\n${statBlock}${detailContext}`
 
           // Read AI config and generate commit message
           const aiConfig = await readJson<any>(getAIConfigPath()).catch(
@@ -274,33 +299,75 @@ class GitService {
             aiConfig.providers.find((p: any) => p.id === activeId) ||
             aiConfig.providers[0]
 
-          const model = getAIModel(activeProvider)
+          const modelName = activeProvider.model || activeProvider.name || 'AI'
 
-          const prompt = `Write a short git commit message for these code changes.
+          let model
+          try {
+            model = getAIModel(activeProvider)
+          } catch (modelErr: unknown) {
+            const msg =
+              modelErr instanceof Error ? modelErr.message : String(modelErr)
+            console.error('[GitService] Failed to create AI model:', msg)
+            return { error: `AI model error: ${msg}` }
+          }
 
-Files changed:
-${diffContent.slice(0, 4000)}`
+          const prompt = `Write a short git commit message in conventional commit format.
+First line must start with a type: feat, fix, chore, refactor, docs, test, style.
+Example: "feat: add user authentication"
 
-          const { text } = await generateText({
-            model,
-            prompt,
-            maxOutputTokens: 300,
-            temperature: 0.5,
-          })
+Changes:
+${diffContent.slice(0, 1500)}`
+
+          let text: string
+          try {
+            const result = await generateText({
+              model,
+              prompt,
+              maxOutputTokens: 500,
+              temperature: 0.7,
+            })
+            text = result.text ?? ''
+          } catch (genErr: unknown) {
+            const genMsg =
+              genErr instanceof Error ? genErr.message : String(genErr)
+            console.error(
+              '[GitService] generateText threw:',
+              genMsg,
+              genErr instanceof Error ? genErr.stack : '',
+            )
+            return { error: `AI generation failed: ${genMsg}` }
+          }
+
+          if (!text?.trim()) {
+            console.error('[GitService] generateText returned empty text')
+            return { error: 'AI returned empty response' }
+          }
 
           // Clean up the generated message
-          const message = text
+          const body = text
             .replace(/^```(?:text)?\n?/, '')
             .replace(/\n?```$/, '')
             .trim()
 
-          if (!message) {
+          if (!body) {
+            console.error(
+              '[GitService] Cleaned message is empty. Raw text:',
+              JSON.stringify(text),
+            )
             return { error: 'Failed to generate a commit message' }
           }
 
-          return { message }
+          // Append Aynite attribution as the last line
+          const message = `${body}\n\nGenerated by Aynite (${modelName})`
+
+          return { message, modelName }
         } catch (e: unknown) {
           const errorMsg = e instanceof Error ? e.message : String(e)
+          console.error(
+            '[GitService] Commit generate failed:',
+            errorMsg,
+            e instanceof Error ? e.stack : '',
+          )
           return { error: errorMsg }
         }
       },
