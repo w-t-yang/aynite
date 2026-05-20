@@ -214,7 +214,7 @@ export async function aiChat({
           system,
           messages: modelMessages,
           tools: enabledTools,
-          stopWhen: stepCountIs(10),
+          stopWhen: stepCountIs(100),
         })
 
         let fullResponseText = ''
