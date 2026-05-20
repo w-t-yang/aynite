@@ -10,6 +10,43 @@ import {
 
 const execAsync = promisify(exec)
 
+/**
+ * Detects the user's default shell and returns the path to it.
+ * Falls back to /bin/zsh on macOS, /bin/bash on Linux, and cmd.exe on Windows.
+ */
+function getUserShell(): string {
+  if (process.platform === 'win32') {
+    return process.env.ComSpec || 'cmd.exe'
+  }
+  return (
+    process.env.SHELL ||
+    (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash')
+  )
+}
+
+/**
+ * Runs a shell command through the user's default login shell.
+ * On Unix, this sources the user's profile files (.zprofile, .bash_profile, etc.)
+ * so that tools installed via Homebrew, nvm, etc. are available on the PATH.
+ * On Windows, this simply uses execAsync as-is.
+ */
+export async function execInUserShell(
+  command: string,
+  options: { cwd?: string; env?: Record<string, string | undefined> } = {},
+): Promise<{ stdout: string; stderr: string }> {
+  if (process.platform === 'win32') {
+    return await execAsync(command, options)
+  }
+
+  const shell = getUserShell()
+  // Wrap command in single quotes to prevent the outer /bin/sh from expanding it.
+  // Handle any single quotes inside the command using the standard shell escape:
+  // end single-quote, add escaped quote, resume single-quote: '\''
+  const escapedCommand = command.replace(/'/g, "'\\''")
+  const fullCommand = `${shell} -l -c '${escapedCommand}'`
+  return await execAsync(fullCommand, options)
+}
+
 export async function getSystemFonts(): Promise<string[]> {
   try {
     const { stdout } = await execAsync(

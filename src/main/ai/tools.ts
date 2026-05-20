@@ -1,5 +1,3 @@
-import { exec } from 'node:child_process'
-import { promisify } from 'node:util'
 import { jsonSchema } from '@ai-sdk/provider-utils'
 import { TOOL_METADATA } from '../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../lib/constants/messages'
@@ -16,12 +14,10 @@ import {
   secureWriteText,
   writeText,
 } from '../../lib/path'
+import type { ToolContext } from '../../lib/types/ai'
+import { execInUserShell } from '../system/logic'
 import { requestAiApproval } from '../window'
 import { getWorkspacesList } from '../workspace/logic'
-
-const execAsync = promisify(exec)
-
-import type { ToolContext } from '../../lib/types/ai'
 
 export type { ToolContext }
 
@@ -96,7 +92,9 @@ export function createTools(context: ToolContext) {
         if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED
 
         try {
-          const { stdout, stderr } = await execAsync(command, { cwd: runCwd })
+          const { stdout, stderr } = await execInUserShell(command, {
+            cwd: runCwd,
+          })
           let output = stdout
           if (stderr?.trim()) {
             output += `\n\nSTDERR:\n${stderr}`

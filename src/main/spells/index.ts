@@ -1,15 +1,11 @@
-import { exec } from 'node:child_process'
 import fs from 'node:fs/promises'
-import { promisify } from 'node:util'
 import { ipcMain } from 'electron'
+import { SpellChannels } from '../../lib/constants/ipc-channels'
 import { joinPaths } from '../../lib/path'
+import { execInUserShell } from '../system/logic'
 import { showOpenDialog } from '../window'
 import { listAvailableCommands, restoreDefaultCommands } from './commands'
 import { listAvailableSkills, restoreDefaultSkills } from './skills'
-
-const execAsync = promisify(exec)
-
-import { SpellChannels } from '../../lib/constants/ipc-channels'
 
 interface CommandRunPayload {
   command: string
@@ -54,7 +50,7 @@ export function setupSpellsIpc() {
   ipcMain.handle(
     SpellChannels.COMMAND_RUN,
     async (_event, { command, cwd }: CommandRunPayload) => {
-      const { stdout, stderr } = await execAsync(command, {
+      const { stdout, stderr } = await execInUserShell(command, {
         cwd: cwd || process.cwd(),
       })
       return { stdout, stderr }
@@ -93,7 +89,7 @@ export function setupSpellsIpc() {
           ? `sh "${runShPath}" ${quotedParams}`
           : `"${runShPath}" ${quotedParams}`
 
-      const { stdout, stderr } = await execAsync(fullCmd, {
+      const { stdout, stderr } = await execInUserShell(fullCmd, {
         cwd: commandPath,
         env,
       })
