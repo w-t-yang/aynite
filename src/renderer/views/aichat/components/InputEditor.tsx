@@ -311,18 +311,6 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
 
     return (
       <fieldset
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            editor?.commands.focus('end')
-          }
-        }}
-        onClick={() => {
-          if (editor) {
-            editor.commands.focus('end')
-            // Force focus on next tick if needed
-            setTimeout(() => editor.commands.focus('end'), 5)
-          }
-        }}
         className={`chat-input-wrapper flex items-end gap-2 bg-background/60 backdrop-blur-xl border border-border/40 rounded-2xl pl-4 pr-2 py-2.5 shadow-2xl shadow-black/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300 cursor-text border-none m-0 p-0 ${disabled ? 'opacity-50 grayscale-[0.5]' : ''}`}
       >
         <div className="flex-1 min-h-[24px] py-1">

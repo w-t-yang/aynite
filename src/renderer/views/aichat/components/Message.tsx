@@ -106,9 +106,30 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
   if (toolName.includes('file')) Icon = FileText
   if (toolName.includes('dir') || toolName.includes('folder')) Icon = FolderOpen
   if (toolName.includes('write')) Icon = Save
+  if (toolName.includes('task')) Icon = Clipboard
 
   // Robust title extraction: prefer the command, then the primary argument, then the tool name
   const getToolTitle = () => {
+    // Special handling for task tools
+    if (toolName === 'create_task' || toolName === 'update_task') {
+      const actualArgs = toolArgs?.args || toolArgs?.input || toolArgs
+      if (toolName === 'create_task') {
+        const tasks = actualArgs?.tasks
+        if (Array.isArray(tasks) && tasks.length > 0) {
+          return `Create Task (${tasks.length} items)`
+        }
+        return 'Create Task'
+      }
+      if (toolName === 'update_task') {
+        const idx = actualArgs?.taskIndex
+        const status = actualArgs?.status
+        if (idx !== undefined) {
+          return `Update Task (${idx}) → ${status || 'updated'}`
+        }
+        return 'Update Task'
+      }
+    }
+
     const getCmd = (obj: any): string | null => {
       if (!obj || typeof obj !== 'object') return null
       return (
@@ -123,7 +144,13 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
     }
 
     const actualArgs = toolArgs?.args || toolArgs?.input || toolArgs
-    const cmd = getCmd(actualArgs)
+    let cmd = getCmd(actualArgs)
+
+    // For run_command, strip leading cd as the cwd parameter handles it
+    if (cmd && toolName === 'run_command') {
+      cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
+    }
+
     if (cmd) return cmd
 
     return toolName.toUpperCase().replace(/_/g, ' ')

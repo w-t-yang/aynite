@@ -84,12 +84,19 @@ export const TOOL_METADATA: Record<
   run_command: {
     name: 'Run Command',
     description:
-      'Execute a shell command. Useful for running build scripts, tests, installing dependencies, or performing system-level operations.',
+      'Execute a shell command. Automatically runs in the project workspace directory - do NOT prefix with `cd`. Use the optional `cwd` parameter only if you need a different directory.',
     inputSchema: {
       type: 'object',
       properties: {
-        command: { type: 'string', description: 'The shell command' },
-        cwd: { type: 'string', description: 'Directory to run in' },
+        command: {
+          type: 'string',
+          description: 'The shell command (do not prefix with cd)',
+        },
+        cwd: {
+          type: 'string',
+          description:
+            'Optional directory to run in (defaults to workspace root)',
+        },
       },
       required: ['command'],
     },
@@ -338,8 +345,12 @@ When the user mentions a skill in the format \`/skill[name](path)\`, it means th
     filename: 'about-commands.md',
     content: `# About Commands
 You can run terminal commands on the USER's system. Always ensure commands are safe and explain what they do.
+Commands run automatically in the project workspace directory, so do NOT prefix them with \`cd /path/to/project\`.
 When the user mentions a command in the format \`>cmd[name](path)\`, it is executed DIRECTLY by the application before your turn. You will see the results of these commands in the chat history as tool messages.
-Do not attempt to execute these commands yourself using tools; they are handled by the environment.`,
+Do not attempt to execute these commands yourself using tools; they are handled by the environment.
+
+# About Using the \`run_command\` Tool
+The \`run_command\` tool has a \`cwd\` parameter that defaults to the workspace root. Do NOT include \`cd\` in the command string - just write the command directly. Use the \`cwd\` parameter only if you explicitly need a different directory.`,
   },
   FILES: {
     filename: 'about-files.md',

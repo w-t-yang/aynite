@@ -30,6 +30,7 @@ export function AIChat() {
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const hasScrolledInitial = useRef(false)
   const [showHistory, setShowHistory] = useState(false)
   const [sessions, setSessions] = useState<any[]>([])
 
@@ -37,7 +38,16 @@ export function AIChat() {
     const el = scrollRef.current
     if (!el) return
 
-    // Only auto-scroll if user is already near the bottom
+    // On initial load with messages present, always scroll to bottom
+    if (!hasScrolledInitial.current && messages.length > 0 && !loading) {
+      hasScrolledInitial.current = true
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight
+      })
+      return
+    }
+
+    // Subsequent auto-scrolls: only if user is already near the bottom
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
 
     if (isNearBottom) {
@@ -48,7 +58,6 @@ export function AIChat() {
       // Double check after a short delay for heavy rendering
       setTimeout(scroll, 100)
     }
-    void [messages, loading]
   }, [messages, loading])
 
   // Global actions for micro-app bridge
