@@ -21,6 +21,12 @@ let appDirname: string = ''
 
 // Approval tracking
 const pendingApprovals = new Map<string, (approved: boolean) => void>()
+const approvalQueue: Array<{
+  id: string
+  data: { command: string; cwd: string }
+  resolve: (approved: boolean) => void
+}> = []
+let isProcessingApproval = false
 
 /**
  * Creates the main application window.
@@ -153,8 +159,24 @@ export function createNewWindow() {
 // ─── AI Approval Helpers ───────────────────────────────────────────────────
 
 /**
+ * Processes the next queued approval request if there is one and no request is currently active.
+ */
+function processApprovalQueue() {
+  if (isProcessingApproval || approvalQueue.length === 0 || !mainWindow) return
+
+  isProcessingApproval = true
+  const next = approvalQueue.shift()!
+  pendingApprovals.set(next.id, next.resolve)
+  sendAppEvent(AppEvents.AI_APPROVAL_REQUEST, {
+    id: next.id,
+    ...next.data,
+  })
+}
+
+/**
  * Sends an approval request to the renderer and waits for the response.
  * Centralized here to avoid illegal webContents usage in other modules.
+ * Requests are queued so only one approval UI is shown at a time.
  */
 export async function requestAiApproval(data: {
   command: string
@@ -163,13 +185,10 @@ export async function requestAiApproval(data: {
   if (!mainWindow) return false
 
   const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-  sendAppEvent(AppEvents.AI_APPROVAL_REQUEST, {
-    id: approvalId,
-    ...data,
-  })
 
   return new Promise((resolve) => {
-    pendingApprovals.set(approvalId, resolve)
+    approvalQueue.push({ id: approvalId, data, resolve })
+    processApprovalQueue()
   })
 }
 
@@ -182,6 +201,9 @@ function setupAiListeners() {
         resolve(response.approved)
         pendingApprovals.delete(response.id)
       }
+      // Clear processing flag and process next queued request
+      isProcessingApproval = false
+      processApprovalQueue()
     },
   )
 
