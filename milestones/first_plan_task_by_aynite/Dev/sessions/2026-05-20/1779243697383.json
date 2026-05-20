@@ -1,0 +1,997 @@
+[
+  {
+    "id": "msg_1779243697376_98rpbo",
+    "role": "system",
+    "parts": [
+      {
+        "type": "text",
+        "text": "# About Me\nYou are Aynite, an AI assistant.\n\n# About Skills\nYou can use specialized 'skills' to help you with complex tasks. Each skill is a directory containing a SKILL.md file with instructions.\nWhen the user mentions a skill in the format `/skill[name](path)`, it means the skill located at `path` is active. You should use your tools to read the `SKILL.md` file within that directory to understand its specific rules and capabilities.\n\n# About Commands\nYou can run terminal commands on the USER's system. Always ensure commands are safe and explain what they do.\nWhen the user mentions a command in the format `>cmd[name](path)`, it is executed DIRECTLY by the application before your turn. You will see the results of these commands in the chat history as tool messages.\nDo not attempt to execute these commands yourself using tools; they are handled by the environment.\n\n# About Files\nYou have access to the local filesystem. You can read, create, and modify files within the allowed workspace.\nThe user can mention files or directories in the chat:\n- `@file[name](path)`: Refers to a file at `path`.\n- `@dir[name](path)`: Refers to a directory at `path`.\n\n# About Planning\nFor any complex task, you MUST follow a structured planning-first workflow:\n1. **Investigate**: Use `glob_search`, `read_file`, and `grep_search` to understand the codebase. \n   - **MANDATORY**: Call `read_memory` FIRST to understand project conventions.\n   - If `read_memory` returns that no memory exists, suggest to the user that you should call `initialize_memory` to create it.\n2. **Plan**: Use `propose_plan` to create a detailed `implementation_plan.md` in the artifacts directory.\n   - **MANDATORY**: Your plan must include a step at the very end to call `update_memory` with any new architectural changes or patterns learned during the task.\n3. **Approve**: Wait for the user to explicitly approve the plan before proceeding.\n4. **Taskify**: Use `create_task` to break down the approved plan into a checklist in `task.md`.\n5. **Execute**: Use `edit_file` for surgical modifications. Update `task.md` as you progress.\n\n\n## Behavioral Guidelines\n\n### 1. Think Before Coding\n**Don't assume. Don't hide confusion. Surface tradeoffs.**\nBefore implementing:\n- State your assumptions explicitly. If uncertain, ask.\n- If multiple interpretations exist, present them - don't pick silently.\n- If a simpler approach exists, say so. Push back when warranted.\n- If something is unclear, stop. Name what's confusing. Ask.\n\n### 2. Simplicity First\n**Minimum code that solves the problem. Nothing speculative.**\n- No features beyond what was asked.\n- No abstractions for single-use code.\n- No \"flexibility\" or \"configurability\" that wasn't requested.\n- No error handling for impossible scenarios.\n- If you write 200 lines and it could be 50, rewrite it.\nAsk yourself: \"Would a senior engineer say this is overcomplicated?\" If yes, simplify.\n\n### 3. Surgical Changes\n**Touch only what you must. Clean up only your own mess.**\nWhen editing existing code:\n- Don't \"improve\" adjacent code, comments, or formatting.\n- Don't refactor things that aren't broken.\n- Match existing style, even if you'd do it differently.\n- If you notice unrelated dead code, mention it - don't delete it.\nWhen your changes create orphans:\n- Remove imports/variables/functions that YOUR changes made unused.\n- Don't remove pre-existing dead code unless asked.\n\n### 4. Goal-Driven Execution\n**Define success criteria. Loop until verified.**\nTransform tasks into verifiable goals:\n- \"Add validation\" → \"Write tests for invalid inputs, then make them pass\"\n- \"Fix the bug\" → \"Write a test that reproduces it, then make it pass\"\n- \"Refactor X\" → \"Ensure tests pass before and after\"\nFor multi-step tasks, state a brief plan:\n```\n1. [Step] → verify: [check]\n2. [Step] → verify: [check]\n3. [Step] → verify: [check]\n```\n\nStrong success criteria let you loop independently. Weak criteria (\"make it work\") require constant clarification.\n\n---\n\n**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes."
+      }
+    ]
+  },
+  {
+    "id": "msg_1779243697376_7tnieh",
+    "role": "user",
+    "parts": [
+      {
+        "type": "text",
+        "text": "i have this electron app project, it allows ai to use tool to run command in local shell\nthere is a problem i need you to fix\nwhen running command in shell, it's not using the user's default shell environment, e.g. there is node and npm installed, but the shell command cannot run it without importing or setting up the path\ncan you help to fix this?\nplan the solution before making any changes"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779243698209_wpns0m",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "The user has an Electron app that allows AI to run shell commands locally. The problem is that when commands are executed, they don't use the user's default shell environment (PATH, etc.), so tools like `node` and `npm` can't be found without explicitly setting up the path.\n\nLet me start by exploring the project structure to understand how it's set up and how shell commands are currently being executed.",
+        "state": "streaming"
+      },
+      {
+        "type": "text",
+        "text": "Let me start by exploring the project to understand its structure and how shell commands are currently executed.",
+        "state": "streaming"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_RV5Ty6kEmfZbZVa6CWS76720",
+        "toolName": "get_file_tree",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/nick/projects/ynab-meal-plugins/ynab-meal-connector",
+          "depth": 2
+        },
+        "output": "Error: Access denied. Path \"/Users/nick/projects/ynab-meal-plugins/ynab-meal-connector\" is not within the allowed domain."
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_8VMxWth2eRs2cVdfbL7N7346",
+        "toolName": "read_memory",
+        "state": "output-available",
+        "input": {},
+        "output": "No project memory found. You can initialize it using \"initialize_memory\"."
+      },
+      {
+        "type": "reasoning",
+        "text": "Let me get the workspace info first.",
+        "state": "streaming"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_J0th5I0BNwY0FO5WXyL77352",
+        "toolName": "get_workspace_info",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "workspaceFolders": [
+            "/Users/wentao/repos/aynite"
+          ],
+          "configDir": "/Users/wentao/.aynite",
+          "activeFile": null
+        }
+      },
+      {
+        "type": "reasoning",
+        "text": "The workspace is at `/Users/wentao/repos/aynite`. Let me explore this directory.",
+        "state": "streaming"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_szilWArWlir1jd8GOS0f0203",
+        "toolName": "get_file_tree",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite",
+          "depth": 3
+        },
+        "output": "📁 .github\n  📄 dependabot.yml\n  📁 workflows\n    📄 release.yml\n📄 .gitignore\n📁 .husky\n  📁 _\n    📄 .gitignore\n    📄 applypatch-msg\n    📄 commit-msg\n    📄 h\n    📄 husky.sh\n    📄 post-applypatch\n    📄 post-checkout\n    📄 post-commit\n    📄 post-merge\n    📄 post-rewrite\n    📄 pre-applypatch\n    📄 pre-auto-gc\n    📄 pre-commit\n    📄 pre-merge-commit\n    📄 pre-push\n    📄 pre-rebase\n    📄 prepare-commit-msg\n  📄 pre-commit\n📄 .jscpd.json\n📄 .stylelintrc.json\n📄 CLAUDE.md\n📄 biome.json\n📁 dist\n  📄 Aynite-1.0.0-beta.12-arm64-mac.zip\n  📄 Aynite-1.0.0-beta.12-arm64-mac.zip.blockmap\n  📁 Aynite.app\n    📁 Contents\n      📁 Frameworks\n      📄 Info.plist\n      📁 MacOS\n      📄 PkgInfo\n      📁 Resources\n      📁 _CodeSignature\n  📄 builder-debug.yml\n  📄 builder-effective-config.yaml\n  📄 latest-mac.yml\n  📁 mac-arm64\n    📁 Aynite.app\n      📁 Contents\n📁 dist-views\n  📁 assets\n    📄 Assistant-Bold-gm-uSS1B.woff2\n    📄 Assistant-Medium-DrcxCXg3.woff2\n    📄 Assistant-Regular-DVxZuzxb.woff2\n    📄 Assistant-SemiBold-SCI4bEL9.woff2\n    📄 Button-DbEDoJqN.js\n    📄 Collapsible-sdXwXZaJ.js\n    📄 Input-BPxaR8sO.js\n    📄 Modal-BcQwZ9ir.js\n    📄 SelectionMenu-DtiJIaiI.js\n    📄 ViewContext-226FOJUd.css\n    📄 ViewContext-DhuKUZ8k.js\n    📄 ViewHeader-DppTWjZb.js\n    📄 rolldown-runtime-CVHK9hpM.js\n    📄 vendor-BcOOl54X.css\n    📄 vendor-wb0vnS3p.js\n    📁 views\n      📁 aichat\n      📁 canvas\n      📁 datachart\n      📁 diagram\n      📁 file-browser\n      📁 flow\n      📁 graph\n      📁 mindmap\n      📁 rss\n      📁 session-view\n      📁 settings\n      📁 spotify\n      📁 stockchart\n      📁 theme-studio\n      📁 treeview\n  📁 views\n    📁 aichat\n      📄 index.html\n    📁 canvas\n      📄 index.html\n    📁 datachart\n      📄 index.html\n    📁 diagram\n      📄 index.html\n    📁 file-browser\n      📄 index.html\n    📁 flow\n      📄 index.html\n    📁 graph\n      📄 index.html\n    📁 mindmap\n      📄 index.html\n    📁 rss\n      📄 index.html\n    📁 session-view\n      📄 index.html\n    📁 settings\n      📄 index.html\n    📁 spotify\n      📄 index.html\n    📁 stockchart\n      📄 index.html\n    📁 theme-studio\n      📄 index.html\n    📁 treeview\n      📄 index.html\n📁 docs\n  📄 AI_AGENT_IMPROVEMENTS.md\n  📄 ARCHITECTURE_SUMMARY.md\n  📄 COMMUNICATION.md\n  📄 CONFIG_RULES.md\n  📄 DESIGN_RULES.md\n  📄 FILE_RULES.md\n  📄 KEYBINDING_RULES.md\n  📄 QUALITY_CONTROL.md\n  📄 REFACTORING_PLAN.md\n  📄 RELEASE_RULES.md\n  📄 SIMPLIFICATION_SUGGESTIONS.md\n  📄 TEST_PLAN.md\n  📄 THEME_PROPAGATION.md\n  📄 TYPE_REFACTOR_PLAN.md\n  📄 ai-sdk-providers.md\n  📄 arch-session-ipc-hardening.md\n  📁 notes\n    📄 improvements.md\n    📄 key-features.md\n    📄 more-bindings.md\n  📁 tasks\n    📄 chat-ui-revamp.md\n📄 electron.vite.config.ts\n📄 knip.json\n📁 out\n  📁 main\n    📄 index.js\n    📄 token-BTPcrDuH.js\n  📁 preload\n    📄 index.js\n  📁 renderer\n    📁 assets\n      📄 index-CKFCdr2W.css\n      📄 index-ClO9-aTS.js\n    📄 index.html\n📄 package-lock.json\n📄 package.json\n📁 resources\n  📁 aynite-playbook\n    📄 Welcome.md\n    📁 canvas\n      📄 sample.json\n    📄 canvas-example.json\n    📁 charts\n      📄 graph-sample.json\n      📄 mindmap-sample.json\n      📄 sample.json\n    📄 datachart-example.json\n    📁 diagram\n      📄 sample.json\n    📄 diagram-example.json\n    📁 diff\n      📄 sample.json\n    📄 diff-example.json\n    📁 flow\n      📄 sample.json\n    📄 flow-example.json\n    📄 graph-example.json\n    📄 mindmap-example.json\n    📁 slides\n      📁 demo-deck\n    📄 stockchart-example.json\n    📁 theme\n      📄 sample.json\n    📁 trading\n      📄 README.md\n      📁 commands\n      📁 data\n  📁 commands\n    📁 hello-command\n      📄 COMMAND.md\n      📄 run.sh\n      📁 scripts\n  📁 skills\n    📁 command-creator\n      📄 SKILL.md\n    📁 hello-skill\n      📄 SKILL.md\n    📁 skill-creator\n      📄 LICENSE.txt\n      📄 SKILL.md\n      📁 agents\n      📁 assets\n      📁 eval-viewer\n      📁 references\n      📁 scripts\n    📁 spell-creator\n      📄 SKILL.md\n    📁 theme-creator\n      📄 SKILL.md\n📁 rfc\n  📄 communication-architecture.md\n📁 rules\n  📄 button-needs-type.yml\n  📄 button-needs-type.yml.bak\n  📄 dangerous-html-needs-comment.yml\n  📄 no-inline-any.yml\n  📄 no-inline-styles.yml\n  📄 no-raw-ipc.yml\n  📄 no-ts-ignore.yml\n  📄 unnecessary-assertion.yml\n📁 rules-test\n  📄 test-button.yml\n📄 scratch_check_paths.js\n📁 scripts\n  📄 audit-communication.ts\n  📄 audit-complexity.ts\n  📄 audit-exports.ts\n  📄 audit-ipc-bridge.ts\n  📄 audit-main.ts\n  📄 audit-patterns.ts\n  📄 audit-simplify.ts\n  📄 audit-ui.ts\n  📄 audit-utils.ts\n  📄 base-audit-components.ts\n  📄 base-audit-constants.ts\n  📄 base-audit-event.ts\n  📄 base-audit-main-import.ts\n  📄 base-audit-path.ts\n  📄 base-audit-preload.ts\n  📄 base-audit-theme.ts\n  📄 base-audit-types.ts\n  📄 base-audit-window.ts\n  📄 base-audit-zindex.ts\n  📄 component-inventory.ts\n  📄 migrate-sessions.ts\n  📄 test-ai-providers.ts\n📄 sgconfig.yml\n📁 src\n  📁 lib\n    📁 constants\n      📄 ai.ts\n      📄 app.ts\n      📄 config.ts\n      📄 ipc-channels.ts\n      📄 keybindings.ts\n      📄 layout.ts\n      📄 messages.ts\n      📄 path.ts\n      📁 renderer\n      📄 settings.ts\n      📄 spells.ts\n      📄 themes.ts\n      📄 types.ts\n      📄 workspace.ts\n    📄 path.ts\n    📁 types\n      📄 ai.ts\n      📄 app.ts\n      📄 bridge.ts\n      📄 chat.ts\n      📄 files.ts\n      📄 rss.ts\n      📄 settings.ts\n      📄 spells.ts\n      📄 spotify.ts\n      📄 ui.ts\n      📄 workspace.ts\n  📁 main\n    📁 ai\n      📄 chat.ts\n      📄 factory.ts\n      📄 index.ts\n      📄 prompts.ts\n      📄 tools.ts\n    📁 config\n      📄 ignore.ts\n      📄 index.ts\n      📄 logic.ts\n      📄 router.ts\n    📁 file\n      📄 index.ts\n    📁 git\n      📄 index.ts\n    📄 index.ts\n    📁 keybindings\n      📄 index.ts\n    📁 rss\n      📄 index.ts\n      📄 logic.ts\n    📁 spells\n      📄 commands.ts\n      📄 common.ts\n      📄 index.ts\n      📄 skills.ts\n      📄 spell-installer.ts\n    📁 spotify\n      📄 index.ts\n      📄 logic.ts\n    📁 system\n      📄 index.ts\n      📄 logic.ts\n    📁 theme\n      📄 index.ts\n      📄 logic.ts\n    📁 updater\n      📄 index.ts\n    📄 window.ts\n    📁 workspace\n      📄 index.ts\n      📄 logic.ts\n  📁 preload\n    📄 index.ts\n  📁 renderer\n    📄 index.html\n    📁 shared\n      📁 basic\n      📁 featured\n      📁 lib\n      📁 styles\n    📁 src\n      📄 App.tsx\n      📄 AppContext.tsx\n      📄 NotificationProvider.tsx\n      📄 env.d.ts\n      📁 layout\n      📄 main.tsx\n      📁 utils\n    📁 views\n      📄 ViewContext.tsx\n      📁 aichat\n      📁 canvas\n      📁 datachart\n      📁 diagram\n      📁 file-browser\n      📁 flow\n      📁 graph\n      📁 mindmap\n      📁 rss\n      📁 session-view\n      📁 settings\n      📁 spotify\n      📁 stockchart\n      📁 theme-studio\n      📁 treeview\n📁 tests\n  📁 lib\n    📄 constants.test.ts\n    📄 path.test.ts\n  📁 main\n    📁 config\n      📄 logic.test.ts\n    📁 workspace\n      📄 logic.test.ts\n📄 tsconfig.json\n📄 typecheck_output.txt\n📄 typecheck_output_2.txt\n📄 vite.views.config.ts\n📄 vitest.config.ts\n"
+      },
+      {
+        "type": "reasoning",
+        "text": "This is an Electron app called \"Aynite\". Let me look at the key files to understand how shell commands are executed. The most relevant files are likely:\n\n1. `src/main/system/logic.ts` - System logic, probably where shell commands are executed\n2. `src/main/spells/commands.ts` - Commands handling\n3. `src/main/ai/tools.ts` - AI tools that might execute commands\n\nLet me read these files to understand the current approach.",
+        "state": "streaming"
+      },
+      {
+        "type": "text",
+        "text": "Let me look at the key files where shell command execution happens.",
+        "state": "streaming"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_xvRw2JGYvC8P5QPMCfaZ5344",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/system/logic.ts"
+        },
+        "output": "import { exec } from 'node:child_process'\nimport { promisify } from 'node:util'\nimport {\n  AYNITE_SUBDIRS,\n  exists,\n  getAyniteDir,\n  joinPaths,\n  readdir,\n} from '../../lib/path'\n\nconst execAsync = promisify(exec)\n\nexport async function getSystemFonts(): Promise<string[]> {\n  try {\n    const { stdout } = await execAsync(\n      'fc-list :lang=en --format=\"%{family}\\n\"',\n    )\n    return [\n      ...new Set(\n        stdout\n          .split('\\n')\n          .map((f) => f.trim())\n          .filter(Boolean),\n      ),\n    ].sort()\n  } catch {\n    return [\n      'Inter',\n      'Arial',\n      'Helvetica',\n      'Times New Roman',\n      'Courier New',\n      'Georgia',\n      'Verdana',\n    ]\n  }\n}\n\nexport async function getAvailableViews(): Promise<\n  { id: string; name: string }[]\n> {\n  const viewsDir = joinPaths(getAyniteDir(), AYNITE_SUBDIRS.VIEWS)\n  if (!(await exists(viewsDir))) return []\n\n  const entries = await readdir(viewsDir)\n  const views: { id: string; name: string }[] = []\n\n  for (const entry of entries) {\n    if (entry.isDirectory()) {\n      const indexPath = joinPaths(viewsDir, entry.name, 'index.html')\n      if (await exists(indexPath)) {\n        // Simple name transformation: aichat -> AI Chat\n        const name = entry.name\n          .split('-')\n          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))\n          .join(' ')\n          .replace('Aichat', 'AI Chat')\n          .replace('Treeview', 'File Explorer')\n\n        views.push({\n          id: entry.name,\n          name,\n        })\n      }\n    }\n  }\n  return views\n}\n"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_XQSmTYAd5ozmQgxJdYFD5572",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/commands.ts"
+        },
+        "output": "import { getCommandPath, getCommandsDir } from '../../lib/path'\nimport {\n  getSpellConfig,\n  listAvailableSpells,\n  restoreSpell as restoreBundledSpell,\n  restoreDefaultSpells,\n  saveSpellConfig,\n} from './spell-installer'\n\nexport async function getCommandsConfig() {\n  return getSpellConfig('commands', getCommandsDir())\n}\n\nexport async function saveCommandsConfig(config: any) {\n  return saveSpellConfig('commands', config)\n}\n\nexport async function listAvailableCommands() {\n  return listAvailableSpells('commands', getCommandsDir(), 'COMMAND.md', true)\n}\n\nexport async function restoreDefaultCommands() {\n  const defaultDir = getCommandsDir()\n  await saveCommandsConfig({ folders: [defaultDir] })\n  return restoreDefaultSpells('commands', ['hello-command'], (name) =>\n    getCommandPath(name),\n  )\n}\n\nexport async function restoreCommand(commandName: string) {\n  return restoreBundledSpell(\n    'commands',\n    commandName,\n    getCommandPath(commandName),\n  )\n}\n"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_02_iVhouSHKWvCyVmnqVGNn7972",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/ai/tools.ts"
+        },
+        "output": "import { exec } from 'node:child_process'\nimport { promisify } from 'node:util'\nimport { jsonSchema } from '@ai-sdk/provider-utils'\nimport { TOOL_METADATA } from '../../lib/constants/ai'\nimport { ERROR_MESSAGES } from '../../lib/constants/messages'\nimport {\n  getAyniteDir,\n  getWorkspaceMemoryPath,\n  getWorkspaceTaskPath,\n  secureEditFile,\n  secureGetFileTree,\n  secureGlobSearch,\n  secureGrepSearch,\n  secureListDir,\n  secureReadText,\n  secureWriteText,\n  writeText,\n} from '../../lib/path'\nimport { requestAiApproval } from '../window'\nimport { getWorkspacesList } from '../workspace/logic'\n\nconst execAsync = promisify(exec)\n\nimport type { ToolContext } from '../../lib/types/ai'\n\nexport type { ToolContext }\n\nexport function getToolsMetadata() {\n  return Object.entries(TOOL_METADATA).map(([id, meta]) => ({\n    id,\n    ...meta,\n  }))\n}\n\nexport function createTools(context: ToolContext) {\n  const domains = [...context.workspaceFolders, getAyniteDir()]\n  const tools: any = {\n    read_file: {\n      description: TOOL_METADATA.read_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_file.inputSchema),\n      execute: async ({ path: filePath }: { path: string }) => {\n        return await secureReadText(filePath, domains)\n      },\n    },\n    write_file: {\n      description: TOOL_METADATA.write_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.write_file.inputSchema),\n      execute: async ({\n        path: filePath,\n        content,\n      }: {\n        path: string\n        content: string\n      }) => {\n        return await secureWriteText(filePath, content, domains)\n      },\n    },\n    edit_file: {\n      description: TOOL_METADATA.edit_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.edit_file.inputSchema),\n      execute: async ({\n        path: filePath,\n        targetContent,\n        replacementContent,\n      }: {\n        path: string\n        targetContent: string\n        replacementContent: string\n      }) => {\n        return await secureEditFile(\n          filePath,\n          targetContent,\n          replacementContent,\n          domains,\n        )\n      },\n    },\n    list_files: {\n      description: TOOL_METADATA.list_files.description,\n      inputSchema: jsonSchema(TOOL_METADATA.list_files.inputSchema),\n      execute: async ({ path: dirPath }: { path: string }) => {\n        return await secureListDir(dirPath, domains)\n      },\n    },\n    run_command: {\n      description: TOOL_METADATA.run_command.description,\n      inputSchema: jsonSchema(TOOL_METADATA.run_command.inputSchema),\n      execute: async ({ command, cwd }: { command: string; cwd?: string }) => {\n        const runCwd = cwd || context.workspaceFolders[0] || '.'\n\n        const approved = await requestAiApproval({\n          command,\n          cwd: runCwd,\n        })\n\n        if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED\n\n        try {\n          const { stdout, stderr } = await execAsync(command, { cwd: runCwd })\n          let output = stdout\n          if (stderr?.trim()) {\n            output += `\\n\\nSTDERR:\\n${stderr}`\n          }\n\n          try {\n            const parsed = JSON.parse(stdout.trim())\n            if (\n              parsed &&\n              typeof parsed === 'object' &&\n              parsed.status === 'error'\n            ) {\n              throw new Error(output)\n            }\n          } catch (_jsonErr) {}\n\n          return output\n        } catch (e: unknown) {\n          const cmdErr = e as {\n            stdout?: string\n            stderr?: string\n            message?: string\n          }\n          return ERROR_MESSAGES.COMMAND_EXEC_ERROR(\n            cmdErr.message || '',\n            cmdErr.stdout || '',\n            cmdErr.stderr || '',\n          )\n        }\n      },\n    },\n    grep_search: {\n      description: TOOL_METADATA.grep_search.description,\n      inputSchema: jsonSchema(TOOL_METADATA.grep_search.inputSchema),\n      execute: async ({\n        pattern,\n        folderPath,\n      }: {\n        pattern: string\n        folderPath: string\n      }) => {\n        return await secureGrepSearch(folderPath, pattern, domains)\n      },\n    },\n    read_url: {\n      description: TOOL_METADATA.read_url.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_url.inputSchema),\n      execute: async ({ url }: { url: string }) => {\n        try {\n          const response = await fetch(url, {\n            headers: {\n              'User-Agent':\n                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',\n            },\n          })\n          if (!response.ok)\n            return ERROR_MESSAGES.URL_FETCH_ERROR(response.statusText)\n          const text = await response.text()\n          return text\n            .replace(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi, '')\n            .replace(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/gi, '')\n            .replace(/<[^>]*>/g, ' ')\n            .replace(/\\s+/g, ' ')\n            .trim()\n            .slice(0, 10000)\n        } catch (e: unknown) {\n          const message = e instanceof Error ? e.message : String(e)\n          return ERROR_MESSAGES.URL_GENERIC_ERROR(message)\n        }\n      },\n    },\n    glob_search: {\n      description: TOOL_METADATA.glob_search.description,\n      inputSchema: jsonSchema(TOOL_METADATA.glob_search.inputSchema),\n      execute: async ({ pattern, cwd }: { pattern: string; cwd?: string }) => {\n        return await secureGlobSearch(pattern, domains, cwd)\n      },\n    },\n    create_task: {\n      description: TOOL_METADATA.create_task.description,\n      inputSchema: jsonSchema(TOOL_METADATA.create_task.inputSchema),\n      execute: async ({\n        tasks,\n        filename,\n      }: {\n        tasks: string[]\n        filename?: string\n      }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        const content = tasks.map((t) => `- [ ] ${t}`).join('\\n')\n        await writeText(taskPath, content)\n        return `Created task list at ${taskPath}`\n      },\n    },\n    update_task: {\n      description: TOOL_METADATA.update_task.description,\n      inputSchema: jsonSchema(TOOL_METADATA.update_task.inputSchema),\n      execute: async ({\n        taskIndex,\n        status,\n        filename,\n      }: {\n        taskIndex: number\n        status: 'todo' | 'in_progress' | 'done'\n        filename?: string\n      }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        try {\n          const content = await secureReadText(taskPath, domains)\n          if (content.startsWith('Error')) return content\n\n          const lines = content.split('\\n')\n          if (taskIndex < 0 || taskIndex >= lines.length) {\n            return `Error: Task index ${taskIndex} out of range (0-${lines.length - 1})`\n          }\n\n          const statusMap = {\n            todo: '[ ]',\n            in_progress: '[/]',\n            done: '[x]',\n          }\n\n          lines[taskIndex] = lines[taskIndex].replace(\n            /\\[[ x/]?\\]/,\n            statusMap[status],\n          )\n          await writeText(taskPath, lines.join('\\n'))\n          return `Updated task ${taskIndex} to ${status}`\n        } catch (e) {\n          return `Error updating task: ${e instanceof Error ? e.message : String(e)}`\n        }\n      },\n    },\n    get_tasks: {\n      description: TOOL_METADATA.get_tasks.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_tasks.inputSchema),\n      execute: async ({ filename }: { filename?: string }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        return await secureReadText(taskPath, domains)\n      },\n    },\n    propose_plan: {\n      description: TOOL_METADATA.propose_plan.description,\n      inputSchema: jsonSchema(TOOL_METADATA.propose_plan.inputSchema),\n      execute: async ({\n        problemStatement,\n        investigationResults,\n        proposedArchitecture,\n        implementationSteps,\n        verificationPlan,\n        openQuestions,\n      }: {\n        problemStatement: string\n        investigationResults: string\n        proposedArchitecture: string\n        implementationSteps: string[]\n        verificationPlan: string\n        openQuestions?: string[]\n      }) => {\n        const { active } = await getWorkspacesList()\n        const planPath = getWorkspaceTaskPath(active, 'implementation_plan.md')\n\n        const content = [\n          '# Implementation Plan',\n          '',\n          '## 1. Problem Statement',\n          problemStatement,\n          '',\n          '## 2. Investigation Results',\n          investigationResults,\n          '',\n          '## 3. Proposed Architecture & Trade-offs',\n          proposedArchitecture,\n          '',\n          '## 4. Implementation Steps',\n          implementationSteps.map((s, i) => `${i + 1}. ${s}`).join('\\n'),\n          '',\n          '## 5. Verification Plan',\n          verificationPlan,\n          '',\n          '## 6. Open Questions & Assumptions',\n          openQuestions?.length\n            ? openQuestions.map((q) => `- ${q}`).join('\\n')\n            : 'None',\n        ].join('\\n')\n\n        await writeText(planPath, content)\n        return `Implementation plan proposed at ${planPath}. Please review the file and type \"Approved\" to proceed.`\n      },\n    },\n    initialize_memory: {\n      description: TOOL_METADATA.initialize_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.initialize_memory.inputSchema),\n      execute: async () => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n\n        // Gather intelligence\n        const pkgPath = domains[0] ? `${domains[0]}/package.json` : null\n        const readmePath = domains[0] ? `${domains[0]}/README.md` : null\n\n        let pkgInfo = 'Unknown'\n        if (pkgPath) {\n          const content = await secureReadText(pkgPath, domains)\n          if (!content.startsWith('Error')) {\n            try {\n              const pkg = JSON.parse(content)\n              pkgInfo = `Project: ${pkg.name}\\nVersion: ${pkg.version}\\nDependencies: ${Object.keys(\n                pkg.dependencies || {},\n              ).join(', ')}`\n            } catch (_e) {\n              pkgInfo = 'Invalid package.json'\n            }\n          }\n        }\n\n        let readmeInfo = ''\n        if (readmePath) {\n          const content = await secureReadText(readmePath, domains)\n          if (!content.startsWith('Error')) {\n            readmeInfo = content.slice(0, 1000) // First 1000 chars\n          }\n        }\n\n        const tree = await secureGetFileTree(domains[0], domains, 2)\n\n        const content = [\n          '# Project Memory',\n          '',\n          '## 🎯 Overview',\n          readmeInfo || 'No summary available yet.',\n          '',\n          '## 📂 Structure',\n          `\\`\\`\\`\\n${tree}\\n\\`\\`\\``,\n          '',\n          '## 📜 Rules & Conventions',\n          pkgInfo !== 'Unknown' ? `- Tech Stack: ${pkgInfo}` : '',\n          '- (Record styles, patterns, or project rules here)',\n          '',\n          '## 💡 Key Decisions & Context',\n          '- (Record important architectural or narrative decisions here)',\n        ]\n          .filter(Boolean)\n          .join('\\n')\n\n        await writeText(memoryPath, content)\n        return `Project memory initialized at ${memoryPath}. You should now update it with specific project secrets or conventions.`\n      },\n    },\n    update_memory: {\n      description: TOOL_METADATA.update_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.update_memory.inputSchema),\n      execute: async ({ update }: { update: string }) => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n        try {\n          const current = await secureReadText(memoryPath, domains)\n          const content = current.startsWith('Error')\n            ? `# Project Memory\\n\\n${update}`\n            : `${current}\\n\\n### Update (${new Date().toLocaleDateString()})\\n${update}`\n\n          await writeText(memoryPath, content)\n          return `Project memory updated at ${memoryPath}`\n        } catch (e) {\n          return `Error updating memory: ${e instanceof Error ? e.message : String(e)}`\n        }\n      },\n    },\n    read_memory: {\n      description: TOOL_METADATA.read_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_memory.inputSchema),\n      execute: async () => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n        const content = await secureReadText(memoryPath, domains)\n        if (content.startsWith('Error')) {\n          return 'No project memory found. You can initialize it using \"initialize_memory\".'\n        }\n        return content\n      },\n    },\n    get_file_tree: {\n      description: TOOL_METADATA.get_file_tree.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_file_tree.inputSchema),\n      execute: async ({\n        path: dirPath,\n        depth = 10,\n      }: {\n        path?: string\n        depth?: number\n      }) => {\n        if (dirPath) {\n          return await secureGetFileTree(dirPath, domains, depth)\n        } else {\n          let fullOutput = ''\n          for (const folder of context.workspaceFolders) {\n            fullOutput += `Workspace Folder: ${folder}\\n`\n            fullOutput += await secureGetFileTree(folder, domains, depth)\n            fullOutput += '\\n'\n          }\n          return fullOutput || ERROR_MESSAGES.WORKSPACE_EMPTY\n        }\n      },\n    },\n    get_workspace_info: {\n      description: TOOL_METADATA.get_workspace_info.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),\n      execute: async () => {\n        return {\n          workspaceFolders: context.workspaceFolders,\n          configDir: getAyniteDir(),\n          activeFile: context.activeFile || null,\n        }\n      },\n    },\n  }\n\n  return tools\n}\n"
+      },
+      {
+        "type": "reasoning",
+        "text": "Now I have a clear picture. The `run_command` tool in `src/main/ai/tools.ts` uses `exec` from `node:child_process` which spawns a non-interactive, non-login shell (`/bin/sh` on Unix). This means it doesn't source the user's `.bashrc`, `.zshrc`, `.profile`, etc., so environment variables like `PATH` aren't set to what the user expects in their normal terminal.\n\nThe fix should make the shell command run in a way that loads the user's default shell environment. Here are the options:\n\n1. **Use `exec` with `shell: true` and a login shell** - Change the shell to `/bin/zsh -l` or `/bin/bash -l` so it sources the user's profile. This is the simplest approach.\n\n2. **Detect the user's default shell** from `$SHELL` environment variable and use it with `-l -c` flags.\n\n3. **Use `exec` with `{ shell: process.env.SHELL }`** - This would use the user's default shell but may not load the full environment without `-l` (login) or `-i` (interactive) flags.\n\nThe best approach is option 2: detect the user's default shell from `process.env.SHELL` (or fallback to `/bin/zsh` on macOS, `/bin/bash` on Linux), and then run it as a login shell (`-l`) so it sources `.zshrc`/`.bashrc`/`.profile`.\n\nHowever, there are some trade-offs:\n- `-l` (login shell) might be slower as it sources all startup files\n- `-i` (interactive) isn't appropriate since we're not running interactively\n- Some users may have complex `.zshrc` that outputs text, which would pollute stdout\n- `-c` is needed to pass the command as a string\n\nLet me also check if there are other places where `exec` is used for running user commands.\n\nFrom what I see:\n1. `src/main/system/logic.ts` - uses `execAsync` for `fc-list` (a system command, not user-provided)\n2. `src/main/ai/tools.ts` - the `run_command` tool uses `execAsync` for user-provided commands\n\nThe main fix should be in `src/main/ai/tools.ts`. But also, let me check if there's a common `execAsync` or shell utility shared across the codebase.\n\nLet me also look at `src/main/index.ts` and `src/main/system/index.ts` to understand the IPC bridge and see if there's middleware.",
+        "state": "streaming"
+      },
+      {
+        "type": "text",
+        "text": "Now let me check if there's a shared utility for shell execution and look at the main IPC handling:",
+        "state": "streaming"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_fketIx0QC5gGaytwKjlE2830",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/system/index.ts"
+        },
+        "output": "import {\n  app,\n  BrowserWindow,\n  clipboard,\n  ipcMain,\n  net,\n  protocol,\n  shell,\n} from 'electron'\nimport {\n  exists,\n  expandHome,\n  copy as fsCopy,\n  getBasename,\n  joinPaths,\n} from '../../lib/path'\nimport {\n  createNewWindow,\n  sendAppEvent,\n  showOpenDialog,\n  showSaveDialog,\n} from '../window'\nimport { getAvailableViews, getSystemFonts } from './logic'\n\nlet clipboardPath: string | null = null\n\n// ─── Channel constants ────────────────────────────────────────────────────\nimport { AppEvents } from '../../lib/constants/app'\nimport { SystemChannels } from '../../lib/constants/ipc-channels'\n\nexport function setupSystemIpc() {\n  ipcMain.handle(SystemChannels.FONT_LIST, async () => {\n    return await getSystemFonts()\n  })\n\n  ipcMain.handle(SystemChannels.OPEN_EXTERNAL, async (_event, url: string) => {\n    await shell.openExternal(url)\n    return true\n  })\n\n  ipcMain.handle(SystemChannels.APP_VERSION, () => {\n    return app.getVersion()\n  })\n\n  ipcMain.handle(SystemChannels.APP_QUIT, () => {\n    app.quit()\n  })\n\n  ipcMain.handle(SystemChannels.DIALOG_SELECT_FILE, async () => {\n    const { canceled, filePaths } = await showOpenDialog({\n      properties: ['openFile'],\n    })\n    if (canceled || filePaths.length === 0) return null\n    return filePaths[0]\n  })\n\n  ipcMain.handle(SystemChannels.DIALOG_SELECT_FOLDER, async () => {\n    const { canceled, filePaths } = await showOpenDialog({\n      properties: ['openDirectory'],\n    })\n    if (canceled || filePaths.length === 0) return null\n    return filePaths\n  })\n\n  ipcMain.handle(SystemChannels.DIALOG_SAVE_FILE, async () => {\n    const { canceled, filePath } = await showSaveDialog({\n      filters: [{ name: 'JSON', extensions: ['json'] }],\n    })\n    if (canceled || !filePath) return null\n    return filePath\n  })\n\n  ipcMain.handle(SystemChannels.WINDOW_MINIMIZE, (event) => {\n    BrowserWindow.fromWebContents(event.sender)?.minimize()\n    return true\n  })\n\n  ipcMain.handle(SystemChannels.WINDOW_MAXIMIZE, (event) => {\n    const win = BrowserWindow.fromWebContents(event.sender)\n    if (win) {\n      if (win.isMaximized()) {\n        win.unmaximize()\n      } else {\n        win.maximize()\n      }\n    }\n    return true\n  })\n\n  ipcMain.handle(SystemChannels.WINDOW_CLOSE, (event) => {\n    const win = BrowserWindow.fromWebContents(event.sender)\n    if (win && !win.isDestroyed()) {\n      win.close()\n    }\n    return true\n  })\n\n  ipcMain.handle(SystemChannels.WINDOW_NEW, () => {\n    createNewWindow()\n    return true\n  })\n\n  ipcMain.handle(\n    SystemChannels.CLIPBOARD_COPY,\n    async (_event, path: string) => {\n      clipboardPath = path\n      return true\n    },\n  )\n\n  ipcMain.handle(\n    SystemChannels.CLIPBOARD_PASTE,\n    async (_event, destDir: string) => {\n      if (!clipboardPath) return false\n      const fileName = getBasename(clipboardPath)\n      const destPath = joinPaths(destDir, fileName)\n      if (await exists(clipboardPath)) {\n        await fsCopy(clipboardPath, destPath, { recursive: true })\n        return true\n      }\n      return false\n    },\n  )\n\n  ipcMain.handle(SystemChannels.VIEW_LIST, async () => {\n    return await getAvailableViews()\n  })\n\n  ipcMain.handle(\n    SystemChannels.TILE_ACTIVATE,\n    async (_event, tileId: string) => {\n      sendAppEvent(AppEvents.TILE_ACTIVATED, tileId)\n      return true\n    },\n  )\n\n  ipcMain.handle(\n    SystemChannels.CLIPBOARD_WRITE_TEXT,\n    (_event, text: string) => {\n      clipboard.writeText(text)\n      return true\n    },\n  )\n}\n\nexport function setupProtocol() {\n  // aynite:// protocol for internal views\n  protocol.handle('aynite', async (request) => {\n    const url = request.url.replace('aynite://', '')\n    try {\n      const decodedPath = decodeURIComponent(url)\n      let filePath = ''\n\n      if (decodedPath.includes('assets/')) {\n        // Redirect asset requests to ~/.aynite/assets\n        const assetPath = decodedPath.split('assets/').pop()\n        if (assetPath) {\n          filePath = expandHome(joinPaths('~/.aynite', 'assets', assetPath))\n        }\n      } else {\n        filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))\n      }\n\n      const fileUrl = `file://${filePath.startsWith('/') ? '' : '/'}${filePath}`\n      return net.fetch(fileUrl)\n    } catch (e) {\n      console.error('Failed to handle aynite protocol:', e)\n      return new Response('View not found', { status: 404 })\n    }\n  })\n\n  // aynite-resource:// protocol for arbitrary files\n  protocol.handle('aynite-resource', (request) => {\n    const url = request.url.replace('aynite-resource://', '')\n    try {\n      const decodedPath = decodeURIComponent(url)\n      const fileUrl = `file://${decodedPath.startsWith('/') ? '' : '/'}${decodedPath}`\n      return net.fetch(fileUrl)\n    } catch (e) {\n      console.error('Failed to handle resource request:', e)\n      return new Response('File not found', { status: 404 })\n    }\n  })\n}\n\nexport { getAvailableViews, getSystemFonts } from './logic'\n"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_DdHaHk1X703ftbIiyEgc2628",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/index.ts"
+        },
+        "output": "import { app, BrowserWindow, protocol } from 'electron'\n\n// IPC & Logic Modules\nimport { setupAiIpc } from './ai/index'\nimport { initAppFolders, setupConfigIpc } from './config/index'\nimport { setupFileIpc, setupWatcher } from './file/index'\nimport { setupGitIpc } from './git/index'\nimport { setupKeybindings } from './keybindings'\nimport { setupRssIpc } from './rss/index'\nimport { setupSpellsIpc } from './spells/index'\nimport { setupSpotifyIpc } from './spotify/index'\nimport { handleSpotifyAuthCode } from './spotify/logic'\nimport { setupProtocol, setupSystemIpc } from './system/index'\nimport { setupThemeIpc } from './theme/index'\nimport { setupUpdater } from './updater'\nimport { createMainWindow, isWindowActive } from './window'\nimport { setupWorkspaceIpc } from './workspace/index'\n\n/**\n * App Lifecycle & Initialization\n */\n\n// Linux Specific Optimizations\nif (process.platform === 'linux') {\n  app.commandLine.appendSwitch('enable-wayland-ime')\n  app.commandLine.appendSwitch('wayland-text-input-v3')\n}\n\n// Register Custom Protocols\nprotocol.registerSchemesAsPrivileged([\n  {\n    scheme: 'aynite',\n    privileges: {\n      standard: true,\n      secure: true,\n      supportFetchAPI: true,\n      corsEnabled: true,\n    },\n  },\n])\n\n/**\n * OS-level protocol registration for aynite://\n * Handles incoming URLs (e.g. aynite://auth/spotify/callback?code=xxx)\n */\n\n// Route incoming aynite:// protocol URLs to the appropriate module\nfunction handleProtocolUrl(urlStr: string) {\n  try {\n    const url = new URL(urlStr)\n    // aynite://auth/spotify/callback?code=xxx\n    // parses as hostname=auth, pathname=/spotify/callback\n    const route = url.hostname + url.pathname\n\n    if (route === 'auth/spotify/callback') {\n      const code = url.searchParams.get('code')\n      if (code) handleSpotifyAuthCode(code)\n      return\n    }\n    // Future: route other aynite:// URLs here\n  } catch (err) {\n    console.error('[Protocol] Failed to handle URL:', urlStr, err)\n  }\n}\n\n// Single instance lock — required for second-instance protocol events on Linux/Windows\nconst gotLock = app.requestSingleInstanceLock()\nif (!gotLock) {\n  app.quit()\n} else {\n  app.on('second-instance', (_event, argv) => {\n    // Focus the existing window\n    for (const win of BrowserWindow.getAllWindows()) {\n      if (!win.isMinimized()) win.focus()\n    }\n    // Check for aynite:// protocol URL in the second instance's args\n    const url = argv.find((arg) => arg.startsWith('aynite://'))\n    if (url) handleProtocolUrl(url)\n  })\n}\n\n// Register aynite:// as an OS-level protocol handler\n// On Linux this creates a .desktop entry; returns false if unavailable (e.g. dev)\nconst protocolAvailable = app.setAsDefaultProtocolClient('aynite')\n\n// macOS: handle open-url events\napp.on('open-url', (event, url) => {\n  event.preventDefault()\n  handleProtocolUrl(url)\n})\n\napp.whenReady().then(async () => {\n  // 1. Essential System Setup\n  setupProtocol()\n  await initAppFolders()\n\n  // 2. Window Initialization (Centralized in window.ts)\n  createMainWindow(__dirname)\n\n  if (isWindowActive()) {\n    // 3. Core IPC & Configuration\n    setupConfigIpc()\n    setupThemeIpc()\n    setupKeybindings()\n\n    setupSystemIpc()\n    setupUpdater()\n\n    // 4. Workspace & File Management\n    setupWorkspaceIpc()\n    setupFileIpc()\n\n    // Initial watcher setup\n    setupWatcher()\n\n    // 5. Feature Subsystems (AI, Spells, Git)\n    setupAiIpc()\n    setupSpellsIpc()\n    setupRssIpc()\n    setupSpotifyIpc(protocolAvailable)\n    setupGitIpc()\n  }\n\n  app.on('activate', () => {\n    if (BrowserWindow.getAllWindows().length === 0) {\n      createMainWindow(__dirname)\n    }\n  })\n})\n\napp.on('window-all-closed', () => {\n  app.quit()\n})\n"
+      },
+      {
+        "type": "reasoning",
+        "text": "Now I have a very clear picture. The key issue is in `src/main/ai/tools.ts` at the `run_command` tool:\n\n```typescript\nconst { stdout, stderr } = await execAsync(command, { cwd: runCwd })\n```\n\n`exec` from `child_process` defaults to `/bin/sh` on Unix, which doesn't load the user's `.zshrc`, `.bashrc`, `.profile`, etc. This means `PATH` and other environment variables aren't set.\n\nThe fix is to:\n1. Detect the user's preferred shell from `process.env.SHELL`\n2. Run the command through that shell as a login shell (using `-l` flag) so it sources the user's shell initialization files\n\nThe approach:\n- Use `process.env.SHELL` (available in most Unix environments including macOS and Linux) to detect the user's default shell\n- Fallback to `/bin/zsh` on macOS and `/bin/bash` on Linux\n- Run the command with `{ shell: userShell, ... }` and prepend `-l -c` or use the shell's appropriate login flag\n\nWait, actually the better approach with Node.js `exec` is to use the `shell` option. Let me think about this more carefully.\n\nWhen using `exec(command, { shell: '/bin/zsh' })`, the shell is invoked as `/bin/zsh -c \"command\"`. This doesn't source `.zshrc` because `-c` makes it a non-interactive, non-login shell.\n\nFor zsh, `.zshrc` is only sourced for interactive shells. `.zprofile` or `.zlogin` is sourced for login shells. For bash, `.bashrc` is for interactive non-login shells and `.bash_profile`/`.profile` is for login shells.\n\nThe trick is to make it a login shell. For zsh: `zsh -l -c \"command\"` and for bash: `bash -l -c \"command\"`. But we can't pass extra flags through `exec`'s `shell` option directly.\n\nOptions:\n1. **Use `shell` option with a wrapper**: Set `shell` to the user's shell and build the command so it runs as a login shell. But `exec` passes the command directly to the shell, so we can't add `-l`.\n\n2. **Modify the command to prefix with shell invocation**: Instead of `exec(command)`, run `exec('/bin/zsh -l -c \"command\"')`. But we lose the `cwd` option...\n\nActually, we can still use the `cwd` option! And the `env` option to merge with process.env. Let me think about the best approach.\n\nActually, the cleanest approach is to detect the user's shell and spawn a login shell that runs the command. We can use `execFile` or just build the command string carefully.\n\nLet me think about what users actually need: they need `PATH` to include locations like `/opt/homebrew/bin`, `/usr/local/bin`, nvm paths, etc. These are typically set in `.zshrc` or `.bashrc` or `.bash_profile`.\n\nOn macOS, the default shell is zsh. `.zshrc` is sourced for interactive shells, but not for `zsh -c`. However, `.zshenv` is always sourced. But most users don't use `.zshenv`, they use `.zshrc`.\n\nThe common workaround is:\n1. Run `$SHELL -l -c 'command'` — this makes it a login shell, which on zsh sources `.zprofile` and `.zlogin`, but NOT `.zshrc`\n2. Run `$SHELL -i -c 'command'` — this makes it an interactive shell, which sources `.zshrc`/`.bashrc`\n\nWait, let me reconsider. On macOS with zsh:\n- `.zshenv` — always sourced\n- `.zprofile` — login shells only\n- `.zshrc` — interactive shells only\n- `.zlogin` — login shells only\n\nSo neither `-l` nor `-i` alone gives us everything. But the practical solution that most tools use is to run a login shell that also sources `.zshrc` explicitly, or use `$SHELL -i -l -c 'command'` to make it both interactive and login.\n\nActually, many solutions just do `$SHELL -l -c 'command'`. Let me check what VS Code does...\n\nVS Code's terminal uses `$SHELL -l` for login shells and `$SHELL` for regular shells. But those are actual PTY terminals.\n\nFor non-interactive command execution, the common approach in Electron apps is to spawn the user's shell as a login shell:\n\n```bash\n$SHELL -l -c 'your command here'\n```\n\nThis sources `.zprofile`/`.bash_profile` which typically have `PATH` setup. Many users also have `source ~/.bashrc` in their `.bash_profile`, or zsh users have `PATH` in `.zprofile`.\n\nBut actually, the most reliable approach is to use `$SHELL -i -c` or `$SHELL -l -c`. Let me check what other similar tools do...\n\nFor the purpose of this fix, I think using `$SHELL -l -c` is the most appropriate. It's a login shell, which is the standard way to get the full user environment. If the user's PATH is set in `.zshrc`, they should also set it in `.zprofile` (which is the proper place for login-time PATH configuration).\n\nHowever, to be more robust and actually solve the user's problem (finding node/npm), I should use `$SHELL -i -c` which makes it an interactive shell (sourcing `.zshrc`/`.bashrc`) but this might have side effects like prompt output or other interactive-only configurations leaking into stdout.\n\nActually, let me reconsider again. The simplest and most robust fix is:\n\n**Detect the user's shell from `SHELL` env var and spawn a login shell.**\n\nFor the implementation:\n\n```typescript\nconst userShell = process.env.SHELL || '/bin/zsh'\n// Run as login shell so it sources .zprofile/.bash_profile\nconst { stdout, stderr } = await execAsync(command, { \n  cwd: runCwd,\n  shell: userShell,\n  env: { ...process.env }\n})\n```\n\nBut wait, this still doesn't add `-l` flag. The `shell` option just changes which binary to use for `/bin/sh -c \"command\"` → becomes `/bin/zsh -c \"command\"`.\n\nFor zsh: `-c` means the shell reads commands from the first argument, and it's neither login nor interactive. So `.zshenv` is sourced but `.zprofile` and `.zshrc` are NOT.\n\nThe solution: I need to construct the full command string to include the `-l` flag. I can set `shell` to `userShell` and also pass the command so the shell runs in login mode... but that doesn't work because `exec` always passes `-c` to the shell.\n\nHere's the trick: I can use `exec` like this:\n\n```typescript\nconst userShell = process.env.SHELL || '/bin/zsh'\nconst { stdout, stderr } = await execAsync(command, { \n  cwd: runCwd,\n  shell: `${userShell} -l`,\n  env: { ...process.env }\n})\n```\n\nWait, no. The `shell` option specifies the path to the shell binary. It can't include flags. Let me think...\n\nActually in Node.js, `exec` passes the command to the shell like: `/bin/sh -c \"command\"`. If we set `shell` to `/bin/zsh`, it becomes `/bin/zsh -c \"command\"`.\n\nWhat we need is `/bin/zsh -l -c \"command\"`.\n\nWe can't achieve this with the `shell` option alone. But we can:\n\n1. Set `shell` to the user's shell path\n2. But there's no way to add the `-l` flag...\n\nActually wait, let me re-read the Node.js docs. The `shell` option just specifies which shell to use. The command is always passed as `shell -c \"command\"` or `shell /d /s /c \"command\"` on Windows.\n\nSo the cleanest approach would be to not use the `shell` option and instead build the command ourselves:\n\n```typescript\nconst userShell = process.env.SHELL || '/bin/zsh'\nconst escapedCommand = command.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"')\nconst fullCommand = `${userShell} -l -c \"${escapedCommand}\"`\nconst { stdout, stderr } = await execAsync(fullCommand, { cwd: runCwd })\n```\n\nThis way the command becomes: `/bin/zsh -l -c \"user's command\"` which will source `.zprofile` (login shell) and also the zsh default behavior on macOS sources path_helper.\n\nActually, there's a subtlety: if userShell is already `/bin/zsh` (which it is on macOS), then this spawns an outer `/bin/sh -c \"/bin/zsh -l -c 'command'\"`... no wait, it spawns the outer shell which is the default `/bin/sh`, and that shell runs `/bin/zsh -l -c \"command\"`.\n\nHmm, but this means the outer `/bin/sh -c` would interpret the command. We need to handle escaping carefully.\n\nActually, with `exec`, the default shell is `/bin/sh` (or `process.env.ComSpec` on Windows). So `exec(\"some command\")` runs `/bin/sh -c \"some command\"`.\n\nIf we do `exec('/bin/zsh -l -c \"echo $PATH\"')`, it becomes:\n`/bin/sh -c '/bin/zsh -l -c \"echo $PATH\"'`\n\nThis should work fine because the outer shell (`/bin/sh`) just runs the command string which invokes zsh with proper flags.\n\nBut there's a potential issue with cwd — the `cwd` option still works because it changes the working directory of the child process.\n\nOK, I think this is the right approach. Let me also think about whether we should pass `env: { ...process.env }` explicitly. By default, `exec` inherits `process.env` from the parent. But the parent (Electron app) might have a different PATH than what the user's shell would set up. Actually, the whole point is that running through a login shell will set up the PATH. The `process.env` already has a basic PATH, and the login shell will add to it.\n\nWait, but the login shell only affects the inner zsh process's environment. The output we capture is from the zsh process. So even if the outer `/bin/sh` has a minimal PATH, the inner zsh will have the full PATH. This should work.\n\nLet me now also check: is there a simpler approach? Could we just set `shell: '/bin/zsh'` and pass `env: { ...process.env, ...fullUserEnv }`? No, because we don't have the full user env.\n\nAnother approach: read the user's shell init files and parse the PATH, then merge. This is fragile and complex.\n\nA third approach: use `spawn` with `{ stdio: 'inherit', shell: true }` and a PTY... no, that's overkill.\n\nI think the `$SHELL -l -c` approach is the right one. Let me also consider the cross-platform implications:\n\n- **macOS**: Default shell is zsh. `SHELL` env var is `/bin/zsh`. Using `zsh -l -c` will source `.zprofile`.\n- **Linux**: Default shell varies (bash is common). `SHELL` env var points to it. Using `bash -l -c` will source `.bash_profile` or `.profile`.\n- **Windows**: This is less relevant since Windows uses `cmd.exe` or PowerShell, and the `exec` behavior is different there.\n\nNow let me plan the implementation:\n\n1. In `src/main/ai/tools.ts`, modify the `run_command` tool to:\n   - Detect the user's shell from `process.env.SHELL` (or `process.env.ComSpec` on Windows)\n   - On Unix, run the command through the user's shell as a login shell\n   - Properly escape the command for the outer shell\n\nLet me also check if there are other places in the codebase where user commands are executed that need this fix.\n\nLooking at the code:\n- `src/main/system/logic.ts`: `execAsync('fc-list ...')` — this is a system command for listing fonts, not user-provided. It uses a specific binary path, so PATH isn't an issue.\n- `src/main/ai/tools.ts`: The `run_command` tool — this is the main one that needs fixing.\n\nLet me also check `src/main/spells` to see if spells execute commands.\n\nLet me look at the spells directory more carefully.",
+        "state": "streaming"
+      },
+      {
+        "type": "text",
+        "text": "Let me also check how spells (skills/commands) execute code, and look more closely at the related files:",
+        "state": "streaming"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_FyVxICMjlV6tSorQ9otO2090",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/index.ts"
+        },
+        "output": "import { exec } from 'node:child_process'\nimport fs from 'node:fs/promises'\nimport { promisify } from 'node:util'\nimport { ipcMain } from 'electron'\nimport { joinPaths } from '../../lib/path'\nimport { showOpenDialog } from '../window'\nimport { listAvailableCommands, restoreDefaultCommands } from './commands'\nimport { listAvailableSkills, restoreDefaultSkills } from './skills'\n\nconst execAsync = promisify(exec)\n\nimport { SpellChannels } from '../../lib/constants/ipc-channels'\n\ninterface CommandRunPayload {\n  command: string\n  cwd?: string\n}\n\ninterface DirectCommandRunPayload {\n  commandPath: string\n  params: string[]\n  currentFile?: string\n}\n\nexport function setupSpellsIpc() {\n  const handleAddFolder = async () => {\n    const { canceled, filePaths } = await showOpenDialog({\n      properties: ['openDirectory'],\n    })\n    if (canceled || filePaths.length === 0) return null\n    return filePaths[0]\n  }\n\n  ipcMain.handle(SpellChannels.SKILL_ADD_FOLDER, handleAddFolder)\n\n  ipcMain.handle(SpellChannels.SKILL_RESTORE, async () => {\n    return await restoreDefaultSkills()\n  })\n\n  ipcMain.handle(SpellChannels.COMMAND_ADD_FOLDER, handleAddFolder)\n\n  ipcMain.handle(SpellChannels.COMMAND_RESTORE, async () => {\n    return await restoreDefaultCommands()\n  })\n\n  ipcMain.handle(SpellChannels.SKILL_LIST, async () => {\n    return await listAvailableSkills()\n  })\n\n  ipcMain.handle(SpellChannels.COMMAND_LIST, async () => {\n    return await listAvailableCommands()\n  })\n\n  ipcMain.handle(\n    SpellChannels.COMMAND_RUN,\n    async (_event, { command, cwd }: CommandRunPayload) => {\n      const { stdout, stderr } = await execAsync(command, {\n        cwd: cwd || process.cwd(),\n      })\n      return { stdout, stderr }\n    },\n  )\n\n  ipcMain.handle(\n    SpellChannels.COMMAND_RUN_DIRECT,\n    async (\n      _event,\n      { commandPath, params, currentFile }: DirectCommandRunPayload,\n    ) => {\n      const runShPath = joinPaths(commandPath, 'run.sh')\n      if (process.platform !== 'win32') {\n        try {\n          await fs.chmod(runShPath, 0o755)\n        } catch (e) {\n          console.error('Failed to set chmod on run.sh', e)\n        }\n      }\n\n      const env = {\n        ...process.env,\n        AYNITE_CURRENT_FILE: currentFile || '',\n      }\n\n      const resolvedParams = params.map((p) => {\n        return p.replace(/@(?:file|skill|cmd)\\[.*?\\]\\((.*?)\\)/g, '$1')\n      })\n\n      const quotedParams = resolvedParams\n        .map((p) => `\"${p.replace(/\"/g, '\\\\\"')}\"`)\n        .join(' ')\n      const fullCmd =\n        process.platform === 'win32'\n          ? `sh \"${runShPath}\" ${quotedParams}`\n          : `\"${runShPath}\" ${quotedParams}`\n\n      const { stdout, stderr } = await execAsync(fullCmd, {\n        cwd: commandPath,\n        env,\n      })\n      return { stdout, stderr }\n    },\n  )\n}\n\nexport {\n  getCommandsConfig,\n  listAvailableCommands,\n  restoreCommand,\n  restoreDefaultCommands,\n  saveCommandsConfig,\n} from './commands'\nexport {\n  findFilesRecursively,\n  getBundledResourcesPath,\n  notifyError,\n  reportedErrors,\n} from './common'\nexport {\n  getSkillsConfig,\n  listAvailableSkills,\n  restoreDefaultSkills,\n  restoreSkill,\n  saveSkillsConfig,\n} from './skills'\nexport { restoreSpell } from './spell-installer'\n"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_vqJjNnSq8KuSfuvVA81S5438",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/skills.ts"
+        },
+        "output": "import { getSkillPath, getSkillsDir } from '../../lib/path'\nimport {\n  getSpellConfig,\n  listAvailableSpells,\n  restoreSpell as restoreBundledSpell,\n  restoreDefaultSpells,\n  saveSpellConfig,\n} from './spell-installer'\n\nexport async function getSkillsConfig() {\n  return getSpellConfig('skills', getSkillsDir())\n}\n\nexport async function saveSkillsConfig(config: any) {\n  return saveSpellConfig('skills', config)\n}\n\nexport async function listAvailableSkills() {\n  return listAvailableSpells('skills', getSkillsDir(), 'SKILL.md', false)\n}\n\nexport async function restoreDefaultSkills() {\n  const defaultDir = getSkillsDir()\n  await saveSkillsConfig({ folders: [defaultDir] })\n  return restoreDefaultSpells(\n    'skills',\n    ['skill-creator', 'command-creator', 'hello-skill', 'theme-creator'],\n    (name) => getSkillPath(name),\n  )\n}\n\nexport async function restoreSkill(skillName: string) {\n  return restoreBundledSpell('skills', skillName, getSkillPath(skillName))\n}\n"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_02_ZheSEtaoNTAI9tJZIM6k5423",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/ai/index.ts"
+        },
+        "output": "import type { UIMessage } from 'ai'\nimport { ipcMain } from 'electron'\nimport { AppOperation } from '../../lib/constants/app'\nimport { AiChannels } from '../../lib/constants/ipc-channels'\nimport { sendAppOperation, showOpenDialog } from '../window'\nimport { getWorkspacesList } from '../workspace/logic'\nimport { aiChat, listSessions, loadSession, saveSession } from './chat'\nimport { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'\nimport { getToolsMetadata } from './tools'\n\n// ─── Payload types ─────────────────────────────────────────────────────────\ninterface AiChatPayload {\n  messages: UIMessage[]\n  config: any\n  workspaceFolders: string[]\n  activeFile?: string\n}\n\ninterface SessionSavePayload {\n  sessionId: string\n  messages: UIMessage[]\n  metadata?: any\n}\n\ninterface SessionLoadPayload {\n  sessionId: string\n  date: string\n}\n\nexport function setupAiIpc() {\n  ipcMain.handle(\n    AiChannels.PROMPT_GET_MERGED,\n    async (_event, globalFiles?: string[], agentFiles?: string[]) => {\n      return await getMergedSystemPrompt(globalFiles, agentFiles)\n    },\n  )\n  ipcMain.handle(AiChannels.GET_TOOLS, async () => {\n    return await getToolsMetadata()\n  })\n\n  ipcMain.handle(AiChannels.CHAT, async (_event, params: AiChatPayload) => {\n    const provider = params.config?.provider?.toLowerCase()\n    if (provider === 'ollama' && !params.config.baseUrl) {\n      sendAppOperation(AppOperation.SHOW_NOTIFICATION, {\n        type: 'warning',\n        title: 'Ollama URL not configured',\n        message:\n          'Using default http://localhost:11434. Set a custom URL in settings if needed.',\n      })\n    } else if (\n      (provider === 'openai' || provider === 'anthropic') &&\n      !params.config.apiKey\n    ) {\n      sendAppOperation(AppOperation.SHOW_NOTIFICATION, {\n        type: 'error',\n        title: 'API Key Missing',\n        message: `No API key configured for ${provider}. Add it in Settings > AI Providers.`,\n      })\n    }\n    return await aiChat(params)\n  })\n\n  ipcMain.handle(\n    AiChannels.SESSION_SAVE,\n    async (_event, { sessionId, messages, metadata }: SessionSavePayload) => {\n      const { active } = await getWorkspacesList()\n      return await saveSession(active, sessionId, messages, metadata)\n    },\n  )\n\n  ipcMain.handle(\n    AiChannels.SESSION_LOAD,\n    async (_event, { sessionId, date }: SessionLoadPayload) => {\n      const { active } = await getWorkspacesList()\n      return await loadSession(active, sessionId, date)\n    },\n  )\n\n  ipcMain.handle(AiChannels.SESSION_LIST, async () => {\n    const { active } = await getWorkspacesList()\n    return await listSessions(active)\n  })\n\n  ipcMain.handle(AiChannels.PROMPT_RESTORE, async () => {\n    return await restoreDefaultPrompts()\n  })\n\n  ipcMain.handle(AiChannels.PROMPT_PICK_FILE, async () => {\n    const { canceled, filePaths } = await showOpenDialog({\n      properties: ['openFile'],\n      filters: [{ name: 'Markdown', extensions: ['md'] }],\n    })\n    if (canceled || filePaths.length === 0) return null\n    return filePaths[0]\n  })\n  ipcMain.handle(AiChannels.ARTIFACTS_STATUS, async () => {\n    const { active } = await getWorkspacesList()\n    const {\n      exists,\n      getWorkspaceMemoryPath,\n      getWorkspaceTaskPath,\n      getWorkspacePlanPath,\n    } = await import('../../lib/path')\n\n    const memoryPath = getWorkspaceMemoryPath(active)\n    const taskPath = getWorkspaceTaskPath(active)\n    const planPath = getWorkspacePlanPath(active)\n\n    const [memoryExists, taskExists, planExists] = await Promise.all([\n      exists(memoryPath),\n      exists(taskPath),\n      exists(planPath),\n    ])\n\n    return {\n      memory: { exists: memoryExists, path: memoryPath },\n      task: { exists: taskExists, path: taskPath },\n      plan: { exists: planExists, path: planPath },\n    }\n  })\n}\n\nexport {\n  deleteSession,\n  initWorkspaceFolders,\n  listSessions,\n  loadSession,\n  saveSession,\n} from './chat'\nexport {\n  ensureDefaultPromptFiles,\n  getDefaultGlobalPrompts,\n  getMergedSystemPrompt,\n  restoreDefaultPrompts,\n} from './prompts'\nexport { getToolsMetadata } from './tools'\n"
+      },
+      {
+        "type": "reasoning",
+        "text": "Now I have the full picture. There are two places where `exec` is used for user commands:\n\n1. **`src/main/ai/tools.ts`** - The `run_command` AI tool\n2. **`src/main/spells/index.ts`** - The `SpellChannels.COMMAND_RUN` and `SpellChannels.COMMAND_RUN_DIRECT` handlers\n\nBoth use `execAsync` without the login shell context, meaning they don't have the user's full shell environment.\n\nNow let me plan the solution:\n\n### Problem\nWhen running shell commands via `exec` from `child_process`, Node.js uses `/bin/sh -c` by default, which doesn't source the user's shell profile files (`.zshrc`, `.bashrc`, `.bash_profile`, `.zprofile`). This means tools like `node` and `npm` installed via version managers (nvm, fnm) or package managers (Homebrew) aren't on the PATH.\n\n### Solution\nOn Unix platforms, detect the user's default shell from `process.env.SHELL` and run commands through it as a login shell (`-l` flag), which sources the user's profile files where PATH and other environment variables are configured.\n\nThe implementation:\n1. Create a helper function that wraps `execAsync` to use the user's login shell\n2. Apply it in both `src/main/ai/tools.ts` and `src/main/spells/index.ts`\n\n### Detailed Implementation\n\nIn `src/main/ai/tools.ts` and `src/main/spells/index.ts`:\n\n```typescript\n// Detect user's shell for login shell execution\nfunction getUserShell(): string {\n  if (process.platform === 'win32') {\n    return process.env.ComSpec || 'cmd.exe'\n  }\n  return process.env.SHELL || '/bin/zsh'\n}\n\n// Run a command through the user's login shell\nasync function execInUserShell(command: string, options: { cwd?: string } = {}): Promise<{ stdout: string; stderr: string }> {\n  if (process.platform === 'win32') {\n    return await execAsync(command, options)\n  }\n  const shell = getUserShell()\n  // Use login shell (-l) to source user's .zprofile/.bash_profile\n  // Wrap entire command in single quotes to prevent expansion by the outer /bin/sh\n  const escapedCommand = command.replace(/'/g, \"'\\\\''\")\n  const fullCommand = `${shell} -l -c '${escapedCommand}'`\n  return await execAsync(fullCommand, options)\n}\n```\n\nWait, there's a subtlety. When `exec` is called, the default `/bin/sh` first interprets the command string. Then it spawns the user's shell. I need to make sure the outer shell doesn't mess with the inner command.\n\nIf I do:\n```\nexec(`${shell} -l -c '${command}'`)\n```\n\nThe outer `/bin/sh -c \"/bin/zsh -l -c 'echo $PATH'\"` should work because:\n1. `/bin/sh` interprets the string `\"/bin/zsh -l -c 'echo $PATH'\"`\n2. It runs `/bin/zsh -l -c 'echo $PATH'`\n3. `/bin/zsh` as login shell sources `.zprofile`, then runs `echo $PATH`\n\nThe single quotes protect the inner command from the outer shell.\n\nBut what if the user's command contains single quotes? I should escape them properly: replace `'` with `'\\''` (end the single-quoted string, add an escaped single quote, and start a new single-quoted string). This is the standard shell escaping for single quotes.\n\nLet me also think about whether `-l` is sufficient. On macOS with zsh:\n- Login shells source: `.zshenv`, `.zprofile`, `.zlogin`\n- Interactive shells source: `.zshenv`, `.zshrc`\n\nSo `-l` only sources `.zprofile` and `.zlogin`, not `.zshrc`. Most users put PATH in `.zprofile` or `.zshenv`, but some put it in `.zshrc`.\n\nHmm, I wonder if I should use both `-l` and `-i`? That would be: `zsh -i -l -c 'command'`. But `-i` might cause issues because it sets up interactive mode (prompts, job control, etc.), which could pollute stdout.\n\nActually, on macOS, the system `/etc/zprofile` runs `path_helper` which sets up the default PATH (including `/usr/local/bin`). And `/etc/zshenv` also runs. So even `zsh -l` should get the basic system PATH. But user-specific additions in `.zshrc` would be missed.\n\nA better approach for maximum compatibility: use `$SHELL -i -c` but filter out any interactive-mode artifacts... no, that's fragile.\n\nThe most pragmatic solution: use `-l` (login shell), which is the standard approach used by many tools. Users who have PATH customizations in `.zshrc` that aren't also in `.zprofile` may need to adjust their setup, but this is the standard Unix convention (`.zprofile` is for login-time settings, `.zshrc` is for interactive shell settings).\n\nActually wait, let me reconsider. On macOS with zsh, there's another approach: we can set the `ZDOTDIR` and use `zsh -c` with a custom startup file that sources both `.zshenv`, `.zprofile`, AND `.zshrc`. But this is getting too complex.\n\nLet me just go with `-l` for now. It's a significant improvement over the current situation (where neither is sourced). The user can always put PATH in `.zprofile` or `.zshenv` if needed.\n\nActually, I just realized there might be an even simpler approach. Some terminals and tools use `env -i` to start fresh and then source everything. But let me not overthink this.\n\nLet me finalize the plan:\n\n1. Create a helper function to get the user's shell\n2. Create a helper to run commands through the user's login shell\n3. Apply to `src/main/ai/tools.ts` (the `run_command` tool)\n4. Apply to `src/main/spells/index.ts` (the `COMMAND_RUN` and `COMMAND_RUN_DIRECT` handlers)\n\nActually, I should create this as a shared utility rather than duplicating code. Let me put it in a new file or in an existing utility. Looking at the codebase structure, `src/main/system/logic.ts` has `execAsync` related code. Or I could put it in a general utility.\n\nLet me keep it simple and just create the helper in both files, or better yet, put it in `src/main/system/logic.ts` since that's where the system-related shell operations are. Then both `tools.ts` and `spells/index.ts` can import from there.\n\nWait, `src/main/system/logic.ts` already has `execAsync`. But it's a local variable, not exported. Let me check what's exported...\n\nLooking at `src/main/system/logic.ts`:\n```typescript\nimport { exec } from 'node:child_process'\nimport { promisify } from 'node:util'\n\nconst execAsync = promisify(exec)\n```\nIt's not exported. The file exports `getSystemFonts` and `getAvailableViews`.\n\nI think the cleanest approach is to create a small helper in `src/main/system/logic.ts` and export it. Then both `tools.ts` and `spells/index.ts` can use it.\n\nLet me now create the implementation plan.",
+        "state": "streaming"
+      },
+      {
+        "type": "text",
+        "text": "Now I have a complete picture. Let me check the `src/lib/path.ts` to understand the project's utility patterns:",
+        "state": "streaming"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_SVkKHetSf8Htnd7vatNs9560",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/lib/path.ts"
+        },
+        "output": "import { existsSync } from 'node:fs'\nimport fs from 'node:fs/promises'\nimport { homedir } from 'node:os'\nimport path from 'node:path'\nimport glob from 'fast-glob'\nimport { ERROR_MESSAGES } from './constants/messages'\n\nconst AYNITE_DIR = path.join(homedir(), '.aynite')\n\nimport { AYNITE_SUBDIRS } from './constants/path'\n\nexport { AYNITE_SUBDIRS }\n\nexport function getAyniteDir() {\n  return AYNITE_DIR\n}\n\nexport function getAynitePath(...parts: string[]) {\n  return path.join(AYNITE_DIR, ...parts)\n}\n\nexport function getAyniteConfigDir() {\n  return path.join(AYNITE_DIR, AYNITE_SUBDIRS.CONFIG)\n}\n\nexport function getAyniteLogsDir() {\n  return path.join(AYNITE_DIR, AYNITE_SUBDIRS.LOGS)\n}\n\nexport function getLogPath(filename: string = 'ai-chat.log') {\n  return path.join(getAyniteLogsDir(), filename)\n}\n\nexport function getAyniteSessionsDir() {\n  return path.join(AYNITE_DIR, AYNITE_SUBDIRS.SESSIONS)\n}\n\nexport function getSessionPath(\n  sessionId: string,\n  date?: string,\n  workspace?: string,\n) {\n  const dateStr = date || new Date().toISOString().split('T')[0]\n  const base = workspace\n    ? getWorkspaceSessionsDir(workspace)\n    : getAyniteSessionsDir()\n  return path.join(base, dateStr, `${sessionId}.json`)\n}\n\nexport function getSessionMetadataPath(\n  sessionId: string,\n  date?: string,\n  workspace?: string,\n) {\n  const dateStr = date || new Date().toISOString().split('T')[0]\n  const base = workspace\n    ? getWorkspaceSessionsDir(workspace)\n    : getAyniteSessionsDir()\n  return path.join(base, dateStr, `${sessionId}-metadata.json`)\n}\n\nexport function getSessionsDateDir(date: string, workspace?: string) {\n  const base = workspace\n    ? getWorkspaceSessionsDir(workspace)\n    : getAyniteSessionsDir()\n  return path.join(base, date)\n}\n\nexport function getAynitePromptsDir() {\n  return path.join(AYNITE_DIR, AYNITE_SUBDIRS.PROMPTS)\n}\n\nexport function getAynitePromptPath(filename: string) {\n  return path.join(AYNITE_DIR, AYNITE_SUBDIRS.PROMPTS, filename)\n}\n\nexport function getWorkspacesConfigPath() {\n  return path.join(getAyniteConfigDir(), 'workspaces.json')\n}\n\nexport function getWorkspacesDir() {\n  return getAynitePath('workspaces')\n}\n\nexport function getWorkspaceDataPath(name: string) {\n  return path.join(getWorkspacesDir(), name, 'config.json')\n}\n\nexport function getWorkspaceDir(name: string) {\n  return path.join(getWorkspacesDir(), name)\n}\n\nexport function getWorkspaceSessionsDir(name: string) {\n  return path.join(getWorkspacesDir(), name, 'sessions')\n}\n\nexport function getWorkspaceArtifactsDir(name: string) {\n  return path.join(getWorkspacesDir(), name, 'artifacts')\n}\n\nexport function getWorkspaceTaskPath(name: string, filename = 'task.md') {\n  return path.join(getWorkspaceArtifactsDir(name), filename)\n}\n\nexport function getWorkspaceMemoryPath(name: string) {\n  return path.join(getWorkspaceArtifactsDir(name), 'memory.md')\n}\n\nexport function getWorkspacePlanPath(name: string) {\n  return path.join(getWorkspaceArtifactsDir(name), 'implementation_plan.md')\n}\n\nexport function getAIConfigPath() {\n  return path.join(getAyniteConfigDir(), 'ai.json')\n}\n\nexport function getKeybindingsConfigPath() {\n  return path.join(getAyniteConfigDir(), 'keybindings.json')\n}\n\nexport function getIgnoreConfigPath() {\n  return path.join(getAyniteConfigDir(), 'ignore')\n}\n\nexport function getMainConfigPath() {\n  return path.join(getAyniteConfigDir(), 'config.json')\n}\n\nexport function getAppearanceConfigPath() {\n  return path.join(getAyniteConfigDir(), 'appearance.json')\n}\n\nexport function getThemesDir() {\n  return getAynitePath('themes')\n}\n\nexport function getThemePath(name: string) {\n  return getAynitePath('themes', `${name}.json`)\n}\n\nexport function getRssDir() {\n  return getAynitePath('rss')\n}\n\nexport function getRssConfigPath() {\n  return getAynitePath('rss', 'config.json')\n}\n\nexport function getRssContentsDir() {\n  return getAynitePath('rss', 'contents')\n}\n\nexport function getRssContentPath(date: string, sourceId: string) {\n  return getAynitePath('rss', 'contents', date, `${sourceId}.json`)\n}\n\nexport function getRssBookmarksPath() {\n  return getAynitePath('rss', 'bookmarks.json')\n}\n\nexport function getSpotifyDir() {\n  return getAynitePath('spotify')\n}\n\nexport function getSpotifyConfigPath() {\n  return getAynitePath('spotify', 'config.json')\n}\n\nexport function getSpotifyProfilePath() {\n  return getAynitePath('spotify', 'profile.json')\n}\n\nexport function getSpotifyRecentlyPlayedPath() {\n  return getAynitePath('spotify', 'recently-played.json')\n}\n\nexport function getSpotifySavedTracksPath() {\n  return getAynitePath('spotify', 'saved-tracks.json')\n}\n\nexport function getSpotifyTopArtistsPath() {\n  return getAynitePath('spotify', 'top-artists.json')\n}\n\nexport function getSpotifyTopTracksPath() {\n  return getAynitePath('spotify', 'top-tracks.json')\n}\n\nexport function getSpotifyPlaylistsPath() {\n  return getAynitePath('spotify', 'playlists.json')\n}\n\nexport function getSpotifyPlaylistTracksPath(id: string) {\n  return getAynitePath('spotify', 'playlist-tracks', `${id}.json`)\n}\n\nexport function getSpotifyMetadataPath() {\n  return getAynitePath('spotify', 'metadata.json')\n}\n\nexport function getPlaybookPath() {\n  return getAynitePath('aynite-playbook')\n}\n\nexport function getWelcomeMdPath() {\n  return path.join(getPlaybookPath(), 'Welcome.md')\n}\n\nexport function getPreloadPath(baseDir: string) {\n  return path.resolve(baseDir, '../preload/index.js')\n}\n\nexport function getRendererHtmlPath(baseDir: string) {\n  return path.resolve(baseDir, '../renderer/index.html')\n}\n\nexport function getSkillsDir() {\n  return getAynitePath('skills')\n}\n\nexport function getCommandsDir() {\n  return getAynitePath('commands')\n}\n\nexport function getSkillPath(skillName: string) {\n  return path.join(getSkillsDir(), skillName)\n}\n\nexport function getCommandPath(commandName: string) {\n  return path.join(getCommandsDir(), commandName)\n}\n\n// --- Path Utilities (Wrapped to avoid direct path module usage) ---\n\nexport function getBasename(p: string, ext?: string) {\n  return path.basename(p, ext)\n}\n\nexport function getDirname(p: string) {\n  return path.dirname(p)\n}\n\nexport function getExtname(p: string) {\n  return path.extname(p)\n}\n\nexport function getRelativePath(from: string, to: string) {\n  return path.relative(from, to)\n}\n\nexport function getAbsolutePath(p: string, base?: string) {\n  if (base) return path.resolve(base, p)\n  return path.resolve(p)\n}\n\nexport function getPathSep() {\n  return path.sep\n}\n\nexport function joinPaths(...parts: string[]) {\n  return path.join(...parts)\n}\n\n/**\n * Checks if a target path is within a set of allowed domain folders.\n */\nexport function isPathWithinDomain(\n  targetPath: string,\n  domainFolders: string[],\n): boolean {\n  if (!targetPath) return false\n  const resolvedTarget = path.resolve(expandHome(targetPath))\n  const result = domainFolders.some((folder) => {\n    const resolvedFolder = path.resolve(expandHome(folder))\n    return (\n      resolvedTarget === resolvedFolder ||\n      resolvedTarget.startsWith(resolvedFolder + path.sep)\n    )\n  })\n  if (!result) {\n    console.warn(\n      `[isPathWithinDomain] Access denied: \"${resolvedTarget}\" is not within any of [${domainFolders.join(', ')}]`,\n    )\n  }\n  return result\n}\n\nexport function expandHome(filePath: string): string {\n  if (filePath.startsWith('~')) {\n    return path.join(homedir(), filePath.slice(1))\n  }\n  return filePath\n}\n\n// --- I/O Helpers ---\n\nexport async function exists(filePath: string): Promise<boolean> {\n  return existsSync(expandHome(filePath))\n}\n\nexport async function ensureDir(dirPath: string) {\n  await fs.mkdir(expandHome(dirPath), { recursive: true })\n}\n\nexport async function readJson<T = any>(\n  filePath: string,\n  fallback?: T,\n): Promise<T> {\n  try {\n    const data = await fs.readFile(expandHome(filePath), 'utf-8')\n    return JSON.parse(data)\n  } catch (e) {\n    if (fallback !== undefined) return fallback\n    throw e\n  }\n}\n\nexport async function writeJson(filePath: string, data: any) {\n  const expanded = expandHome(filePath)\n  await ensureDir(path.dirname(expanded))\n  await fs.writeFile(expanded, JSON.stringify(data, null, 2), 'utf-8')\n}\n\nexport async function readText(filePath: string): Promise<string> {\n  return await fs.readFile(expandHome(filePath), 'utf-8')\n}\n\nexport async function writeText(filePath: string, content: string) {\n  const expanded = expandHome(filePath)\n  await ensureDir(path.dirname(expanded))\n  await fs.writeFile(expanded, content, 'utf-8')\n}\n\nexport async function appendText(filePath: string, content: string) {\n  const expanded = expandHome(filePath)\n  await ensureDir(path.dirname(expanded))\n  await fs.appendFile(expanded, content, 'utf-8')\n}\n\nexport async function readdir(dirPath: string) {\n  return await fs.readdir(expandHome(dirPath), { withFileTypes: true })\n}\n\nexport async function stat(filePath: string) {\n  return await fs.stat(expandHome(filePath))\n}\n\nexport async function unlink(filePath: string) {\n  return await fs.unlink(expandHome(filePath))\n}\n\nexport async function copy(\n  src: string,\n  dest: string,\n  options?: { recursive?: boolean },\n) {\n  const expandedSrc = expandHome(src)\n  const expandedDest = expandHome(dest)\n  await ensureDir(path.dirname(expandedDest))\n  return await fs.cp(expandedSrc, expandedDest, options)\n}\n\nexport async function rename(oldPath: string, newPath: string) {\n  const expandedOld = expandHome(oldPath)\n  const expandedNew = expandHome(newPath)\n  await ensureDir(path.dirname(expandedNew))\n  await fs.rename(expandedOld, expandedNew)\n}\n\nexport async function remove(\n  filePath: string,\n  options?: { recursive?: boolean; force?: boolean },\n) {\n  await fs.rm(expandHome(filePath), options)\n}\n\nexport async function checkIsTextFile(filePath: string): Promise<boolean> {\n  try {\n    const fd = await fs.open(expandHome(filePath), 'r')\n    const { bytesRead, buffer } = await fd.read(Buffer.alloc(1024), 0, 1024, 0)\n    await fd.close()\n\n    for (let i = 0; i < bytesRead; i++) {\n      if (buffer[i] === 0) return false\n    }\n    return true\n  } catch {\n    return false\n  }\n}\n\n// --- Secure Helpers (with Domain Validation) ---\n\nasync function secureFileOp(\n  filePath: string,\n  domainFolders: string[],\n  op: () => Promise<string>,\n  errorMsg: (msg: string) => string,\n): Promise<string> {\n  if (!isPathWithinDomain(filePath, domainFolders)) {\n    return ERROR_MESSAGES.ACCESS_DENIED(filePath)\n  }\n  try {\n    return await op()\n  } catch (e: unknown) {\n    const message = e instanceof Error ? e.message : String(e)\n    return errorMsg(message)\n  }\n}\n\nexport async function secureReadText(\n  filePath: string,\n  domainFolders: string[],\n): Promise<string> {\n  return secureFileOp(\n    filePath,\n    domainFolders,\n    () => readText(filePath),\n    ERROR_MESSAGES.FILE_READ_ERROR,\n  )\n}\n\nexport async function secureWriteText(\n  filePath: string,\n  content: string,\n  domainFolders: string[],\n): Promise<string> {\n  return secureFileOp(\n    filePath,\n    domainFolders,\n    async () => {\n      await writeText(filePath, content)\n      return ERROR_MESSAGES.FILE_WRITE_SUCCESS(filePath)\n    },\n    ERROR_MESSAGES.FILE_WRITE_ERROR,\n  )\n}\n\nexport async function secureEditFile(\n  filePath: string,\n  targetContent: string,\n  replacementContent: string,\n  domainFolders: string[],\n): Promise<string> {\n  return secureFileOp(\n    filePath,\n    domainFolders,\n    async () => {\n      const content = await readText(filePath)\n      const parts = content.split(targetContent)\n\n      if (parts.length === 1) {\n        return ERROR_MESSAGES.FILE_EDIT_NOT_UNIQUE(0)\n      }\n      if (parts.length > 2) {\n        return ERROR_MESSAGES.FILE_EDIT_NOT_UNIQUE(parts.length - 1)\n      }\n\n      const newContent = parts.join(replacementContent)\n      await writeText(filePath, newContent)\n      return ERROR_MESSAGES.FILE_EDIT_SUCCESS(filePath)\n    },\n    ERROR_MESSAGES.FILE_EDIT_ERROR,\n  )\n}\n\nexport async function secureListDir(\n  dirPath: string,\n  domainFolders: string[],\n): Promise<string> {\n  if (!isPathWithinDomain(dirPath, domainFolders)) {\n    return ERROR_MESSAGES.ACCESS_DENIED(dirPath)\n  }\n  try {\n    const files = await readdir(dirPath)\n    const entries = files.map(\n      (f) => `${f.isDirectory() ? '📁' : '📄'} ${f.name}`,\n    )\n    return entries.join('\\n') || ERROR_MESSAGES.DIR_EMPTY\n  } catch (e: unknown) {\n    const message = e instanceof Error ? e.message : String(e)\n    return ERROR_MESSAGES.DIR_LIST_ERROR(message)\n  }\n}\n\nexport async function secureGetFileTree(\n  dirPath: string,\n  domainFolders: string[],\n  depth: number = 10,\n): Promise<string> {\n  if (!isPathWithinDomain(dirPath, domainFolders)) {\n    return ERROR_MESSAGES.ACCESS_DENIED(dirPath)\n  }\n  const tree = await getFileTree(dirPath, depth)\n  return tree || ERROR_MESSAGES.DIR_EMPTY\n}\n\nexport async function secureGrepSearch(\n  folderPath: string,\n  pattern: string,\n  domainFolders: string[],\n): Promise<string> {\n  if (!isPathWithinDomain(folderPath, domainFolders)) {\n    return ERROR_MESSAGES.ACCESS_DENIED(folderPath)\n  }\n  const results = await grepSearch(folderPath, pattern)\n  return results.slice(0, 50).join('\\n') || ERROR_MESSAGES.NO_MATCHES_FOUND\n}\n\nexport async function secureGlobSearch(\n  pattern: string,\n  domainFolders: string[],\n  cwd?: string,\n): Promise<string> {\n  const searchCwd = cwd || domainFolders[0]\n  if (!isPathWithinDomain(searchCwd, domainFolders)) {\n    return ERROR_MESSAGES.ACCESS_DENIED(searchCwd)\n  }\n\n  try {\n    const files = await glob(pattern, {\n      cwd: expandHome(searchCwd),\n      onlyFiles: true,\n      absolute: true,\n      ignore: ['**/node_modules/**', '**/.git/**'],\n    })\n    return files.join('\\n') || ERROR_MESSAGES.NO_MATCHES_FOUND\n  } catch (e: unknown) {\n    const message = e instanceof Error ? e.message : String(e)\n    return ERROR_MESSAGES.DIR_LIST_ERROR(message)\n  }\n}\n\n// --- Internal Implementation Helpers ---\n\nasync function getFileTree(\n  dirPath: string,\n  depth: number = 10,\n  currentDepth: number = 0,\n): Promise<string> {\n  if (currentDepth > depth) return ''\n  const expanded = expandHome(dirPath)\n  let output = ''\n  try {\n    const files = await readdir(expanded)\n    for (const file of files) {\n      if (file.name === 'node_modules' || file.name === '.git') continue\n      const indent = '  '.repeat(currentDepth)\n      output += `${indent}${file.isDirectory() ? '📁' : '📄'} ${file.name}\\n`\n      if (file.isDirectory()) {\n        output += await getFileTree(\n          path.join(expanded, file.name),\n          depth,\n          currentDepth + 1,\n        )\n      }\n    }\n  } catch (_e) {}\n  return output\n}\n\nasync function grepSearch(\n  folderPath: string,\n  pattern: string,\n): Promise<string[]> {\n  const expandedFolder = expandHome(folderPath)\n  const results: string[] = []\n  const regex = new RegExp(pattern, 'i')\n\n  const walk = async (dir: string) => {\n    const files = await readdir(dir)\n    for (const file of files) {\n      const res = path.resolve(dir, file.name)\n      if (file.isDirectory()) {\n        if (file.name === 'node_modules' || file.name === '.git') continue\n        await walk(res)\n      } else {\n        const ext = path.extname(file.name).toLowerCase()\n        if (\n          [\n            '.ts',\n            '.tsx',\n            '.js',\n            '.jsx',\n            '.json',\n            '.md',\n            '.txt',\n            '.html',\n            '.css',\n            '.scss',\n          ].includes(ext)\n        ) {\n          try {\n            const content = await readText(res)\n            if (regex.test(content)) {\n              const lines = content.split('\\n')\n              lines.forEach((line, i) => {\n                if (regex.test(line)) {\n                  results.push(\n                    `${path.relative(expandedFolder, res)}:${i + 1}: ${line.trim()}`,\n                  )\n                }\n              })\n            }\n          } catch (_e) {}\n        }\n      }\n    }\n  }\n\n  await walk(expandedFolder)\n  return results\n}\n"
+      },
+      {
+        "type": "reasoning",
+        "text": "Now I have a complete understanding. Let me create the implementation plan.\n\nSummary of findings:\n1. `src/main/ai/tools.ts` - The `run_command` tool uses `execAsync(command, { cwd: runCwd })` which runs via `/bin/sh -c`, not loading user's shell environment\n2. `src/main/spells/index.ts` - `COMMAND_RUN` and `COMMAND_RUN_DIRECT` handlers also use bare `execAsync`\n3. Both use `promisify(exec)` from `child_process`\n\nThe fix: Create a shared utility that detects the user's shell and runs commands through it as a login shell, then apply it to both locations.\n\nLet me now propose the plan.",
+        "state": "streaming"
+      },
+      {
+        "type": "text",
+        "text": "Now I have a complete picture. Let me propose the plan.",
+        "state": "streaming"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244136793_ky0wui",
+    "role": "user",
+    "parts": [
+      {
+        "type": "text",
+        "text": "continue"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244230690_juhlij",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Let me now create the implementation plan. I have a complete understanding of the codebase:\n\n**Problem**: When running shell commands via `exec()` from `node:child_process`, Node.js uses `/bin/sh -c` by default. This doesn't source the user's shell profile files (`.zshrc`, `.bashrc`, `.bash_profile`, `.zprofile`), so tools like `node` and `npm` installed via version managers or Homebrew aren't on the PATH.\n\n**Locations that need fixing**:\n1. `src/main/ai/tools.ts` - The `run_command` AI tool (line ~80)\n2. `src/main/spells/index.ts` - `COMMAND_RUN` and `COMMAND_RUN_DIRECT` handlers (lines ~48, ~59)\n\n**Solution**: Detect the user's shell from `process.env.SHELL` and run commands through it as a login shell (`-l` flag), which sources the user's profile files.\n\nLet me create the plan now.The plan proposal failed because of the HTML-like content in the JSON field. Let me fix that by using proper formatting.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Now I have a complete understanding. Let me propose the plan.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_43SzrEJvoAH9Nvzguwuk9527",
+        "toolName": "propose_plan",
+        "state": "output-available",
+        "input": {
+          "problemStatement": "When running shell commands via exec() from node:child_process, Node.js uses /bin/sh -c by default, which does NOT source the user's shell profile files (.zshrc, .bashrc, .bash_profile, .zprofile). This means tools like node, npm, nvm, homebrew binaries etc. are not on the PATH because they require the user's shell initialization to set up environment variables. Users have to manually set up PATH in every command.",
+          "investigationResults": "Three locations use execAsync (promisified exec) for running user-provided shell commands:\n\n1. src/main/ai/tools.ts - the run_command AI tool (~line 80):\n   const { stdout, stderr } = await execAsync(command, { cwd: runCwd })\n   This is the primary path — AI invokes run_command tool.\n\n2. src/main/spells/index.ts - the COMMAND_RUN handler (~line 48):\n   const { stdout, stderr } = await execAsync(command, { cwd: cwd || process.cwd() })\n   This handles `>cmd[name](path)` syntax in chat.\n\n3. src/main/spells/index.ts - the COMMAND_RUN_DIRECT handler (~line 59):\n   const { stdout, stderr } = await execAsync(fullCmd, { cwd: commandPath, env })\n   This runs run.sh files directly. It already passes env but still uses the default /bin/sh.\n\nAll three use exec which defaults to /bin/sh -c on Unix — a non-interactive, non-login shell that doesn't source user profile files.\n\nsrc/main/system/logic.ts also uses execAsync but only for fc-list (system font listing), which is a system binary — no fix needed there.\n\nThe helper execAsync is defined locally in each file (not shared), so the fix needs to be applied in each location or a shared utility should be created.",
+          "proposedArchitecture": "Approach: On Unix (macOS/Linux), detect the user's default shell from process.env.SHELL and run commands through it as a login shell (-l flag). This causes the shell to source profile files (~/.zprofile, ~/.bash_profile, ~/.profile) where PATH and other environment variables are typically configured.\n\nHow it works:\n- Detect shell: process.env.SHELL || '/bin/zsh' (macOS default) or /bin/bash (Linux fallback)\n- Wrap the user command: ${userShell} -l -c '${escapedCommand}'\n- The outer default /bin/sh interprets this string and spawns the user's login shell\n- The login shell sources profile files, then executes the user's command\n\nEscape strategy: Single-quote the user's command to prevent the outer /bin/sh from expanding variables/glob patterns. Escape any single quotes inside the command using the standard shell pattern: replace single-quote with the sequence: single-quote, backslash, single-quote, single-quote.\n\nWindows: No change needed — exec uses cmd.exe on Windows which is the expected behavior.\n\nImplementation: Create a shared helper execInUserShell() in a utility location (src/main/system/logic.ts), then apply it to all three call sites.",
+          "implementationSteps": [
+            "Create execInUserShell() helper in src/main/system/logic.ts that detects user's shell and runs commands through it as a login shell on Unix.",
+            "Update src/main/ai/tools.ts run_command tool to use execInUserShell instead of bare execAsync.",
+            "Update src/main/spells/index.ts COMMAND_RUN handler to use execInUserShell instead of bare execAsync.",
+            "Update src/main/spells/index.ts COMMAND_RUN_DIRECT handler to use execInUserShell instead of bare execAsync.",
+            "Run TypeScript type check (npx tsc --noEmit) to verify no compilation errors.",
+            "Run electron-vite build to verify the build succeeds."
+          ],
+          "verificationPlan": "1. Run npx tsc --noEmit to ensure no type errors.\n2. Run npm run build to verify the build succeeds.\n3. Smoke test: run_command with 'node --version' should work without PATH setup.\n4. Smoke test: run_command with 'npm --version' should work without PATH setup.\n5. Smoke test: COMMAND_RUN_DIRECT with a run.sh that uses node should work.",
+          "openQuestions": [
+            "-l (login shell) sources .zprofile/.bash_profile but NOT .zshrc/.bashrc. Some users put PATH in .zshrc (interactive shell config). Should we also explore using -i (interactive) or -il (both)? Trade-off: -i could cause prompt/color artifacts in output. Using -l is the safer default — users who need .zshrc sourced can symlink or source it from .zprofile."
+          ]
+        },
+        "output": "Implementation plan proposed at /Users/wentao/.aynite/workspaces/Dev/artifacts/implementation_plan.md. Please review the file and type \"Approved\" to proceed."
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244246709_l9n0uf",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "The plan has been proposed. Let me summarize it for the user before they approve.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Here's a summary of my findings and plan:\n\n## Problem\nWhen the AI runs shell commands via `exec()` from Node.js, it uses `/bin/sh -c` — a bare shell that **doesn't source your profile files** (`.zshrc`, `.zprofile`, `.bash_profile`, etc.). This means Homebrew-installed tools (`node`, `npm`), nvm-managed runtimes, and anything else configured in your shell profile is invisible.\n\n## Root Cause: 3 locations\nAll three places where user commands are executed use bare `exec(command)`:\n\n| Location | What it handles |\n|---|---|\n| `src/main/ai/tools.ts` | AI's `run_command` tool |\n| `src/main/spells/index.ts` | `>cmd[name](path)` syntax (both `COMMAND_RUN` and `COMMAND_RUN_DIRECT`) |\n\n## Proposed Fix\nCreate a shared helper `execInUserShell()` that:\n1. Detects your shell from `process.env.SHELL` (e.g., `/bin/zsh`)\n2. Runs commands as a **login shell** (`zsh -l -c 'your command'`), which sources `.zprofile`/`.bash_profile` where PATH is set\n3. Properly escapes the command for the outer `/bin/sh` wrapper\n4. On Windows, passes through unchanged\n\n## Open Question\n`-l` (login shell) sources `.zprofile`/`.bash_profile` but **not** `.zshrc`/`.bashrc`. If your PATH is only in `.zshrc`, you'd need to move it to `.zprofile` or source `.zshrc` from `.zprofile`. I chose `-l` over `-i` (interactive) because `-i` can cause terminal prompt artifacts in output.\n\nThe plan is at `~/.aynite/workspaces/Dev/artifacts/implementation_plan.md`. Type **\"Approved\"** to proceed!",
+        "state": "done"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244918589_odzukq",
+    "role": "user",
+    "parts": [
+      {
+        "type": "text",
+        "text": "approved"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244922619_y3qogs",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "The user approved the plan. Let me start executing.\n\nStep 1: Create the `execInUserShell()` helper in `src/main/system/logic.ts`\n\nLet me first read the current file to see its exact content so I can make surgical edits.\n\nThen I need to:\n1. Add the helper to `src/main/system/logic.ts`\n2. Update `src/main/ai/tools.ts` to import and use it\n3. Update `src/main/spells/index.ts` to import and use it\n4. Verify with type check and build\n\nLet me start with creating the tasks and then begin execution.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Let me start executing. First, I'll initialize a task list to track progress.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_8b2zV2zq4ThTCAns9E2P2778",
+        "toolName": "create_task",
+        "state": "output-available",
+        "input": {
+          "tasks": [
+            "Create execInUserShell() helper in src/main/system/logic.ts",
+            "Update src/main/ai/tools.ts run_command tool to use execInUserShell",
+            "Update src/main/spells/index.ts COMMAND_RUN handler to use execInUserShell",
+            "Update src/main/spells/index.ts COMMAND_RUN_DIRECT handler to use execInUserShell",
+            "Run TypeScript type check to verify no compilation errors",
+            "Run build to verify the build succeeds"
+          ]
+        },
+        "output": "Created task list at /Users/wentao/.aynite/workspaces/Dev/artifacts/task.md"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244925535_klrr9d",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Let me start with step 1: Adding the helper to `src/main/system/logic.ts`.\n\nI need to add:\n1. `import { userInfo } from 'node:os'` — actually, I don't need this. I just need `process.env.SHELL` and `process.platform`.\n2. A function `execInUserShell(command, options)` that:\n   - On Windows: calls `execAsync` as-is\n   - On Unix: detects user shell, constructs `$shell -l -c 'escapedCommand'`, and calls `execAsync` with that\n\nLet me read the current file content to make a precise edit.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_2gRkapLNqBTer2SEeWTy9092",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 0,
+          "status": "in_progress"
+        },
+        "output": "Updated task 0 to in_progress"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244927154_hstvjj",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Let me re-read the current `src/main/system/logic.ts` to make precise edits.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "**Step 1: Add `execInUserShell()` helper to `src/main/system/logic.ts`**",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_VSj0OsOyD4IfZApSAjKG1327",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/system/logic.ts"
+        },
+        "output": "import { exec } from 'node:child_process'\nimport { promisify } from 'node:util'\nimport {\n  AYNITE_SUBDIRS,\n  exists,\n  getAyniteDir,\n  joinPaths,\n  readdir,\n} from '../../lib/path'\n\nconst execAsync = promisify(exec)\n\nexport async function getSystemFonts(): Promise<string[]> {\n  try {\n    const { stdout } = await execAsync(\n      'fc-list :lang=en --format=\"%{family}\\n\"',\n    )\n    return [\n      ...new Set(\n        stdout\n          .split('\\n')\n          .map((f) => f.trim())\n          .filter(Boolean),\n      ),\n    ].sort()\n  } catch {\n    return [\n      'Inter',\n      'Arial',\n      'Helvetica',\n      'Times New Roman',\n      'Courier New',\n      'Georgia',\n      'Verdana',\n    ]\n  }\n}\n\nexport async function getAvailableViews(): Promise<\n  { id: string; name: string }[]\n> {\n  const viewsDir = joinPaths(getAyniteDir(), AYNITE_SUBDIRS.VIEWS)\n  if (!(await exists(viewsDir))) return []\n\n  const entries = await readdir(viewsDir)\n  const views: { id: string; name: string }[] = []\n\n  for (const entry of entries) {\n    if (entry.isDirectory()) {\n      const indexPath = joinPaths(viewsDir, entry.name, 'index.html')\n      if (await exists(indexPath)) {\n        // Simple name transformation: aichat -> AI Chat\n        const name = entry.name\n          .split('-')\n          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))\n          .join(' ')\n          .replace('Aichat', 'AI Chat')\n          .replace('Treeview', 'File Explorer')\n\n        views.push({\n          id: entry.name,\n          name,\n        })\n      }\n    }\n  }\n  return views\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244934739_gv3iav",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now I'll add the `execInUserShell` function to this file. I'll add it after `const execAsync = promisify(exec)` and before the `getSystemFonts` function. I also need to export it.\n\nThe function should:\n1. On Windows, use execAsync directly (no change needed)\n2. On Unix, detect the user's shell from process.env.SHELL, construct a login shell command, and run that through execAsync\n\nFor escaping: I need to wrap the user's command in single quotes to prevent the outer /bin/sh from interpreting it. Inside single quotes, the only character that can't appear is a single quote itself. The standard shell trick is: `'foo'\\''bar'` which closes the single-quoted string, adds an escaped single quote, and starts a new single-quoted string.\n\nSo: `command.replace(/'/g, \"'\\\\''\")` \n\nThis transforms: `echo it's` → `echo it'\\''s`\n\nThen wrap in single quotes: `'echo it'\\''s'`\n\nThe outer /bin/sh will interpret this, and /bin/zsh will receive: `echo it's`\n\nLet me write the code.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_yFGzKG7ZsoFkKMJP03BK8876",
+        "toolName": "edit_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/system/logic.ts",
+          "targetContent": "const execAsync = promisify(exec)\n\nexport async function getSystemFonts(): Promise<string[]> {",
+          "replacementContent": "const execAsync = promisify(exec)\n\n/**\n * Detects the user's default shell and returns the path to it.\n * Falls back to /bin/zsh on macOS, /bin/bash on Linux, and cmd.exe on Windows.\n */\nfunction getUserShell(): string {\n  if (process.platform === 'win32') {\n    return process.env.ComSpec || 'cmd.exe'\n  }\n  return process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash')\n}\n\n/**\n * Runs a shell command through the user's default login shell.\n * On Unix, this sources the user's profile files (.zprofile, .bash_profile, etc.)\n * so that tools installed via Homebrew, nvm, etc. are available on the PATH.\n * On Windows, this simply uses execAsync as-is.\n */\nexport async function execInUserShell(\n  command: string,\n  options: { cwd?: string; env?: Record<string, string | undefined> } = {},\n): Promise<{ stdout: string; stderr: string }> {\n  if (process.platform === 'win32') {\n    return await execAsync(command, options)\n  }\n\n  const shell = getUserShell()\n  // Wrap command in single quotes to prevent the outer /bin/sh from expanding it.\n  // Handle any single quotes inside the command using the standard shell escape:\n  // end single-quote, add escaped quote, resume single-quote: '\\'' \n  const escapedCommand = command.replace(/'/g, \"'\\\\''\")\n  const fullCommand = `${shell} -l -c '${escapedCommand}'`\n  return await execAsync(fullCommand, options)\n}\n\nexport async function getSystemFonts(): Promise<string[]> {"
+        },
+        "output": "Successfully edited /Users/wentao/repos/aynite/src/main/system/logic.ts"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244936243_9rxk6k",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Good. Now let me verify the file looks correct, then move on to step 2.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_AP9AOg4tPK9ATTHcUfHt4253",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 0,
+          "status": "done"
+        },
+        "output": "Updated task 0 to done"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244936699_qececx",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_M5TeSg7YDNcXioijDwOg9629",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 1,
+          "status": "in_progress"
+        },
+        "output": "Updated task 1 to in_progress"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244938256_vvx8l5",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now step 2: Update `src/main/ai/tools.ts` to use `execInUserShell` instead of `execAsync` for the `run_command` tool.\n\nLet me re-read the file to see the exact code block I need to change.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "**Step 2: Update `src/main/ai/tools.ts` to use `execInUserShell`**",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_d5B3wKyzqjheU6XaSGUf0941",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/ai/tools.ts"
+        },
+        "output": "import { exec } from 'node:child_process'\nimport { promisify } from 'node:util'\nimport { jsonSchema } from '@ai-sdk/provider-utils'\nimport { TOOL_METADATA } from '../../lib/constants/ai'\nimport { ERROR_MESSAGES } from '../../lib/constants/messages'\nimport {\n  getAyniteDir,\n  getWorkspaceMemoryPath,\n  getWorkspaceTaskPath,\n  secureEditFile,\n  secureGetFileTree,\n  secureGlobSearch,\n  secureGrepSearch,\n  secureListDir,\n  secureReadText,\n  secureWriteText,\n  writeText,\n} from '../../lib/path'\nimport { requestAiApproval } from '../window'\nimport { getWorkspacesList } from '../workspace/logic'\n\nconst execAsync = promisify(exec)\n\nimport type { ToolContext } from '../../lib/types/ai'\n\nexport type { ToolContext }\n\nexport function getToolsMetadata() {\n  return Object.entries(TOOL_METADATA).map(([id, meta]) => ({\n    id,\n    ...meta,\n  }))\n}\n\nexport function createTools(context: ToolContext) {\n  const domains = [...context.workspaceFolders, getAyniteDir()]\n  const tools: any = {\n    read_file: {\n      description: TOOL_METADATA.read_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_file.inputSchema),\n      execute: async ({ path: filePath }: { path: string }) => {\n        return await secureReadText(filePath, domains)\n      },\n    },\n    write_file: {\n      description: TOOL_METADATA.write_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.write_file.inputSchema),\n      execute: async ({\n        path: filePath,\n        content,\n      }: {\n        path: string\n        content: string\n      }) => {\n        return await secureWriteText(filePath, content, domains)\n      },\n    },\n    edit_file: {\n      description: TOOL_METADATA.edit_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.edit_file.inputSchema),\n      execute: async ({\n        path: filePath,\n        targetContent,\n        replacementContent,\n      }: {\n        path: string\n        targetContent: string\n        replacementContent: string\n      }) => {\n        return await secureEditFile(\n          filePath,\n          targetContent,\n          replacementContent,\n          domains,\n        )\n      },\n    },\n    list_files: {\n      description: TOOL_METADATA.list_files.description,\n      inputSchema: jsonSchema(TOOL_METADATA.list_files.inputSchema),\n      execute: async ({ path: dirPath }: { path: string }) => {\n        return await secureListDir(dirPath, domains)\n      },\n    },\n    run_command: {\n      description: TOOL_METADATA.run_command.description,\n      inputSchema: jsonSchema(TOOL_METADATA.run_command.inputSchema),\n      execute: async ({ command, cwd }: { command: string; cwd?: string }) => {\n        const runCwd = cwd || context.workspaceFolders[0] || '.'\n\n        const approved = await requestAiApproval({\n          command,\n          cwd: runCwd,\n        })\n\n        if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED\n\n        try {\n          const { stdout, stderr } = await execAsync(command, { cwd: runCwd })\n          let output = stdout\n          if (stderr?.trim()) {\n            output += `\\n\\nSTDERR:\\n${stderr}`\n          }\n\n          try {\n            const parsed = JSON.parse(stdout.trim())\n            if (\n              parsed &&\n              typeof parsed === 'object' &&\n              parsed.status === 'error'\n            ) {\n              throw new Error(output)\n            }\n          } catch (_jsonErr) {}\n\n          return output\n        } catch (e: unknown) {\n          const cmdErr = e as {\n            stdout?: string\n            stderr?: string\n            message?: string\n          }\n          return ERROR_MESSAGES.COMMAND_EXEC_ERROR(\n            cmdErr.message || '',\n            cmdErr.stdout || '',\n            cmdErr.stderr || '',\n          )\n        }\n      },\n    },\n    grep_search: {\n      description: TOOL_METADATA.grep_search.description,\n      inputSchema: jsonSchema(TOOL_METADATA.grep_search.inputSchema),\n      execute: async ({\n        pattern,\n        folderPath,\n      }: {\n        pattern: string\n        folderPath: string\n      }) => {\n        return await secureGrepSearch(folderPath, pattern, domains)\n      },\n    },\n    read_url: {\n      description: TOOL_METADATA.read_url.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_url.inputSchema),\n      execute: async ({ url }: { url: string }) => {\n        try {\n          const response = await fetch(url, {\n            headers: {\n              'User-Agent':\n                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',\n            },\n          })\n          if (!response.ok)\n            return ERROR_MESSAGES.URL_FETCH_ERROR(response.statusText)\n          const text = await response.text()\n          return text\n            .replace(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi, '')\n            .replace(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/gi, '')\n            .replace(/<[^>]*>/g, ' ')\n            .replace(/\\s+/g, ' ')\n            .trim()\n            .slice(0, 10000)\n        } catch (e: unknown) {\n          const message = e instanceof Error ? e.message : String(e)\n          return ERROR_MESSAGES.URL_GENERIC_ERROR(message)\n        }\n      },\n    },\n    glob_search: {\n      description: TOOL_METADATA.glob_search.description,\n      inputSchema: jsonSchema(TOOL_METADATA.glob_search.inputSchema),\n      execute: async ({ pattern, cwd }: { pattern: string; cwd?: string }) => {\n        return await secureGlobSearch(pattern, domains, cwd)\n      },\n    },\n    create_task: {\n      description: TOOL_METADATA.create_task.description,\n      inputSchema: jsonSchema(TOOL_METADATA.create_task.inputSchema),\n      execute: async ({\n        tasks,\n        filename,\n      }: {\n        tasks: string[]\n        filename?: string\n      }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        const content = tasks.map((t) => `- [ ] ${t}`).join('\\n')\n        await writeText(taskPath, content)\n        return `Created task list at ${taskPath}`\n      },\n    },\n    update_task: {\n      description: TOOL_METADATA.update_task.description,\n      inputSchema: jsonSchema(TOOL_METADATA.update_task.inputSchema),\n      execute: async ({\n        taskIndex,\n        status,\n        filename,\n      }: {\n        taskIndex: number\n        status: 'todo' | 'in_progress' | 'done'\n        filename?: string\n      }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        try {\n          const content = await secureReadText(taskPath, domains)\n          if (content.startsWith('Error')) return content\n\n          const lines = content.split('\\n')\n          if (taskIndex < 0 || taskIndex >= lines.length) {\n            return `Error: Task index ${taskIndex} out of range (0-${lines.length - 1})`\n          }\n\n          const statusMap = {\n            todo: '[ ]',\n            in_progress: '[/]',\n            done: '[x]',\n          }\n\n          lines[taskIndex] = lines[taskIndex].replace(\n            /\\[[ x/]?\\]/,\n            statusMap[status],\n          )\n          await writeText(taskPath, lines.join('\\n'))\n          return `Updated task ${taskIndex} to ${status}`\n        } catch (e) {\n          return `Error updating task: ${e instanceof Error ? e.message : String(e)}`\n        }\n      },\n    },\n    get_tasks: {\n      description: TOOL_METADATA.get_tasks.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_tasks.inputSchema),\n      execute: async ({ filename }: { filename?: string }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        return await secureReadText(taskPath, domains)\n      },\n    },\n    propose_plan: {\n      description: TOOL_METADATA.propose_plan.description,\n      inputSchema: jsonSchema(TOOL_METADATA.propose_plan.inputSchema),\n      execute: async ({\n        problemStatement,\n        investigationResults,\n        proposedArchitecture,\n        implementationSteps,\n        verificationPlan,\n        openQuestions,\n      }: {\n        problemStatement: string\n        investigationResults: string\n        proposedArchitecture: string\n        implementationSteps: string[]\n        verificationPlan: string\n        openQuestions?: string[]\n      }) => {\n        const { active } = await getWorkspacesList()\n        const planPath = getWorkspaceTaskPath(active, 'implementation_plan.md')\n\n        const content = [\n          '# Implementation Plan',\n          '',\n          '## 1. Problem Statement',\n          problemStatement,\n          '',\n          '## 2. Investigation Results',\n          investigationResults,\n          '',\n          '## 3. Proposed Architecture & Trade-offs',\n          proposedArchitecture,\n          '',\n          '## 4. Implementation Steps',\n          implementationSteps.map((s, i) => `${i + 1}. ${s}`).join('\\n'),\n          '',\n          '## 5. Verification Plan',\n          verificationPlan,\n          '',\n          '## 6. Open Questions & Assumptions',\n          openQuestions?.length\n            ? openQuestions.map((q) => `- ${q}`).join('\\n')\n            : 'None',\n        ].join('\\n')\n\n        await writeText(planPath, content)\n        return `Implementation plan proposed at ${planPath}. Please review the file and type \"Approved\" to proceed.`\n      },\n    },\n    initialize_memory: {\n      description: TOOL_METADATA.initialize_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.initialize_memory.inputSchema),\n      execute: async () => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n\n        // Gather intelligence\n        const pkgPath = domains[0] ? `${domains[0]}/package.json` : null\n        const readmePath = domains[0] ? `${domains[0]}/README.md` : null\n\n        let pkgInfo = 'Unknown'\n        if (pkgPath) {\n          const content = await secureReadText(pkgPath, domains)\n          if (!content.startsWith('Error')) {\n            try {\n              const pkg = JSON.parse(content)\n              pkgInfo = `Project: ${pkg.name}\\nVersion: ${pkg.version}\\nDependencies: ${Object.keys(\n                pkg.dependencies || {},\n              ).join(', ')}`\n            } catch (_e) {\n              pkgInfo = 'Invalid package.json'\n            }\n          }\n        }\n\n        let readmeInfo = ''\n        if (readmePath) {\n          const content = await secureReadText(readmePath, domains)\n          if (!content.startsWith('Error')) {\n            readmeInfo = content.slice(0, 1000) // First 1000 chars\n          }\n        }\n\n        const tree = await secureGetFileTree(domains[0], domains, 2)\n\n        const content = [\n          '# Project Memory',\n          '',\n          '## 🎯 Overview',\n          readmeInfo || 'No summary available yet.',\n          '',\n          '## 📂 Structure',\n          `\\`\\`\\`\\n${tree}\\n\\`\\`\\``,\n          '',\n          '## 📜 Rules & Conventions',\n          pkgInfo !== 'Unknown' ? `- Tech Stack: ${pkgInfo}` : '',\n          '- (Record styles, patterns, or project rules here)',\n          '',\n          '## 💡 Key Decisions & Context',\n          '- (Record important architectural or narrative decisions here)',\n        ]\n          .filter(Boolean)\n          .join('\\n')\n\n        await writeText(memoryPath, content)\n        return `Project memory initialized at ${memoryPath}. You should now update it with specific project secrets or conventions.`\n      },\n    },\n    update_memory: {\n      description: TOOL_METADATA.update_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.update_memory.inputSchema),\n      execute: async ({ update }: { update: string }) => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n        try {\n          const current = await secureReadText(memoryPath, domains)\n          const content = current.startsWith('Error')\n            ? `# Project Memory\\n\\n${update}`\n            : `${current}\\n\\n### Update (${new Date().toLocaleDateString()})\\n${update}`\n\n          await writeText(memoryPath, content)\n          return `Project memory updated at ${memoryPath}`\n        } catch (e) {\n          return `Error updating memory: ${e instanceof Error ? e.message : String(e)}`\n        }\n      },\n    },\n    read_memory: {\n      description: TOOL_METADATA.read_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_memory.inputSchema),\n      execute: async () => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n        const content = await secureReadText(memoryPath, domains)\n        if (content.startsWith('Error')) {\n          return 'No project memory found. You can initialize it using \"initialize_memory\".'\n        }\n        return content\n      },\n    },\n    get_file_tree: {\n      description: TOOL_METADATA.get_file_tree.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_file_tree.inputSchema),\n      execute: async ({\n        path: dirPath,\n        depth = 10,\n      }: {\n        path?: string\n        depth?: number\n      }) => {\n        if (dirPath) {\n          return await secureGetFileTree(dirPath, domains, depth)\n        } else {\n          let fullOutput = ''\n          for (const folder of context.workspaceFolders) {\n            fullOutput += `Workspace Folder: ${folder}\\n`\n            fullOutput += await secureGetFileTree(folder, domains, depth)\n            fullOutput += '\\n'\n          }\n          return fullOutput || ERROR_MESSAGES.WORKSPACE_EMPTY\n        }\n      },\n    },\n    get_workspace_info: {\n      description: TOOL_METADATA.get_workspace_info.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),\n      execute: async () => {\n        return {\n          workspaceFolders: context.workspaceFolders,\n          configDir: getAyniteDir(),\n          activeFile: context.activeFile || null,\n        }\n      },\n    },\n  }\n\n  return tools\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244944411_hzod0a",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now I need to:\n1. Add the import for `execInUserShell` from `../system/logic`\n2. Replace the `execAsync` call in the `run_command` handler with `execInUserShell`\n3. Remove the unused `exec` import and `execAsync` if nothing else uses them\n\nLet me check if `execAsync` is used anywhere else in this file... I only see it used in the `run_command` handler. So I can remove the `exec` import and `promisify` import entirely.\n\nAlso, looking at the imports, the `exec` and `promisify` imports are at the top. After replacing `execAsync` with `execInUserShell`, nothing in this file will use them anymore. Let me remove those imports.\n\nLet me make two edits:\n1. Remove `import { exec } from 'node:child_process'` and `import { promisify } from 'node:util'` and add `import { execInUserShell } from '../system/logic'`\n2. Replace `await execAsync(command, { cwd: runCwd })` with `await execInUserShell(command, { cwd: runCwd })`",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "I need to make two edits to `tools.ts`: update the imports and replace `execAsync` with `execInUserShell`.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_XWWK4QJIVaieCBXs0Yi36816",
+        "toolName": "edit_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/ai/tools.ts",
+          "targetContent": "import { exec } from 'node:child_process'\nimport { promisify } from 'node:util'\nimport { jsonSchema } from '@ai-sdk/provider-utils'\nimport { TOOL_METADATA } from '../../lib/constants/ai'\nimport { ERROR_MESSAGES } from '../../lib/constants/messages'\nimport {\n  getAyniteDir,\n  getWorkspaceMemoryPath,\n  getWorkspaceTaskPath,\n  secureEditFile,\n  secureGetFileTree,\n  secureGlobSearch,\n  secureGrepSearch,\n  secureListDir,\n  secureReadText,\n  secureWriteText,\n  writeText,\n} from '../../lib/path'\nimport { requestAiApproval } from '../window'\nimport { getWorkspacesList } from '../workspace/logic'\n\nconst execAsync = promisify(exec)",
+          "replacementContent": "import { jsonSchema } from '@ai-sdk/provider-utils'\nimport { TOOL_METADATA } from '../../lib/constants/ai'\nimport { ERROR_MESSAGES } from '../../lib/constants/messages'\nimport {\n  getAyniteDir,\n  getWorkspaceMemoryPath,\n  getWorkspaceTaskPath,\n  secureEditFile,\n  secureGetFileTree,\n  secureGlobSearch,\n  secureGrepSearch,\n  secureListDir,\n  secureReadText,\n  secureWriteText,\n  writeText,\n} from '../../lib/path'\nimport { execInUserShell } from '../system/logic'\nimport { requestAiApproval } from '../window'\nimport { getWorkspacesList } from '../workspace/logic'"
+        },
+        "output": "Successfully edited /Users/wentao/repos/aynite/src/main/ai/tools.ts"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244946377_1g3dge",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now replace `execAsync(command, { cwd: runCwd })` with `execInUserShell(command, { cwd: runCwd })` in the run_command handler.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_CLLefecRmPtNp5XJfXih1905",
+        "toolName": "edit_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/ai/tools.ts",
+          "targetContent": "          const { stdout, stderr } = await execAsync(command, { cwd: runCwd })",
+          "replacementContent": "          const { stdout, stderr } = await execInUserShell(command, { cwd: runCwd })"
+        },
+        "output": "Successfully edited /Users/wentao/repos/aynite/src/main/ai/tools.ts"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244947639_vw64f7",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Step 2 done. Now step 3: Update `src/main/spells/index.ts` - the COMMAND_RUN handler.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_mECwcL2eGLYCPxTtqGcR2460",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 1,
+          "status": "done"
+        },
+        "output": "Updated task 1 to done"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244947915_200log",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_xXGeNpvcZ0hCAUEzyVNY6273",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 2,
+          "status": "in_progress"
+        },
+        "output": "Updated task 2 to in_progress"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244949477_en5p3g",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Let me read the current spells/index.ts to make precise edits.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "**Step 3: Update `src/main/spells/index.ts` — COMMAND_RUN handler**",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_ngjfiZssa3fVKNYalSCc6610",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/index.ts"
+        },
+        "output": "import { exec } from 'node:child_process'\nimport fs from 'node:fs/promises'\nimport { promisify } from 'node:util'\nimport { ipcMain } from 'electron'\nimport { joinPaths } from '../../lib/path'\nimport { showOpenDialog } from '../window'\nimport { listAvailableCommands, restoreDefaultCommands } from './commands'\nimport { listAvailableSkills, restoreDefaultSkills } from './skills'\n\nconst execAsync = promisify(exec)\n\nimport { SpellChannels } from '../../lib/constants/ipc-channels'\n\ninterface CommandRunPayload {\n  command: string\n  cwd?: string\n}\n\ninterface DirectCommandRunPayload {\n  commandPath: string\n  params: string[]\n  currentFile?: string\n}\n\nexport function setupSpellsIpc() {\n  const handleAddFolder = async () => {\n    const { canceled, filePaths } = await showOpenDialog({\n      properties: ['openDirectory'],\n    })\n    if (canceled || filePaths.length === 0) return null\n    return filePaths[0]\n  }\n\n  ipcMain.handle(SpellChannels.SKILL_ADD_FOLDER, handleAddFolder)\n\n  ipcMain.handle(SpellChannels.SKILL_RESTORE, async () => {\n    return await restoreDefaultSkills()\n  })\n\n  ipcMain.handle(SpellChannels.COMMAND_ADD_FOLDER, handleAddFolder)\n\n  ipcMain.handle(SpellChannels.COMMAND_RESTORE, async () => {\n    return await restoreDefaultCommands()\n  })\n\n  ipcMain.handle(SpellChannels.SKILL_LIST, async () => {\n    return await listAvailableSkills()\n  })\n\n  ipcMain.handle(SpellChannels.COMMAND_LIST, async () => {\n    return await listAvailableCommands()\n  })\n\n  ipcMain.handle(\n    SpellChannels.COMMAND_RUN,\n    async (_event, { command, cwd }: CommandRunPayload) => {\n      const { stdout, stderr } = await execAsync(command, {\n        cwd: cwd || process.cwd(),\n      })\n      return { stdout, stderr }\n    },\n  )\n\n  ipcMain.handle(\n    SpellChannels.COMMAND_RUN_DIRECT,\n    async (\n      _event,\n      { commandPath, params, currentFile }: DirectCommandRunPayload,\n    ) => {\n      const runShPath = joinPaths(commandPath, 'run.sh')\n      if (process.platform !== 'win32') {\n        try {\n          await fs.chmod(runShPath, 0o755)\n        } catch (e) {\n          console.error('Failed to set chmod on run.sh', e)\n        }\n      }\n\n      const env = {\n        ...process.env,\n        AYNITE_CURRENT_FILE: currentFile || '',\n      }\n\n      const resolvedParams = params.map((p) => {\n        return p.replace(/@(?:file|skill|cmd)\\[.*?\\]\\((.*?)\\)/g, '$1')\n      })\n\n      const quotedParams = resolvedParams\n        .map((p) => `\"${p.replace(/\"/g, '\\\\\"')}\"`)\n        .join(' ')\n      const fullCmd =\n        process.platform === 'win32'\n          ? `sh \"${runShPath}\" ${quotedParams}`\n          : `\"${runShPath}\" ${quotedParams}`\n\n      const { stdout, stderr } = await execAsync(fullCmd, {\n        cwd: commandPath,\n        env,\n      })\n      return { stdout, stderr }\n    },\n  )\n}\n\nexport {\n  getCommandsConfig,\n  listAvailableCommands,\n  restoreCommand,\n  restoreDefaultCommands,\n  saveCommandsConfig,\n} from './commands'\nexport {\n  findFilesRecursively,\n  getBundledResourcesPath,\n  notifyError,\n  reportedErrors,\n} from './common'\nexport {\n  getSkillsConfig,\n  listAvailableSkills,\n  restoreDefaultSkills,\n  restoreSkill,\n  saveSkillsConfig,\n} from './skills'\nexport { restoreSpell } from './spell-installer'\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244993879_w04yj9",
+    "role": "user",
+    "parts": [
+      {
+        "type": "text",
+        "text": "are you done? continue if not"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779244998774_qs2bnq",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Right, I need to make two edits to `spells/index.ts`:\n1. Replace the `exec`/`promisify` imports with `execInUserShell` import\n2. Replace `execAsync` with `execInUserShell` in both `COMMAND_RUN` and `COMMAND_RUN_DIRECT` handlers\n\nLet me check if `execAsync` is still used by both COMMAND_RUN and COMMAND_RUN_DIRECT. Yes it is.\n\nFor COMMAND_RUN_DIRECT: This one runs a `run.sh` script file. The command is already a path to a script file (with arguments). Running `/bin/zsh -l -c '\"/path/to/run.sh\" arg1 arg2'` should work fine - the login shell will set up the environment, then execute the script.\n\nLet me make the changes.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Yes, continuing! I need to update `spells/index.ts` for both `COMMAND_RUN` and `COMMAND_RUN_DIRECT`.\n\nFirst, update the imports:",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_kcIIzZKOxQ08uTeENeyl1594",
+        "toolName": "edit_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/index.ts",
+          "targetContent": "import { exec } from 'node:child_process'\nimport fs from 'node:fs/promises'\nimport { promisify } from 'node:util'\nimport { ipcMain } from 'electron'\nimport { joinPaths } from '../../lib/path'\nimport { showOpenDialog } from '../window'\nimport { listAvailableCommands, restoreDefaultCommands } from './commands'\nimport { listAvailableSkills, restoreDefaultSkills } from './skills'\n\nconst execAsync = promisify(exec)",
+          "replacementContent": "import fs from 'node:fs/promises'\nimport { ipcMain } from 'electron'\nimport { joinPaths } from '../../lib/path'\nimport { execInUserShell } from '../system/logic'\nimport { showOpenDialog } from '../window'\nimport { listAvailableCommands, restoreDefaultCommands } from './commands'\nimport { listAvailableSkills, restoreDefaultSkills } from './skills'"
+        },
+        "output": "Successfully edited /Users/wentao/repos/aynite/src/main/spells/index.ts"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245001321_o53ikl",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now update both handlers. First, the COMMAND_RUN handler:",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Now update the `COMMAND_RUN` handler:",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_T2NtEhzMeYlYbsNHkqAf9799",
+        "toolName": "edit_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/index.ts",
+          "targetContent": "  ipcMain.handle(\n    SpellChannels.COMMAND_RUN,\n    async (_event, { command, cwd }: CommandRunPayload) => {\n      const { stdout, stderr } = await execAsync(command, {\n        cwd: cwd || process.cwd(),\n      })\n      return { stdout, stderr }\n    },\n  )",
+          "replacementContent": "  ipcMain.handle(\n    SpellChannels.COMMAND_RUN,\n    async (_event, { command, cwd }: CommandRunPayload) => {\n      const { stdout, stderr } = await execInUserShell(command, {\n        cwd: cwd || process.cwd(),\n      })\n      return { stdout, stderr }\n    },\n  )"
+        },
+        "output": "Successfully edited /Users/wentao/repos/aynite/src/main/spells/index.ts"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245004446_xy3oly",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now update the COMMAND_RUN_DIRECT handler. This one passes `env` as well. My `execInUserShell` function already accepts an `env` option in its signature. Let me check...\n\nLooking at my function signature:\n```typescript\nexport async function execInUserShell(\n  command: string,\n  options: { cwd?: string; env?: Record<string, string | undefined> } = {},\n): Promise<{ stdout: string; stderr: string }> {\n```\n\nYes, it accepts `env`. So I can just replace `execAsync` with `execInUserShell` and pass the same options.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Now update the `COMMAND_RUN_DIRECT` handler:",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_EzMfBHTFuy2o4RZp1mwc8464",
+        "toolName": "edit_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/index.ts",
+          "targetContent": "      const { stdout, stderr } = await execAsync(fullCmd, {\n        cwd: commandPath,\n        env,\n      })\n      return { stdout, stderr }",
+          "replacementContent": "      const { stdout, stderr } = await execInUserShell(fullCmd, {\n        cwd: commandPath,\n        env,\n      })\n      return { stdout, stderr }"
+        },
+        "output": "Successfully edited /Users/wentao/repos/aynite/src/main/spells/index.ts"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245005715_6cq55j",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Good. Now let me mark steps 2 and 3 done, and move on to verification.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_pINVBnhwgneUA4O6xj4N0464",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 2,
+          "status": "done"
+        },
+        "output": "Updated task 2 to done"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245007193_7si67d",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Actually I need to also update task 3 (COMMAND_RUN_DIRECT) which I already did. Let me mark it as done and move to verification.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_moHu9Xi8K9qdiyCbugvD8396",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 3,
+          "status": "done"
+        },
+        "output": "Updated task 3 to done"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245008557_v7y4fe",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now let me verify the changes look correct by reading the modified files, then run the TypeScript type check.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Let me verify the files look correct before running type checks.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_l1TpgKuEun1A3bcSClCw2723",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/system/logic.ts"
+        },
+        "output": "import { exec } from 'node:child_process'\nimport { promisify } from 'node:util'\nimport {\n  AYNITE_SUBDIRS,\n  exists,\n  getAyniteDir,\n  joinPaths,\n  readdir,\n} from '../../lib/path'\n\nconst execAsync = promisify(exec)\n\n/**\n * Detects the user's default shell and returns the path to it.\n * Falls back to /bin/zsh on macOS, /bin/bash on Linux, and cmd.exe on Windows.\n */\nfunction getUserShell(): string {\n  if (process.platform === 'win32') {\n    return process.env.ComSpec || 'cmd.exe'\n  }\n  return process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash')\n}\n\n/**\n * Runs a shell command through the user's default login shell.\n * On Unix, this sources the user's profile files (.zprofile, .bash_profile, etc.)\n * so that tools installed via Homebrew, nvm, etc. are available on the PATH.\n * On Windows, this simply uses execAsync as-is.\n */\nexport async function execInUserShell(\n  command: string,\n  options: { cwd?: string; env?: Record<string, string | undefined> } = {},\n): Promise<{ stdout: string; stderr: string }> {\n  if (process.platform === 'win32') {\n    return await execAsync(command, options)\n  }\n\n  const shell = getUserShell()\n  // Wrap command in single quotes to prevent the outer /bin/sh from expanding it.\n  // Handle any single quotes inside the command using the standard shell escape:\n  // end single-quote, add escaped quote, resume single-quote: '\\'' \n  const escapedCommand = command.replace(/'/g, \"'\\\\''\")\n  const fullCommand = `${shell} -l -c '${escapedCommand}'`\n  return await execAsync(fullCommand, options)\n}\n\nexport async function getSystemFonts(): Promise<string[]> {\n  try {\n    const { stdout } = await execAsync(\n      'fc-list :lang=en --format=\"%{family}\\n\"',\n    )\n    return [\n      ...new Set(\n        stdout\n          .split('\\n')\n          .map((f) => f.trim())\n          .filter(Boolean),\n      ),\n    ].sort()\n  } catch {\n    return [\n      'Inter',\n      'Arial',\n      'Helvetica',\n      'Times New Roman',\n      'Courier New',\n      'Georgia',\n      'Verdana',\n    ]\n  }\n}\n\nexport async function getAvailableViews(): Promise<\n  { id: string; name: string }[]\n> {\n  const viewsDir = joinPaths(getAyniteDir(), AYNITE_SUBDIRS.VIEWS)\n  if (!(await exists(viewsDir))) return []\n\n  const entries = await readdir(viewsDir)\n  const views: { id: string; name: string }[] = []\n\n  for (const entry of entries) {\n    if (entry.isDirectory()) {\n      const indexPath = joinPaths(viewsDir, entry.name, 'index.html')\n      if (await exists(indexPath)) {\n        // Simple name transformation: aichat -> AI Chat\n        const name = entry.name\n          .split('-')\n          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))\n          .join(' ')\n          .replace('Aichat', 'AI Chat')\n          .replace('Treeview', 'File Explorer')\n\n        views.push({\n          id: entry.name,\n          name,\n        })\n      }\n    }\n  }\n  return views\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245008809_ouilqh",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_gmSu7AvNYEvIwu49c9wi3727",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/ai/tools.ts"
+        },
+        "output": "import { jsonSchema } from '@ai-sdk/provider-utils'\nimport { TOOL_METADATA } from '../../lib/constants/ai'\nimport { ERROR_MESSAGES } from '../../lib/constants/messages'\nimport {\n  getAyniteDir,\n  getWorkspaceMemoryPath,\n  getWorkspaceTaskPath,\n  secureEditFile,\n  secureGetFileTree,\n  secureGlobSearch,\n  secureGrepSearch,\n  secureListDir,\n  secureReadText,\n  secureWriteText,\n  writeText,\n} from '../../lib/path'\nimport { execInUserShell } from '../system/logic'\nimport { requestAiApproval } from '../window'\nimport { getWorkspacesList } from '../workspace/logic'\n\nimport type { ToolContext } from '../../lib/types/ai'\n\nexport type { ToolContext }\n\nexport function getToolsMetadata() {\n  return Object.entries(TOOL_METADATA).map(([id, meta]) => ({\n    id,\n    ...meta,\n  }))\n}\n\nexport function createTools(context: ToolContext) {\n  const domains = [...context.workspaceFolders, getAyniteDir()]\n  const tools: any = {\n    read_file: {\n      description: TOOL_METADATA.read_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_file.inputSchema),\n      execute: async ({ path: filePath }: { path: string }) => {\n        return await secureReadText(filePath, domains)\n      },\n    },\n    write_file: {\n      description: TOOL_METADATA.write_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.write_file.inputSchema),\n      execute: async ({\n        path: filePath,\n        content,\n      }: {\n        path: string\n        content: string\n      }) => {\n        return await secureWriteText(filePath, content, domains)\n      },\n    },\n    edit_file: {\n      description: TOOL_METADATA.edit_file.description,\n      inputSchema: jsonSchema(TOOL_METADATA.edit_file.inputSchema),\n      execute: async ({\n        path: filePath,\n        targetContent,\n        replacementContent,\n      }: {\n        path: string\n        targetContent: string\n        replacementContent: string\n      }) => {\n        return await secureEditFile(\n          filePath,\n          targetContent,\n          replacementContent,\n          domains,\n        )\n      },\n    },\n    list_files: {\n      description: TOOL_METADATA.list_files.description,\n      inputSchema: jsonSchema(TOOL_METADATA.list_files.inputSchema),\n      execute: async ({ path: dirPath }: { path: string }) => {\n        return await secureListDir(dirPath, domains)\n      },\n    },\n    run_command: {\n      description: TOOL_METADATA.run_command.description,\n      inputSchema: jsonSchema(TOOL_METADATA.run_command.inputSchema),\n      execute: async ({ command, cwd }: { command: string; cwd?: string }) => {\n        const runCwd = cwd || context.workspaceFolders[0] || '.'\n\n        const approved = await requestAiApproval({\n          command,\n          cwd: runCwd,\n        })\n\n        if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED\n\n        try {\n          const { stdout, stderr } = await execInUserShell(command, { cwd: runCwd })\n          let output = stdout\n          if (stderr?.trim()) {\n            output += `\\n\\nSTDERR:\\n${stderr}`\n          }\n\n          try {\n            const parsed = JSON.parse(stdout.trim())\n            if (\n              parsed &&\n              typeof parsed === 'object' &&\n              parsed.status === 'error'\n            ) {\n              throw new Error(output)\n            }\n          } catch (_jsonErr) {}\n\n          return output\n        } catch (e: unknown) {\n          const cmdErr = e as {\n            stdout?: string\n            stderr?: string\n            message?: string\n          }\n          return ERROR_MESSAGES.COMMAND_EXEC_ERROR(\n            cmdErr.message || '',\n            cmdErr.stdout || '',\n            cmdErr.stderr || '',\n          )\n        }\n      },\n    },\n    grep_search: {\n      description: TOOL_METADATA.grep_search.description,\n      inputSchema: jsonSchema(TOOL_METADATA.grep_search.inputSchema),\n      execute: async ({\n        pattern,\n        folderPath,\n      }: {\n        pattern: string\n        folderPath: string\n      }) => {\n        return await secureGrepSearch(folderPath, pattern, domains)\n      },\n    },\n    read_url: {\n      description: TOOL_METADATA.read_url.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_url.inputSchema),\n      execute: async ({ url }: { url: string }) => {\n        try {\n          const response = await fetch(url, {\n            headers: {\n              'User-Agent':\n                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',\n            },\n          })\n          if (!response.ok)\n            return ERROR_MESSAGES.URL_FETCH_ERROR(response.statusText)\n          const text = await response.text()\n          return text\n            .replace(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi, '')\n            .replace(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/gi, '')\n            .replace(/<[^>]*>/g, ' ')\n            .replace(/\\s+/g, ' ')\n            .trim()\n            .slice(0, 10000)\n        } catch (e: unknown) {\n          const message = e instanceof Error ? e.message : String(e)\n          return ERROR_MESSAGES.URL_GENERIC_ERROR(message)\n        }\n      },\n    },\n    glob_search: {\n      description: TOOL_METADATA.glob_search.description,\n      inputSchema: jsonSchema(TOOL_METADATA.glob_search.inputSchema),\n      execute: async ({ pattern, cwd }: { pattern: string; cwd?: string }) => {\n        return await secureGlobSearch(pattern, domains, cwd)\n      },\n    },\n    create_task: {\n      description: TOOL_METADATA.create_task.description,\n      inputSchema: jsonSchema(TOOL_METADATA.create_task.inputSchema),\n      execute: async ({\n        tasks,\n        filename,\n      }: {\n        tasks: string[]\n        filename?: string\n      }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        const content = tasks.map((t) => `- [ ] ${t}`).join('\\n')\n        await writeText(taskPath, content)\n        return `Created task list at ${taskPath}`\n      },\n    },\n    update_task: {\n      description: TOOL_METADATA.update_task.description,\n      inputSchema: jsonSchema(TOOL_METADATA.update_task.inputSchema),\n      execute: async ({\n        taskIndex,\n        status,\n        filename,\n      }: {\n        taskIndex: number\n        status: 'todo' | 'in_progress' | 'done'\n        filename?: string\n      }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        try {\n          const content = await secureReadText(taskPath, domains)\n          if (content.startsWith('Error')) return content\n\n          const lines = content.split('\\n')\n          if (taskIndex < 0 || taskIndex >= lines.length) {\n            return `Error: Task index ${taskIndex} out of range (0-${lines.length - 1})`\n          }\n\n          const statusMap = {\n            todo: '[ ]',\n            in_progress: '[/]',\n            done: '[x]',\n          }\n\n          lines[taskIndex] = lines[taskIndex].replace(\n            /\\[[ x/]?\\]/,\n            statusMap[status],\n          )\n          await writeText(taskPath, lines.join('\\n'))\n          return `Updated task ${taskIndex} to ${status}`\n        } catch (e) {\n          return `Error updating task: ${e instanceof Error ? e.message : String(e)}`\n        }\n      },\n    },\n    get_tasks: {\n      description: TOOL_METADATA.get_tasks.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_tasks.inputSchema),\n      execute: async ({ filename }: { filename?: string }) => {\n        const { active } = await getWorkspacesList()\n        const taskPath = getWorkspaceTaskPath(active, filename)\n        return await secureReadText(taskPath, domains)\n      },\n    },\n    propose_plan: {\n      description: TOOL_METADATA.propose_plan.description,\n      inputSchema: jsonSchema(TOOL_METADATA.propose_plan.inputSchema),\n      execute: async ({\n        problemStatement,\n        investigationResults,\n        proposedArchitecture,\n        implementationSteps,\n        verificationPlan,\n        openQuestions,\n      }: {\n        problemStatement: string\n        investigationResults: string\n        proposedArchitecture: string\n        implementationSteps: string[]\n        verificationPlan: string\n        openQuestions?: string[]\n      }) => {\n        const { active } = await getWorkspacesList()\n        const planPath = getWorkspaceTaskPath(active, 'implementation_plan.md')\n\n        const content = [\n          '# Implementation Plan',\n          '',\n          '## 1. Problem Statement',\n          problemStatement,\n          '',\n          '## 2. Investigation Results',\n          investigationResults,\n          '',\n          '## 3. Proposed Architecture & Trade-offs',\n          proposedArchitecture,\n          '',\n          '## 4. Implementation Steps',\n          implementationSteps.map((s, i) => `${i + 1}. ${s}`).join('\\n'),\n          '',\n          '## 5. Verification Plan',\n          verificationPlan,\n          '',\n          '## 6. Open Questions & Assumptions',\n          openQuestions?.length\n            ? openQuestions.map((q) => `- ${q}`).join('\\n')\n            : 'None',\n        ].join('\\n')\n\n        await writeText(planPath, content)\n        return `Implementation plan proposed at ${planPath}. Please review the file and type \"Approved\" to proceed.`\n      },\n    },\n    initialize_memory: {\n      description: TOOL_METADATA.initialize_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.initialize_memory.inputSchema),\n      execute: async () => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n\n        // Gather intelligence\n        const pkgPath = domains[0] ? `${domains[0]}/package.json` : null\n        const readmePath = domains[0] ? `${domains[0]}/README.md` : null\n\n        let pkgInfo = 'Unknown'\n        if (pkgPath) {\n          const content = await secureReadText(pkgPath, domains)\n          if (!content.startsWith('Error')) {\n            try {\n              const pkg = JSON.parse(content)\n              pkgInfo = `Project: ${pkg.name}\\nVersion: ${pkg.version}\\nDependencies: ${Object.keys(\n                pkg.dependencies || {},\n              ).join(', ')}`\n            } catch (_e) {\n              pkgInfo = 'Invalid package.json'\n            }\n          }\n        }\n\n        let readmeInfo = ''\n        if (readmePath) {\n          const content = await secureReadText(readmePath, domains)\n          if (!content.startsWith('Error')) {\n            readmeInfo = content.slice(0, 1000) // First 1000 chars\n          }\n        }\n\n        const tree = await secureGetFileTree(domains[0], domains, 2)\n\n        const content = [\n          '# Project Memory',\n          '',\n          '## 🎯 Overview',\n          readmeInfo || 'No summary available yet.',\n          '',\n          '## 📂 Structure',\n          `\\`\\`\\`\\n${tree}\\n\\`\\`\\``,\n          '',\n          '## 📜 Rules & Conventions',\n          pkgInfo !== 'Unknown' ? `- Tech Stack: ${pkgInfo}` : '',\n          '- (Record styles, patterns, or project rules here)',\n          '',\n          '## 💡 Key Decisions & Context',\n          '- (Record important architectural or narrative decisions here)',\n        ]\n          .filter(Boolean)\n          .join('\\n')\n\n        await writeText(memoryPath, content)\n        return `Project memory initialized at ${memoryPath}. You should now update it with specific project secrets or conventions.`\n      },\n    },\n    update_memory: {\n      description: TOOL_METADATA.update_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.update_memory.inputSchema),\n      execute: async ({ update }: { update: string }) => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n        try {\n          const current = await secureReadText(memoryPath, domains)\n          const content = current.startsWith('Error')\n            ? `# Project Memory\\n\\n${update}`\n            : `${current}\\n\\n### Update (${new Date().toLocaleDateString()})\\n${update}`\n\n          await writeText(memoryPath, content)\n          return `Project memory updated at ${memoryPath}`\n        } catch (e) {\n          return `Error updating memory: ${e instanceof Error ? e.message : String(e)}`\n        }\n      },\n    },\n    read_memory: {\n      description: TOOL_METADATA.read_memory.description,\n      inputSchema: jsonSchema(TOOL_METADATA.read_memory.inputSchema),\n      execute: async () => {\n        const { active } = await getWorkspacesList()\n        const memoryPath = getWorkspaceMemoryPath(active)\n        const content = await secureReadText(memoryPath, domains)\n        if (content.startsWith('Error')) {\n          return 'No project memory found. You can initialize it using \"initialize_memory\".'\n        }\n        return content\n      },\n    },\n    get_file_tree: {\n      description: TOOL_METADATA.get_file_tree.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_file_tree.inputSchema),\n      execute: async ({\n        path: dirPath,\n        depth = 10,\n      }: {\n        path?: string\n        depth?: number\n      }) => {\n        if (dirPath) {\n          return await secureGetFileTree(dirPath, domains, depth)\n        } else {\n          let fullOutput = ''\n          for (const folder of context.workspaceFolders) {\n            fullOutput += `Workspace Folder: ${folder}\\n`\n            fullOutput += await secureGetFileTree(folder, domains, depth)\n            fullOutput += '\\n'\n          }\n          return fullOutput || ERROR_MESSAGES.WORKSPACE_EMPTY\n        }\n      },\n    },\n    get_workspace_info: {\n      description: TOOL_METADATA.get_workspace_info.description,\n      inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),\n      execute: async () => {\n        return {\n          workspaceFolders: context.workspaceFolders,\n          configDir: getAyniteDir(),\n          activeFile: context.activeFile || null,\n        }\n      },\n    },\n  }\n\n  return tools\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245009107_zk91sp",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_02_XMeVYkAVEiWcTHnKy9cD1473",
+        "toolName": "read_file",
+        "state": "output-available",
+        "input": {
+          "path": "/Users/wentao/repos/aynite/src/main/spells/index.ts"
+        },
+        "output": "import fs from 'node:fs/promises'\nimport { ipcMain } from 'electron'\nimport { joinPaths } from '../../lib/path'\nimport { execInUserShell } from '../system/logic'\nimport { showOpenDialog } from '../window'\nimport { listAvailableCommands, restoreDefaultCommands } from './commands'\nimport { listAvailableSkills, restoreDefaultSkills } from './skills'\n\nimport { SpellChannels } from '../../lib/constants/ipc-channels'\n\ninterface CommandRunPayload {\n  command: string\n  cwd?: string\n}\n\ninterface DirectCommandRunPayload {\n  commandPath: string\n  params: string[]\n  currentFile?: string\n}\n\nexport function setupSpellsIpc() {\n  const handleAddFolder = async () => {\n    const { canceled, filePaths } = await showOpenDialog({\n      properties: ['openDirectory'],\n    })\n    if (canceled || filePaths.length === 0) return null\n    return filePaths[0]\n  }\n\n  ipcMain.handle(SpellChannels.SKILL_ADD_FOLDER, handleAddFolder)\n\n  ipcMain.handle(SpellChannels.SKILL_RESTORE, async () => {\n    return await restoreDefaultSkills()\n  })\n\n  ipcMain.handle(SpellChannels.COMMAND_ADD_FOLDER, handleAddFolder)\n\n  ipcMain.handle(SpellChannels.COMMAND_RESTORE, async () => {\n    return await restoreDefaultCommands()\n  })\n\n  ipcMain.handle(SpellChannels.SKILL_LIST, async () => {\n    return await listAvailableSkills()\n  })\n\n  ipcMain.handle(SpellChannels.COMMAND_LIST, async () => {\n    return await listAvailableCommands()\n  })\n\n  ipcMain.handle(\n    SpellChannels.COMMAND_RUN,\n    async (_event, { command, cwd }: CommandRunPayload) => {\n      const { stdout, stderr } = await execInUserShell(command, {\n        cwd: cwd || process.cwd(),\n      })\n      return { stdout, stderr }\n    },\n  )\n\n  ipcMain.handle(\n    SpellChannels.COMMAND_RUN_DIRECT,\n    async (\n      _event,\n      { commandPath, params, currentFile }: DirectCommandRunPayload,\n    ) => {\n      const runShPath = joinPaths(commandPath, 'run.sh')\n      if (process.platform !== 'win32') {\n        try {\n          await fs.chmod(runShPath, 0o755)\n        } catch (e) {\n          console.error('Failed to set chmod on run.sh', e)\n        }\n      }\n\n      const env = {\n        ...process.env,\n        AYNITE_CURRENT_FILE: currentFile || '',\n      }\n\n      const resolvedParams = params.map((p) => {\n        return p.replace(/@(?:file|skill|cmd)\\[.*?\\]\\((.*?)\\)/g, '$1')\n      })\n\n      const quotedParams = resolvedParams\n        .map((p) => `\"${p.replace(/\"/g, '\\\\\"')}\"`)\n        .join(' ')\n      const fullCmd =\n        process.platform === 'win32'\n          ? `sh \"${runShPath}\" ${quotedParams}`\n          : `\"${runShPath}\" ${quotedParams}`\n\n      const { stdout, stderr } = await execInUserShell(fullCmd, {\n        cwd: commandPath,\n        env,\n      })\n      return { stdout, stderr }\n    },\n  )\n}\n\nexport {\n  getCommandsConfig,\n  listAvailableCommands,\n  restoreCommand,\n  restoreDefaultCommands,\n  saveCommandsConfig,\n} from './commands'\nexport {\n  findFilesRecursively,\n  getBundledResourcesPath,\n  notifyError,\n  reportedErrors,\n} from './common'\nexport {\n  getSkillsConfig,\n  listAvailableSkills,\n  restoreDefaultSkills,\n  restoreSkill,\n  saveSkillsConfig,\n} from './skills'\nexport { restoreSpell } from './spell-installer'\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245010613_qib1fc",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "All three files look correct. Now let me run the TypeScript type check to verify there are no compilation errors.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "All files look correct. Now let me run the TypeScript type check.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_cSe5g5UBiL6ctqrKPjmQ2738",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 4,
+          "status": "in_progress"
+        },
+        "output": "Updated task 4 to in_progress"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245017358_998rop",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Let me run TypeScript type checking.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_xxuJW8hT2m457aw4oGqF3295",
+        "toolName": "run_command",
+        "state": "output-available",
+        "input": {
+          "command": "cd /Users/wentao/repos/aynite && npx tsc --noEmit 2>&1"
+        },
+        "output": "Execution Error:\nCommand failed: cd /Users/wentao/repos/aynite && npx tsc --noEmit 2>&1\n\n\nSTDOUT:\n/bin/sh: npx: command not found\n\n\nSTDERR:\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245025318_v4ov9v",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Ah, `npx` isn't in the PATH for the bare `/bin/sh` shell. This is exactly the problem we're fixing! Let me use the full path to npx or use npm instead.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_WzK1gvXeJBurmLfCPnFr7973",
+        "toolName": "run_command",
+        "state": "output-available",
+        "input": {
+          "command": "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\" && cd /Users/wentao/repos/aynite && npx tsc --noEmit 2>&1"
+        },
+        "output": "Execution Error:\nCommand failed: export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\" && cd /Users/wentao/repos/aynite && npx tsc --noEmit 2>&1\n\n\nSTDOUT:\nsrc/main/config/logic.ts(263,14): error TS2339: Property 'baseUrl' does not exist on type 'never'.\nsrc/main/config/logic.ts(263,49): error TS2339: Property 'provider' does not exist on type 'never'.\nsrc/main/config/logic.ts(264,11): error TS2339: Property 'baseUrl' does not exist on type 'never'.\nsrc/main/config/logic.ts(264,45): error TS2339: Property 'provider' does not exist on type 'never'.\nsrc/renderer/views/aichat/AIChat.tsx(118,9): error TS2322: Type '{ settings: SettingsState; onShowHistory: () => Promise<void>; onClear: () => void; onCopy: () => void; onSwitchAgent: (agentId: string) => Promise<void>; onSwitchProvider: (providerId: string) => Promise<...>; artifactStatus: { ...; } | null; tokenCount: number; }' is not assignable to type 'IntrinsicAttributes & HeaderProps'.\n  Property 'artifactStatus' does not exist on type 'IntrinsicAttributes & HeaderProps'.\nsrc/renderer/views/aichat/hooks/useAIChat.ts(51,40): error TS2339: Property 'getArtifactsStatus' does not exist on type 'AyniteWindow'.\n\n\nSTDERR:\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245027863_i2gk2g",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "The errors I see are all **pre-existing** (in other files like `config/logic.ts`, `AIChat.tsx`, `useAIChat.ts`). None of them are related to my changes. Let me verify by checking if any of the errors are in the files I modified.\n\nMy changes were in:\n- `src/main/system/logic.ts` — not in the error list\n- `src/main/ai/tools.ts` — not in the error list\n- `src/main/spells/index.ts` — not in the error list\n\nThese are all pre-existing errors. Let me also check the build to be sure.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "The TypeScript errors shown are all **pre-existing** in unrelated files (`config/logic.ts`, `AIChat.tsx`, `useAIChat.ts`) — none in my modified files. Let me also run the build to ensure everything compiles correctly.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_s7K176tLl268bkgxcpzu3174",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 4,
+          "status": "done"
+        },
+        "output": "Updated task 4 to done"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245028137_i3lavk",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_01_DqPPPkzDiksQpedb1JUE1536",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 5,
+          "status": "in_progress"
+        },
+        "output": "Updated task 5 to in_progress"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245043474_93zlcw",
+    "role": "user",
+    "parts": [
+      {
+        "type": "text",
+        "text": "finished?"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245050964_v1qfbm",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "The user is asking if I'm done. Let me check - I was about to run the build to verify it succeeds, but the user interrupted. Let me check the status of the tasks.\n\nActually, step 5 (build verification) was marked as in_progress but I was waiting for the command to run. Let me check if I need to still run the build.\n\nLet me just run the build to complete the verification.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Almost! Let me just run the build to verify everything compiles, then I'll update the memory.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_6apmHqe9iXV64p0jVK6o6256",
+        "toolName": "run_command",
+        "state": "output-available",
+        "input": {
+          "command": "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\" && cd /Users/wentao/repos/aynite && npm run build 2>&1"
+        },
+        "output": "\n> aynite-app@1.0.0-beta.12 build\n> npm run build:views && electron-vite build\n\n\n> aynite-app@1.0.0-beta.12 build:views\n> vite build --config vite.views.config.ts\n\n(node:24453) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.\n(Use `node --trace-deprecation ...` to show where the warning was created)\nvite v8.0.13 building client environment for production...\n\u001b[2K\rtransforming...✓ 5365 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist-views/views/datachart/index.html                       0.90 kB │ gzip:     0.42 kB\ndist-views/views/graph/index.html                           0.90 kB │ gzip:     0.42 kB\ndist-views/views/mindmap/index.html                         0.90 kB │ gzip:     0.42 kB\ndist-views/views/spotify/index.html                         0.90 kB │ gzip:     0.40 kB\ndist-views/views/canvas/index.html                          0.97 kB │ gzip:     0.41 kB\ndist-views/views/flow/index.html                            0.98 kB │ gzip:     0.41 kB\ndist-views/views/diagram/index.html                         0.98 kB │ gzip:     0.41 kB\ndist-views/views/stockchart/index.html                      0.98 kB │ gzip:     0.41 kB\ndist-views/views/theme-studio/index.html                    0.99 kB │ gzip:     0.41 kB\ndist-views/views/session-view/index.html                    1.02 kB │ gzip:     0.41 kB\ndist-views/views/rss/index.html                             1.13 kB │ gzip:     0.44 kB\ndist-views/views/file-browser/index.html                    1.15 kB │ gzip:     0.45 kB\ndist-views/views/aichat/index.html                          1.23 kB │ gzip:     0.46 kB\ndist-views/views/treeview/index.html                        1.24 kB │ gzip:     0.46 kB\ndist-views/views/settings/index.html                        1.33 kB │ gzip:     0.48 kB\ndist-views/assets/Assistant-SemiBold-SCI4bEL9.woff2        20.21 kB\ndist-views/assets/Assistant-Regular-DVxZuzxb.woff2         20.23 kB\ndist-views/assets/Assistant-Medium-DrcxCXg3.woff2          20.32 kB\ndist-views/assets/Assistant-Bold-gm-uSS1B.woff2            20.38 kB\ndist-views/assets/ViewContext-226FOJUd.css                114.38 kB │ gzip:    17.11 kB\ndist-views/assets/vendor-BcOOl54X.css                     160.70 kB │ gzip:    25.42 kB\ndist-views/assets/ViewHeader-DppTWjZb.js                    0.76 kB │ gzip:     0.42 kB\ndist-views/assets/Button-DbEDoJqN.js                        0.77 kB │ gzip:     0.44 kB\ndist-views/assets/Input-BPxaR8sO.js                         0.79 kB │ gzip:     0.49 kB\ndist-views/assets/rolldown-runtime-CVHK9hpM.js              1.21 kB │ gzip:     0.67 kB\ndist-views/assets/Modal-BcQwZ9ir.js                         1.71 kB │ gzip:     0.87 kB\ndist-views/assets/ViewContext-DhuKUZ8k.js                   3.76 kB │ gzip:     1.69 kB\ndist-views/assets/views/session-view/index-CbgAnGl3.js      5.13 kB │ gzip:     1.79 kB\ndist-views/assets/views/canvas/index-SoO-8yAK.js            5.97 kB │ gzip:     2.35 kB\ndist-views/assets/views/diagram/index-mURzt1Bo.js           6.23 kB │ gzip:     2.40 kB\ndist-views/assets/views/mindmap/index-MM44unBg.js           7.14 kB │ gzip:     3.04 kB\ndist-views/assets/views/theme-studio/index-CR8C-ZoS.js      7.27 kB │ gzip:     2.75 kB\ndist-views/assets/views/flow/index-D3La6t-8.js              7.28 kB │ gzip:     2.69 kB\ndist-views/assets/views/graph/index-D3dRI4yx.js             9.18 kB │ gzip:     3.63 kB\ndist-views/assets/Collapsible-sdXwXZaJ.js                   9.77 kB │ gzip:     3.44 kB\ndist-views/assets/SelectionMenu-DtiJIaiI.js                 9.95 kB │ gzip:     3.81 kB\ndist-views/assets/views/datachart/index-BZMzRpp7.js        10.06 kB │ gzip:     3.45 kB\ndist-views/assets/views/treeview/index-DO8vD5k8.js         19.80 kB │ gzip:     6.83 kB\ndist-views/assets/views/rss/index-q6E_Z3WL.js              22.88 kB │ gzip:     5.97 kB\ndist-views/assets/views/spotify/index-CITBBFLW.js          27.73 kB │ gzip:     5.85 kB\ndist-views/assets/views/stockchart/index-BBgknevl.js       29.18 kB │ gzip:     8.47 kB\ndist-views/assets/views/settings/index-BL8oHk5_.js         41.96 kB │ gzip:    11.15 kB\ndist-views/assets/views/aichat/index-DbdkiPFE.js           43.25 kB │ gzip:    12.99 kB\ndist-views/assets/views/file-browser/index-CXw6ruqC.js     76.69 kB │ gzip:    24.13 kB\ndist-views/assets/vendor-wb0vnS3p.js                    9,015.73 kB │ gzip: 2,854.40 kB\n\n✓ built in 1.10s\n[plugin builtin:vite-reporter] \n(!) Some chunks are larger than 1000 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n(node:24470) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.\n(Use `node --trace-deprecation ...` to show where the warning was created)\nvite v8.0.13 building ssr environment for production...\n\u001b[2K\rtransforming...✓ 391 modules transformed.\nrendering chunks...\nout/main/token-BTPcrDuH.js      2.65 kB\nout/main/index.js           2,000.10 kB\n\n\u001b[33m[INEFFECTIVE_DYNAMIC_IMPORT] \u001b[0msrc/lib/path.ts is dynamically imported by src/main/ai/index.ts but also statically imported by src/main/ai/chat.ts, src/main/ai/prompts.ts, src/main/ai/tools.ts, src/main/config/ignore.ts, src/main/config/logic.ts, ..., dynamic import will not move module into another chunk.\n\n✓ built in 103ms\nvite v8.0.13 building ssr environment for production...\n\u001b[2K\rtransforming...✓ 3 modules transformed.\nrendering chunks...\nout/preload/index.js  14.67 kB\n\n✓ built in 5ms\nvite v8.0.13 building client environment for production...\n\u001b[2K\rtransforming...✓ 1685 modules transformed.\nrendering chunks...\nout/renderer/index.html                   0.39 kB\nout/renderer/assets/index-CKFCdr2W.css  141.22 kB\nout/renderer/assets/index-ClO9-aTS.js   670.78 kB\n\n✓ built in 108ms\n"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245052373_c93kzk",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "The build completed successfully. All three targets (main, preload, renderer) built without errors.\n\nNow let me update the tasks and the memory.",
+        "state": "done"
+      },
+      {
+        "type": "text",
+        "text": "Build succeeds with no errors. Let me finalize everything.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_gBGLCiHaTM0z0WvA226y8550",
+        "toolName": "update_task",
+        "state": "output-available",
+        "input": {
+          "taskIndex": 5,
+          "status": "done"
+        },
+        "output": "Updated task 5 to done"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245055747_4knvff",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "reasoning",
+        "text": "Now let me update the project memory with this architectural change.",
+        "state": "done"
+      },
+      {
+        "type": "dynamic-tool",
+        "toolCallId": "call_00_EUcUlCwsQTZ6oCd2xUgY3557",
+        "toolName": "update_memory",
+        "state": "output-available",
+        "input": {
+          "update": "## Shell Environment Fix (Login Shell)\n\n**Context**: Shell commands run via `exec()` from `child_process` default to `/bin/sh -c`, which doesn't source the user's shell profile files (`.zprofile`, `.bash_profile`, etc.). This means tools like `node`, `npm`, Homebrew binaries etc. are not on the PATH.\n\n**Fix**: Created `execInUserShell()` in `src/main/system/logic.ts` which:\n- Detects the user's default shell from `process.env.SHELL`\n- On Unix: runs commands through `$SHELL -l -c 'command'` — a login shell that sources profile files\n- Uses proper single-quote escaping to prevent the outer shell from mangling the command\n- On Windows: passes through unchanged\n\n**Applied to**:\n- `src/main/ai/tools.ts` — `run_command` AI tool\n- `src/main/spells/index.ts` — `COMMAND_RUN` and `COMMAND_RUN_DIRECT` IPC handlers"
+        },
+        "output": "Project memory updated at /Users/wentao/.aynite/workspaces/Dev/artifacts/memory.md"
+      }
+    ]
+  },
+  {
+    "id": "msg_1779245060179_bw9fy1",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "text",
+        "text": "All done! Here's a summary of the changes:\n\n## What was changed\n\n### 🔧 `src/main/system/logic.ts` — New shared helper\nAdded `execInUserShell()` that wraps `execAsync` and runs commands through the user's shell as a **login shell** (`$SHELL -l -c 'command'`):\n- **macOS/Linux**: Goes from `/bin/sh -c 'node --version'` → `/bin/zsh -l -c 'node --version'`, which sources `.zprofile`/`.bash_profile` where `PATH` is configured\n- **Windows**: Passes through unchanged (uses `cmd.exe` natively)\n\n### 🔧 `src/main/ai/tools.ts` — AI `run_command` tool\nReplaced `execAsync(command, { cwd })` with `execInUserShell(command, { cwd })`.\n\n### 🔧 `src/main/spells/index.ts` — IPC command handlers\n- `COMMAND_RUN` handler: uses `execInUserShell`\n- `COMMAND_RUN_DIRECT` handler: uses `execInUserShell` (for `run.sh` script execution)\n\n### Why `-l` (login shell) instead of `-i` (interactive)?\n- `zsh -i` sources `.zshrc` but can produce terminal prompt artifacts in output\n- `zsh -l` (login) sources `.zprofile`/`.bash_profile` — the conventional place for `PATH` setup\n- If you keep `PATH` only in `.zshrc`, you can add `source ~/.zshrc` to your `.zprofile`, or that's a simple config adjustment after this fix",
+        "state": "done"
+      }
+    ]
+  }
+]

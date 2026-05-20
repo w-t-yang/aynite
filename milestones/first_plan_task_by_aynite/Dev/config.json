@@ -1,0 +1,59 @@
+{
+  "id": "Dev",
+  "layouts": [
+    {
+      "id": "dev",
+      "name": "Default",
+      "layout": {
+        "id": "dev-leaf",
+        "type": "leaf",
+        "size": 100
+      }
+    },
+    {
+      "id": "qfq7payv",
+      "name": "Code Vibe",
+      "layout": {
+        "id": "ca1r2407",
+        "type": "split",
+        "direction": "horizontal",
+        "size": 100,
+        "children": [
+          {
+            "id": "0pmqycvx",
+            "type": "leaf",
+            "name": "treeview",
+            "size": 20
+          },
+          {
+            "id": "yuidlwfj",
+            "type": "leaf",
+            "name": "file-browser",
+            "size": 47.952541116428854
+          },
+          {
+            "id": "minmtp5d",
+            "type": "leaf",
+            "name": "aichat",
+            "size": 32.04745888357116
+          }
+        ]
+      }
+    }
+  ],
+  "activeLayoutId": "qfq7payv",
+  "activeAgentId": "aynite",
+  "activeSessionId": "1779243697383",
+  "folders": [
+    "/Users/wentao/repos/aynite",
+    "/Users/wentao/.aynite"
+  ],
+  "files": [
+    "/Users/wentao/repos/aynite/package.json",
+    "/Users/wentao/.aynite/workspaces/Dev/sessions/2026-05-20/1779243231656.json",
+    "/Users/wentao/.aynite/workspaces/Dev/sessions/2026-05-20/1779243697383.json",
+    "/Users/wentao/.aynite/workspaces/Dev/artifacts/implementation_plan.md",
+    "/Users/wentao/.aynite/workspaces/Dev/artifacts/task.md"
+  ],
+  "activeFile": "/Users/wentao/.aynite/workspaces/Dev/artifacts/task.md"
+}

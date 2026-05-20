@@ -1,0 +1,6 @@
+- [x] Create execInUserShell() helper in src/main/system/logic.ts
+- [x] Update src/main/ai/tools.ts run_command tool to use execInUserShell
+- [x] Update src/main/spells/index.ts COMMAND_RUN handler to use execInUserShell
+- [x] Update src/main/spells/index.ts COMMAND_RUN_DIRECT handler to use execInUserShell
+- [x] Run TypeScript type check to verify no compilation errors
+- [x] Run build to verify the build succeeds
