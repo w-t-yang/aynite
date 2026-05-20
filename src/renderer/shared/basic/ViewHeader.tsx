@@ -1,4 +1,5 @@
 import type React from 'react'
+import { ICON_BTN_CLS } from '../../../lib/constants/renderer/styles'
 import { cn } from '../lib/utils'
 
 interface ViewHeaderProps {
@@ -7,9 +8,6 @@ interface ViewHeaderProps {
   children?: React.ReactNode
   className?: string
 }
-
-export const ICON_BTN_CLS =
-  'p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors'
 
 export const iconBtn = (overrides?: string) => cn(ICON_BTN_CLS, overrides)
 
@@ -22,7 +20,7 @@ export function ViewHeader({
   return (
     <div
       className={cn(
-        'h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30',
+        'h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-popover',
         className,
       )}
     >

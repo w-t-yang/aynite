@@ -1,4 +1,4 @@
-export interface StockData {
+interface StockData {
   time: string
   open: number
   high: number
@@ -41,36 +41,7 @@ export interface StockData {
   compareClose?: number
 }
 
-export interface ChartComponentProps {
-  data: StockData[]
-  symbol: string
-  compareData?: StockData[] | null
-  compareSymbol?: string | null
-  indicators?: {
-    sma5: boolean
-    sma10: boolean
-    sma20: boolean
-    sma50: boolean
-    sma100: boolean
-    sma200: boolean
-    ema12: boolean
-    ema26: boolean
-    ema50: boolean
-    ema200: boolean
-    vwap: boolean
-    bollinger: boolean
-    donchian: boolean
-    macd: boolean
-    rsi: boolean
-    keltner: boolean
-    sar: boolean
-    atr: boolean
-    stoch: boolean
-    cci: boolean
-  }
-  theme?: 'dark' | 'light'
-  timeframe?: string
-}
+export type { StockData }
 
 export enum TimeInterval {
   D1 = '1d',
@@ -79,7 +50,7 @@ export enum TimeInterval {
   Y1 = '1y',
 }
 
-export const DEFAULT_INDICATORS = {
+const DEFAULT_INDICATORS = {
   sma5: false,
   sma10: false,
   sma20: true,
@@ -101,3 +72,5 @@ export const DEFAULT_INDICATORS = {
   stoch: false,
   cci: false,
 }
+
+export { DEFAULT_INDICATORS }

@@ -37,7 +37,7 @@ export function PlayerBar({
     : 0
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-14 border-t border-border bg-background/95 backdrop-blur-sm flex items-center px-4 gap-3 z-50">
+    <div className="fixed bottom-0 left-0 right-0 h-14 border-t border-border bg-background/95 backdrop-blur-sm flex items-center px-4 gap-3 z-popover">
       {/* Track info */}
       <div className="flex items-center gap-2.5 min-w-0 w-64">
         {track?.album.images?.[2]?.url || track?.album.images?.[0]?.url ? (

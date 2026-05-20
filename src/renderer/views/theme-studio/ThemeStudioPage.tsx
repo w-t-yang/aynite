@@ -191,7 +191,8 @@ export function ThemeStudioPage() {
   const handleApplyTheme = async () => {
     if (!data) return
     try {
-      await (window as any).aynite.setConfig('activeTheme', {
+      const key = 'activeTheme'
+      await (window as any).aynite.setConfig(key, {
         ...data,
         colors: editedColors,
       })
@@ -260,7 +261,7 @@ export function ThemeStudioPage() {
       {/* Content */}
       <section className="flex-1 flex overflow-hidden relative bg-background">
         {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-10">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-base">
             <span className="text-[12vw] font-black rotate-12">THEME MOCK</span>
           </div>
         )}
@@ -360,7 +361,7 @@ export function ThemeStudioPage() {
 
         {/* Error Overlay */}
         {error && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
+          <div className="absolute inset-0 z-modal flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
             <div className="max-w-md w-full bg-popover border border-destructive/20 rounded-xl shadow-2xl p-6">
               <div className="flex items-center gap-3 text-destructive mb-4">
                 <AlertCircle size={24} />

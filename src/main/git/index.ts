@@ -14,8 +14,8 @@ import {
   readJson,
 } from '../../lib/path'
 import type { DiffStats, GitStatusType } from '../../lib/types/files'
-import { getAIModel } from '../ai/factory'
-import { execInUserShell } from '../system/logic'
+import { getAIModel } from '../ai'
+import { execInUserShell } from '../system'
 import { sendAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
 
@@ -560,7 +560,9 @@ export function setupGitIpc() {
   }
 }
 
-export const gitService = {
+const gitService = {
   handleFsChange: (path: string) => instance?.handleFsChange(path),
   clearCaches: () => instance?.clearCaches(),
 }
+
+export { gitService }

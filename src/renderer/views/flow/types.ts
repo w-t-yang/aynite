@@ -1,4 +1,4 @@
-export interface FlowNode {
+interface FlowNode {
   id: string
   type?: string
   position: { x: number; y: number }
@@ -7,7 +7,7 @@ export interface FlowNode {
   height?: number
 }
 
-export interface FlowEdge {
+interface FlowEdge {
   id: string
   source: string
   target: string
@@ -17,8 +17,10 @@ export interface FlowEdge {
   label?: string
 }
 
-export interface FlowData {
+interface FlowData {
   nodes: FlowNode[]
   edges: FlowEdge[]
   viewport?: { x: number; y: number; zoom: number }
 }
+
+export type { FlowData }

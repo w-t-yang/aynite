@@ -430,11 +430,11 @@ export function DataChartPage() {
             <>
               <button
                 type="button"
-                className="fixed inset-0 z-10 w-full h-full bg-transparent border-none cursor-default"
+                className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
                 onClick={() => setIsTypeMenuOpen(false)}
                 aria-label="Close menu"
               />
-              <div className="absolute top-full left-0 mt-1 w-40 bg-popover border border-border rounded-lg shadow-xl z-20 overflow-hidden py-1 backdrop-blur-md">
+              <div className="absolute top-full left-0 mt-1 w-40 bg-popover border border-border rounded-lg shadow-xl z-layout overflow-hidden py-1 backdrop-blur-md">
                 {Object.values(ChartType).map((type) => (
                   <button
                     type="button"
@@ -505,7 +505,7 @@ export function DataChartPage() {
 
         {/* Error Overlay */}
         {error && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
+          <div className="absolute inset-0 z-modal flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
             <div className="max-w-xl w-full bg-popover border-2 border-destructive/50 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="bg-destructive/10 p-4 flex items-start gap-4 border-b border-destructive/20">
                 <div className="bg-destructive text-destructive-foreground p-2 rounded-lg">

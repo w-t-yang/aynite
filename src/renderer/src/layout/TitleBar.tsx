@@ -12,8 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import type React from 'react'
-import { useEffect, useMemo, useState } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
+import { useMemo, useState } from 'react'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
@@ -42,27 +41,12 @@ const TitleBar: React.FC = () => {
     showTileControls,
     setShowTileControls,
     setShowSettings,
+    isMaximized,
+    isFullscreen,
   } = useApp()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showVibeModal, setShowVibeModal] = useState(false)
-  const [isMaximized, setIsMaximized] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-
-  // Listen for window state changes
-  useEffect(() => {
-    if (!window.aynite?.onAppEvent) return
-    const unsub = window.aynite.onAppEvent(
-      (event: { type: string; data: unknown }) => {
-        if (event.type === AppEvents.WINDOW_MAXIMIZED_CHANGED) {
-          setIsMaximized((event.data as any)?.isMaximized ?? false)
-        } else if (event.type === AppEvents.FULLSCREEN_CHANGED) {
-          setIsFullscreen((event.data as any)?.isFullscreen ?? false)
-        }
-      },
-    )
-    return unsub
-  }, [])
 
   const workspaceOptions = useMemo(
     () =>

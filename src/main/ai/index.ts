@@ -3,7 +3,7 @@ import { ipcMain } from 'electron'
 import { AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
 import { sendAppOperation, showOpenDialog } from '../window'
-import { getWorkspacesList } from '../workspace/logic'
+import { getWorkspacesList } from '../workspace'
 import { aiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
@@ -127,6 +127,7 @@ export {
   loadSession,
   saveSession,
 } from './chat'
+export { getAIModel } from './factory'
 export {
   ensureDefaultPromptFiles,
   getDefaultGlobalPrompts,

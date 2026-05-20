@@ -1,4 +1,4 @@
-export interface MindMapNode {
+interface MindMapNode {
   id: string
   label: string
   children?: MindMapNode[]
@@ -6,6 +6,10 @@ export interface MindMapNode {
   parentId?: string
 }
 
-export interface MindMapData {
+export type { MindMapNode }
+
+interface MindMapData {
   root: MindMapNode
 }
+
+export type { MindMapData }

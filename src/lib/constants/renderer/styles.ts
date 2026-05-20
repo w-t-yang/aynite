@@ -36,3 +36,7 @@ export const FLEX_CENTER_BETWEEN = 'flex items-center justify-between'
 
 /** Flex column with no shrink */
 export const FLEX_COL_MIN = 'flex flex-col min-w-0'
+
+/** Icon button in view headers */
+export const ICON_BTN_CLS =
+  'p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors'

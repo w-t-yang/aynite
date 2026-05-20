@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import type { GitStatusType } from '../../../../lib/types/files'
 import { useAppEvent } from '../../ViewContext'
 
-export interface GitStatusMap {
+interface GitStatusMap {
   [path: string]: GitStatusType
 }
 

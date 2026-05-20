@@ -209,7 +209,7 @@ export function RSSApp() {
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       {/* Header */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
+      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-popover">
         <div className="flex items-center gap-2 min-w-0">
           <Rss size={14} className="text-primary" />
           <span className="text-[10px] font-bold uppercase tracking-widest truncate text-muted-foreground">

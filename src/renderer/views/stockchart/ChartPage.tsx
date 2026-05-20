@@ -83,7 +83,7 @@ const CustomTooltip = ({
   const data = payload[0].payload
 
   return (
-    <div className="p-3 border rounded shadow-xl backdrop-blur-md text-xs font-mono z-50 bg-popover/95 border-border text-popover-foreground">
+    <div className="p-3 border rounded shadow-xl backdrop-blur-md text-xs font-mono z-popover bg-popover/95 border-border text-popover-foreground">
       <div className="font-bold mb-2 border-b border-border/20 pb-1 text-muted-foreground">
         {label}
       </div>
@@ -679,11 +679,11 @@ OR
             <>
               <button
                 type="button"
-                className="fixed inset-0 z-10 w-full h-full bg-transparent border-none cursor-default"
+                className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
                 onClick={() => setIsIndicatorMenuOpen(false)}
                 aria-label="Close menu"
               />
-              <div className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-xl z-20 overflow-hidden py-1 max-h-[70vh] overflow-y-auto backdrop-blur-md">
+              <div className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-xl z-popover overflow-hidden py-1 max-h-[70vh] overflow-y-auto backdrop-blur-md">
                 <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
                   Trend & Moving Averages
                 </div>
@@ -794,7 +794,7 @@ OR
 
         {/* Error Overlay */}
         {error && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
+          <div className="absolute inset-0 z-modal flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
             <div className="max-w-xl w-full bg-popover border-2 border-destructive/50 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="bg-destructive/10 p-4 flex items-start gap-4 border-b border-destructive/20">
                 <div className="bg-destructive text-destructive-foreground p-2 rounded-lg">
@@ -835,7 +835,7 @@ OR
           </div>
         )}
 
-        <div className="absolute top-4 left-4 z-10 pointer-events-none">
+        <div className="absolute top-4 left-4 z-base pointer-events-none">
           <h2 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
             {symbol}
             <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border">
@@ -893,7 +893,7 @@ OR
         </div>
 
         {compareSymbol && (
-          <div className="absolute top-4 right-20 z-10 pointer-events-none">
+          <div className="absolute top-4 right-20 z-base pointer-events-none">
             <div className="flex items-center gap-2 bg-muted/80 px-3 py-1 rounded-full border border-border">
               <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
               <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">

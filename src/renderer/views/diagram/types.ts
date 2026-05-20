@@ -1,4 +1,4 @@
-export type DiagramType =
+type DiagramType =
   | 'flowchart'
   | 'sequenceDiagram'
   | 'classDiagram'
@@ -7,8 +7,10 @@ export type DiagramType =
   | 'pie'
   | 'erDiagram'
 
-export interface DiagramData {
+interface DiagramData {
   title?: string
   type: DiagramType
   definition: string
 }
+
+export type { DiagramData }

@@ -15,9 +15,9 @@ import {
   writeText,
 } from '../../lib/path'
 import type { ToolContext } from '../../lib/types/ai'
-import { execInUserShell } from '../system/logic'
+import { execInUserShell } from '../system'
 import { requestAiApproval } from '../window'
-import { getWorkspacesList } from '../workspace/logic'
+import { getWorkspacesList } from '../workspace'
 
 export type { ToolContext }
 

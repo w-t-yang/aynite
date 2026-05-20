@@ -1,17 +1,21 @@
-export interface GraphNode {
+interface GraphNode {
   id: string
   label: string
   group?: number
   val?: number // radius/importance
 }
 
-export interface GraphLink {
+export type { GraphNode }
+
+interface GraphLink {
   source: string
   target: string
   value?: number
 }
 
-export interface GraphData {
+interface GraphData {
   nodes: GraphNode[]
   links: GraphLink[]
 }
+
+export type { GraphData }

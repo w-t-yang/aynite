@@ -16,7 +16,7 @@ import 'prism-themes/themes/prism-vsc-dark-plus.css'
 
 const { languages } = Prism
 
-export const langMap: Record<string, any> = {
+const langMap: Record<string, any> = {
   js: languages.js,
   ts: languages.typescript,
   tsx: languages.typescript,
@@ -32,6 +32,8 @@ export const langMap: Record<string, any> = {
   yml: languages.yaml,
   md: languages.markdown,
 }
+
+export { langMap }
 
 export function highlightCode(code: string, extension: string) {
   const lang = langMap[extension] || languages.clike || languages.plain

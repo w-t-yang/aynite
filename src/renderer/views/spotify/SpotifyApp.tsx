@@ -1,5 +1,9 @@
 import { Disc3, Loader2, LogOut, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
+import {
+  SPOTIFY_AUTH_CALLBACK,
+  SPOTIFY_AUTH_CALLBACK_HTTP,
+} from '../../../lib/constants/app'
 import { PlayerBar } from './components/PlayerBar'
 import { Playlists } from './components/Playlists'
 import { PlaylistTracks } from './components/PlaylistTracks'
@@ -9,11 +13,17 @@ import { Timeline } from './components/Timeline'
 import { TopArtists } from './components/TopArtists'
 import { useSpotify } from './hooks/useSpotify'
 
-export type Section = 'timeline' | 'saved' | 'artists' | 'playlists'
+type Section = 'timeline' | 'saved' | 'artists' | 'playlists'
+
+export type { Section }
 
 export function SpotifyApp() {
   const spotify = useSpotify()
   const clientIdRef = useRef<HTMLInputElement>(null)
+
+  const oauthCallbackUrl = spotify.protocolAvailable
+    ? SPOTIFY_AUTH_CALLBACK
+    : SPOTIFY_AUTH_CALLBACK_HTTP
 
   // Pre-fill stored client ID once loaded
   useEffect(() => {
@@ -152,9 +162,7 @@ export function SpotifyApp() {
                 Add this redirect URI to the app's settings:
                 <br />
                 <code className="text-primary/80 bg-muted px-1 rounded">
-                  {spotify.protocolAvailable
-                    ? 'aynite://auth/spotify/callback'
-                    : 'http://127.0.0.1:18080/callback'}
+                  {oauthCallbackUrl}
                 </code>
               </li>
               <li>
@@ -178,7 +186,7 @@ export function SpotifyApp() {
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       {/* Header */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-30">
+      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-popover">
         <div className="flex items-center gap-2 min-w-0">
           <Disc3 size={14} className="text-primary" />
           <span className="text-[10px] font-bold uppercase tracking-widest truncate text-muted-foreground">

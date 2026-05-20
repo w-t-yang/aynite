@@ -165,7 +165,8 @@ function processApprovalQueue() {
   if (isProcessingApproval || approvalQueue.length === 0 || !mainWindow) return
 
   isProcessingApproval = true
-  const next = approvalQueue.shift()!
+  const next = approvalQueue.shift()
+  if (!next) return
   pendingApprovals.set(next.id, next.resolve)
   sendAppEvent(AppEvents.AI_APPROVAL_REQUEST, {
     id: next.id,

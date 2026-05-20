@@ -1,5 +1,9 @@
 export const PROTOCOL = 'aynite'
 
+// OAuth callback URLs
+export const SPOTIFY_AUTH_CALLBACK = `${PROTOCOL}://auth/spotify/callback`
+export const SPOTIFY_AUTH_CALLBACK_HTTP = 'http://127.0.0.1:18080/callback'
+
 export const AppOperation = {
   TILE_CYCLE: 'TILE_CYCLE',
   TILE_SPLIT_HORIZONTAL: 'TILE_SPLIT_HORIZONTAL',

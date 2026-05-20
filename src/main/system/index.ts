@@ -183,4 +183,4 @@ export function setupProtocol() {
   })
 }
 
-export { getAvailableViews, getSystemFonts } from './logic'
+export { execInUserShell, getAvailableViews, getSystemFonts } from './logic'

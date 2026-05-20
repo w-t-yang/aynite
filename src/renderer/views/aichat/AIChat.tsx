@@ -97,10 +97,7 @@ export function AIChat() {
     settings.ai?.providers && settings.ai.providers.length > 0
 
   const openAISettings = () => {
-    window.parent.postMessage(
-      { type: 'aynite:operation', operation: 'SETTINGS', data: { tab: 'ai' } },
-      '*',
-    )
+    window.aynite.executeAppOperation('SETTINGS', { tab: 'ai' })
   }
 
   return (
@@ -161,7 +158,7 @@ export function AIChat() {
           />
         </>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center p-10 text-center z-10 relative">
+        <div className="flex-1 flex flex-col items-center justify-center p-10 text-center z-base relative">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse">
             <Bot size={40} className="text-primary" />
           </div>

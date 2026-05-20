@@ -342,7 +342,7 @@ function FlowCanvas() {
       {/* Canvas */}
       <section className="flex-1 relative">
         {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-10">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-base">
             <span className="text-[12vw] font-black rotate-12">FLOW MOCK</span>
           </div>
         )}
@@ -374,7 +374,7 @@ function FlowCanvas() {
 
         {/* Stats overlay */}
         {data && (
-          <div className="absolute bottom-4 left-4 bg-popover/80 backdrop-blur-md border border-border p-2.5 rounded-xl shadow-2xl pointer-events-none z-20">
+          <div className="absolute bottom-4 left-4 bg-popover/80 backdrop-blur-md border border-border p-2.5 rounded-xl shadow-2xl pointer-events-none z-layout">
             <div className="flex gap-4 text-[10px]">
               <div>
                 <span className="text-primary font-bold">
@@ -394,7 +394,7 @@ function FlowCanvas() {
 
         {/* Error Overlay */}
         {error && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
+          <div className="absolute inset-0 z-modal flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
             <div className="max-w-md w-full bg-popover border border-destructive/20 rounded-xl shadow-2xl p-6">
               <div className="flex items-center gap-3 text-destructive mb-4">
                 <AlertCircle size={24} />

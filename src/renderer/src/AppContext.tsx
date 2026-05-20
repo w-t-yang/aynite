@@ -81,6 +81,10 @@ interface AppContextType {
     message: string
   } | null
   dismissNotification: () => void
+
+  // Window State
+  isMaximized: boolean
+  isFullscreen: boolean
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -120,6 +124,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     title: string
     message: string
   } | null>(null)
+
+  const [isMaximized, setIsMaximized] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const dismissNotification = useCallback(() => setActiveNotification(null), [])
 
@@ -417,6 +424,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
             setUpdateStatus('downloaded')
             setUpdateInfo(event.data)
             break
+          case AppEvents.WINDOW_MAXIMIZED_CHANGED:
+            setIsMaximized((event.data as any)?.isMaximized ?? false)
+            break
+          case AppEvents.FULLSCREEN_CHANGED:
+            setIsFullscreen((event.data as any)?.isFullscreen ?? false)
+            break
         }
       },
     )
@@ -561,6 +574,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         },
         activeNotification,
         dismissNotification,
+        isMaximized,
+        isFullscreen,
       }}
     >
       {children}

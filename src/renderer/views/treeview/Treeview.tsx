@@ -809,7 +809,7 @@ export function Treeview() {
       )}
 
       {commitState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-[520px] bg-card border border-border/40 rounded-xl shadow-2xl overflow-hidden">
             <div className="px-4 py-3 border-b border-border/20">
               <h3 className="text-sm font-bold">Commit Changes</h3>
