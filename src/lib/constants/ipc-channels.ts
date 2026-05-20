@@ -96,6 +96,8 @@ export const GitChannels = {
   STAGE_HUNK: 'aynite:git-stage-hunk',
   DISCARD_HUNK: 'aynite:git-discard-hunk',
   DIFF_STATS: 'aynite:git-diff-stats',
+  COMMIT_GENERATE: 'aynite:git-commit-generate',
+  COMMIT_EXECUTE: 'aynite:git-commit-execute',
 } as const
 export const RssChannels = {
   GET_CONFIG: 'aynite:rss-get-config',

@@ -1,16 +1,21 @@
 import { exec, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
+import { generateText } from 'ai'
 import { ipcMain } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { GitChannels } from '../../lib/constants/ipc-channels'
 import {
   exists,
   getAbsolutePath,
+  getAIConfigPath,
   getDirname,
   getRelativePath,
   joinPaths,
+  readJson,
 } from '../../lib/path'
 import type { DiffStats, GitStatusType } from '../../lib/types/files'
+import { getAIModel } from '../ai/factory'
+import { execInUserShell } from '../system/logic'
 import { sendAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
 
@@ -203,6 +208,131 @@ class GitService {
         return {}
       }
     })
+
+    // ─── Commit Message Generation ───────────────────────────────────────
+
+    const _COMMIT_DIFF_CHARS_LIMIT = 5000
+
+    ipcMain.handle(
+      GitChannels.COMMIT_GENERATE,
+      async (_event, root: string) => {
+        try {
+          // Get changed files list with stats
+          const [{ stdout: statusShort }, { stdout: statSummary }] =
+            await Promise.all([
+              execAsync('git status --short', { cwd: root }),
+              execAsync('git diff --stat', { cwd: root }),
+            ])
+
+          const changedFiles = statusShort
+            .split('\n')
+            .filter(Boolean)
+            .map((line: string) => {
+              const code = line.slice(0, 2).trim()
+              const file = line.slice(3).trim()
+              const typeMap: Record<string, string> = {
+                M: 'modified',
+                A: 'added',
+                D: 'deleted',
+                R: 'renamed',
+                '?': 'untracked',
+              }
+              return `${typeMap[code] || 'changed'}: ${file}`
+            })
+            .join('\n')
+
+          if (!changedFiles) {
+            return { error: 'No changes to commit' }
+          }
+
+          // Try to get a compact diff for extra context (only if small)
+          let detailContext = ''
+          try {
+            const { stdout: compactDiff } = await execAsync(
+              'git diff --unified=3',
+              { cwd: root, maxBuffer: 1024 * 10 },
+            )
+            if (compactDiff.length > 0 && compactDiff.length < 3000) {
+              detailContext = `\nKey diff excerpts:\n${compactDiff.slice(0, 3000)}`
+            }
+          } catch {
+            // diff too large, skip detail
+          }
+
+          const diffContent = `Files changed:\n${changedFiles}\n${statSummary.trim()}${detailContext}`
+
+          // Read AI config and generate commit message
+          const aiConfig = await readJson<any>(getAIConfigPath()).catch(
+            () => null,
+          )
+          if (!aiConfig?.providers || aiConfig.providers.length === 0) {
+            return { error: 'No AI provider configured' }
+          }
+
+          const activeId = aiConfig.activeId
+          const activeProvider =
+            aiConfig.providers.find((p: any) => p.id === activeId) ||
+            aiConfig.providers[0]
+
+          const model = getAIModel(activeProvider)
+
+          const prompt = `Write a short git commit message for these code changes.
+
+Files changed:
+${diffContent.slice(0, 4000)}`
+
+          const { text } = await generateText({
+            model,
+            prompt,
+            maxOutputTokens: 300,
+            temperature: 0.5,
+          })
+
+          // Clean up the generated message
+          const message = text
+            .replace(/^```(?:text)?\n?/, '')
+            .replace(/\n?```$/, '')
+            .trim()
+
+          if (!message) {
+            return { error: 'Failed to generate a commit message' }
+          }
+
+          return { message }
+        } catch (e: unknown) {
+          const errorMsg = e instanceof Error ? e.message : String(e)
+          return { error: errorMsg }
+        }
+      },
+    )
+
+    // ─── Commit Execution ───────────────────────────────────────────────
+
+    ipcMain.handle(
+      GitChannels.COMMIT_EXECUTE,
+      async (_event, root: string, message: string) => {
+        try {
+          if (!message.trim()) {
+            return { error: 'Commit message cannot be empty' }
+          }
+
+          // Stage all changes (both tracked and untracked)
+          await execAsync('git add -A', { cwd: root })
+
+          // Execute commit through user's login shell so git hooks can find tools (npx, etc.)
+          const escapedMsg = message.replace(/'/g, "'\\''")
+          await execInUserShell(`git commit -m '${escapedMsg}'`, {
+            cwd: root,
+          })
+
+          await this.refreshStatus(root, true)
+          return { success: true }
+        } catch (e: unknown) {
+          const errorMsg = e instanceof Error ? e.message : String(e)
+          return { error: errorMsg }
+        }
+      },
+    )
   }
 
   async findGitRoot(path: string): Promise<string | null> {

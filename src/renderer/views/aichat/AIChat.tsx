@@ -13,6 +13,7 @@ export function AIChat() {
     pendingApproval,
     workspaceFolders,
     inputRef,
+    abortRef,
     handleApprove,
     handleReject,
     sendMessage,
@@ -139,7 +140,7 @@ export function AIChat() {
             workspaceFolders={workspaceFolders}
             loading={loading}
             onSend={sendMessage}
-            onAbort={() => {}}
+            onAbort={() => abortRef.current?.abort()}
             onClear={clearChat}
             getAllFiles={getAllFiles}
             getAvailableSkills={getAvailableSkills}

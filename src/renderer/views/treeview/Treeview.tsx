@@ -115,6 +115,58 @@ export function Treeview() {
     onConfirm: () => Promise<void>
   } | null>(null)
 
+  // ─── Commit State ────────────────────────────────────────────────────
+  const [commitState, setCommitState] = useState<{
+    generating: boolean
+    message: string
+    root: string
+    error: string | null
+  } | null>(null)
+
+  const handleCommit = useCallback(async (root: string) => {
+    setCommitState({ generating: true, message: '', root, error: null })
+    try {
+      const result = await (window as any).aynite.commitGenerate(root)
+      if (result.error) {
+        setCommitState((prev) =>
+          prev ? { ...prev, generating: false, error: result.error } : null,
+        )
+        return
+      }
+      setCommitState((prev) =>
+        prev
+          ? {
+              ...prev,
+              generating: false,
+              message: result.message || '',
+            }
+          : null,
+      )
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setCommitState((prev) =>
+        prev ? { ...prev, generating: false, error: msg } : null,
+      )
+    }
+  }, [])
+
+  const handleCommitConfirm = useCallback(async () => {
+    if (!commitState) return
+    const result = await (window as any).aynite.commitExecute(
+      commitState.root,
+      commitState.message,
+    )
+    if (result.error) {
+      setCommitState((prev) => (prev ? { ...prev, error: result.error } : null))
+      return
+    }
+    setCommitState(null)
+    // Refresh git status
+    for (const node of treeData) {
+      fetchStatus(node.id)
+    }
+  }, [commitState, fetchStatus, treeData])
+
   const _workspaceOptions = useMemo(
     (): SelectionItem[] =>
       workspaces.map((ws) => ({
@@ -617,6 +669,56 @@ export function Treeview() {
             <div className="p-4 text-xs text-muted-foreground text-center">
               No changes
             </div>
+          ) : changesOnly ? (
+            <>
+              <Tree
+                ref={treeRef}
+                data={changesTreeData}
+                width="100%"
+                height={treeHeight - 68}
+                indent={12}
+                rowHeight={28}
+                openByDefault={false}
+                className="scrollbar-gutter-stable"
+              >
+                {(props) => (
+                  <NodeRenderer
+                    {...props}
+                    onSelectFile={onSelectFile}
+                    setContextMenu={setContextMenu}
+                    dirtyFiles={[]}
+                    activeFilePath={activeFilePath}
+                    gitStatuses={gitStatuses}
+                    gitRoots={gitRoots}
+                    diffStats={diffStats}
+                    changesOnly={changesOnly}
+                  />
+                )}
+              </Tree>
+              <div className="px-3 py-2 border-t border-border/20">
+                {changesTreeData.map((root) => {
+                  const gitRoot = gitRoots.has(root.id)
+                  return gitRoot ? (
+                    <button
+                      key={root.id}
+                      type="button"
+                      onClick={() => handleCommit(root.id)}
+                      disabled={commitState?.generating}
+                      className={cn(
+                        'w-full text-xs px-3 py-1.5 rounded-lg font-medium transition-all',
+                        commitState?.generating
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-primary/15 text-primary hover:bg-primary/25',
+                      )}
+                    >
+                      {commitState?.generating
+                        ? 'Generating message...'
+                        : `Commit (${root.name})`}
+                    </button>
+                  ) : null
+                })}
+              </div>
+            </>
           ) : (
             <Tree
               ref={treeRef}
@@ -704,6 +806,58 @@ export function Treeview() {
           }}
           onCancel={() => setConfirmModal(null)}
         />
+      )}
+
+      {commitState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-[520px] bg-card border border-border/40 rounded-xl shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border/20">
+              <h3 className="text-sm font-bold">Commit Changes</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              {commitState.error && (
+                <div className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                  {commitState.error}
+                </div>
+              )}
+              {commitState.generating ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
+                  <div className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                  Generating commit message...
+                </div>
+              ) : (
+                <textarea
+                  value={commitState.message}
+                  onChange={(e) =>
+                    setCommitState((prev) =>
+                      prev ? { ...prev, message: e.target.value } : null,
+                    )
+                  }
+                  className="w-full h-24 bg-background border border-border/30 rounded-lg px-3 py-2 text-xs font-mono resize-none outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+                  placeholder="Commit message..."
+                />
+              )}
+            </div>
+            {!commitState.generating && (
+              <div className="px-4 py-3 border-t border-border/20 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCommitState(null)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-foreground/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCommitConfirm}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
+                >
+                  Commit
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {contextMenu && (

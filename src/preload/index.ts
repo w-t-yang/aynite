@@ -93,6 +93,10 @@ const aynite = {
     ipcRenderer.invoke(GitChannels.DIFF_STATS, root),
   checkIsGitRoot: (path: string) =>
     ipcRenderer.invoke('aynite:git-is-root', path),
+  commitGenerate: (root: string) =>
+    ipcRenderer.invoke(GitChannels.COMMIT_GENERATE, root),
+  commitExecute: (root: string, message: string) =>
+    ipcRenderer.invoke(GitChannels.COMMIT_EXECUTE, root, message),
   stageHunk: (data: {
     filePath: string
     oldStart: number
