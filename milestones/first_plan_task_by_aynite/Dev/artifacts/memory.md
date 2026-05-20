@@ -13,3 +13,10 @@
 **Applied to**:
 - `src/main/ai/tools.ts` — `run_command` AI tool
 - `src/main/spells/index.ts` — `COMMAND_RUN` and `COMMAND_RUN_DIRECT` IPC handlers
+
+### Update (5/20/2026)
+## MissingToolResultsError Fix
+
+**Problem**: When a chat request was interrupted mid-tool-execution, the stored messages contained tool calls in `input-available` state without results. The next request passed these to `convertToModelMessages()`, which threw `MissingToolResultsError`.
+
+**Fix**: Added `ignoreIncompleteToolCalls: true` option to `convertToModelMessages()` call in `src/main/ai/chat.ts`. This is a built-in SDK option that filters out tool parts with state `input-streaming` or `input-available` (incomplete tool calls) before converting to model messages.

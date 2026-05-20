@@ -53,7 +53,14 @@
     "/Users/wentao/.aynite/workspaces/Dev/sessions/2026-05-20/1779243231656.json",
     "/Users/wentao/.aynite/workspaces/Dev/sessions/2026-05-20/1779243697383.json",
     "/Users/wentao/.aynite/workspaces/Dev/artifacts/implementation_plan.md",
-    "/Users/wentao/.aynite/workspaces/Dev/artifacts/task.md"
+    "/Users/wentao/.aynite/workspaces/Dev/artifacts/task.md",
+    "/Users/wentao/repos/aynite/src/main/spells/index.ts",
+    "/Users/wentao/repos/aynite/src/main/system/logic.ts",
+    "/Users/wentao/repos/aynite/milestones",
+    "/Users/wentao/repos/aynite/src/main/ai/tools.ts",
+    "/Users/wentao/repos/aynite/src/main/ai/chat.ts",
+    "/Users/wentao/.aynite/workspaces/Dev/artifacts/memory.md",
+    "/Users/wentao/repos/aynite/src/renderer/views/aichat/hooks/useAIChat.ts"
   ],
-  "activeFile": "/Users/wentao/.aynite/workspaces/Dev/artifacts/task.md"
+  "activeFile": "/Users/wentao/repos/aynite/src/renderer/views/aichat/hooks/useAIChat.ts"
 }
