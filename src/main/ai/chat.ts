@@ -197,6 +197,7 @@ export async function aiChat({
     const chatMessages = messages.filter((m) => m.role !== 'system')
     const modelMessages = await convertToModelMessages(chatMessages, {
       tools: enabledTools,
+      ignoreIncompleteToolCalls: true,
     })
 
     const system = systemMessage

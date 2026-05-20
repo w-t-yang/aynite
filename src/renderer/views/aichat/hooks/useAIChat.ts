@@ -447,10 +447,36 @@ export function useAIChat() {
     [loadArtifactStatus],
   )
 
-  // Simple token estimator: (chars / 4) * 1.1
+  // Token estimator: (chars / 4) * 1.1 accounting for all part types
   const tokenCount = messages.reduce((acc, m) => {
-    const text = m.parts.map((p) => (p.type === 'text' ? p.text : '')).join('')
-    return acc + Math.ceil((text.length / 4) * 1.1)
+    const textLength = m.parts.reduce((len, p) => {
+      switch (p.type) {
+        case 'text':
+          return len + p.text.length
+        case 'reasoning':
+          return len + p.text.length
+        case 'dynamic-tool': {
+          let inputLen = 0
+          let outputLen = 0
+          if (p.input) {
+            inputLen =
+              typeof p.input === 'string'
+                ? p.input.length
+                : JSON.stringify(p.input).length
+          }
+          if (p.output) {
+            outputLen =
+              typeof p.output === 'string'
+                ? p.output.length
+                : JSON.stringify(p.output).length
+          }
+          return len + inputLen + outputLen
+        }
+        default:
+          return len
+      }
+    }, 0)
+    return acc + Math.ceil((textLength / 4) * 1.1)
   }, 0)
 
   return {
