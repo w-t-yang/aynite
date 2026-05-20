@@ -57,11 +57,11 @@ export function createMainWindow(dirname: string): void {
   mainWindow.on('unmaximize', () => {
     sendAppEvent(AppEvents.WINDOW_MAXIMIZED_CHANGED, { isMaximized: false })
   })
-  // Track fullscreen via the webContents DOM event instead of typed event
-  mainWindow.webContents.on('enter-fullscreen' as any, () => {
+  // Track fullscreen state changes
+  mainWindow.on('enter-full-screen', () => {
     sendAppEvent(AppEvents.FULLSCREEN_CHANGED, { isFullscreen: true })
   })
-  mainWindow.webContents.on('leave-fullscreen' as any, () => {
+  mainWindow.on('leave-full-screen', () => {
     sendAppEvent(AppEvents.FULLSCREEN_CHANGED, { isFullscreen: false })
   })
 

@@ -247,14 +247,24 @@ function SubmenuFlyout({
     if (!flyoutRef.current) return
     const _flyout = flyoutRef.current
 
-    const menuWidth = Math.min(200, window.innerWidth - anchorRect.right - 20)
+    const preferredWidth = Math.min(
+      200,
+      window.innerWidth - anchorRect.right - 20,
+    )
+    const menuWidth = Math.max(150, preferredWidth)
     const menuHeight = items.length * 32 + 16
 
     let left = anchorRect.right + 4
     let top = anchorRect.top
 
-    if (left + menuWidth > window.innerWidth - 8) {
+    // Check if submenu overflows the right edge, using a realistic minimum width
+    if (left + Math.max(menuWidth, 150) > window.innerWidth - 8) {
       left = anchorRect.left - menuWidth - 4
+    }
+
+    // Also check if it still overflows after flipping (e.g., anchor is at very left edge)
+    if (left < 8) {
+      left = 8
     }
 
     if (top + menuHeight > window.innerHeight - 8) {

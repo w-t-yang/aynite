@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import { Button } from '../../shared/basic/Button'
+import { Modal } from '../../shared/basic/Modal'
 import { FormModal } from '../../shared/featured/FormModal'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { cn } from '../../shared/lib/utils'
@@ -43,6 +44,7 @@ const TitleBar: React.FC = () => {
     setShowSettings,
   } = useApp()
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showVibeModal, setShowVibeModal] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -105,7 +107,7 @@ const TitleBar: React.FC = () => {
 
   const handleDeleteWorkspace = async () => {
     if (workspaces.length <= 1) return
-    await deleteWorkspace(workspaceConfig.id)
+    setShowDeleteConfirm(true)
   }
 
   return (
@@ -113,12 +115,81 @@ const TitleBar: React.FC = () => {
       <div
         className={cn(
           'h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag relative z-layout',
-          isMac && !isFullscreen ? 'pl-[78px]' : 'px-2',
-          !isMac && 'px-2',
+          isMac && !isFullscreen ? 'pl-[78px] pr-2' : isMac ? 'pr-2' : 'px-2',
         )}
       >
-        {/* Left: Layout switcher (dynamic from workspace config) */}
-        <div className="flex items-center gap-1.5 no-drag group/layouts relative px-1">
+        {/* Left: Workspace switcher */}
+        <div className="flex items-center no-drag shrink-0">
+          <SelectionMenu
+            activeId={workspaceConfig.id}
+            items={workspaceOptions}
+            onSelect={switchWorkspace}
+            divided={false}
+            align="left"
+            menuClassName="min-w-[260px]"
+            trigger={
+              <Button variant="ghost" size="sm" className={FLEX_CENTER_GAP_1}>
+                <span>{workspaceConfig.id}</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <title>Chevron down</title>
+                  <path
+                    fillRule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </Button>
+            }
+            title="Workspaces"
+            footer={
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowAddWorkspaceModal(true)}
+                  className="w-full justify-start px-3 py-2 text-xs text-primary hover:bg-primary/10 rounded-md gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <title>Add</title>
+                    <path
+                      fillRule="evenodd"
+                      d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  New Workspace
+                </Button>
+                {workspaces.length > 1 && (
+                  <>
+                    <div className="h-px bg-border/40 my-1 mx-1 shrink-0" />
+                    <Button
+                      variant="ghost"
+                      onClick={handleDeleteWorkspace}
+                      className="w-full justify-start px-3 py-2 text-xs text-destructive hover:bg-destructive/10 rounded-md gap-2 hover:text-destructive"
+                    >
+                      <Trash2 size={14} />
+                      Delete Workspace ({workspaceConfig.id})
+                    </Button>
+                  </>
+                )}
+              </>
+            }
+          />
+        </div>
+
+        {/* Center: Layout switcher - truly centered in the titlebar */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 no-drag group/layouts px-1">
           {workspaceConfig.layouts.map((layout) => {
             const isActive = workspaceConfig.activeLayoutId === layout.id
             return (
@@ -181,60 +252,6 @@ const TitleBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Center: Workspace switcher */}
-        <div className="flex-1 flex justify-center items-center no-drag">
-          <SelectionMenu
-            activeId={workspaceConfig.id}
-            items={workspaceOptions}
-            onSelect={switchWorkspace}
-            divided={false}
-            align="center"
-            trigger={
-              <Button variant="ghost" size="sm" className={FLEX_CENTER_GAP_1}>
-                <span>{workspaceConfig.id}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3.5 w-3.5 text-muted-foreground"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <title>Chevron down</title>
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </Button>
-            }
-            title="Workspaces"
-            footer={
-              <Button
-                variant="ghost"
-                onClick={() => setShowAddWorkspaceModal(true)}
-                className="w-full justify-start px-3 py-2 text-xs text-primary hover:bg-primary/10 rounded-md gap-2"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <title>Add</title>
-                  <path
-                    fillRule="evenodd"
-                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                New Workspace
-              </Button>
-            }
-          />
-        </div>
-
         {/* Right: App options + Window controls */}
         <div className="flex items-center gap-1 no-drag shrink-0">
           <SelectionMenu
@@ -269,21 +286,12 @@ const TitleBar: React.FC = () => {
                 icon: <Palette size={14} />,
                 isActive: showTileControls,
               },
-              { id: 'divider-3', type: 'divider' },
-              {
-                id: 'delete-workspace',
-                label: 'Delete Current Workspace',
-                icon: <Trash2 size={14} />,
-                type: 'danger' as any,
-                disabled: workspaces.length <= 1,
-              },
             ]}
             onSelect={(id: string) => {
               if (id === 'settings') setShowSettings(true)
               else if (id === 'new-window') openNewWindow()
               else if (id === 'toggle-controls')
                 setShowTileControls(!showTileControls)
-              else if (id === 'delete-workspace') handleDeleteWorkspace()
             }}
             onSelectSubmenu={(parentId: string, childId: string) => {
               if (parentId === 'theme') setTheme(childId)
@@ -342,6 +350,44 @@ const TitleBar: React.FC = () => {
             addWorkspace(name)
           }}
         />
+      )}
+
+      {showDeleteConfirm && (
+        <Modal
+          isOpen
+          onClose={() => setShowDeleteConfirm(false)}
+          title="Delete Workspace"
+          size="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete workspace{' '}
+              <span className="font-semibold text-foreground">
+                {workspaceConfig.id}
+              </span>
+              ? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 bg-destructive text-destructive-foreground hover:opacity-90"
+                onClick={async () => {
+                  setShowDeleteConfirm(false)
+                  await deleteWorkspace(workspaceConfig.id)
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       <LayoutVibeModal
