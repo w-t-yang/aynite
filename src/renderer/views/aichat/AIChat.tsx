@@ -30,34 +30,39 @@ export function AIChat() {
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const hasScrolledInitial = useRef(false)
+  const prevLoadingRef = useRef(loading)
   const [showHistory, setShowHistory] = useState(false)
   const [sessions, setSessions] = useState<any[]>([])
 
   useEffect(() => {
     const el = scrollRef.current
-    if (!el) return
+    if (!el || messages.length === 0) return
 
-    // On initial load with messages present, always scroll to bottom
-    if (!hasScrolledInitial.current && messages.length > 0 && !loading) {
-      hasScrolledInitial.current = true
+    // Detect whether this change is a streaming update (AI generating)
+    // vs a bulk message load (initial load, session switch, revert).
+    // During streaming: loading is true, or just transitioned true→false.
+    const streamingUpdate = loading || (prevLoadingRef.current && !loading)
+
+    if (streamingUpdate) {
+      // During streaming - only scroll if user is already near the bottom
+      const isNearBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 150
+      if (isNearBottom) {
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight
+        })
+        setTimeout(() => {
+          el.scrollTop = el.scrollHeight
+        }, 100)
+      }
+    } else {
+      // Bulk load (initial load, session switch) - always scroll to bottom
       requestAnimationFrame(() => {
         el.scrollTop = el.scrollHeight
       })
-      return
     }
 
-    // Subsequent auto-scrolls: only if user is already near the bottom
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
-
-    if (isNearBottom) {
-      const scroll = () => {
-        el.scrollTop = el.scrollHeight
-      }
-      requestAnimationFrame(scroll)
-      // Double check after a short delay for heavy rendering
-      setTimeout(scroll, 100)
-    }
+    prevLoadingRef.current = loading
   }, [messages, loading])
 
   // Global actions for micro-app bridge
