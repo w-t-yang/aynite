@@ -79,7 +79,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
 
     const onSelectArtifact = (path: string) => {
       if (path?.includes('/')) {
-        executeOperation('SWITCH_FILE', { path })
+        window.aynite.setConfig('activeFile', path)
       }
     }
 

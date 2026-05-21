@@ -224,7 +224,15 @@ export function createTools(context: ToolContext) {
             statusMap[status],
           )
           await writeText(taskPath, lines.join('\n'))
-          return `Updated task ${taskIndex} to ${status}`
+
+          // Count progress: total task lines and done/completed lines
+          const totalTasks = lines.filter((l) =>
+            /^\s*-\s*\[[ x/]?\]/.test(l),
+          ).length
+          const doneTasks = lines.filter((l) => /^\s*-\s*\[x\]/.test(l)).length
+
+          // Return with 1-based index and progress
+          return `Updated task ${taskIndex + 1} to ${status} (${doneTasks}/${totalTasks})`
         } catch (e) {
           return `Error updating task: ${e instanceof Error ? e.message : String(e)}`
         }

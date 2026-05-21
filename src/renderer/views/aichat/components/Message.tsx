@@ -124,7 +124,7 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
         const idx = actualArgs?.taskIndex
         const status = actualArgs?.status
         if (idx !== undefined) {
-          return `Update Task (${idx}) → ${status || 'updated'}`
+          return `Update Task ${idx + 1} → ${status || 'updated'}`
         }
         return 'Update Task'
       }
