@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { MatchingView } from '../../../lib/types/file-browser'
 import type { FileInfo } from '../../../lib/types/files'
 import { useAppEvent } from '../ViewContext'
 import { FileContent } from './components/FileContent'
-import type { MatchingView } from './components/StatusBar'
 import { StatusBar } from './components/StatusBar'
 import { TabBar } from './components/TabBar'
 

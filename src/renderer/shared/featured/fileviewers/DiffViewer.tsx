@@ -351,7 +351,7 @@ export function DiffViewer({
             className="flex h-7 items-center px-3 bg-accent/20 border-y border-border/30"
           >
             <div className="flex-1 min-w-0" />
-            <div className="sticky right-0 z-10 flex items-center gap-1.5 bg-accent/20 pl-2 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]">
+            <div className="sticky right-0 z-base flex items-center gap-1.5 bg-accent/20 pl-2 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]">
               <button
                 type="button"
                 onClick={() => handleStage(hunk)}

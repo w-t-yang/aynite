@@ -9,7 +9,7 @@
  * that can be used for runtime validation.
  */
 
-import type { ViewConfig } from '../../lib/types/ai'
+import type { ViewConfig } from '../types/ai'
 
 export const DEFAULT_VIEW_CONFIGS: Record<string, ViewConfig> = {
   // ─── Data-driven views (with expected_file_type) ────────────────────────

@@ -1,14 +1,7 @@
 import { Eye, Pencil, Save } from 'lucide-react'
+import type { MatchingView } from '../../../../lib/types/file-browser'
 import type { FileInfo } from '../../../../lib/types/files'
 import { cn } from '../../../shared/lib/utils'
-
-export interface MatchingView {
-  name: string
-  config: {
-    name: string
-    description?: string
-  }
-}
 
 interface StatusBarProps {
   isEditing: boolean

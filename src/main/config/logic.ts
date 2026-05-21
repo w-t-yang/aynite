@@ -6,6 +6,7 @@ import {
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import type { MainConfig, WorkspaceConfig } from '../../lib/constants/types'
+import { DEFAULT_VIEW_CONFIGS } from '../../lib/constants/view-configs'
 import {
   PLAYBOOK_WORKSPACE_CONFIG,
   TRADER_WORKSPACE_CONFIG,
@@ -53,7 +54,6 @@ import {
 } from '../spells'
 import { initThemes } from '../theme'
 import { getIgnorePatterns } from './ignore'
-import { DEFAULT_VIEW_CONFIGS } from './view-configs'
 
 /**
  * Helper to compare versions.
