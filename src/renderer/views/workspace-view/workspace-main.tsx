@@ -1,4 +1,4 @@
 import { renderView } from '../ViewContext'
-import { WorkspaceView } from './SessionView'
+import { WorkspaceView } from './WorkspaceView'
 
 renderView(WorkspaceView)

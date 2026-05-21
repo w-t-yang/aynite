@@ -428,9 +428,24 @@ export function WorkspaceView() {
 
         {/* Sessions Group */}
         <section className="space-y-3 flex-1 flex flex-col min-h-0">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
-            <MessageSquare size={14} />
-            <span>Sessions</span>
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={14} />
+              <span>Sessions</span>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                window.aynite.setConfig(
+                  'activeSessionId',
+                  Date.now().toString(),
+                )
+              }
+              className="p-1 rounded hover:bg-accent text-muted-foreground/50 hover:text-foreground transition-colors"
+              title="New Session"
+            >
+              <Plus size={14} />
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
             {sessions.length === 0 ? (

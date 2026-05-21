@@ -54,7 +54,7 @@ const EXEMPTED_FILES: Record<string, string> = {
     'Modal action buttons with custom styling',
   'src/renderer/views/rss/components/Sidebar.tsx':
     'Sidebar navigation and action buttons',
-  'src/renderer/views/workspace-view/SessionView.tsx':
+  'src/renderer/views/workspace-view/WorkspaceView.tsx':
     'Commit area with textarea and action buttons',
   'src/renderer/views/spotify/SpotifyApp.tsx':
     'Spotify-specific UI with custom input/button styling',
