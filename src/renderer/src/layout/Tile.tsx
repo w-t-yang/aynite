@@ -1,5 +1,4 @@
-import type React from 'react'
-import { useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppOperation } from '../../../lib/constants/app'
 import type { LeafNode } from '../../../lib/constants/types'
 
@@ -25,16 +24,17 @@ const Tile: React.FC<TileProps> = ({ node }) => {
   const { id, name, size } = node
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [loaded, setLoaded] = useState(false)
+  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const viewOptions = availableViews.map((v) => ({ id: v.id, label: v.name }))
 
   const handleSelectView = (selectedUrl: string) => {
-    console.log(`[Tile] handleSelectView: ${selectedUrl} for tile ${id}`)
     if (selectedUrl === 'close') {
       executeAppOperation(AppOperation.TILE_CLOSE)
     } else {
-      const _view = viewOptions.find((v) => v.id === selectedUrl)
-      console.log(`[Tile] updating tile ${id} to ${selectedUrl}`)
+      setLoaded(false)
+      if (loadTimerRef.current) clearTimeout(loadTimerRef.current)
       updateTileView(id, { name: selectedUrl })
     }
   }
@@ -44,6 +44,20 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     { id: 'divider-1', type: 'divider' },
     { id: 'close', label: 'Close Tile', className: 'text-destructive' },
   ]
+
+  const handleIframeLoad = useCallback(() => {
+    loadTimerRef.current = setTimeout(() => setLoaded(true), 80)
+  }, [])
+
+  // Reset loading state when view name changes
+  useEffect(() => {
+    setLoaded(false)
+    if (loadTimerRef.current) clearTimeout(loadTimerRef.current)
+  }, [])
+
+  const iframeSrc = name
+    ? `aynite://${name}/index.html#tileId=${id}${node.data ? `&data=${encodeURIComponent(JSON.stringify(node.data))}` : ''}`
+    : ''
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: Tile container needs to catch clicks for activation
@@ -95,17 +109,37 @@ const Tile: React.FC<TileProps> = ({ node }) => {
         />
       </div>
 
-      <div className="tile-content h-full p-0 relative overflow-hidden">
+      <div className="tile-content h-full p-0 relative overflow-hidden bg-background">
         {name ? (
-          <iframe
-            ref={iframeRef}
-            src={`aynite://${name}/index.html#tileId=${id}${node.data ? `&data=${encodeURIComponent(JSON.stringify(node.data))}` : ''}`}
-            className="w-full h-full border-none"
-            style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
-            title={name}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            allow="clipboard-read; clipboard-write"
-          />
+          <>
+            {/* Loading overlay — shown before iframe has loaded */}
+            <div
+              className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none bg-background"
+              style={{ opacity: loaded ? 0 : 1 }}
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                <span className="text-[10px] text-muted-foreground/50 font-medium tracking-wider uppercase">
+                  Loading {name}...
+                </span>
+              </div>
+            </div>
+
+            <iframe
+              ref={iframeRef}
+              key={iframeSrc}
+              src={iframeSrc}
+              onLoad={handleIframeLoad}
+              className="w-full h-full border-none transition-opacity duration-300"
+              style={{
+                opacity: loaded ? 1 : 0,
+                pointerEvents: isResizing ? 'none' : ('auto' as any),
+              }}
+              title={name}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              allow="clipboard-read; clipboard-write"
+            />
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <svg
