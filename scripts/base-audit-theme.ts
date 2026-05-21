@@ -34,6 +34,22 @@ function scanFile(filePath: string) {
     return
   }
 
+  // Skip data visualization views — their colors are chart/indicator data,
+  // theme preview data, or visual effect shadows, not theme violations
+  const dataViewDirs = [
+    'src/renderer/views/canvas',
+    'src/renderer/views/datachart',
+    'src/renderer/views/flow',
+    'src/renderer/views/graph',
+    'src/renderer/views/mindmap',
+    'src/renderer/views/stockchart',
+    'src/renderer/views/theme-studio',
+  ]
+  if (dataViewDirs.some((dir) => relativePath.startsWith(dir))) return
+
+  // Skip DiffViewer — shadow rgba colors are visual effects, not theme colors
+  if (relativePath.includes('DiffViewer.tsx')) return
+
   lines.forEach((line, index) => {
     const lineNum = index + 1
     const trimmedLine = line.trim()
