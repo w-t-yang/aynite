@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileInfo } from '../../../lib/types/files'
 import { useAppEvent } from '../ViewContext'
 import { FileContent } from './components/FileContent'
+import type { MatchingView } from './components/StatusBar'
 import { StatusBar } from './components/StatusBar'
 import { TabBar } from './components/TabBar'
 
@@ -241,6 +242,48 @@ export function FileBrowserPage() {
 
   const [isEditing, setIsEditing] = useState(false)
 
+  // ─── View Preview State ─────────────────────────────────────────────────
+  const [matchingViews, setMatchingViews] = useState<MatchingView[]>([])
+  const [activeView, setActiveView] = useState<string | null>(null)
+
+  // Load matching views when activePath changes (JSON/text files only)
+  useEffect(() => {
+    setMatchingViews([])
+    setActiveView(null)
+
+    if (!activePath || !fileInfo) return
+    // Only try matching for JSON files (the main expected_file_type)
+    if (fileInfo.extension?.toLowerCase() !== 'json') return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const views = await (window as any).aynite.getConfig('matching-views', {
+          filePath: activePath,
+        })
+        if (!cancelled && Array.isArray(views) && views.length > 0) {
+          setMatchingViews(views)
+          // Auto-select first matching view as the active preview
+          setActiveView(views[0].name)
+        } else if (!cancelled) {
+          setActiveView(null)
+        }
+      } catch {
+        // Silently fail — matching is best-effort
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [activePath, fileInfo])
+
+  const handleSelectView = useCallback((viewName: string | null) => {
+    setActiveView(viewName)
+    if (viewName !== null) {
+      setIsEditing(false) // preview mode overrides edit
+    }
+  }, [])
+
   const handleSave = useCallback(async () => {
     if (!activePath || content === null) return
     try {
@@ -278,6 +321,7 @@ export function FileBrowserPage() {
           error={error}
           isEditing={isEditing}
           onContentChange={setContent}
+          activeView={activeView}
         />
       </div>
       {activePath && (
@@ -288,6 +332,9 @@ export function FileBrowserPage() {
           content={content}
           onSave={handleSave}
           isDirty={isDirty}
+          matchingViews={matchingViews}
+          activeView={activeView}
+          onSelectView={handleSelectView}
         />
       )}
     </div>

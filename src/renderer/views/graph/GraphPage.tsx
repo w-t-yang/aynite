@@ -99,6 +99,11 @@ export function GraphPage() {
       })
   }, [])
 
+  const isPreview = useMemo(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    return new URLSearchParams(hash).get('preview') === '1'
+  }, [])
+
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const _isDark = currentTheme?.type === 'dark'
 
@@ -355,51 +360,53 @@ export function GraphPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      <ViewHeader icon={<Share2 size={16} />} title="Graph Explorer">
-        <button
-          type="button"
-          onClick={() => setZoom((z) => z * 1.2)}
-          className={iconBtn()}
-          title="Zoom In"
-        >
-          <ZoomIn size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => setZoom((z) => z / 1.2)}
-          className={iconBtn()}
-          title="Zoom Out"
-        >
-          <ZoomOut size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setZoom(1)
-            setOffset({ x: 0, y: 0 })
-          }}
-          className={iconBtn()}
-          title="Reset Zoom"
-        >
-          <Undo2 size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className={iconBtn()}
-          title="Reload"
-        >
-          <RefreshCw size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleSelectFile}
-          className={iconBtn()}
-          title="Load graph file"
-        >
-          <FolderOpen size={14} />
-        </button>
-      </ViewHeader>
+      {!isPreview && (
+        <ViewHeader icon={<Share2 size={16} />} title="Graph Explorer">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => z * 1.2)}
+            className={iconBtn()}
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => z / 1.2)}
+            className={iconBtn()}
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setZoom(1)
+              setOffset({ x: 0, y: 0 })
+            }}
+            className={iconBtn()}
+            title="Reset Zoom"
+          >
+            <Undo2 size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className={iconBtn()}
+            title="Reload"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            className={iconBtn()}
+            title="Load graph file"
+          >
+            <FolderOpen size={14} />
+          </button>
+        </ViewHeader>
+      )}
 
       <section
         ref={containerRef}

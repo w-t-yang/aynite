@@ -64,6 +64,11 @@ export function CanvasPage() {
       })
   }, [])
 
+  const isPreview = useMemo(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    return new URLSearchParams(hash).get('preview') === '1'
+  }, [])
+
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const isDark = currentTheme?.type === 'dark'
 
@@ -234,66 +239,68 @@ export function CanvasPage() {
           display: none !important;
         }
       `}</style>
-      <ViewHeader
-        icon={
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
+      {!isPreview && (
+        <ViewHeader
+          icon={
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="7.5" cy="7.5" r="1.5" />
+              <path d="m3 16 4.5-4.5a1 1 0 0 1 1.4 0l3.6 3.6" />
+              <path d="m14 12 1.5-1.5a1 1 0 0 1 1.4 0L21 16" />
+            </svg>
+          }
+          title="Canvas"
+        >
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className={iconBtn()}
+            title="Zoom In"
           >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="7.5" cy="7.5" r="1.5" />
-            <path d="m3 16 4.5-4.5a1 1 0 0 1 1.4 0l3.6 3.6" />
-            <path d="m14 12 1.5-1.5a1 1 0 0 1 1.4 0L21 16" />
-          </svg>
-        }
-        title="Canvas"
-      >
-        <button
-          type="button"
-          onClick={handleZoomIn}
-          className={iconBtn()}
-          title="Zoom In"
-        >
-          <ZoomIn size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleZoomOut}
-          className={iconBtn()}
-          title="Zoom Out"
-        >
-          <ZoomOut size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          className={iconBtn()}
-          title="Save"
-        >
-          <Save size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className={iconBtn()}
-          title="Reload"
-        >
-          <RefreshCw size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleSelectFile}
-          className={iconBtn()}
-          title="Load canvas file"
-        >
-          <FolderOpen size={14} />
-        </button>
-      </ViewHeader>
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className={iconBtn()}
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className={iconBtn()}
+            title="Save"
+          >
+            <Save size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className={iconBtn()}
+            title="Reload"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            className={iconBtn()}
+            title="Load canvas file"
+          >
+            <FolderOpen size={14} />
+          </button>
+        </ViewHeader>
+      )}
 
       {/* Canvas Area */}
       <section className="flex-1 relative bg-background">

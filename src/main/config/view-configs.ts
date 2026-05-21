@@ -98,16 +98,44 @@ export const DEFAULT_VIEW_CONFIGS: Record<string, ViewConfig> = {
       ext: 'json',
       schema: {
         type: 'object',
-        required: ['nodes'],
+        required: ['nodes', 'edges'],
         properties: {
           nodes: {
             type: 'array',
-            items: { type: 'object' },
+            items: {
+              type: 'object',
+              required: ['position', 'data'],
+              properties: {
+                id: { type: 'string' },
+                position: {
+                  type: 'object',
+                  required: ['x', 'y'],
+                  properties: {
+                    x: { type: 'number' },
+                    y: { type: 'number' },
+                  },
+                },
+                data: {
+                  type: 'object',
+                  required: ['label'],
+                },
+                type: { type: 'string' },
+              },
+            },
             minItems: 1,
           },
           edges: {
             type: 'array',
-            items: { type: 'object' },
+            items: {
+              type: 'object',
+              required: ['source', 'target'],
+              properties: {
+                id: { type: 'string' },
+                source: { type: 'string' },
+                target: { type: 'string' },
+                label: { type: 'string' },
+              },
+            },
           },
           viewport: { type: 'object' },
         },
@@ -125,16 +153,33 @@ export const DEFAULT_VIEW_CONFIGS: Record<string, ViewConfig> = {
       ext: 'json',
       schema: {
         type: 'object',
-        required: ['nodes'],
+        required: ['nodes', 'links'],
         properties: {
           nodes: {
             type: 'array',
-            items: { type: 'object' },
+            items: {
+              type: 'object',
+              required: ['id', 'label'],
+              properties: {
+                id: { type: 'string' },
+                label: { type: 'string' },
+                group: { type: 'number' },
+                val: { type: 'number' },
+              },
+            },
             minItems: 1,
           },
           links: {
             type: 'array',
-            items: { type: 'object' },
+            items: {
+              type: 'object',
+              required: ['source', 'target'],
+              properties: {
+                source: { type: 'string' },
+                target: { type: 'string' },
+                value: { type: 'number' },
+              },
+            },
           },
         },
       },

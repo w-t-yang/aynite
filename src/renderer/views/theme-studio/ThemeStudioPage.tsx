@@ -81,6 +81,11 @@ export function ThemeStudioPage() {
     return match ? match[1] : null
   }, [])
 
+  const isPreview = useMemo(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    return new URLSearchParams(hash).get('preview') === '1'
+  }, [])
+
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const _isDark = currentTheme?.type === 'dark'
 
@@ -233,48 +238,50 @@ export function ThemeStudioPage() {
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       {/* Toolbar */}
-      <ViewHeader icon={<Palette size={16} />} title="Theme Studio">
-        <button
-          type="button"
-          onClick={() => setShowJson((v) => !v)}
-          className={iconBtn(
-            showJson ? 'bg-primary text-primary-foreground' : '',
-          )}
-          title={showJson ? 'Hide JSON' : 'Show JSON'}
-        >
-          {showJson ? <EyeOff size={14} /> : <Eye size={14} />}
-        </button>
-        <button
-          type="button"
-          onClick={handleExportJson}
-          className={iconBtn()}
-          title="Export theme as JSON"
-        >
-          {copied ? (
-            <Check size={14} className="text-success" />
-          ) : (
-            <Clipboard size={14} />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={handleApplyTheme}
-          className={iconBtn(
-            'bg-primary text-primary-foreground hover:opacity-90',
-          )}
-          title="Apply theme"
-        >
-          <Check size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleSelectFile}
-          className={iconBtn()}
-          title="Load theme file"
-        >
-          <Upload size={14} />
-        </button>
-      </ViewHeader>
+      {!isPreview && (
+        <ViewHeader icon={<Palette size={16} />} title="Theme Studio">
+          <button
+            type="button"
+            onClick={() => setShowJson((v) => !v)}
+            className={iconBtn(
+              showJson ? 'bg-primary text-primary-foreground' : '',
+            )}
+            title={showJson ? 'Hide JSON' : 'Show JSON'}
+          >
+            {showJson ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+          <button
+            type="button"
+            onClick={handleExportJson}
+            className={iconBtn()}
+            title="Export theme as JSON"
+          >
+            {copied ? (
+              <Check size={14} className="text-success" />
+            ) : (
+              <Clipboard size={14} />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleApplyTheme}
+            className={iconBtn(
+              'bg-primary text-primary-foreground hover:opacity-90',
+            )}
+            title="Apply theme"
+          >
+            <Check size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            className={iconBtn()}
+            title="Load theme file"
+          >
+            <Upload size={14} />
+          </button>
+        </ViewHeader>
+      )}
 
       {/* Content */}
       <section className="flex-1 flex overflow-hidden relative bg-background">

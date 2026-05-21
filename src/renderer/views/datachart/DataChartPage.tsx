@@ -94,6 +94,11 @@ export function DataChartPage() {
       })
   }, [])
 
+  const isPreview = useMemo(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    return new URLSearchParams(hash).get('preview') === '1'
+  }, [])
+
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const themeType = currentTheme?.type || 'dark'
 
@@ -432,80 +437,82 @@ export function DataChartPage() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      <ViewHeader icon={<BarChart3 size={16} />} title="Chart">
-        <div className="relative">
+      {!isPreview && (
+        <ViewHeader icon={<BarChart3 size={16} />} title="Chart">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              {chartIcons[chartType]} {chartType.toUpperCase()}{' '}
+              <ChevronDown size={12} />
+            </button>
+
+            {isTypeMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
+                  onClick={() => setIsTypeMenuOpen(false)}
+                  aria-label="Close menu"
+                />
+                <div className="absolute top-full left-0 mt-1 w-40 bg-popover border border-border rounded-lg shadow-xl z-layout overflow-hidden py-1 backdrop-blur-md">
+                  {Object.values(ChartType).map((type) => (
+                    <button
+                      type="button"
+                      key={type}
+                      onClick={() => {
+                        setChartType(type)
+                        setIsTypeMenuOpen(false)
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors ${
+                        chartType === type
+                          ? 'text-primary'
+                          : 'text-popover-foreground'
+                      }`}
+                    >
+                      {chartIcons[type]} {type.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button
             type="button"
-            onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => setZoom((z) => Math.min(z * 1.3, 5))}
+            className={iconBtn()}
+            title="Zoom In"
           >
-            {chartIcons[chartType]} {chartType.toUpperCase()}{' '}
-            <ChevronDown size={12} />
+            <ZoomIn size={14} />
           </button>
-
-          {isTypeMenuOpen && (
-            <>
-              <button
-                type="button"
-                className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
-                onClick={() => setIsTypeMenuOpen(false)}
-                aria-label="Close menu"
-              />
-              <div className="absolute top-full left-0 mt-1 w-40 bg-popover border border-border rounded-lg shadow-xl z-layout overflow-hidden py-1 backdrop-blur-md">
-                {Object.values(ChartType).map((type) => (
-                  <button
-                    type="button"
-                    key={type}
-                    onClick={() => {
-                      setChartType(type)
-                      setIsTypeMenuOpen(false)
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors ${
-                      chartType === type
-                        ? 'text-primary'
-                        : 'text-popover-foreground'
-                    }`}
-                  >
-                    {chartIcons[type]} {type.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setZoom((z) => Math.min(z * 1.3, 5))}
-          className={iconBtn()}
-          title="Zoom In"
-        >
-          <ZoomIn size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => setZoom((z) => Math.max(z / 1.3, 0.3))}
-          className={iconBtn()}
-          title="Zoom Out"
-        >
-          <ZoomOut size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className={iconBtn()}
-          title="Reload"
-        >
-          <RefreshCw size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleSelectFile}
-          className={iconBtn()}
-          title="Load chart file"
-        >
-          <FolderOpen size={14} />
-        </button>
-      </ViewHeader>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(z / 1.3, 0.3))}
+            className={iconBtn()}
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className={iconBtn()}
+            title="Reload"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            className={iconBtn()}
+            title="Load chart file"
+          >
+            <FolderOpen size={14} />
+          </button>
+        </ViewHeader>
+      )}
 
       <section
         aria-label="Data Chart"

@@ -196,6 +196,11 @@ export function StockChart() {
     return match ? match[1] : null
   }, [])
 
+  const isPreview = useMemo(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    return new URLSearchParams(hash).get('preview') === '1'
+  }, [])
+
   // UI State
   const [isIndicatorMenuOpen, setIsIndicatorMenuOpen] = useState(false)
   const [_isComparePromptOpen, _setIsComparePromptOpen] = useState(false)
@@ -626,160 +631,162 @@ export function StockChart() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      <ViewHeader icon={<Activity size={16} />} title="Stock Chart">
-        <div className="flex items-center gap-1 text-[10px] font-bold">
-          {[
-            TimeInterval.D1,
-            TimeInterval.W1,
-            TimeInterval.M1,
-            TimeInterval.Y1,
-          ].map((tf) => (
-            <button
-              type="button"
-              key={tf}
-              onClick={() => handleTimeframeChange(tf)}
-              className={`px-2 py-1 rounded transition-colors uppercase ${
-                timeframe === tf
-                  ? 'text-primary-foreground bg-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}
-            >
-              {tf}
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={handleZoomIn}
-          className={iconBtn()}
-          title="Zoom In"
-        >
-          <ZoomIn size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleZoomOut}
-          className={iconBtn()}
-          title="Zoom Out"
-        >
-          <ZoomOut size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className={iconBtn()}
-          title="Reload"
-        >
-          <RefreshCw size={14} />
-        </button>
-        {/* Indicators Dropdown */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsIndicatorMenuOpen(!isIndicatorMenuOpen)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-          >
-            <Activity size={14} /> INDICATORS <ChevronDown size={12} />
-          </button>
-
-          {isIndicatorMenuOpen && (
-            <>
+      {!isPreview && (
+        <ViewHeader icon={<Activity size={16} />} title="Stock Chart">
+          <div className="flex items-center gap-1 text-[10px] font-bold">
+            {[
+              TimeInterval.D1,
+              TimeInterval.W1,
+              TimeInterval.M1,
+              TimeInterval.Y1,
+            ].map((tf) => (
               <button
                 type="button"
-                className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
-                onClick={() => setIsIndicatorMenuOpen(false)}
-                aria-label="Close menu"
-              />
-              <div className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-xl z-popover overflow-hidden py-1 max-h-[70vh] overflow-y-auto backdrop-blur-md">
-                <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
-                  Trend & Moving Averages
-                </div>
-                {[
-                  { id: 'sma5', label: 'SMA 5' },
-                  { id: 'sma10', label: 'SMA 10' },
-                  { id: 'sma20', label: 'SMA 20' },
-                  { id: 'sma50', label: 'SMA 50' },
-                  { id: 'sma100', label: 'SMA 100' },
-                  { id: 'sma200', label: 'SMA 200' },
-                  { id: 'ema12', label: 'EMA 12' },
-                  { id: 'ema26', label: 'EMA 26' },
-                  { id: 'ema50', label: 'EMA 50' },
-                  { id: 'ema200', label: 'EMA 200' },
-                  { id: 'vwap', label: 'VWAP' },
-                  { id: 'sar', label: 'Parabolic SAR' },
-                ].map((ind) => (
-                  <button
-                    type="button"
-                    key={ind.id}
-                    onClick={() => toggleIndicator(ind.id as any)}
-                    className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
-                  >
-                    {ind.label}{' '}
-                    {indicators[ind.id as keyof typeof indicators] && (
-                      <Check size={12} className="text-primary" />
-                    )}
-                  </button>
-                ))}
+                key={tf}
+                onClick={() => handleTimeframeChange(tf)}
+                className={`px-2 py-1 rounded transition-colors uppercase ${
+                  timeframe === tf
+                    ? 'text-primary-foreground bg-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
 
-                <div className="border-t border-border my-1"></div>
-                <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
-                  Channels & Bands
-                </div>
-                {[
-                  { id: 'bollinger', label: 'Bollinger Bands' },
-                  { id: 'donchian', label: 'Donchian Channels' },
-                  { id: 'keltner', label: 'Keltner Channels' },
-                ].map((ind) => (
-                  <button
-                    type="button"
-                    key={ind.id}
-                    onClick={() => toggleIndicator(ind.id as any)}
-                    className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
-                  >
-                    {ind.label}{' '}
-                    {indicators[ind.id as keyof typeof indicators] && (
-                      <Check size={12} className="text-primary" />
-                    )}
-                  </button>
-                ))}
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className={iconBtn()}
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className={iconBtn()}
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className={iconBtn()}
+            title="Reload"
+          >
+            <RefreshCw size={14} />
+          </button>
+          {/* Indicators Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsIndicatorMenuOpen(!isIndicatorMenuOpen)}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              <Activity size={14} /> INDICATORS <ChevronDown size={12} />
+            </button>
 
-                <div className="border-t border-border my-1"></div>
-                <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
-                  Oscillators
+            {isIndicatorMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
+                  onClick={() => setIsIndicatorMenuOpen(false)}
+                  aria-label="Close menu"
+                />
+                <div className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-xl z-popover overflow-hidden py-1 max-h-[70vh] overflow-y-auto backdrop-blur-md">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
+                    Trend & Moving Averages
+                  </div>
+                  {[
+                    { id: 'sma5', label: 'SMA 5' },
+                    { id: 'sma10', label: 'SMA 10' },
+                    { id: 'sma20', label: 'SMA 20' },
+                    { id: 'sma50', label: 'SMA 50' },
+                    { id: 'sma100', label: 'SMA 100' },
+                    { id: 'sma200', label: 'SMA 200' },
+                    { id: 'ema12', label: 'EMA 12' },
+                    { id: 'ema26', label: 'EMA 26' },
+                    { id: 'ema50', label: 'EMA 50' },
+                    { id: 'ema200', label: 'EMA 200' },
+                    { id: 'vwap', label: 'VWAP' },
+                    { id: 'sar', label: 'Parabolic SAR' },
+                  ].map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.id}
+                      onClick={() => toggleIndicator(ind.id as any)}
+                      className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
+                    >
+                      {ind.label}{' '}
+                      {indicators[ind.id as keyof typeof indicators] && (
+                        <Check size={12} className="text-primary" />
+                      )}
+                    </button>
+                  ))}
+
+                  <div className="border-t border-border my-1"></div>
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
+                    Channels & Bands
+                  </div>
+                  {[
+                    { id: 'bollinger', label: 'Bollinger Bands' },
+                    { id: 'donchian', label: 'Donchian Channels' },
+                    { id: 'keltner', label: 'Keltner Channels' },
+                  ].map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.id}
+                      onClick={() => toggleIndicator(ind.id as any)}
+                      className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
+                    >
+                      {ind.label}{' '}
+                      {indicators[ind.id as keyof typeof indicators] && (
+                        <Check size={12} className="text-primary" />
+                      )}
+                    </button>
+                  ))}
+
+                  <div className="border-t border-border my-1"></div>
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
+                    Oscillators
+                  </div>
+                  {[
+                    { id: 'macd', label: 'MACD' },
+                    { id: 'rsi', label: 'RSI' },
+                    { id: 'stoch', label: 'Stochastic' },
+                    { id: 'cci', label: 'CCI' },
+                    { id: 'atr', label: 'ATR' },
+                  ].map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.id}
+                      onClick={() => toggleIndicator(ind.id as any)}
+                      className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
+                    >
+                      {ind.label}{' '}
+                      {indicators[ind.id as keyof typeof indicators] && (
+                        <Check size={12} className="text-primary" />
+                      )}
+                    </button>
+                  ))}
                 </div>
-                {[
-                  { id: 'macd', label: 'MACD' },
-                  { id: 'rsi', label: 'RSI' },
-                  { id: 'stoch', label: 'Stochastic' },
-                  { id: 'cci', label: 'CCI' },
-                  { id: 'atr', label: 'ATR' },
-                ].map((ind) => (
-                  <button
-                    type="button"
-                    key={ind.id}
-                    onClick={() => toggleIndicator(ind.id as any)}
-                    className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
-                  >
-                    {ind.label}{' '}
-                    {indicators[ind.id as keyof typeof indicators] && (
-                      <Check size={12} className="text-primary" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={handleSelectSystemFile}
-          className={iconBtn()}
-          title="Load chart data"
-        >
-          <FolderOpen size={14} />
-        </button>
-      </ViewHeader>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleSelectSystemFile}
+            className={iconBtn()}
+            title="Load chart data"
+          >
+            <FolderOpen size={14} />
+          </button>
+        </ViewHeader>
+      )}
 
       <section
         aria-label="Stock Chart"

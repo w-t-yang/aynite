@@ -2,6 +2,14 @@ import { Eye, Pencil, Save } from 'lucide-react'
 import type { FileInfo } from '../../../../lib/types/files'
 import { cn } from '../../../shared/lib/utils'
 
+export interface MatchingView {
+  name: string
+  config: {
+    name: string
+    description?: string
+  }
+}
+
 interface StatusBarProps {
   isEditing: boolean
   setIsEditing: (val: boolean) => void
@@ -9,6 +17,12 @@ interface StatusBarProps {
   content: string | null
   onSave?: () => void
   isDirty?: boolean
+  /** Views whose schema matches the current file */
+  matchingViews?: MatchingView[]
+  /** Currently selected view preview mode (null = default) */
+  activeView?: string | null
+  /** Called when user selects a view or default */
+  onSelectView?: (viewName: string | null) => void
 }
 
 export function StatusBar({
@@ -18,6 +32,9 @@ export function StatusBar({
   content,
   onSave,
   isDirty = false,
+  matchingViews = [],
+  activeView = null,
+  onSelectView,
 }: StatusBarProps) {
   const wordCount = content ? content.trim().split(/\s+/).length : 0
   const lineCount = content ? content.split('\n').length : 0
@@ -27,12 +44,39 @@ export function StatusBar({
       {/* Left section: mode + save */}
       <div className="flex items-center gap-1">
         <div className="flex items-center text-[10px] font-medium tracking-wider">
+          {/* Matching view buttons */}
+          {matchingViews.map((view, i) => (
+            <button
+              key={view.name}
+              type="button"
+              onClick={() => onSelectView?.(view.name)}
+              title={view.config.description}
+              className={cn(
+                'flex items-center gap-1 px-2 py-0.5 transition-colors',
+                activeView === view.name
+                  ? 'text-foreground/80'
+                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+              )}
+            >
+              {i > 0 && <div className="w-px h-3 bg-border/30 mr-1" />}
+              <span>{view.config.name}</span>
+            </button>
+          ))}
+
+          {matchingViews.length > 0 && (
+            <div className="w-px h-3 bg-border/30" />
+          )}
+
+          {/* View mode (text viewer) */}
           <button
             type="button"
-            onClick={() => setIsEditing(false)}
+            onClick={() => {
+              setIsEditing(false)
+              onSelectView?.(null)
+            }}
             className={cn(
               'flex items-center gap-1 px-2 py-0.5 transition-colors',
-              !isEditing
+              !isEditing && activeView === null
                 ? 'text-foreground/80'
                 : 'text-muted-foreground/40 hover:text-muted-foreground/70',
             )}
@@ -40,10 +84,14 @@ export function StatusBar({
             <Eye size={11} />
             <span>View</span>
           </button>
-          <div className="w-px h-3 bg-border/30" />
+
+          {/* Edit mode */}
           <button
             type="button"
-            onClick={() => setIsEditing(true)}
+            onClick={() => {
+              setIsEditing(true)
+              onSelectView?.(null)
+            }}
             className={cn(
               'flex items-center gap-1 px-2 py-0.5 transition-colors',
               isEditing

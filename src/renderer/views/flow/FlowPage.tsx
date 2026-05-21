@@ -105,6 +105,11 @@ function FlowCanvas() {
     return match ? match[1] : null
   }, [])
 
+  const isPreview = useMemo(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    return new URLSearchParams(hash).get('preview') === '1'
+  }, [])
+
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const isDark = currentTheme?.type === 'dark'
 
@@ -302,48 +307,50 @@ function FlowCanvas() {
 
   return (
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
-      <ViewHeader icon={<Workflow size={16} />} title="Flow Editor">
-        <button
-          type="button"
-          onClick={() => reactFlow.zoomIn()}
-          className={iconBtn()}
-          title="Zoom In"
-        >
-          <ZoomIn size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => reactFlow.zoomOut()}
-          className={iconBtn()}
-          title="Zoom Out"
-        >
-          <ZoomOut size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => reactFlow.fitView({ duration: 200 })}
-          className={iconBtn()}
-          title="Fit View"
-        >
-          <Maximize2 size={14} className="rotate-45" />
-        </button>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className={iconBtn()}
-          title="Reload"
-        >
-          <RefreshCw size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={handleSelectFile}
-          className={iconBtn()}
-          title="Load flow file"
-        >
-          <FolderOpen size={14} />
-        </button>
-      </ViewHeader>
+      {!isPreview && (
+        <ViewHeader icon={<Workflow size={16} />} title="Flow Editor">
+          <button
+            type="button"
+            onClick={() => reactFlow.zoomIn()}
+            className={iconBtn()}
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => reactFlow.zoomOut()}
+            className={iconBtn()}
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => reactFlow.fitView({ duration: 200 })}
+            className={iconBtn()}
+            title="Fit View"
+          >
+            <Maximize2 size={14} className="rotate-45" />
+          </button>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className={iconBtn()}
+            title="Reload"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            className={iconBtn()}
+            title="Load flow file"
+          >
+            <FolderOpen size={14} />
+          </button>
+        </ViewHeader>
+      )}
 
       {/* Canvas */}
       <section className="flex-1 relative">

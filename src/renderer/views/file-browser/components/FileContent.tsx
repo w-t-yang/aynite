@@ -10,6 +10,7 @@ import { TextEditor } from '../../../shared/featured/fileviewers/TextEditor'
 import { TextViewer } from '../../../shared/featured/fileviewers/TextViewer'
 import { getFileCategory } from '../../../shared/lib/file-handlers'
 import { useAppOperation } from '../../ViewContext'
+import { ViewPreview } from './ViewPreview'
 
 interface FileContentProps {
   path: string | null
@@ -19,6 +20,8 @@ interface FileContentProps {
   error: string | null
   isEditing?: boolean
   onContentChange?: (content: string) => void
+  /** Active view preview mode (null = default rendering) */
+  activeView?: string | null
 }
 
 export function FileContent({
@@ -29,6 +32,7 @@ export function FileContent({
   error,
   isEditing = false,
   onContentChange,
+  activeView = null,
 }: FileContentProps) {
   const execOp = useAppOperation()
   const [baseContent, setBaseContent] = useState<string | null>(null)
@@ -114,6 +118,11 @@ export function FileContent({
   }
 
   if (!fileInfo) return null
+
+  // Render view preview if a matching view is active
+  if (activeView && path) {
+    return <ViewPreview viewName={activeView} filePath={path} />
+  }
 
   const category = getFileCategory(
     fileInfo.extension,
