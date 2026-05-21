@@ -1,5 +1,6 @@
 import { diffLines } from 'diff'
-import { useMemo, useState } from 'react'
+import { ArrowDown, ArrowUp } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useView } from '../../../views/ViewContext'
 import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
@@ -30,6 +31,8 @@ interface DiffHunk {
   /** index in the lines array where the hunk's last content line sits */
   lineIndex: number
 }
+
+type ViewMode = 'full' | 'changes-only'
 
 function buildDiffData(head: string, current: string) {
   const parts = diffLines(head, current)
@@ -154,6 +157,10 @@ export function DiffViewer({
   )
 
   const [processedHunks, setProcessedHunks] = useState<Set<string>>(new Set())
+  const [viewMode, setViewMode] = useState<ViewMode>('full')
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const hunkRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const ext = extension || 'txt'
 
@@ -164,6 +171,20 @@ export function DiffViewer({
     }
     return map
   }, [hunks])
+
+  const unprocessedHunks = useMemo(
+    () => hunks.filter((h) => !processedHunks.has(h.id)),
+    [hunks, processedHunks],
+  )
+
+  const visibleLineIndices = useMemo(() => {
+    return diffLines
+      .map((line, idx) => ({ line, idx }))
+      .filter(
+        ({ line }) => viewMode !== 'changes-only' || line.type !== 'unchanged',
+      )
+      .map(({ idx }) => idx)
+  }, [diffLines, viewMode])
 
   const handleStage = async (hunk: DiffHunk) => {
     if (!filePath) return
@@ -207,10 +228,76 @@ export function DiffViewer({
     }
   }
 
+  const setHunkRef = useCallback(
+    (hunkId: string, el: HTMLDivElement | null) => {
+      if (el) {
+        hunkRefs.current.set(hunkId, el)
+      } else {
+        hunkRefs.current.delete(hunkId)
+      }
+    },
+    [],
+  )
+
+  const scrollToChange = useCallback(
+    (direction: 'prev' | 'next') => {
+      const container = scrollContainerRef.current
+      if (!container) return
+
+      // Get all unprocessed hunk entries sorted by position
+      const entries = unprocessedHunks
+        .map((h) => {
+          const el = hunkRefs.current.get(h.id)
+          if (!el) return null
+          return { id: h.id, el, top: el.offsetTop }
+        })
+        .filter(Boolean) as { id: string; el: HTMLDivElement; top: number }[]
+
+      if (entries.length === 0) return
+      entries.sort((a, b) => a.top - b.top)
+
+      // Find which hunk is closest to the viewport center
+      const viewCenter = container.scrollTop + container.clientHeight / 2
+      let currentIdx = 0
+      let minDist = Infinity
+      for (let i = 0; i < entries.length; i++) {
+        const dist = Math.abs(entries[i].top - viewCenter)
+        if (dist < minDist) {
+          minDist = dist
+          currentIdx = i
+        }
+      }
+
+      let targetIdx: number
+      if (direction === 'next') {
+        targetIdx = currentIdx + 1
+        if (targetIdx >= entries.length) return // at last change, no wrap
+      } else {
+        targetIdx = currentIdx - 1
+        if (targetIdx < 0) return // at first change, no wrap
+      }
+
+      entries[targetIdx].el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    },
+    [unprocessedHunks],
+  )
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode((prev) => (prev === 'full' ? 'changes-only' : 'full'))
+  }, [])
+
   function renderContent() {
     const elements: React.ReactNode[] = []
     for (let i = 0; i < diffLines.length; i++) {
       const line = diffLines[i]
+
+      // Skip unchanged lines in changes-only mode
+      if (viewMode === 'changes-only' && line.type === 'unchanged') {
+        continue
+      }
 
       const bg =
         line.type === 'added'
@@ -260,22 +347,26 @@ export function DiffViewer({
         elements.push(
           <div
             key={`${line.id}-actions`}
-            className="flex h-7 items-center justify-end gap-1.5 px-3 bg-accent/20 border-y border-border/30"
+            ref={(el) => setHunkRef(hunk.id, el)}
+            className="flex h-7 items-center px-3 bg-accent/20 border-y border-border/30"
           >
-            <button
-              type="button"
-              onClick={() => handleStage(hunk)}
-              className="text-[10px] px-2 py-0.5 rounded bg-green-600/15 text-green-700 dark:text-green-400 hover:bg-green-600/30 transition-colors cursor-pointer"
-            >
-              Accept
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDiscard(hunk)}
-              className="text-[10px] px-2 py-0.5 rounded bg-red-600/15 text-red-700 dark:text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer"
-            >
-              Reject
-            </button>
+            <div className="flex-1 min-w-0" />
+            <div className="sticky right-0 z-10 flex items-center gap-1.5 bg-accent/20 pl-2 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]">
+              <button
+                type="button"
+                onClick={() => handleStage(hunk)}
+                className="text-[10px] px-2 py-0.5 rounded bg-green-600/15 text-green-700 dark:text-green-400 hover:bg-green-600/30 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Accept
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDiscard(hunk)}
+                className="text-[10px] px-2 py-0.5 rounded bg-red-600/15 text-red-700 dark:text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Reject
+              </button>
+            </div>
           </div>,
         )
       }
@@ -286,26 +377,71 @@ export function DiffViewer({
   return (
     <div
       className={cn(
-        'flex h-full w-full bg-background font-mono text-sm overflow-auto',
+        'flex flex-col h-full w-full bg-background font-mono text-sm',
         className,
       )}
     >
-      {showLineNumbers && (
-        <div className="w-12 shrink-0 bg-sidebar border-r border-border select-none">
-          {diffLines.map((line, _i) => (
-            <div
-              key={line.id}
-              className={cn(
-                'h-6 leading-relaxed text-right pr-2 text-muted-foreground/40',
-                line.type === 'removed' && 'opacity-0',
-              )}
-            >
-              {line.lineNumber || ''}
-            </div>
-          ))}
+      {/* Toolbar */}
+      <div className="flex items-center justify-center h-8 border-b border-border bg-muted/30 select-none shrink-0">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <button
+            type="button"
+            onClick={toggleViewMode}
+            className="px-2 py-1 rounded hover:bg-accent cursor-pointer transition-colors"
+            title={`${viewMode === 'full' ? 'Show changes only' : 'Show full file'}`}
+          >
+            <span className={cn(unprocessedHunks.length === 0 && 'opacity-40')}>
+              {unprocessedHunks.length} change
+              {unprocessedHunks.length !== 1 ? 's' : ''}
+            </span>
+          </button>
+          <span className="text-border/50 mx-0.5">|</span>
+          <button
+            type="button"
+            onClick={() => scrollToChange('prev')}
+            className="p-1 rounded hover:bg-accent cursor-pointer transition-colors"
+            title="Previous change"
+            disabled={unprocessedHunks.length === 0}
+          >
+            <ArrowUp size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToChange('next')}
+            className="p-1 rounded hover:bg-accent cursor-pointer transition-colors"
+            title="Next change"
+            disabled={unprocessedHunks.length === 0}
+          >
+            <ArrowDown size={14} />
+          </button>
         </div>
-      )}
-      <div className="flex-1">{renderContent()}</div>
+      </div>
+
+      {/* Scrollable content */}
+      <div
+        ref={scrollContainerRef}
+        className="flex flex-1 overflow-auto min-h-0"
+      >
+        {showLineNumbers && (
+          <div className="w-12 shrink-0 bg-sidebar border-r border-border select-none">
+            {visibleLineIndices.map((idx) => {
+              const line = diffLines[idx]
+              return (
+                <div
+                  key={line.id}
+                  className={cn(
+                    'h-6 leading-relaxed text-right pr-2 text-muted-foreground/40',
+                    line.type === 'removed' && 'opacity-0',
+                  )}
+                >
+                  {line.lineNumber || ''}
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <div className="flex-1">{renderContent()}</div>
+      </div>
     </div>
   )
 }
