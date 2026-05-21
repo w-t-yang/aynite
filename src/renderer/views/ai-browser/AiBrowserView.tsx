@@ -24,11 +24,17 @@ export function AiBrowserView() {
     [],
   )
 
-  // On mount, check if there's an active file already — if so, show file-browser
+  // On mount, prefer chat view if there's an active session,
+  // otherwise fall back to file-browser if there's an active file
   const checkInitialMode = useCallback(async () => {
     try {
-      const activeFile = await window.aynite.getConfig('activeFile')
-      if (activeFile) {
+      const [activeSessionId, activeFile] = await Promise.all([
+        window.aynite.getConfig('activeSessionId'),
+        window.aynite.getConfig('activeFile'),
+      ])
+      if (activeSessionId) {
+        setMode('aichat')
+      } else if (activeFile) {
         setMode('file-browser')
       }
     } catch (_e) {
