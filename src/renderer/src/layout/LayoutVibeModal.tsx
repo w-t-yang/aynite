@@ -15,8 +15,7 @@ const VIBES = [
   {
     id: 'chat' as VibeType,
     label: 'Chat Vibe',
-    description:
-      'Perfect for focused AI interaction with Session View and Chat.',
+    description: 'Sessions panel with hybrid AI Chat and File Browser view.',
     icon: <MessageSquare className="text-blue-500" size={24} />,
     color: 'bg-blue-500/10 border-blue-500/20 hover:border-blue-500/50',
   },
@@ -64,7 +63,7 @@ export function LayoutVibeModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="How would you like your new vibe?"
+      title="How would you like your new layout?"
       size="2xl"
       footer={
         <div className="flex gap-2">

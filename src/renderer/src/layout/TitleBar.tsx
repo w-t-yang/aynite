@@ -205,7 +205,7 @@ const TitleBar: React.FC = () => {
               items={[
                 {
                   id: 'add-vibe',
-                  label: 'Add Vibe',
+                  label: 'Add Layout',
                   icon: <Plus size={14} />,
                   disabled: workspaceConfig.layouts.length >= 9,
                 },
@@ -231,7 +231,7 @@ const TitleBar: React.FC = () => {
                   <MoreHorizontal size={14} />
                 </Button>
               }
-              title="Layout Vibes"
+              title="Layouts"
             />
           </div>
         </div>

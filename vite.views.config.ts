@@ -44,6 +44,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/session-view/index.html',
         ),
+        'views/ai-browser/index': resolve(
+          __dirname,
+          'src/renderer/views/ai-browser/index.html',
+        ),
         'views/stockchart/index': resolve(
           __dirname,
           'src/renderer/views/stockchart/index.html',

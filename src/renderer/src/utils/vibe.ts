@@ -10,8 +10,13 @@ const VIBE_LAYOUTS: Record<VibeType, LayoutNode> = {
     direction: 'horizontal',
     size: 100,
     children: [
-      { id: 'vibe-chat-tree', type: 'leaf', name: 'treeview', size: 30 },
-      { id: 'vibe-chat-ai', type: 'leaf', name: 'aichat', size: 70 },
+      {
+        id: 'vibe-chat-sessions',
+        type: 'leaf',
+        name: 'session-view',
+        size: 30,
+      },
+      { id: 'vibe-chat-ai', type: 'leaf', name: 'ai-browser', size: 70 },
     ],
   },
   file: {
