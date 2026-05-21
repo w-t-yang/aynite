@@ -206,6 +206,14 @@ export function getWelcomeMdPath() {
   return path.join(getPlaybookPath(), 'Welcome.md')
 }
 
+export function getViewConfigDir(viewName: string) {
+  return getAynitePath(AYNITE_SUBDIRS.VIEWS, viewName)
+}
+
+export function getViewConfigPath(viewName: string) {
+  return path.join(getViewConfigDir(viewName), 'config.json')
+}
+
 export function getPreloadPath(baseDir: string) {
   return path.resolve(baseDir, '../preload/index.js')
 }

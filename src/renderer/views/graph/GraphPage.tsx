@@ -10,6 +10,7 @@ import {
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
+import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import type { GraphData, GraphNode } from './types'
 
@@ -55,16 +56,6 @@ const MOCK_DATA: GraphData = {
   ],
 }
 
-const EXPECTED_FORMAT = `{
-  "nodes": [
-    { "id": "1", "label": "Node A", "group": 1 },
-    { "id": "2", "label": "Node B", "group": 2 }
-  ],
-  "links": [
-    { "source": "1", "target": "2" }
-  ]
-}`
-
 interface NodePos extends GraphNode {
   x: number
   y: number
@@ -80,6 +71,7 @@ export function GraphPage() {
     message: string
     expected: string
   } | null>(null)
+  const [viewConfig, setViewConfig] = useState<any>(null)
   const [isMock, setIsMock] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -97,6 +89,15 @@ export function GraphPage() {
   }, [])
 
   const currentFile = useRef<string | null>(null)
+
+  // Load view config
+  useEffect(() => {
+    ;(window as any).aynite
+      ?.getConfig('view-config', { view: 'graph' })
+      .then((cfg: any) => {
+        if (cfg) setViewConfig(cfg)
+      })
+  }, [])
 
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const _isDark = currentTheme?.type === 'dark'
@@ -127,7 +128,16 @@ export function GraphPage() {
         const content = await (window as any).aynite.readFile(path)
         const json = JSON.parse(content)
 
-        if (!json.nodes || !Array.isArray(json.nodes)) {
+        // Validate against config schema if available
+        if (viewConfig?.expected_file_type?.schema) {
+          const { valid, errors } = validateJsonSchema(
+            json,
+            viewConfig.expected_file_type.schema,
+          )
+          if (!valid) {
+            throw new Error(`Invalid graph format: ${errors.join('; ')}`)
+          }
+        } else if (!json.nodes || !Array.isArray(json.nodes)) {
           throw new Error('Invalid graph format: missing nodes array')
         }
 
@@ -138,14 +148,17 @@ export function GraphPage() {
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load graph file:', err)
+        const schemaStr = viewConfig?.expected_file_type?.schema
+          ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+          : '{ "nodes": [...] }'
         setError({
           message: `Failed to load file: ${path}. File might be missing or invalid.`,
-          expected: EXPECTED_FORMAT,
+          expected: schemaStr,
         })
         loadMockData()
       }
     },
-    [initializeNodes, loadMockData],
+    [initializeNodes, loadMockData, viewConfig?.expected_file_type?.schema],
   )
 
   useEffect(() => {
@@ -285,9 +298,12 @@ export function GraphPage() {
         }
       }
     } catch (_err) {
+      const schemaStr = viewConfig?.expected_file_type?.schema
+        ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+        : '{ "nodes": [...] }'
       setError({
         message: 'Failed to select or parse file.',
-        expected: EXPECTED_FORMAT,
+        expected: schemaStr,
       })
     }
   }

@@ -11,14 +11,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@excalidraw/excalidraw/index.css'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
+import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useAppEvent, useView } from '../ViewContext'
-
-const EXPECTED_FORMAT = `{
-  "type": "excalidraw",
-  "version": 2,
-  "elements": [ ... ],
-  "appState": { ... }
-}`
 
 function getThemeBg(): string {
   return (
@@ -34,6 +28,7 @@ export function CanvasPage() {
     message: string
     expected: string
   } | null>(null)
+  const [viewConfig, setViewConfig] = useState<any>(null)
   const excRef = useRef<ExcalidrawImperativeAPI | null>(null)
   const currentFile = useRef<string | null>(null)
 
@@ -58,6 +53,15 @@ export function CanvasPage() {
       }
     }
     return file
+  }, [])
+
+  // Load view config
+  useEffect(() => {
+    ;(window as any).aynite
+      ?.getConfig('view-config', { view: 'canvas' })
+      .then((cfg: any) => {
+        if (cfg) setViewConfig(cfg)
+      })
   }, [])
 
   const currentTheme = themes.find((t) => t.id === activeThemeId)
@@ -95,35 +99,53 @@ export function CanvasPage() {
   }, [])
 
   // ─── File loading ──────────────────────────────────────────────────────
-  const loadFile = useCallback(async (path: string) => {
-    try {
-      const content = await (window as any).aynite.readFile(path)
-      const json = JSON.parse(content)
+  const loadFile = useCallback(
+    async (path: string) => {
+      try {
+        const content = await (window as any).aynite.readFile(path)
+        const json = JSON.parse(content)
 
-      if (!json.elements || !Array.isArray(json.elements)) {
-        throw new Error('Invalid canvas format: missing elements array')
-      }
+        // Validate against config schema if available
+        if (viewConfig?.expected_file_type?.schema) {
+          const { valid, errors } = validateJsonSchema(
+            json,
+            viewConfig.expected_file_type.schema,
+          )
+          if (!valid) {
+            throw new Error(`Invalid canvas format: ${errors.join('; ')}`)
+          }
+        } else {
+          // Fallback validation when config not loaded
+          if (!json.elements || !Array.isArray(json.elements)) {
+            throw new Error('Invalid canvas format: missing elements array')
+          }
+        }
 
-      setError(null)
-      currentFile.current = path
-      const api = excRef.current
-      if (api) {
-        api.updateScene({
-          elements: json.elements as any,
-          appState: {
-            ...(json.appState || {}),
-            viewBackgroundColor: getThemeBg(),
-          },
+        setError(null)
+        currentFile.current = path
+        const api = excRef.current
+        if (api) {
+          api.updateScene({
+            elements: json.elements as any,
+            appState: {
+              ...(json.appState || {}),
+              viewBackgroundColor: getThemeBg(),
+            },
+          })
+        }
+      } catch (err) {
+        console.error('Failed to load canvas file:', err)
+        const schemaStr = viewConfig?.expected_file_type?.schema
+          ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+          : '{ "elements": [...], "appState": {...} }'
+        setError({
+          message: `Failed to load file. File might be missing or invalid.`,
+          expected: schemaStr,
         })
       }
-    } catch (err) {
-      console.error('Failed to load canvas file:', err)
-      setError({
-        message: `Failed to load file. File might be missing or invalid.`,
-        expected: EXPECTED_FORMAT,
-      })
-    }
-  }, [])
+    },
+    [viewConfig?.expected_file_type?.schema],
+  )
 
   // Load initial file when Excalidraw API becomes available
   const [excalidrawReady, setExcalidrawReady] = useState(false)
@@ -149,9 +171,12 @@ export function CanvasPage() {
         }
       }
     } catch {
+      const schemaStr = viewConfig?.expected_file_type?.schema
+        ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+        : '{ "elements": [...], "appState": {...} }'
       setError({
         message: 'Failed to select or parse file.',
-        expected: EXPECTED_FORMAT,
+        expected: schemaStr,
       })
     }
   }

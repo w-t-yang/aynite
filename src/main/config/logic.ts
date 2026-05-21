@@ -24,6 +24,8 @@ import {
   getKeybindingsConfigPath,
   getMainConfigPath,
   getPlaybookPath,
+  getViewConfigDir,
+  getViewConfigPath,
   getWelcomeMdPath,
   getWorkspaceDataPath,
   getWorkspaceDir,
@@ -51,6 +53,7 @@ import {
 } from '../spells'
 import { initThemes } from '../theme'
 import { getIgnorePatterns } from './ignore'
+import { DEFAULT_VIEW_CONFIGS } from './view-configs'
 
 /**
  * Helper to compare versions.
@@ -245,6 +248,22 @@ export async function initAppFolders() {
       await copy(bundledDir, baseDir, { recursive: true })
     } catch (e) {
       console.error(`[Init] Error copying bundled views:`, e)
+    }
+  }
+
+  // Initialize view config files
+  await initViewConfigs()
+}
+
+/**
+ * Initialize view configuration files under ~/.aynite/config/views/[view]/config.json
+ */
+export async function initViewConfigs() {
+  for (const [viewName, config] of Object.entries(DEFAULT_VIEW_CONFIGS)) {
+    const configPath = getViewConfigPath(viewName)
+    if (!(await exists(configPath))) {
+      await ensureDir(getViewConfigDir(viewName))
+      await writeJson(configPath, config)
     }
   }
 }

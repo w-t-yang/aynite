@@ -13,6 +13,7 @@ import {
   getAIConfigPath,
   getKeybindingsConfigPath,
   getMainConfigPath,
+  getViewConfigPath,
   getWorkspaceDataPath,
   readJson,
   writeJson,
@@ -157,6 +158,12 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
       const wsConfig = await getWorkspacesList()
       const state = await getWorkspaceState(wsConfig.active)
       return state.activeSessionId || null
+    }
+
+    case ConfigKey.VIEW_CONFIG: {
+      const viewName = payload?.view as string
+      if (!viewName) return null
+      return await readJson(getViewConfigPath(viewName), null)
     }
 
     default:

@@ -11,6 +11,7 @@ import {
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
+import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import type { MindMapData, MindMapNode } from './types'
 
@@ -66,16 +67,6 @@ const MOCK_DATA: MindMapData = {
   },
 }
 
-const EXPECTED_FORMAT = `{
-  "root": {
-    "id": "1",
-    "label": "Topic",
-    "children": [
-      { "id": "2", "label": "Subtopic" }
-    ]
-  }
-}`
-
 interface PositionedNode extends MindMapNode {
   x: number
   y: number
@@ -89,6 +80,7 @@ export function MindMapPage() {
     message: string
     expected: string
   } | null>(null)
+  const [viewConfig, setViewConfig] = useState<any>(null)
   const [isMock, setIsMock] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -108,6 +100,15 @@ export function MindMapPage() {
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const isDark = currentTheme?.type === 'dark'
 
+  // Load view config
+  useEffect(() => {
+    ;(window as any).aynite
+      ?.getConfig('view-config', { view: 'mindmap' })
+      .then((cfg: any) => {
+        if (cfg) setViewConfig(cfg)
+      })
+  }, [])
+
   const loadMockData = useCallback(() => {
     setData(MOCK_DATA)
     setIsMock(true)
@@ -119,7 +120,16 @@ export function MindMapPage() {
         const content = await (window as any).aynite.readFile(path)
         const json = JSON.parse(content)
 
-        if (!json.root?.label) {
+        // Validate against config schema if available
+        if (viewConfig?.expected_file_type?.schema) {
+          const { valid, errors } = validateJsonSchema(
+            json,
+            viewConfig.expected_file_type.schema,
+          )
+          if (!valid) {
+            throw new Error(`Invalid mindmap format: ${errors.join('; ')}`)
+          }
+        } else if (!json.root?.label) {
           throw new Error('Invalid mindmap format: missing root node or label')
         }
 
@@ -129,14 +139,17 @@ export function MindMapPage() {
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load mindmap file:', err)
+        const schemaStr = viewConfig?.expected_file_type?.schema
+          ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+          : '{ "root": { "id": "...", "label": "..." } }'
         setError({
           message: `Failed to load file: ${path}. File might be missing or invalid.`,
-          expected: EXPECTED_FORMAT,
+          expected: schemaStr,
         })
         loadMockData()
       }
     },
-    [loadMockData],
+    [loadMockData, viewConfig?.expected_file_type?.schema],
   )
 
   useEffect(() => {
@@ -248,9 +261,12 @@ export function MindMapPage() {
         }
       }
     } catch (_err) {
+      const schemaStr = viewConfig?.expected_file_type?.schema
+        ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+        : '{ "root": { "id": "...", "label": "..." } }'
       setError({
         message: 'Failed to select or parse file.',
-        expected: EXPECTED_FORMAT,
+        expected: schemaStr,
       })
     }
   }

@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
+import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import type { FlowData } from './types'
 
@@ -85,26 +86,6 @@ const MOCK_DATA: FlowData = {
   ],
 }
 
-const EXPECTED_FORMAT = `{
-  "nodes": [
-    {
-      "id": "node-1",
-      "type": "input | default | output",
-      "position": { "x": 0, "y": 0 },
-      "data": { "label": "Node Label" }
-    }
-  ],
-  "edges": [
-    {
-      "id": "e-1-2",
-      "source": "node-1",
-      "target": "node-2",
-      "label": "optional label"
-    }
-  ],
-  "viewport": { "x": 0, "y": 0, "zoom": 1 }
-}`
-
 function FlowCanvas() {
   const { themes, activeThemeId } = useView()
   const reactFlow = useReactFlow()
@@ -113,6 +94,7 @@ function FlowCanvas() {
     message: string
     expected: string
   } | null>(null)
+  const [viewConfig, setViewConfig] = useState<any>(null)
   const [isMock, setIsMock] = useState(false)
 
   const currentFile = useRef<string | null>(null)
@@ -126,6 +108,15 @@ function FlowCanvas() {
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const isDark = currentTheme?.type === 'dark'
 
+  // Load view config
+  useEffect(() => {
+    ;(window as any).aynite
+      ?.getConfig('view-config', { view: 'flow' })
+      .then((cfg: any) => {
+        if (cfg) setViewConfig(cfg)
+      })
+  }, [])
+
   const loadMockData = useCallback(() => {
     setData(MOCK_DATA)
     setIsMock(true)
@@ -137,7 +128,16 @@ function FlowCanvas() {
         const content = await (window as any).aynite.readFile(path)
         const json = JSON.parse(content)
 
-        if (!json.nodes || !Array.isArray(json.nodes)) {
+        // Validate against config schema if available
+        if (viewConfig?.expected_file_type?.schema) {
+          const { valid, errors } = validateJsonSchema(
+            json,
+            viewConfig.expected_file_type.schema,
+          )
+          if (!valid) {
+            throw new Error(`Invalid flow format: ${errors.join('; ')}`)
+          }
+        } else if (!json.nodes || !Array.isArray(json.nodes)) {
           throw new Error('Invalid flow format: missing nodes array')
         }
 
@@ -147,14 +147,17 @@ function FlowCanvas() {
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load flow file:', err)
+        const schemaStr = viewConfig?.expected_file_type?.schema
+          ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+          : '{ "nodes": [...] }'
         setError({
           message: `Failed to load file. File might be missing or invalid.`,
-          expected: EXPECTED_FORMAT,
+          expected: schemaStr,
         })
         loadMockData()
       }
     },
-    [loadMockData],
+    [loadMockData, viewConfig?.expected_file_type?.schema],
   )
 
   useEffect(() => {
@@ -204,9 +207,12 @@ function FlowCanvas() {
         }
       }
     } catch {
+      const schemaStr = viewConfig?.expected_file_type?.schema
+        ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+        : '{ "nodes": [...] }'
       setError({
         message: 'Failed to select or parse file.',
-        expected: EXPECTED_FORMAT,
+        expected: schemaStr,
       })
     }
   }

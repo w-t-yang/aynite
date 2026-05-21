@@ -24,4 +24,5 @@ export enum ConfigKey {
   ACTIVE_SESSION_ID = 'activeSessionId',
   SESSION_DELETE = 'session-delete',
   TILE_DATA = 'tile-data',
+  VIEW_CONFIG = 'view-config',
 }

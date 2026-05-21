@@ -35,6 +35,7 @@ import {
   YAxis,
 } from 'recharts'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
+import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import { type ChartData, ChartType } from './types'
 
@@ -63,15 +64,6 @@ const MOCK_DATA: ChartData = {
   ],
 }
 
-const EXPECTED_FORMAT = `{
-  "title": "My Data Chart",
-  "keys": ["Value1", "Value2"],
-  "data": [
-    { "name": "A", "Value1": 10, "Value2": 20 },
-    { "name": "B", "Value1": 15, "Value2": 25 }
-  ]
-}`
-
 export function DataChartPage() {
   const { themes, activeThemeId } = useView()
   const [chartType, setChartType] = useState<ChartType>(ChartType.AREA)
@@ -80,6 +72,7 @@ export function DataChartPage() {
     message: string
     expected: string
   } | null>(null)
+  const [viewConfig, setViewConfig] = useState<any>(null)
   const [isMock, setIsMock] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false)
@@ -90,6 +83,15 @@ export function DataChartPage() {
     const hash = window.location.hash
     const match = hash.match(/tileId=([^&]+)/)
     return match ? match[1] : null
+  }, [])
+
+  // Load view config
+  useEffect(() => {
+    ;(window as any).aynite
+      ?.getConfig('view-config', { view: 'datachart' })
+      .then((cfg: any) => {
+        if (cfg) setViewConfig(cfg)
+      })
   }, [])
 
   const currentTheme = themes.find((t) => t.id === activeThemeId)
@@ -106,7 +108,16 @@ export function DataChartPage() {
         const content = await (window as any).aynite.readFile(path)
         const json = JSON.parse(content)
 
-        if (!json.data || !Array.isArray(json.data) || !json.keys) {
+        // Validate against config schema if available
+        if (viewConfig?.expected_file_type?.schema) {
+          const { valid, errors } = validateJsonSchema(
+            json,
+            viewConfig.expected_file_type.schema,
+          )
+          if (!valid) {
+            throw new Error(`Invalid data format: ${errors.join('; ')}`)
+          }
+        } else if (!json.data || !Array.isArray(json.data) || !json.keys) {
           throw new Error('Invalid data format: missing data array or keys')
         }
 
@@ -116,14 +127,17 @@ export function DataChartPage() {
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load initial file:', err)
+        const schemaStr = viewConfig?.expected_file_type?.schema
+          ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+          : '{ "title": "...", "keys": [...], "data": [...] }'
         setError({
           message: `Failed to load file: ${path}. File might be missing or in an invalid format.`,
-          expected: EXPECTED_FORMAT,
+          expected: schemaStr,
         })
         loadMockData()
       }
     },
-    [loadMockData],
+    [loadMockData, viewConfig?.expected_file_type?.schema],
   )
 
   useEffect(() => {
@@ -168,9 +182,12 @@ export function DataChartPage() {
       }
     } catch (err) {
       console.error('Failed to select file:', err)
+      const schemaStr = viewConfig?.expected_file_type?.schema
+        ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+        : '{ "title": "...", "keys": [...], "data": [...] }'
       setError({
         message: 'Failed to select or parse JSON file.',
-        expected: EXPECTED_FORMAT,
+        expected: schemaStr,
       })
     }
   }

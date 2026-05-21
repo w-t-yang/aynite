@@ -39,3 +39,15 @@ export interface SuggestionItem {
   error?: string
   subtitle?: string
 }
+
+export interface ViewConfig {
+  name: string
+  description: string
+  author: string
+  version: string
+  expected_file_type?: {
+    ext: string
+    schema: Record<string, unknown>
+  }
+  key_bindings: Record<string, unknown>
+}

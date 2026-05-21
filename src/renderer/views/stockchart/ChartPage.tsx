@@ -206,19 +206,7 @@ export function StockChart() {
   const _fileInputRef = useRef<HTMLInputElement>(null)
   const currentFile = useRef<string | null>(null)
 
-  const EXPECTED_FORMAT = `{
-  "symbol": "AAPL",
-  "data": [
-    { "time": "2024-01-01", "open": 150.0, "high": 155.0, "low": 148.0, "close": 152.0, "volume": 1000000 }
-  ]
-}
-OR
-{
-  "metadata": { "symbol": "AAPL" },
-  "history": [
-    { "date": "2024-01-01", "open": 150.0, ... }
-  ]
-}`
+  const [viewConfig, setViewConfig] = useState<any>(null)
 
   const parseJsonData = useCallback((json: any, defaultSymbol: string) => {
     let parsedData: StockData[] = []
@@ -266,15 +254,32 @@ OR
         setIsMock(false)
       } catch (err) {
         console.error('Failed to load initial file:', err)
+        const schemaStr = viewConfig?.expected_file_type?.schema
+          ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+          : '{ "symbol": "...", "data": [...] }'
         setError({
           message: `Failed to load file: ${path}. File might be missing or in an invalid format.`,
-          expected: EXPECTED_FORMAT,
+          expected: schemaStr,
         })
         loadMockData()
       }
     },
-    [symbol, parseJsonData, loadMockData],
+    [
+      symbol,
+      parseJsonData,
+      loadMockData,
+      viewConfig?.expected_file_type?.schema,
+    ],
   )
+
+  // Load view config
+  useEffect(() => {
+    ;(window as any).aynite
+      ?.getConfig('view-config', { view: 'stockchart' })
+      .then((cfg: any) => {
+        if (cfg) setViewConfig(cfg)
+      })
+  }, [])
 
   // Initial load from tile config
   useEffect(() => {
@@ -360,9 +365,12 @@ OR
       }
     } catch (err) {
       console.error('Failed to select or parse file:', err)
+      const schemaStr = viewConfig?.expected_file_type?.schema
+        ? JSON.stringify(viewConfig.expected_file_type.schema, null, 2)
+        : '{ "symbol": "...", "data": [...] }'
       setError({
         message: 'Failed to select or parse JSON file.',
-        expected: EXPECTED_FORMAT,
+        expected: schemaStr,
       })
     }
   }
