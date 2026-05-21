@@ -95,19 +95,31 @@ export function WorkspaceView() {
           newRoots.add(folderPath)
           const statusMap = await window.aynite.getGitStatus(folderPath)
           if (statusMap) {
-            const changed: GitChangedFile[] = []
+            // Collect all changed file paths under this root
+            const allPaths: string[] = []
             for (const [absPath, status] of Object.entries(statusMap)) {
-              // Only include files directly under this root (not directories)
               if (
                 absPath.startsWith(`${folderPath}/`) &&
                 absPath !== folderPath &&
                 status !== 'none' &&
                 status !== 'ignored'
               ) {
-                const name = absPath.split('/').pop() || absPath
-                changed.push({ name, path: absPath, status })
+                allPaths.push(absPath)
               }
             }
+            // Filter out parent directory entries (paths that are a prefix
+            // of another changed path) — same heuristic as treeview
+            const leafPaths = allPaths.filter(
+              (p) =>
+                !allPaths.some(
+                  (other) => other !== p && other.startsWith(`${p}/`),
+                ),
+            )
+            const changed: GitChangedFile[] = leafPaths.map((absPath) => ({
+              name: absPath.split('/').pop() || absPath,
+              path: absPath,
+              status: statusMap[absPath],
+            }))
             if (changed.length > 0) {
               newChangedFiles[folderPath] = changed.sort((a, b) =>
                 a.name.localeCompare(b.name),
@@ -251,7 +263,7 @@ export function WorkspaceView() {
       setSessionToDelete(null)
       // loadData will be called by the event listener
     } catch (e) {
-      console.error('[SessionView] Failed to delete session:', e)
+      console.error('[WorkspaceView] Failed to delete session:', e)
     }
   }
 

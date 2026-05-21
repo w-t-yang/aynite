@@ -40,6 +40,8 @@ export function useAIChat() {
   const inputRef = useRef<ChatInputHandle>(null)
   const abortRef = useRef<AbortController | null>(null)
   const loadingRef = useRef(loading)
+  /** Tracks the last saved message snapshot to avoid re-saving loaded-in-place data */
+  const lastSavedSnapshotRef = useRef<string>('')
 
   const [artifactStatus, setArtifactStatus] = useState<{
     memory: { exists: boolean; path: string }
@@ -109,6 +111,8 @@ export function useAIChat() {
         if (res) {
           setMessages(res)
           setSessionId(id)
+          // Mark snapshot so auto-save doesn't re-write the same data
+          lastSavedSnapshotRef.current = JSON.stringify(res)
         }
       })
     }
@@ -127,6 +131,7 @@ export function useAIChat() {
         if (res) {
           setMessages(res)
           setSessionId(activeSessionId)
+          lastSavedSnapshotRef.current = JSON.stringify(res)
         }
       }
     }
@@ -144,6 +149,12 @@ export function useAIChat() {
 
   useEffect(() => {
     if (sessionId && messages.length > 0) {
+      // Skip save if messages haven't changed since last load/save
+      const snapshot = JSON.stringify(messages)
+      if (snapshot === lastSavedSnapshotRef.current) {
+        return undefined
+      }
+
       const timer = setTimeout(async () => {
         try {
           const activeId = settingsRef.current.ai?.activeId
@@ -163,6 +174,8 @@ export function useAIChat() {
           }
 
           await window.aynite.saveSession(sessionId, messages, metadata)
+          // Update snapshot to reflect the saved state
+          lastSavedSnapshotRef.current = snapshot
         } catch (_err) {}
       }, 1000)
       return () => clearTimeout(timer)

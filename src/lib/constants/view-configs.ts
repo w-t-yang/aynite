@@ -325,7 +325,7 @@ export const DEFAULT_VIEW_CONFIGS: Record<string, ViewConfig> = {
     key_bindings: {},
   },
 
-  'session-view': {
+  'workspace-view': {
     name: 'Workspace View',
     description:
       'Workspace overview with folders, artifacts, sessions, and git status',

@@ -40,9 +40,9 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/file-browser/index.html',
         ),
-        'views/session-view/index': resolve(
+        'views/workspace-view/index': resolve(
           __dirname,
-          'src/renderer/views/session-view/index.html',
+          'src/renderer/views/workspace-view/index.html',
         ),
         'views/ai-browser/index': resolve(
           __dirname,

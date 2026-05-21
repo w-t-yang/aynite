@@ -13,7 +13,7 @@ const VIBE_LAYOUTS: Record<VibeType, LayoutNode> = {
       {
         id: 'vibe-chat-sessions',
         type: 'leaf',
-        name: 'session-view',
+        name: 'workspace-view',
         size: 30,
       },
       { id: 'vibe-chat-ai', type: 'leaf', name: 'ai-browser', size: 70 },
