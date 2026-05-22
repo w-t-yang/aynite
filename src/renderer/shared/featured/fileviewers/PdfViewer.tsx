@@ -2,6 +2,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Maximize2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -35,6 +36,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const isRenderingRef = useRef(false)
 
   // ── Load PDF document ──────────────────────────────────────────────────
@@ -86,16 +88,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
     try {
       const page: PDFPageProxy = await pdf.getPage(currentPage)
 
-      // Calculate viewport to fit the container width
-      const container = canvas.parentElement
-      const containerWidth = container?.clientWidth ?? 800
-      const unscaledViewport = page.getViewport({ scale: 1 })
-      const fitScale = Math.min(
-        scale,
-        (containerWidth - 48) / unscaledViewport.width,
-      )
-      const effectiveScale = Math.max(scale, fitScale)
-      const viewport = page.getViewport({ scale: effectiveScale })
+      const viewport = page.getViewport({ scale })
 
       // Handle device pixel ratio for sharp rendering
       const dpr = window.devicePixelRatio || 1
@@ -161,6 +154,26 @@ export function PdfViewer({ file }: PdfViewerProps) {
     )
   }, [])
 
+  const fitToHeight = useCallback(async () => {
+    const pdf = pdfDoc
+    const container = containerRef.current
+    if (!pdf || !container) return
+    try {
+      const page = await pdf.getPage(currentPage)
+      const viewport = page.getViewport({ scale: 1 })
+      const containerHeight = container.clientHeight - 48 // p-6 padding on both sides
+      const fitScale = containerHeight / viewport.height
+      setScale(
+        Math.max(
+          MIN_SCALE,
+          Math.min(MAX_SCALE, parseFloat(fitScale.toFixed(2))),
+        ),
+      )
+    } catch {
+      // Silently ignore
+    }
+  }, [pdfDoc, currentPage])
+
   // ── Loading state ──────────────────────────────────────────────────────
 
   if (loading) {
@@ -195,7 +208,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
       {/* Toolbar */}
-      <div className="shrink-0 h-10 bg-sidebar border-b border-border flex items-center px-3 gap-2 select-none">
+      <div className="shrink-0 h-10 bg-sidebar border-b border-border flex items-center justify-center px-3 gap-2 select-none">
         {/* Page navigation */}
         <Button
           variant="ghost"
@@ -253,22 +266,24 @@ export function PdfViewer({ file }: PdfViewerProps) {
           <ZoomIn size={15} />
         </Button>
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* File name */}
-        <span className="text-[11px] text-muted-foreground/40 truncate max-w-[200px]">
-          {file.name}
-        </span>
+        {/* Fit to height */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={fitToHeight}
+          className="p-1 rounded"
+          title="Fit to height"
+        >
+          <Maximize2 size={15} />
+        </Button>
       </div>
 
       {/* Canvas area */}
-      <div className="flex-1 overflow-auto bg-muted/20 flex justify-center p-6">
-        <canvas
-          ref={canvasRef}
-          className="shadow-xl rounded-sm bg-white"
-          style={{ maxWidth: '100%' }}
-        />
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto bg-muted/20 flex justify-start p-6"
+      >
+        <canvas ref={canvasRef} className="shadow-xl rounded-sm bg-white" />
       </div>
     </div>
   )
