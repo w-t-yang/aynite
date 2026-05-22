@@ -9,10 +9,10 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MoveHandler, Tree, type TreeApi } from 'react-arborist'
-import type { DiffStats } from '../../../lib/types/files'
 import { Button } from '../../shared/basic/Button'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
+import { GitDiffView } from '../../shared/featured/GitDiffView'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
 import { cn } from '../../shared/lib/utils'
@@ -68,7 +68,6 @@ export function Treeview() {
   const { gitStatuses, gitRoots, fetchStatus } = useGitStatus()
 
   const [changesOnly, setChangesOnly] = useState(false)
-  const [diffStats, setDiffStats] = useState<Record<string, DiffStats>>({})
 
   // Fetch git status for workspace folders once they're loaded
   useEffect(() => {
@@ -78,28 +77,6 @@ export function Treeview() {
       }
     }
   }, [treeData.length, fetchStatus, treeData])
-
-  // Fetch diff stats when changes-only mode is active or git status updates
-  useEffect(() => {
-    if (!changesOnly) {
-      setDiffStats({})
-      return
-    }
-    // Reference gitStatuses to re-fetch diff stats on status change
-    void gitStatuses
-    let cancelled = false
-    ;(async () => {
-      const all: Record<string, DiffStats> = {}
-      for (const root of treeData) {
-        const stats = await (window as any).aynite.getGitDiffStats(root.id)
-        if (!cancelled && stats) Object.assign(all, stats)
-      }
-      if (!cancelled) setDiffStats(all)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [changesOnly, gitStatuses, treeData])
 
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean
@@ -114,58 +91,6 @@ export function Treeview() {
     message: string
     onConfirm: () => Promise<void>
   } | null>(null)
-
-  // ─── Commit State ────────────────────────────────────────────────────
-  const [commitState, setCommitState] = useState<{
-    generating: boolean
-    message: string
-    root: string
-    error: string | null
-  } | null>(null)
-
-  const handleCommit = useCallback(async (root: string) => {
-    setCommitState({ generating: true, message: '', root, error: null })
-    try {
-      const result = await (window as any).aynite.commitGenerate(root)
-      if (result.error) {
-        setCommitState((prev) =>
-          prev ? { ...prev, generating: false, error: result.error } : null,
-        )
-        return
-      }
-      setCommitState((prev) =>
-        prev
-          ? {
-              ...prev,
-              generating: false,
-              message: result.message || '',
-            }
-          : null,
-      )
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setCommitState((prev) =>
-        prev ? { ...prev, generating: false, error: msg } : null,
-      )
-    }
-  }, [])
-
-  const handleCommitConfirm = useCallback(async () => {
-    if (!commitState) return
-    const result = await (window as any).aynite.commitExecute(
-      commitState.root,
-      commitState.message,
-    )
-    if (result.error) {
-      setCommitState((prev) => (prev ? { ...prev, error: result.error } : null))
-      return
-    }
-    setCommitState(null)
-    // Refresh git status
-    for (const node of treeData) {
-      fetchStatus(node.id)
-    }
-  }, [commitState, fetchStatus, treeData])
 
   const _workspaceOptions = useMemo(
     (): SelectionItem[] =>
@@ -230,42 +155,6 @@ export function Treeview() {
     return items
   }, [contextMenu, clipboard, rootFilesPaths])
 
-  const changesTreeData: FileNode[] = useMemo(() => {
-    if (!changesOnly) return []
-
-    const changedFiles = new Map<string, DiffStats | null>()
-    for (const [path, stats] of Object.entries(diffStats)) {
-      changedFiles.set(path, stats)
-    }
-    for (const [path, status] of Object.entries(gitStatuses)) {
-      if (status === 'untracked' && !changedFiles.has(path)) {
-        changedFiles.set(path, null)
-      }
-    }
-
-    return treeData
-      .map((root) => {
-        const children = Array.from(changedFiles.entries())
-          .filter(([path]) => path.startsWith(`${root.id}/`))
-          .map(([path]) => ({
-            id: path,
-            name: path.split('/').pop() || path,
-            isDirectory: false,
-            isLoaded: true,
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name))
-        if (children.length === 0) return null
-        return {
-          id: root.id,
-          name: root.name,
-          isDirectory: true,
-          isLoaded: true,
-          children,
-        }
-      })
-      .filter(Boolean) as FileNode[]
-  }, [changesOnly, diffStats, gitStatuses, treeData])
-
   const changesCount = useMemo(() => {
     const paths = Object.entries(gitStatuses)
       .filter(([, status]) => status !== 'none' && status !== 'ignored')
@@ -275,18 +164,6 @@ export function Treeview() {
       (p) => !paths.some((other) => other !== p && other.startsWith(`${p}/`)),
     ).length
   }, [gitStatuses])
-
-  // Auto-expand root folders when entering changes-only mode
-  useEffect(() => {
-    if (!changesOnly || !treeRef.current || changesTreeData.length === 0) return
-    const ids = changesTreeData.map((n) => n.id)
-    const timer = setTimeout(() => {
-      for (const id of ids) {
-        treeRef.current?.open(id)
-      }
-    }, 0)
-    return () => clearTimeout(timer)
-  }, [changesOnly, changesTreeData])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -665,71 +542,28 @@ export function Treeview() {
         onContextMenu={handleContainerContextMenu}
       >
         {treeData.length > 0 ? (
-          changesOnly && changesTreeData.length === 0 ? (
-            <div className="p-4 text-xs text-muted-foreground text-center">
-              No changes
-            </div>
-          ) : changesOnly ? (
-            <>
-              <Tree
-                ref={treeRef}
-                data={changesTreeData}
-                width="100%"
-                height={treeHeight - 68}
-                indent={12}
-                rowHeight={28}
-                openByDefault={false}
-                className="scrollbar-gutter-stable"
-              >
-                {(props) => (
-                  <NodeRenderer
-                    {...props}
-                    onSelectFile={onSelectFile}
-                    setContextMenu={setContextMenu}
-                    dirtyFiles={[]}
-                    activeFilePath={activeFilePath}
-                    gitStatuses={gitStatuses}
-                    gitRoots={gitRoots}
-                    diffStats={diffStats}
-                    changesOnly={changesOnly}
-                  />
-                )}
-              </Tree>
-              <div className="px-3 py-2 border-t border-border/20">
-                {changesTreeData.map((root) => {
-                  const gitRoot = gitRoots.has(root.id)
-                  return gitRoot ? (
-                    <button
-                      key={root.id}
-                      type="button"
-                      onClick={() => handleCommit(root.id)}
-                      disabled={commitState?.generating}
-                      className={cn(
-                        'w-full text-xs px-3 py-1.5 rounded-lg font-medium transition-all',
-                        commitState?.generating
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                          : 'bg-primary/15 text-primary hover:bg-primary/25',
-                      )}
-                    >
-                      {commitState?.generating
-                        ? 'Generating message...'
-                        : `Commit (${root.name})`}
-                    </button>
-                  ) : null
-                })}
-              </div>
-            </>
+          changesOnly ? (
+            <GitDiffView
+              folders={treeData.map((n) => n.id)}
+              onSelectFile={(path) =>
+                onSelectFile({
+                  name: path.split('/').pop() || path,
+                  isDirectory: false,
+                  path,
+                })
+              }
+            />
           ) : (
             <Tree
               ref={treeRef}
-              data={changesOnly ? changesTreeData : treeData}
+              data={treeData}
               width="100%"
               height={treeHeight - 16}
               indent={12}
               rowHeight={28}
               openByDefault={false}
-              onMove={changesOnly ? undefined : onMove}
-              onToggle={changesOnly ? undefined : handleToggle}
+              onMove={onMove}
+              onToggle={handleToggle}
               className="scrollbar-gutter-stable"
               disableDrop={({ parentNode }) => {
                 if (
@@ -750,8 +584,8 @@ export function Treeview() {
                   activeFilePath={activeFilePath}
                   gitStatuses={gitStatuses}
                   gitRoots={gitRoots}
-                  diffStats={diffStats}
-                  changesOnly={changesOnly}
+                  diffStats={{}}
+                  changesOnly={false}
                 />
               )}
             </Tree>
@@ -806,58 +640,6 @@ export function Treeview() {
           }}
           onCancel={() => setConfirmModal(null)}
         />
-      )}
-
-      {commitState && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-[520px] bg-card border border-border/40 rounded-xl shadow-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-border/20">
-              <h3 className="text-sm font-bold">Commit Changes</h3>
-            </div>
-            <div className="p-4 space-y-3">
-              {commitState.error && (
-                <div className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
-                  {commitState.error}
-                </div>
-              )}
-              {commitState.generating ? (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
-                  <div className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-                  Generating commit message...
-                </div>
-              ) : (
-                <textarea
-                  value={commitState.message}
-                  onChange={(e) =>
-                    setCommitState((prev) =>
-                      prev ? { ...prev, message: e.target.value } : null,
-                    )
-                  }
-                  className="w-full h-24 bg-background border border-border/30 rounded-lg px-3 py-2 text-xs font-mono resize-none outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
-                  placeholder="Commit message..."
-                />
-              )}
-            </div>
-            {!commitState.generating && (
-              <div className="px-4 py-3 border-t border-border/20 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCommitState(null)}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-foreground/10 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCommitConfirm}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
-                >
-                  Commit
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
       )}
 
       {contextMenu && (
