@@ -9,6 +9,7 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileInfo } from '../../../../lib/types/files'
+import { Button } from '../../basic/Button'
 
 // Register the pdfjs worker — Vite recognizes new URL with import.meta.url
 GlobalWorkerOptions.workerSrc = new URL(
@@ -108,8 +109,8 @@ export function PdfViewer({ file }: PdfViewerProps) {
 
       ctx.scale(dpr, dpr)
 
-      // White background for the PDF
-      ctx.fillStyle = '#ffffff'
+      // Background for the PDF page (uses canvas CSS, e.g. bg-white)
+      ctx.fillStyle = window.getComputedStyle(canvas).backgroundColor
       ctx.fillRect(0, 0, viewport.width, viewport.height)
 
       await page.render({ canvas, viewport }).promise
@@ -196,57 +197,61 @@ export function PdfViewer({ file }: PdfViewerProps) {
       {/* Toolbar */}
       <div className="shrink-0 h-10 bg-sidebar border-b border-border flex items-center px-3 gap-2 select-none">
         {/* Page navigation */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={goToPrevPage}
           disabled={currentPage <= 1}
-          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          className="p-1 rounded"
           title="Previous page"
         >
           <ChevronLeft size={15} />
-        </button>
+        </Button>
 
         <span className="text-[11px] text-muted-foreground/70 font-medium tabular-nums min-w-[80px] text-center">
           Page {currentPage} / {numPages}
         </span>
 
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={goToNextPage}
           disabled={currentPage >= numPages}
-          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          className="p-1 rounded"
           title="Next page"
         >
           <ChevronRight size={15} />
-        </button>
+        </Button>
 
         {/* Separator */}
         <div className="w-px h-5 bg-border/40 mx-1" />
 
         {/* Zoom controls */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={zoomOut}
           disabled={scale <= MIN_SCALE}
-          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          className="p-1 rounded"
           title="Zoom out"
         >
           <ZoomOut size={15} />
-        </button>
+        </Button>
 
         <span className="text-[11px] text-muted-foreground/70 font-medium tabular-nums min-w-[36px] text-center">
           {Math.round(scale * 100)}%
         </span>
 
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={zoomIn}
           disabled={scale >= MAX_SCALE}
-          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          className="p-1 rounded"
           title="Zoom in"
         >
           <ZoomIn size={15} />
-        </button>
+        </Button>
 
         {/* Spacer */}
         <div className="flex-1" />

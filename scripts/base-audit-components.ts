@@ -117,6 +117,11 @@ walk(SRC_DIR, (filePath) => {
           continue
         }
 
+        // Skip <textarea> — no shared/basic component exists yet
+        if (tag === 'textarea') {
+          continue
+        }
+
         violations.push({
           file: relativePath,
           line: index + 1,

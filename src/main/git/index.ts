@@ -1,4 +1,5 @@
 import { exec, spawn } from 'node:child_process'
+import { type FSWatcher, watch as fsWatch } from 'node:fs'
 import { promisify } from 'node:util'
 import { streamText } from 'ai'
 import { ipcMain } from 'electron'
@@ -70,6 +71,8 @@ class GitService {
   private statusCache: Map<string, GitStatusMap> = new Map()
   private rootCache: Map<string, string | null> = new Map()
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map()
+  private gitWatchers: Map<string, { head?: FSWatcher; index?: FSWatcher }> =
+    new Map()
 
   constructor() {
     this.setupIpc()
@@ -587,6 +590,80 @@ ${diffContent.slice(0, 1200)}`
     this.rootCache.clear()
     this.statusCache.clear()
   }
+
+  // ── Lightweight .git metadata watcher ─────────────────────────────────
+  // Watches .git/HEAD (changes on checkout/reset/rebase) and .git/index
+  // (changes on add/reset/stash) to trigger git status refresh for external
+  // git operations. Uses Node's built-in fs.watch — only 2 files per root.
+
+  async setupGitWatcher(root: string) {
+    // Clean up any existing watcher for this root
+    this.teardownGitWatcher(root)
+
+    const gitDir = joinPaths(root, '.git')
+    const headPath = joinPaths(gitDir, 'HEAD')
+    const indexPath = joinPaths(gitDir, 'index')
+
+    const headExists = await exists(headPath)
+    const indexExists = await exists(indexPath)
+
+    if (!headExists && !indexExists) {
+      // Not a standard git repo (could be a submodule or worktree with
+      // a .git file instead of directory) — skip watching
+      return
+    }
+
+    const watchers: { head?: FSWatcher; index?: FSWatcher } = {}
+
+    if (headExists) {
+      try {
+        watchers.head = fsWatch(headPath, () => {
+          this.refreshStatus(root)
+        })
+      } catch (err) {
+        console.error(`[GitService] Failed to watch ${headPath}:`, err)
+      }
+    }
+
+    if (indexExists) {
+      try {
+        watchers.index = fsWatch(indexPath, () => {
+          this.refreshStatus(root)
+        })
+      } catch (err) {
+        console.error(`[GitService] Failed to watch ${indexPath}:`, err)
+      }
+    }
+
+    this.gitWatchers.set(root, watchers)
+  }
+
+  teardownGitWatcher(root: string) {
+    const watchers = this.gitWatchers.get(root)
+    if (watchers) {
+      watchers.head?.close()
+      watchers.index?.close()
+      this.gitWatchers.delete(root)
+    }
+  }
+
+  refreshWatchers(folders: string[]) {
+    // Teardown watchers for roots that are no longer in the folder list
+    for (const [root] of this.gitWatchers) {
+      if (!folders.some((f) => f === root || f.startsWith(`${root}/`))) {
+        this.teardownGitWatcher(root)
+      }
+    }
+
+    // Setup watchers for current folders
+    for (const folder of folders) {
+      this.findGitRoot(folder).then((root) => {
+        if (root) {
+          this.setupGitWatcher(root)
+        }
+      })
+    }
+  }
 }
 
 let instance: GitService | null = null
@@ -595,11 +672,12 @@ export function setupGitIpc() {
   if (!instance) {
     instance = new GitService()
 
-    // Forced initial refresh for all workspace folders
+    // Forced initial refresh + start .git watchers for all workspace folders
     getWorkspaceFolders().then((folders) => {
       for (const folder of folders) {
         instance?.refreshStatus(folder, true)
       }
+      instance?.refreshWatchers(folders)
     })
   }
 }
@@ -607,6 +685,7 @@ export function setupGitIpc() {
 const gitService = {
   handleFsChange: (path: string) => instance?.handleFsChange(path),
   clearCaches: () => instance?.clearCaches(),
+  refreshWatchers: (folders: string[]) => instance?.refreshWatchers(folders),
 }
 
 export { gitService }

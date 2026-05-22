@@ -3,6 +3,7 @@ import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
+import { gitService } from '../git/index'
 import { sendAppEvent, sendAppOperation, showOpenDialog } from '../window'
 import {
   addWorkspaceFolder,
@@ -19,6 +20,7 @@ import {
 export function setupWorkspaceIpc(): void {
   const notifyChanged = (folders: string[]) => {
     sendAppEvent(AppEvents.WORKSPACE_CHANGED, { folders })
+    gitService.refreshWatchers(folders)
   }
 
   ipcMain.handle(WorkspaceChannels.LIST, async () => {

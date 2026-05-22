@@ -20,6 +20,7 @@ import {
   writeText,
 } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
+import { gitService } from '../git/index'
 import { sendAppEvent } from '../window'
 
 let activeFileWatcher: ReturnType<typeof fsWatch> | null = null
@@ -124,6 +125,7 @@ export function setupFileIpc() {
         event: 'add',
         path: filePath,
       })
+      gitService.handleFsChange(filePath)
       return true
     },
   )
@@ -137,6 +139,7 @@ export function setupFileIpc() {
         event: 'rename',
         path: newPath,
       })
+      gitService.handleFsChange(newPath)
       return true
     },
   )
@@ -149,6 +152,7 @@ export function setupFileIpc() {
         event: 'add',
         path: destPath,
       })
+      gitService.handleFsChange(destPath)
       return true
     },
   )
@@ -160,6 +164,7 @@ export function setupFileIpc() {
       event: 'unlink',
       path: filePath,
     })
+    gitService.handleFsChange(filePath)
     return true
   })
 
@@ -171,6 +176,7 @@ export function setupFileIpc() {
         event: 'change',
         path: filePath,
       })
+      gitService.handleFsChange(filePath)
       return true
     },
   )

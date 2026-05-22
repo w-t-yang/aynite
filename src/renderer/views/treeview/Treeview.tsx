@@ -264,6 +264,13 @@ export function Treeview() {
     window.dispatchEvent(
       new CustomEvent('reload-folder', { detail: parentDir }),
     )
+
+    // Also refresh git status for the workspace root that contains this path
+    const roots = rootFilesPathsRef.current
+    const affectedRoot = roots.find((r) => data.path.startsWith(r))
+    if (affectedRoot) {
+      fetchStatus(affectedRoot)
+    }
   })
 
   const handleToggle = async (id: string) => {

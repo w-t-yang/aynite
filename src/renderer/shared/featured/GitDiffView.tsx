@@ -2,6 +2,7 @@ import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { DiffStats } from '../../../lib/types/files'
 import { useAppEvent } from '../../views/ViewContext'
+import { Button } from '../basic/Button'
 import { Modal } from '../basic/Modal'
 import { cn } from '../lib/utils'
 
@@ -224,14 +225,15 @@ export function GitDiffView({
                   />
                 )}
                 <span className="truncate flex-1">{folderName}</span>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => loadGitStatus(folders, true)}
-                  className="shrink-0 p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-accent/30 transition-all"
+                  className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-accent/30"
                   title="Refresh git status"
                 >
                   <RefreshCw size={12} />
-                </button>
+                </Button>
                 {!isGit && (
                   <span className="text-[10px] text-muted-foreground/40 italic shrink-0">
                     not a git repository
@@ -274,11 +276,12 @@ export function GitDiffView({
                   const stat = diffStats[file.path]
                   const config = getStatusConfig(file.status)
                   return (
-                    <button
+                    <Button
                       key={file.path}
-                      type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onSelectFile?.(file.path)}
-                      className="w-full group flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-foreground/70 hover:bg-accent/10 hover:text-foreground transition-all text-left"
+                      className="w-full justify-start text-left hover:bg-accent/10"
                       title={file.path}
                     >
                       <span
@@ -304,14 +307,15 @@ export function GitDiffView({
                           )}
                         </span>
                       )}
-                    </button>
+                    </Button>
                   )
                 })}
 
                 {/* Commit button */}
                 <div className="pt-1 pl-1">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleCommit(path)}
                     disabled={commitState?.generating}
                     className="text-[10px] px-2.5 py-1 rounded-md font-medium transition-all bg-primary/15 text-primary hover:bg-primary/25 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
@@ -319,7 +323,7 @@ export function GitDiffView({
                     {commitState?.generating && commitState?.root === path
                       ? 'Generating...'
                       : `Commit (${folderName})`}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -337,20 +341,22 @@ export function GitDiffView({
           footer={
             !commitState.generating ? (
               <>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleCommitCancel}
                   className="text-xs px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-foreground/10 transition-colors"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleCommitConfirm}
                   className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
                 >
                   Commit
-                </button>
+                </Button>
               </>
             ) : null
           }
