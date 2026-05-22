@@ -434,7 +434,7 @@ export function Settings() {
                 actions={{
                   onCheckUpdates: window.aynite.checkForUpdates,
                   onInstallUpdate: () => {},
-                  onOpenExternal: (url) => window.open(url, '_blank'),
+                  onOpenExternal: (url) => window.aynite.openExternal(url),
                 }}
               />
             )}
