@@ -1,8 +1,9 @@
 import {
+  ArrowLeftRight,
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   FileText,
-  Maximize2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -154,6 +155,26 @@ export function PdfViewer({ file }: PdfViewerProps) {
     )
   }, [])
 
+  const fitToWidth = useCallback(async () => {
+    const pdf = pdfDoc
+    const container = containerRef.current
+    if (!pdf || !container) return
+    try {
+      const page = await pdf.getPage(currentPage)
+      const viewport = page.getViewport({ scale: 1 })
+      const containerWidth = container.clientWidth - 48 // p-6 padding on both sides
+      const fitScale = containerWidth / viewport.width
+      setScale(
+        Math.max(
+          MIN_SCALE,
+          Math.min(MAX_SCALE, parseFloat(fitScale.toFixed(2))),
+        ),
+      )
+    } catch {
+      // Silently ignore
+    }
+  }, [pdfDoc, currentPage])
+
   const fitToHeight = useCallback(async () => {
     const pdf = pdfDoc
     const container = containerRef.current
@@ -266,7 +287,16 @@ export function PdfViewer({ file }: PdfViewerProps) {
           <ZoomIn size={15} />
         </Button>
 
-        {/* Fit to height */}
+        {/* Fit controls */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={fitToWidth}
+          className="p-1 rounded"
+          title="Fit to width"
+        >
+          <ArrowLeftRight size={15} />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
@@ -274,7 +304,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
           className="p-1 rounded"
           title="Fit to height"
         >
-          <Maximize2 size={15} />
+          <ArrowUpDown size={15} />
         </Button>
       </div>
 
