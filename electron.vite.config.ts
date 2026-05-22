@@ -15,7 +15,6 @@ export default defineConfig({
           '@ai-sdk/deepseek',
           '@ai-sdk/provider-utils',
           'zod',
-          'chokidar',
           'js-yaml',
           'electron-is-dev',
           'electron-log',

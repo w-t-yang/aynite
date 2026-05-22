@@ -1,4 +1,4 @@
-import { type FSWatcher, watch } from 'chokidar'
+import { watch as fsWatch } from 'node:fs'
 import { ipcMain } from 'electron'
 import { AppEvents as AppEventTypes } from '../../lib/constants/app'
 import { FileChannels } from '../../lib/constants/ipc-channels'
@@ -20,11 +20,9 @@ import {
   writeText,
 } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
-import { gitService } from '../git/index'
 import { sendAppEvent } from '../window'
-import { getWorkspaceFolders } from '../workspace'
 
-let watcher: FSWatcher | null = null
+let activeFileWatcher: ReturnType<typeof fsWatch> | null = null
 
 // ─── Payload types ─────────────────────────────────────────────────────────
 interface FileCreatePayload {
@@ -156,52 +154,33 @@ export function setupFileIpc() {
     },
   )
 
-  ipcMain.handle(FileChannels.WATCHER_REFRESH, async () => {
-    return await setupWatcher()
-  })
-}
+  /**
+   * Watch a single file for external changes (e.g. git checkout, another editor).
+   * Only the currently open file needs watching — saves thousands of FDs.
+   */
+  ipcMain.handle(
+    FileChannels.WATCH_FILE,
+    async (_event, filePath: string | null) => {
+      // Close previous watcher
+      if (activeFileWatcher) {
+        activeFileWatcher.close()
+        activeFileWatcher = null
+      }
 
-export async function setupWatcher(folders?: string[]) {
-  if (watcher) {
-    watcher.close()
-  }
+      if (!filePath) return
 
-  const watchFolders = folders || (await getWorkspaceFolders())
-  if (!watchFolders || watchFolders.length === 0) return
-
-  // Build a set of path segments to ignore for efficient lookup
-  // Always include common heavy directories to prevent FD exhaustion
-  const ALWAYS_IGNORE = new Set(['node_modules', '.git', '.DS_Store'])
-
-  ;(async () => {
-    try {
-      const userPatterns = await getIgnorePatterns()
-      const ignoreSet = new Set([
-        ...ALWAYS_IGNORE,
-        ...(Array.isArray(userPatterns) ? userPatterns : []),
-      ])
-
-      watcher = watch(watchFolders, {
-        ignored: (p: string) => {
-          if (watchFolders.includes(p)) return false
-          // Split path into segments and check each one
-          // This catches node_modules/express/lib even when basename is "lib"
-          const segments = p.split('/')
-          return segments.some((seg) => ignoreSet.has(seg))
-        },
-        persistent: true,
-        ignoreInitial: true,
-        // Depth 20 is more than enough for any real project
-        // node_modules is already excluded, so this covers deep nested source dirs
-        depth: 20,
-      })
-
-      watcher.on('all', (event, path) => {
-        sendAppEvent(AppEventTypes.FS_CHANGE, { event, path })
-        gitService.handleFsChange(path)
-      })
-    } catch (e) {
-      console.error('Error in setupWatcher ignore patterns:', e)
-    }
-  })()
+      try {
+        activeFileWatcher = fsWatch(filePath, (eventType) => {
+          if (eventType === 'change') {
+            sendAppEvent(AppEventTypes.FS_CHANGE, {
+              event: 'change',
+              path: filePath,
+            })
+          }
+        })
+      } catch (err) {
+        console.error(`[File] Failed to watch file: ${filePath}`, err)
+      }
+    },
+  )
 }

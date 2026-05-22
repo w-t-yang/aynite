@@ -72,7 +72,7 @@ interface AyniteWindow {
     extension: string
     isText: boolean
   }>
-  refreshWatcher: () => Promise<void>
+  watchFile: (path: string | null) => Promise<void>
   getFiles: (path: string) => Promise<FileEntry[]>
   onFileSystemChange: (
     callback: (data: { event: string; path: string }) => void,

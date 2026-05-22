@@ -4,6 +4,7 @@ import {
   FilePlus,
   FolderPlus,
   FolderTree,
+  RefreshCw,
   Trash2,
   X,
 } from 'lucide-react'
@@ -126,6 +127,11 @@ export function Treeview() {
         id: 'new-folder',
         label: 'New Folder',
         icon: <FolderPlus size={14} />,
+      })
+      items.push({
+        id: 'refresh',
+        label: 'Refresh',
+        icon: <RefreshCw size={14} />,
       })
     }
 
@@ -366,7 +372,8 @@ export function Treeview() {
       | 'remove-from-workspace'
       | 'copy'
       | 'paste'
-      | 'add-folder',
+      | 'add-folder'
+      | 'refresh',
   ) => {
     if (action === 'add-folder') {
       handleAddFolder()
@@ -382,6 +389,16 @@ export function Treeview() {
         treeRef.current?.selectedIds || new Set<string>([file.id]),
       )
       setClipboard({ paths: selectedIds, action: 'copy' })
+      return
+    }
+
+    // Refresh: reload folder contents and re-fetch git status
+    if (action === 'refresh') {
+      const children = await fetchFiles(file.id)
+      setTreeData((prev: FileNode[]) =>
+        updateNodeChildren(prev, file.id, children),
+      )
+      fetchStatus(file.id)
       return
     }
 

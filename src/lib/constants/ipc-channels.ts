@@ -22,7 +22,7 @@ export const FileChannels = {
   DELETE: 'aynite:file-delete',
   INFO: 'aynite:file-info',
   CHECK_TEXT: 'aynite:file-check-text',
-  WATCHER_REFRESH: 'aynite:file-watcher-refresh',
+  WATCH_FILE: 'aynite:file-watch',
 } as const
 
 export const WorkspaceChannels = {

@@ -1,4 +1,4 @@
-import { GitBranch, GitCommitHorizontal } from 'lucide-react'
+import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { DiffStats } from '../../../lib/types/files'
 import { useAppEvent } from '../../views/ViewContext'
@@ -218,6 +218,14 @@ export function GitDiffView({
                   />
                 )}
                 <span className="truncate flex-1">{folderName}</span>
+                <button
+                  type="button"
+                  onClick={() => loadGitStatus(folders)}
+                  className="shrink-0 p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-accent/30 transition-all"
+                  title="Refresh git status"
+                >
+                  <RefreshCw size={12} />
+                </button>
                 {!isGit && (
                   <span className="text-[10px] text-muted-foreground/40 italic shrink-0">
                     not a git repository

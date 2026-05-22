@@ -47,7 +47,8 @@ const aynite = {
   getFileInfo: (path: string) => ipcRenderer.invoke(FileChannels.INFO, path),
   checkIsTextFile: (path: string) =>
     ipcRenderer.invoke(FileChannels.CHECK_TEXT, path),
-  refreshWatcher: () => ipcRenderer.invoke(FileChannels.WATCHER_REFRESH),
+  watchFile: (path: string | null) =>
+    ipcRenderer.invoke(FileChannels.WATCH_FILE, path),
 
   // ── Workspace operations ────────────────────────────────────────────────
   getWorkspacesList: () => ipcRenderer.invoke(WorkspaceChannels.LIST),

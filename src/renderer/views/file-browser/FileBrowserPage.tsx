@@ -210,6 +210,12 @@ export function FileBrowserPage() {
     loadFile()
   }, [activePath])
 
+  // Watch only the currently open file for external changes
+  // Uses 1 FD instead of thousands from recursive directory watching
+  useEffect(() => {
+    window.aynite.watchFile(activePath)
+  }, [activePath])
+
   // Reload active file if it changes on disk
   useAppEvent('fs-change', (data: { event: string; path: string }) => {
     if (!activePath || isBroadcastingRef.current) return

@@ -3,7 +3,7 @@ import { app, BrowserWindow, protocol } from 'electron'
 // IPC & Logic Modules
 import { setupAiIpc } from './ai/index'
 import { initAppFolders, setupConfigIpc } from './config/index'
-import { setupFileIpc, setupWatcher } from './file/index'
+import { setupFileIpc } from './file/index'
 import { setupGitIpc } from './git/index'
 import { setupKeybindings } from './keybindings'
 import { setupRssIpc } from './rss/index'
@@ -109,9 +109,6 @@ app.whenReady().then(async () => {
     // 4. Workspace & File Management
     setupWorkspaceIpc()
     setupFileIpc()
-
-    // Initial watcher setup
-    setupWatcher()
 
     // 5. Feature Subsystems (AI, Spells, Git)
     setupAiIpc()
