@@ -92,6 +92,7 @@ export const UpdateChannels = {
 } as const
 export const GitChannels = {
   STATUS: 'aynite:git-status',
+  REFRESH_STATUS: 'aynite:git-refresh-status',
   HEAD_CONTENT: 'aynite:git-head-content',
   INDEX_CONTENT: 'aynite:git-index-content',
   STAGE_HUNK: 'aynite:git-stage-hunk',

@@ -64,67 +64,73 @@ export function GitDiffView({
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
 
-  const loadGitStatus = useCallback(async (folderPaths: string[]) => {
-    const newRoots = new Set<string>()
-    const newChangedFiles: Record<string, GitChangedFile[]> = {}
-    const newDiffStats: Record<string, DiffStats> = {}
+  const loadGitStatus = useCallback(
+    async (folderPaths: string[], forceRefresh = false) => {
+      const newRoots = new Set<string>()
+      const newChangedFiles: Record<string, GitChangedFile[]> = {}
+      const newDiffStats: Record<string, DiffStats> = {}
 
-    for (const folderPath of folderPaths) {
-      try {
-        const isRoot = await (window as any).aynite.checkIsGitRoot(folderPath)
-        if (isRoot) {
-          newRoots.add(folderPath)
+      for (const folderPath of folderPaths) {
+        try {
+          const isRoot = await (window as any).aynite.checkIsGitRoot(folderPath)
+          if (isRoot) {
+            newRoots.add(folderPath)
 
-          // Fetch git status
-          const statusMap = await (window as any).aynite.getGitStatus(
-            folderPath,
-          )
-          if (statusMap) {
-            const allPaths: string[] = []
-            for (const [absPath, status] of Object.entries(statusMap)) {
-              if (
-                absPath.startsWith(`${folderPath}/`) &&
-                absPath !== folderPath &&
-                status !== 'none' &&
-                status !== 'ignored'
-              ) {
-                allPaths.push(absPath)
+            // Use force-refresh API when called from refresh button,
+            // otherwise use cached status (faster for initial load)
+            const statusMap = forceRefresh
+              ? await (window as any).aynite.refreshGitStatus(folderPath)
+              : await (window as any).aynite.getGitStatus(folderPath)
+            if (statusMap) {
+              const allPaths: string[] = []
+              for (const [absPath, status] of Object.entries(statusMap)) {
+                if (
+                  absPath.startsWith(`${folderPath}/`) &&
+                  absPath !== folderPath &&
+                  status !== 'none' &&
+                  status !== 'ignored'
+                ) {
+                  allPaths.push(absPath)
+                }
+              }
+              // Filter out parent directory entries
+              const leafPaths = allPaths.filter(
+                (p) =>
+                  !allPaths.some(
+                    (other) => other !== p && other.startsWith(`${p}/`),
+                  ),
+              )
+              const changed: GitChangedFile[] = leafPaths.map((absPath) => ({
+                name: absPath.split('/').pop() || absPath,
+                path: absPath,
+                status: statusMap[absPath],
+              }))
+              if (changed.length > 0) {
+                newChangedFiles[folderPath] = changed.sort((a, b) =>
+                  a.name.localeCompare(b.name),
+                )
               }
             }
-            // Filter out parent directory entries
-            const leafPaths = allPaths.filter(
-              (p) =>
-                !allPaths.some(
-                  (other) => other !== p && other.startsWith(`${p}/`),
-                ),
+
+            // Fetch diff stats
+            const stats = await (window as any).aynite.getGitDiffStats(
+              folderPath,
             )
-            const changed: GitChangedFile[] = leafPaths.map((absPath) => ({
-              name: absPath.split('/').pop() || absPath,
-              path: absPath,
-              status: statusMap[absPath],
-            }))
-            if (changed.length > 0) {
-              newChangedFiles[folderPath] = changed.sort((a, b) =>
-                a.name.localeCompare(b.name),
-              )
+            if (stats) {
+              Object.assign(newDiffStats, stats)
             }
           }
-
-          // Fetch diff stats
-          const stats = await (window as any).aynite.getGitDiffStats(folderPath)
-          if (stats) {
-            Object.assign(newDiffStats, stats)
-          }
+        } catch (e) {
+          console.error('[GitDiffView] Failed to check git status:', e)
         }
-      } catch (e) {
-        console.error('[GitDiffView] Failed to check git status:', e)
       }
-    }
 
-    setGitRoots(newRoots)
-    setGitChangedFiles(newChangedFiles)
-    setDiffStats(newDiffStats)
-  }, [])
+      setGitRoots(newRoots)
+      setGitChangedFiles(newChangedFiles)
+      setDiffStats(newDiffStats)
+    },
+    [],
+  )
 
   // Load git status when folders change
   useEffect(() => {
@@ -220,7 +226,7 @@ export function GitDiffView({
                 <span className="truncate flex-1">{folderName}</span>
                 <button
                   type="button"
-                  onClick={() => loadGitStatus(folders)}
+                  onClick={() => loadGitStatus(folders, true)}
                   className="shrink-0 p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-accent/30 transition-all"
                   title="Refresh git status"
                 >

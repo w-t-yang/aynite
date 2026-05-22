@@ -88,6 +88,8 @@ const aynite = {
 
   // ── Git operations ────────────────────────────────────────────────────────
   getGitStatus: (path: string) => ipcRenderer.invoke(GitChannels.STATUS, path),
+  refreshGitStatus: (path: string) =>
+    ipcRenderer.invoke(GitChannels.REFRESH_STATUS, path),
   getGitHeadContent: (path: string) =>
     ipcRenderer.invoke(GitChannels.HEAD_CONTENT, path),
   getGitIndexContent: (path: string) =>

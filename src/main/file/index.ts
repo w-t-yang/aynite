@@ -119,6 +119,11 @@ export function setupFileIpc() {
       } else {
         await writeText(filePath, '')
       }
+      // Notify renderer so treeview/file-browser can refresh
+      sendAppEvent(AppEventTypes.FS_CHANGE, {
+        event: 'add',
+        path: filePath,
+      })
       return true
     },
   )
@@ -128,6 +133,10 @@ export function setupFileIpc() {
     async (_event, { oldPath, newPath }: FileRenamePayload) => {
       await rename(oldPath, newPath)
       sendAppEvent(AppEventTypes.FILE_RENAMED, { oldPath, newPath })
+      sendAppEvent(AppEventTypes.FS_CHANGE, {
+        event: 'rename',
+        path: newPath,
+      })
       return true
     },
   )
@@ -136,6 +145,10 @@ export function setupFileIpc() {
     FileChannels.COPY,
     async (_event, { srcPath, destPath }: FileCopyPayload) => {
       await copy(srcPath, destPath, { recursive: true })
+      sendAppEvent(AppEventTypes.FS_CHANGE, {
+        event: 'add',
+        path: destPath,
+      })
       return true
     },
   )
@@ -143,6 +156,10 @@ export function setupFileIpc() {
   ipcMain.handle(FileChannels.DELETE, async (_event, filePath: string) => {
     await remove(filePath, { recursive: true, force: true })
     sendAppEvent(AppEventTypes.FILE_DELETED, { path: filePath })
+    sendAppEvent(AppEventTypes.FS_CHANGE, {
+      event: 'unlink',
+      path: filePath,
+    })
     return true
   })
 
@@ -150,6 +167,10 @@ export function setupFileIpc() {
     FileChannels.SAVE,
     async (_event, { path: filePath, content }: FileSavePayload) => {
       await writeText(filePath, content)
+      sendAppEvent(AppEventTypes.FS_CHANGE, {
+        event: 'change',
+        path: filePath,
+      })
       return true
     },
   )

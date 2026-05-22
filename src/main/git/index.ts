@@ -88,6 +88,14 @@ class GitService {
       return cached
     })
 
+    ipcMain.handle(GitChannels.REFRESH_STATUS, async (_event, path: string) => {
+      const root = await this.findGitRoot(path)
+      if (!root) return null
+
+      await this.refreshStatus(root, true)
+      return this.statusCache.get(root) || {}
+    })
+
     ipcMain.handle('aynite:git-is-root', async (_event, path: string) => {
       const gitDir = joinPaths(getAbsolutePath(path), '.git')
       return await exists(gitDir)

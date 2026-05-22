@@ -11,6 +11,7 @@
     "test:ai": "tsx scripts/test-ai-providers.ts",
     "dev:views": "vite --config vite.views.config.ts",
     "count:aynite": "tsx scripts/count-aynite-commits.ts",
+    "count:fd": "tsx scripts/count-fd.ts",
     "audit:base": "npm run audit:preload && npm run audit:constants && npm run audit:types && npm run audit:window && npm run audit:zindex && npm run audit:path && npm run audit:main-import && npm run audit:event && npm run audit:theme && npm run audit:components",
     "audit:standalone": "npm run audit:bridge && npm run audit:communication && npm run audit:complexity && npm run audit:exports && npm run audit:patterns",
     "audit:tools": "npm run audit:duplication && npm run audit:circular && npm run audit:ast-grep && npm run audit:deadcode",

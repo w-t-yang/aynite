@@ -253,6 +253,19 @@ export function Treeview() {
     return () => window.removeEventListener('reload-folder', handleReload)
   }, [])
 
+  // Auto-refresh tree when files are created/deleted/renamed via the app
+  // (e.g. AI tool operations, manual file operations)
+  useAppEvent('fs-change', (data: { event: string; path: string }) => {
+    // Determine the parent directory of the changed file to refresh
+    const parentDir = data.path.split('/').slice(0, -1).join('/')
+    if (!parentDir) return
+
+    // Dispatch reload-folder to refresh the tree
+    window.dispatchEvent(
+      new CustomEvent('reload-folder', { detail: parentDir }),
+    )
+  })
+
   const handleToggle = async (id: string) => {
     const node = findNodeData(treeData, id)
     if (node && !node.isLoaded && node.isDirectory) {
