@@ -169,20 +169,31 @@ export async function setupWatcher(folders?: string[]) {
   const watchFolders = folders || (await getWorkspaceFolders())
   if (!watchFolders || watchFolders.length === 0) return
 
+  // Build a set of path segments to ignore for efficient lookup
+  // Always include common heavy directories to prevent FD exhaustion
+  const ALWAYS_IGNORE = new Set(['node_modules', '.git', '.DS_Store'])
+
   ;(async () => {
     try {
-      const ignorePatterns = await getIgnorePatterns()
+      const userPatterns = await getIgnorePatterns()
+      const ignoreSet = new Set([
+        ...ALWAYS_IGNORE,
+        ...(Array.isArray(userPatterns) ? userPatterns : []),
+      ])
+
       watcher = watch(watchFolders, {
-        ignored: (p) => {
-          const basename = getBasename(p)
+        ignored: (p: string) => {
           if (watchFolders.includes(p)) return false
-          return (
-            Array.isArray(ignorePatterns) && ignorePatterns.includes(basename)
-          )
+          // Split path into segments and check each one
+          // This catches node_modules/express/lib even when basename is "lib"
+          const segments = p.split('/')
+          return segments.some((seg) => ignoreSet.has(seg))
         },
         persistent: true,
         ignoreInitial: true,
-        depth: 99,
+        // Depth 20 is more than enough for any real project
+        // node_modules is already excluded, so this covers deep nested source dirs
+        depth: 20,
       })
 
       watcher.on('all', (event, path) => {
