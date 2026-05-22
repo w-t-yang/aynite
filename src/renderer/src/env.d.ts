@@ -55,6 +55,7 @@ interface AyniteWindow {
   // File operations
   listFolder: (path: string) => Promise<FileEntry[]>
   readFile: (path: string) => Promise<string>
+  readFileBinary: (path: string) => Promise<Uint8Array>
   openFile: (path: string) => Promise<boolean>
   writeFile: (path: string, content: string) => Promise<boolean>
   createFile: (path: string, isDirectory: boolean) => Promise<boolean>

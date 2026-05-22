@@ -333,6 +333,10 @@ export async function readText(filePath: string): Promise<string> {
   return await fs.readFile(expandHome(filePath), 'utf-8')
 }
 
+export async function readBinary(filePath: string): Promise<Buffer> {
+  return await fs.readFile(expandHome(filePath))
+}
+
 export async function writeText(filePath: string, content: string) {
   const expanded = expandHome(filePath)
   await ensureDir(path.dirname(expanded))

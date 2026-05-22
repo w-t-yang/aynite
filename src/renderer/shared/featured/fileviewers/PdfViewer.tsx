@@ -1,7 +1,270 @@
-import type React from 'react'
-import type { FileInfo } from '../../lib/file-handlers'
-import { UnifiedViewer } from './UnifiedViewer'
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { FileInfo } from '../../../../lib/types/files'
 
-export const PdfViewer: React.FC<{ file: FileInfo }> = ({ file }) => (
-  <UnifiedViewer src={`aynite-resource://${file.path}`} padding="p-0" />
-)
+// Register the pdfjs worker — Vite recognizes new URL with import.meta.url
+GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString()
+
+interface PdfViewerProps {
+  file: FileInfo
+  content?: string
+}
+
+const MIN_SCALE = 0.5
+const MAX_SCALE = 4.0
+const SCALE_STEP = 0.25
+const DEFAULT_SCALE = 1.5
+
+export function PdfViewer({ file }: PdfViewerProps) {
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [numPages, setNumPages] = useState(0)
+  const [scale, setScale] = useState(DEFAULT_SCALE)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const isRenderingRef = useRef(false)
+
+  // ── Load PDF document ──────────────────────────────────────────────────
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadPdf = async () => {
+      setLoading(true)
+      setError(null)
+      setPdfDoc(null)
+      setCurrentPage(1)
+
+      try {
+        const data = await window.aynite.readFileBinary(file.path)
+        const pdf = await getDocument({ data }).promise
+        if (cancelled) return
+        setPdfDoc(pdf)
+        setNumPages(pdf.numPages)
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load PDF')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadPdf()
+    return () => {
+      cancelled = true
+    }
+  }, [file.path])
+
+  // ── Render current page ────────────────────────────────────────────────
+
+  const renderPage = useCallback(async () => {
+    const pdf = pdfDoc
+    const canvas = canvasRef.current
+    if (!pdf || !canvas) return
+
+    // Wait for previous render to finish
+    while (isRenderingRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+
+    isRenderingRef.current = true
+
+    try {
+      const page: PDFPageProxy = await pdf.getPage(currentPage)
+
+      // Calculate viewport to fit the container width
+      const container = canvas.parentElement
+      const containerWidth = container?.clientWidth ?? 800
+      const unscaledViewport = page.getViewport({ scale: 1 })
+      const fitScale = Math.min(
+        scale,
+        (containerWidth - 48) / unscaledViewport.width,
+      )
+      const effectiveScale = Math.max(scale, fitScale)
+      const viewport = page.getViewport({ scale: effectiveScale })
+
+      // Handle device pixel ratio for sharp rendering
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = viewport.width * dpr
+      canvas.height = viewport.height * dpr
+      canvas.style.width = `${viewport.width}px`
+      canvas.style.height = `${viewport.height}px`
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.scale(dpr, dpr)
+
+      // White background for the PDF
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, viewport.width, viewport.height)
+
+      await page.render({ canvas, viewport }).promise
+      page.cleanup()
+    } catch (renderErr: unknown) {
+      // Silently ignore rendering errors during teardown
+      if (renderErr instanceof Error && renderErr.message.includes('Worker')) {
+        return
+      }
+      console.error('[PdfViewer] Render error:', renderErr)
+    } finally {
+      isRenderingRef.current = false
+    }
+  }, [pdfDoc, currentPage, scale])
+
+  useEffect(() => {
+    renderPage()
+  }, [renderPage])
+
+  // ── Cleanup on unmount ─────────────────────────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      pdfDoc?.cleanup()
+      pdfDoc?.destroy()
+    }
+  }, [pdfDoc])
+
+  // ── Handlers ───────────────────────────────────────────────────────────
+
+  const goToPrevPage = useCallback(() => {
+    setCurrentPage((p) => Math.max(1, p - 1))
+  }, [])
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((p) => Math.min(numPages, p + 1))
+  }, [numPages])
+
+  const zoomIn = useCallback(() => {
+    setScale((s) =>
+      Math.min(MAX_SCALE, parseFloat((s + SCALE_STEP).toFixed(2))),
+    )
+  }, [])
+
+  const zoomOut = useCallback(() => {
+    setScale((s) =>
+      Math.max(MIN_SCALE, parseFloat((s - SCALE_STEP).toFixed(2))),
+    )
+  }, [])
+
+  // ── Loading state ──────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-background gap-4">
+        <div className="w-6 h-6 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <span className="text-xs text-muted-foreground/50 font-medium tracking-wider uppercase">
+          Loading PDF...
+        </span>
+      </div>
+    )
+  }
+
+  // ── Error state ────────────────────────────────────────────────────────
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-background gap-4 p-8">
+        <FileText size={40} className="text-destructive/40" strokeWidth={1.5} />
+        <div className="text-sm font-medium text-destructive">
+          Could not open PDF
+        </div>
+        <div className="text-xs text-muted-foreground/60 max-w-md text-center">
+          {error}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Main render ────────────────────────────────────────────────────────
+
+  return (
+    <div className="flex-1 flex flex-col bg-background overflow-hidden">
+      {/* Toolbar */}
+      <div className="shrink-0 h-10 bg-sidebar border-b border-border flex items-center px-3 gap-2 select-none">
+        {/* Page navigation */}
+        <button
+          type="button"
+          onClick={goToPrevPage}
+          disabled={currentPage <= 1}
+          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          title="Previous page"
+        >
+          <ChevronLeft size={15} />
+        </button>
+
+        <span className="text-[11px] text-muted-foreground/70 font-medium tabular-nums min-w-[80px] text-center">
+          Page {currentPage} / {numPages}
+        </span>
+
+        <button
+          type="button"
+          onClick={goToNextPage}
+          disabled={currentPage >= numPages}
+          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          title="Next page"
+        >
+          <ChevronRight size={15} />
+        </button>
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-border/40 mx-1" />
+
+        {/* Zoom controls */}
+        <button
+          type="button"
+          onClick={zoomOut}
+          disabled={scale <= MIN_SCALE}
+          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          title="Zoom out"
+        >
+          <ZoomOut size={15} />
+        </button>
+
+        <span className="text-[11px] text-muted-foreground/70 font-medium tabular-nums min-w-[36px] text-center">
+          {Math.round(scale * 100)}%
+        </span>
+
+        <button
+          type="button"
+          onClick={zoomIn}
+          disabled={scale >= MAX_SCALE}
+          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors rounded"
+          title="Zoom in"
+        >
+          <ZoomIn size={15} />
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* File name */}
+        <span className="text-[11px] text-muted-foreground/40 truncate max-w-[200px]">
+          {file.name}
+        </span>
+      </div>
+
+      {/* Canvas area */}
+      <div className="flex-1 overflow-auto bg-muted/20 flex justify-center p-6">
+        <canvas
+          ref={canvasRef}
+          className="shadow-xl rounded-sm bg-white"
+          style={{ maxWidth: '100%' }}
+        />
+      </div>
+    </div>
+  )
+}

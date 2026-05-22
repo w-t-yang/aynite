@@ -11,6 +11,7 @@ import {
   getBasename,
   getExtname,
   joinPaths,
+  readBinary,
   readdir,
   readText,
   remove,
@@ -85,6 +86,10 @@ export function setupFileIpc() {
 
   ipcMain.handle(FileChannels.READ, async (_event, filePath: string) => {
     return await readText(filePath)
+  })
+
+  ipcMain.handle(FileChannels.READ_BINARY, async (_event, filePath: string) => {
+    return await readBinary(filePath)
   })
 
   ipcMain.handle(FileChannels.CHECK_TEXT, async (_event, filePath: string) => {

@@ -31,6 +31,7 @@ export function StatusBar({
 }: StatusBarProps) {
   const wordCount = content ? content.trim().split(/\s+/).length : 0
   const lineCount = content ? content.split('\n').length : 0
+  const isPdf = fileInfo?.extension?.toLowerCase() === 'pdf'
 
   return (
     <div className="h-[26px] shrink-0 bg-sidebar border-t border-border flex items-center px-3 text-[11px] text-muted-foreground/70 select-none">
@@ -78,23 +79,25 @@ export function StatusBar({
             <span>View</span>
           </button>
 
-          {/* Edit mode */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsEditing(true)
-              onSelectView?.(null)
-            }}
-            className={cn(
-              'flex items-center gap-1 px-2 py-0.5 transition-colors',
-              isEditing
-                ? 'text-foreground/80'
-                : 'text-muted-foreground/40 hover:text-muted-foreground/70',
-            )}
-          >
-            <Pencil size={11} />
-            <span>Edit</span>
-          </button>
+          {/* Edit mode — hidden for PDF (read-only binary format) */}
+          {!isPdf && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditing(true)
+                onSelectView?.(null)
+              }}
+              className={cn(
+                'flex items-center gap-1 px-2 py-0.5 transition-colors',
+                isEditing
+                  ? 'text-foreground/80'
+                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+              )}
+            >
+              <Pencil size={11} />
+              <span>Edit</span>
+            </button>
+          )}
         </div>
 
         {isEditing && (
@@ -120,25 +123,29 @@ export function StatusBar({
 
       {/* Right section: metadata */}
       <div className="flex items-center gap-1">
-        <span className="px-2 py-0.5 text-muted-foreground/50">
-          Ln {lineCount}
-        </span>
+        {!isPdf && (
+          <>
+            <span className="px-2 py-0.5 text-muted-foreground/50">
+              Ln {lineCount}
+            </span>
 
-        <div className="w-px h-3 bg-border/30" />
+            <div className="w-px h-3 bg-border/30" />
 
-        <span className="px-2 py-0.5 text-muted-foreground/50">
-          {wordCount} {wordCount === 1 ? 'word' : 'words'}
-        </span>
+            <span className="px-2 py-0.5 text-muted-foreground/50">
+              {wordCount} {wordCount === 1 ? 'word' : 'words'}
+            </span>
 
-        <div className="w-px h-3 bg-border/30" />
+            <div className="w-px h-3 bg-border/30" />
 
-        <span className="px-2 py-0.5">UTF-8</span>
+            <span className="px-2 py-0.5">UTF-8</span>
 
-        <div className="w-px h-3 bg-border/30" />
+            <div className="w-px h-3 bg-border/30" />
 
-        <span className="px-2 py-0.5">LF</span>
+            <span className="px-2 py-0.5">LF</span>
 
-        <div className="w-px h-3 bg-border/30" />
+            <div className="w-px h-3 bg-border/30" />
+          </>
+        )}
 
         <span className="px-2 py-0.5 bg-muted/40 rounded text-[10px] font-medium text-foreground/70">
           {fileInfo?.extension?.toUpperCase() || 'TXT'}

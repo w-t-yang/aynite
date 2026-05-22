@@ -13,6 +13,7 @@ export const ConfigChannels = {
 export const FileChannels = {
   LIST: 'aynite:file-list',
   READ: 'aynite:file-read',
+  READ_BINARY: 'aynite:file-read-binary',
   OPEN: 'aynite:file-open',
   SAVE: 'aynite:file-save',
   CREATE: 'aynite:file-create',
