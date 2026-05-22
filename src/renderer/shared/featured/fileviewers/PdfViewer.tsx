@@ -206,7 +206,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
   // ── Main render ────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 flex flex-col bg-background overflow-hidden">
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Toolbar */}
       <div className="shrink-0 h-10 bg-sidebar border-b border-border flex items-center justify-center px-3 gap-2 select-none">
         {/* Page navigation */}
@@ -281,9 +281,12 @@ export function PdfViewer({ file }: PdfViewerProps) {
       {/* Canvas area */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-muted/20 flex justify-start p-6"
+        className="flex-1 min-h-0 overflow-auto bg-muted/20 p-6"
       >
-        <canvas ref={canvasRef} className="shadow-xl rounded-sm bg-white" />
+        <canvas
+          ref={canvasRef}
+          className="shadow-xl rounded-sm bg-white block mx-auto"
+        />
       </div>
     </div>
   )
