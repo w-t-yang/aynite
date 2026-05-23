@@ -1,5 +1,5 @@
 import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { DiffStats } from '../../../lib/types/files'
 import { useAppEvent } from '../../views/ViewContext'
 import { Button } from '../basic/Button'
@@ -48,6 +48,52 @@ function getStatusConfig(status: string) {
   )
 }
 
+// ─── Memoized File Item ─────────────────────────────────────────────────────
+
+interface FileItemProps {
+  file: GitChangedFile
+  stat: DiffStats | undefined
+  statusConfig: { letter: string; className: string }
+  onSelect: (path: string) => void
+}
+
+const FileItem = React.memo(function FileItem({
+  file,
+  stat,
+  statusConfig,
+  onSelect,
+}: FileItemProps) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => onSelect(file.path)}
+      className="w-full justify-start text-left hover:bg-accent/10"
+      title={file.path}
+    >
+      <span
+        className={`text-[10px] font-bold font-mono shrink-0 w-5 ${statusConfig.className}`}
+      >
+        {statusConfig.letter}
+      </span>
+      <span className="truncate flex-1">{file.name}</span>
+      {stat && (
+        <span className="text-[10px] font-mono leading-none whitespace-nowrap shrink-0">
+          {stat.additions > 0 && (
+            <span className="text-green-500">+{stat.additions}</span>
+          )}
+          {stat.additions > 0 && stat.deletions > 0 && (
+            <span className="text-muted-foreground/40"> </span>
+          )}
+          {stat.deletions > 0 && (
+            <span className="text-red-500">-{stat.deletions}</span>
+          )}
+        </span>
+      )}
+    </Button>
+  )
+})
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function GitDiffView({
@@ -63,89 +109,119 @@ export function GitDiffView({
   const [diffStats, setDiffStats] = useState<Record<string, DiffStats>>({})
   const [commitState, setCommitState] = useState<CommitState | null>(null)
 
+  // ─── Stable folders key ───────────────────────────────────────────────────
+  // `folders` is often created as `arr.map(...)` in the parent, which creates
+  // a NEW array reference on every parent render. Using `folders` directly as
+  // an effect dep causes an infinite loop: effect fires → loadGitStatus →
+  // setState → re-render → effect fires again (because folders is a new ref).
+  // We stabilize by comparing CONTENT, not reference.
+  const prevFoldersRef = useRef<string[]>([])
+  if (
+    prevFoldersRef.current.length !== folders.length ||
+    prevFoldersRef.current.some((f, i) => f !== folders[i])
+  ) {
+    prevFoldersRef.current = folders
+  }
+  // Stable key that only changes when folder paths actually change
+  const _foldersKey = prevFoldersRef.current.join('\x00')
+
+  // Guard against concurrent loadGitStatus calls
+  const loadingRef = useRef(false)
+
   // ─── Data Fetching ────────────────────────────────────────────────────────
 
   const loadGitStatus = useCallback(
     async (folderPaths: string[], forceRefresh = false) => {
+      if (loadingRef.current) return // skip if already loading
+      loadingRef.current = true
+
       const newRoots = new Set<string>()
       const newChangedFiles: Record<string, GitChangedFile[]> = {}
       const newDiffStats: Record<string, DiffStats> = {}
 
-      for (const folderPath of folderPaths) {
-        try {
-          const isRoot = await (window as any).aynite.checkIsGitRoot(folderPath)
-          if (isRoot) {
-            newRoots.add(folderPath)
-
-            // Use force-refresh API when called from refresh button,
-            // otherwise use cached status (faster for initial load)
-            const statusMap = forceRefresh
-              ? await (window as any).aynite.refreshGitStatus(folderPath)
-              : await (window as any).aynite.getGitStatus(folderPath)
-            if (statusMap) {
-              const allPaths: string[] = []
-              for (const [absPath, status] of Object.entries(statusMap)) {
-                if (
-                  absPath.startsWith(`${folderPath}/`) &&
-                  absPath !== folderPath &&
-                  status !== 'none' &&
-                  status !== 'ignored'
-                ) {
-                  allPaths.push(absPath)
-                }
-              }
-              // Filter out parent directory entries
-              const leafPaths = allPaths.filter(
-                (p) =>
-                  !allPaths.some(
-                    (other) => other !== p && other.startsWith(`${p}/`),
-                  ),
-              )
-              const changed: GitChangedFile[] = leafPaths.map((absPath) => ({
-                name: absPath.split('/').pop() || absPath,
-                path: absPath,
-                status: statusMap[absPath],
-              }))
-              if (changed.length > 0) {
-                newChangedFiles[folderPath] = changed.sort((a, b) =>
-                  a.name.localeCompare(b.name),
-                )
-              }
-            }
-
-            // Fetch diff stats
-            const stats = await (window as any).aynite.getGitDiffStats(
+      try {
+        for (const folderPath of folderPaths) {
+          try {
+            const isRoot = await (window as any).aynite.checkIsGitRoot(
               folderPath,
             )
-            if (stats) {
-              Object.assign(newDiffStats, stats)
-            }
-          }
-        } catch (e) {
-          console.error('[GitDiffView] Failed to check git status:', e)
-        }
-      }
+            if (isRoot) {
+              newRoots.add(folderPath)
 
-      setGitRoots(newRoots)
-      setGitChangedFiles(newChangedFiles)
-      setDiffStats(newDiffStats)
+              const statusMap = forceRefresh
+                ? await (window as any).aynite.refreshGitStatus(folderPath)
+                : await (window as any).aynite.getGitStatus(folderPath)
+              if (statusMap) {
+                const allPaths: string[] = []
+                for (const [absPath, status] of Object.entries(statusMap)) {
+                  if (
+                    absPath.startsWith(`${folderPath}/`) &&
+                    absPath !== folderPath &&
+                    status !== 'none' &&
+                    status !== 'ignored'
+                  ) {
+                    allPaths.push(absPath)
+                  }
+                }
+                const leafPaths = allPaths.filter(
+                  (p) =>
+                    !allPaths.some(
+                      (other) => other !== p && other.startsWith(`${p}/`),
+                    ),
+                )
+                const changed: GitChangedFile[] = leafPaths.map((absPath) => ({
+                  name: absPath.split('/').pop() || absPath,
+                  path: absPath,
+                  status: statusMap[absPath],
+                }))
+                if (changed.length > 0) {
+                  newChangedFiles[folderPath] = changed.sort((a, b) =>
+                    a.name.localeCompare(b.name),
+                  )
+                }
+              }
+
+              const stats = await (window as any).aynite.getGitDiffStats(
+                folderPath,
+              )
+              if (stats) {
+                Object.assign(newDiffStats, stats)
+              }
+            }
+          } catch (e) {
+            console.error('[GitDiffView] Failed to check git status:', e)
+          }
+        }
+
+        setGitRoots(newRoots)
+        setGitChangedFiles(newChangedFiles)
+        setDiffStats(newDiffStats)
+      } finally {
+        loadingRef.current = false
+      }
     },
     [],
   )
 
-  // Load git status when folders change
+  // Load git status when folders change (by content, not reference)
   useEffect(() => {
     if (folders.length > 0) {
       loadGitStatus(folders)
     }
-  }, [folders, loadGitStatus])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadGitStatus, folders])
 
-  // Listen for git status changes
-  useAppEvent('git-status-changed', (data: { root: string }) => {
-    if (data?.root && folders.includes(data.root)) {
-      loadGitStatus(folders)
-    }
-  })
+  // Listen for git status changes — stable callback to avoid listener thrashing
+  const handleGitStatusChanged = useCallback(
+    (data: { root: string }) => {
+      if (data?.root && folders.includes(data.root)) {
+        loadGitStatus(folders)
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loadGitStatus, folders.includes, folders],
+  )
+  useAppEvent('git-status-changed', handleGitStatusChanged)
 
   // ─── Commit Flow ──────────────────────────────────────────────────────────
 
@@ -272,44 +348,15 @@ export function GitDiffView({
                     : 'space-y-0.5'
                 }
               >
-                {changedFiles.map((file) => {
-                  const stat = diffStats[file.path]
-                  const config = getStatusConfig(file.status)
-                  return (
-                    <Button
-                      key={file.path}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSelectFile?.(file.path)}
-                      className="w-full justify-start text-left hover:bg-accent/10"
-                      title={file.path}
-                    >
-                      <span
-                        className={`text-[10px] font-bold font-mono shrink-0 w-5 ${config.className}`}
-                      >
-                        {config.letter}
-                      </span>
-                      <span className="truncate flex-1">{file.name}</span>
-                      {stat && (
-                        <span className="text-[10px] font-mono leading-none whitespace-nowrap shrink-0">
-                          {stat.additions > 0 && (
-                            <span className="text-green-500">
-                              +{stat.additions}
-                            </span>
-                          )}
-                          {stat.additions > 0 && stat.deletions > 0 && (
-                            <span className="text-muted-foreground/40"> </span>
-                          )}
-                          {stat.deletions > 0 && (
-                            <span className="text-red-500">
-                              -{stat.deletions}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </Button>
-                  )
-                })}
+                {changedFiles.map((file) => (
+                  <FileItem
+                    key={file.path}
+                    file={file}
+                    stat={diffStats[file.path]}
+                    statusConfig={getStatusConfig(file.status)}
+                    onSelect={(path) => onSelectFile?.(path)}
+                  />
+                ))}
 
                 {/* Commit button */}
                 <div className="pt-1 pl-1">

@@ -186,47 +186,56 @@ export function DiffViewer({
       .map(({ idx }) => idx)
   }, [diffLines, viewMode])
 
-  const handleStage = async (hunk: DiffHunk) => {
-    if (!filePath) return
-    try {
-      const result = await (window as any).aynite.stageHunk({
-        filePath,
-        oldStart: hunk.oldStart,
-        oldLines: hunk.oldLines,
-        newStart: hunk.newStart,
-        newLines: hunk.newLines,
-      })
-      if (!result?.error) {
-        setProcessedHunks((prev) => new Set([...prev, hunk.id]))
-        onHunkProcessed?.()
-      } else {
-        console.error('[DiffViewer] stageHunk returned error:', result.error)
+  const handleStage = useCallback(
+    async (hunk: DiffHunk) => {
+      if (!filePath) return
+      try {
+        const result = await (window as any).aynite.stageHunk({
+          filePath,
+          oldStart: hunk.oldStart,
+          oldLines: hunk.oldLines,
+          newStart: hunk.newStart,
+          newLines: hunk.newLines,
+        })
+        if (!result?.error) {
+          setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+          onHunkProcessed?.()
+        } else {
+          console.error('[DiffViewer] stageHunk returned error:', result.error)
+        }
+      } catch (e) {
+        console.error('[DiffViewer] stageHunk threw:', e)
       }
-    } catch (e) {
-      console.error('[DiffViewer] stageHunk threw:', e)
-    }
-  }
+    },
+    [filePath, onHunkProcessed],
+  )
 
-  const handleDiscard = async (hunk: DiffHunk) => {
-    if (!filePath) return
-    try {
-      const result = await (window as any).aynite.discardHunk({
-        filePath,
-        oldStart: hunk.oldStart,
-        oldLines: hunk.oldLines,
-        newStart: hunk.newStart,
-        newLines: hunk.newLines,
-      })
-      if (!result?.error) {
-        setProcessedHunks((prev) => new Set([...prev, hunk.id]))
-        onHunkProcessed?.()
-      } else {
-        console.error('[DiffViewer] discardHunk returned error:', result.error)
+  const handleDiscard = useCallback(
+    async (hunk: DiffHunk) => {
+      if (!filePath) return
+      try {
+        const result = await (window as any).aynite.discardHunk({
+          filePath,
+          oldStart: hunk.oldStart,
+          oldLines: hunk.oldLines,
+          newStart: hunk.newStart,
+          newLines: hunk.newLines,
+        })
+        if (!result?.error) {
+          setProcessedHunks((prev) => new Set([...prev, hunk.id]))
+          onHunkProcessed?.()
+        } else {
+          console.error(
+            '[DiffViewer] discardHunk returned error:',
+            result.error,
+          )
+        }
+      } catch (e) {
+        console.error('[DiffViewer] discardHunk threw:', e)
       }
-    } catch (e) {
-      console.error('[DiffViewer] discardHunk threw:', e)
-    }
-  }
+    },
+    [filePath, onHunkProcessed],
+  )
 
   const setHunkRef = useCallback(
     (hunkId: string, el: HTMLDivElement | null) => {
@@ -289,7 +298,25 @@ export function DiffViewer({
     setViewMode((prev) => (prev === 'full' ? 'changes-only' : 'full'))
   }, [])
 
-  function renderContent() {
+  // ─── Memoized highlighted HTML per line ──────────────────────────────────
+  // Pre-compute Prism.js highlighting so it only runs when diff lines or ext change,
+  // not on every React render (e.g. when processedHunks or viewMode changes).
+  const highlightedHtml = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const line of diffLines) {
+      if (!map.has(line.value)) {
+        map.set(
+          line.value,
+          line.value ? highlightCode(line.value, ext) : '<br>',
+        )
+      }
+    }
+    return map
+  }, [diffLines, ext])
+
+  // ─── Memoized rendered content ───────────────────────────────────────────
+  // Only re-create React elements when their actual dependencies change.
+  const renderedContent = useMemo(() => {
     const elements: React.ReactNode[] = []
     for (let i = 0; i < diffLines.length; i++) {
       const line = diffLines[i]
@@ -335,7 +362,7 @@ export function DiffViewer({
             }}
             // biome-ignore lint/security/noDangerouslySetInnerHtml: Required for PrismJS highlighting
             dangerouslySetInnerHTML={{
-              __html: line.value ? highlightCode(line.value, ext) : '<br>',
+              __html: highlightedHtml.get(line.value) ?? '<br>',
             }}
           />
         </div>,
@@ -372,7 +399,17 @@ export function DiffViewer({
       }
     }
     return elements
-  }
+  }, [
+    diffLines,
+    hunkIndex,
+    processedHunks,
+    viewMode,
+    isDark,
+    highlightedHtml,
+    setHunkRef,
+    handleStage,
+    handleDiscard,
+  ])
 
   return (
     <div
@@ -440,7 +477,7 @@ export function DiffViewer({
             })}
           </div>
         )}
-        <div className="flex-1">{renderContent()}</div>
+        <div className="flex-1">{renderedContent}</div>
       </div>
     </div>
   )

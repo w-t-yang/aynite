@@ -255,23 +255,27 @@ export function Treeview() {
 
   // Auto-refresh tree when files are created/deleted/renamed via the app
   // (e.g. AI tool operations, manual file operations)
-  useAppEvent('fs-change', (data: { event: string; path: string }) => {
-    // Determine the parent directory of the changed file to refresh
-    const parentDir = data.path.split('/').slice(0, -1).join('/')
-    if (!parentDir) return
+  const handleFsChange = useCallback(
+    (data: { event: string; path: string }) => {
+      // Determine the parent directory of the changed file to refresh
+      const parentDir = data.path.split('/').slice(0, -1).join('/')
+      if (!parentDir) return
 
-    // Dispatch reload-folder to refresh the tree
-    window.dispatchEvent(
-      new CustomEvent('reload-folder', { detail: parentDir }),
-    )
+      // Dispatch reload-folder to refresh the tree
+      window.dispatchEvent(
+        new CustomEvent('reload-folder', { detail: parentDir }),
+      )
 
-    // Also refresh git status for the workspace root that contains this path
-    const roots = rootFilesPathsRef.current
-    const affectedRoot = roots.find((r) => data.path.startsWith(r))
-    if (affectedRoot) {
-      fetchStatus(affectedRoot)
-    }
-  })
+      // Also refresh git status for the workspace root that contains this path
+      const roots = rootFilesPathsRef.current
+      const affectedRoot = roots.find((r) => data.path.startsWith(r))
+      if (affectedRoot) {
+        fetchStatus(affectedRoot)
+      }
+    },
+    [fetchStatus],
+  )
+  useAppEvent('fs-change', handleFsChange)
 
   const handleToggle = async (id: string) => {
     const node = findNodeData(treeData, id)
