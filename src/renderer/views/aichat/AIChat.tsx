@@ -34,6 +34,25 @@ export function AIChat() {
   const [showHistory, setShowHistory] = useState(false)
   const [sessions, setSessions] = useState<any[]>([])
 
+  // Separate effect for approval: always scroll to bottom when approval box appears
+  const prevPendingApprovalRef = useRef(pendingApproval)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    // When approval appears, always scroll to bottom
+    if (pendingApproval && !prevPendingApprovalRef.current) {
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight
+      })
+      setTimeout(() => {
+        el.scrollTop = el.scrollHeight
+      }, 100)
+    }
+
+    prevPendingApprovalRef.current = pendingApproval
+  }, [pendingApproval])
+
   useEffect(() => {
     const el = scrollRef.current
     if (!el || messages.length === 0) return

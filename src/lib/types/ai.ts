@@ -24,6 +24,8 @@ export interface Agent {
 export interface ToolContext {
   workspaceFolders: string[]
   activeFile?: string
+  /** Callback to stream real-time command output during run_command tool execution */
+  onCommandProgress?: (text: string) => void
 }
 
 export interface AgentLoopConfig extends AIProvider {

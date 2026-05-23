@@ -80,6 +80,7 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
   const input = part.input ?? part.args
   const output = part.output ?? part.result
   const isStreaming = state === 'input-streaming'
+  const isExecuting = state === 'executing'
   const isCall =
     part.type === 'tool-call' || state === 'input-available' || isStreaming
   const isResult =
@@ -100,6 +101,23 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
     } catch {
       /* ignore */
     }
+  }
+
+  // Truncate large content to prevent UI freezes from rendering huge strings
+  const truncateContent = (text: string, maxLen = 2000): string => {
+    if (text.length <= maxLen) return text
+    return `${text.slice(0, maxLen)}\n\n... (truncated, ${text.length - maxLen} more chars)`
+  }
+
+  const formatOutput = (val: unknown): string => {
+    if (val === undefined || val === null) return ''
+    const text = typeof val === 'string' ? val : JSON.stringify(val, null, 2)
+    return truncateContent(text, 2000)
+  }
+
+  const formatArgs = (args: unknown): string => {
+    const text = typeof args === 'string' ? args : JSON.stringify(args, null, 2)
+    return truncateContent(text, 1000)
   }
 
   let Icon = Terminal
@@ -179,14 +197,15 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
         >
           {isResult ? (
             output !== undefined && output !== null && output !== '' ? (
-              typeof output === 'string' ? (
-                output
-              ) : (
-                JSON.stringify(output, null, 2)
-              )
+              formatOutput(output)
             ) : (
               errorText || '(No output)'
             )
+          ) : isExecuting && output ? (
+            <span>
+              {formatOutput(output)}
+              <span className="inline-block w-1.5 h-4 bg-primary/70 ml-0.5 animate-pulse align-middle" />
+            </span>
           ) : (
             <div className="flex items-center gap-2 text-primary animate-pulse">
               <span>{isStreaming ? 'Streaming Input...' : 'Executing...'}</span>
@@ -199,9 +218,7 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
               Arguments
             </div>
             <pre className="text-[10px] font-mono px-2 py-1 bg-black/5 rounded overflow-auto max-h-20">
-              {typeof toolArgs === 'string'
-                ? toolArgs
-                : JSON.stringify(toolArgs, null, 2)}
+              {formatArgs(toolArgs)}
             </pre>
           </div>
         )}
@@ -364,6 +381,7 @@ function AssistantMessage({
       return (
         p.state === 'output-available' ||
         p.state === 'output-error' ||
+        p.state === 'executing' ||
         (isCall && hasInput)
       )
     }

@@ -93,7 +93,7 @@ export async function runAgentLoop(
             return
           }
 
-          const part = event.data.part as TextStreamPart<any>
+          const part = event.data.part as any
           switch (part.type) {
             case 'text-delta':
               textAccum += part.text
@@ -149,6 +149,35 @@ export async function runAgentLoop(
               }
 
               onEvent(part)
+              break
+            }
+
+            // Real-time command output streaming while run_command is executing
+            case 'command-output': {
+              const text = (part as any).text
+              if (text && loopMessages.length > 0) {
+                const last = loopMessages[loopMessages.length - 1]
+                const parts = [...last.parts]
+                // Find the last run_command tool part that's still executing
+                for (let i = parts.length - 1; i >= 0; i--) {
+                  const p = parts[i] as any
+                  if (
+                    p.type === 'dynamic-tool' &&
+                    p.toolName === 'run_command' &&
+                    (p.state === 'input-available' || p.state === 'executing')
+                  ) {
+                    const currentOutput = (p as any).output || ''
+                    parts[i] = {
+                      ...p,
+                      state: 'executing',
+                      output: currentOutput + text,
+                    } as any
+                    loopMessages[loopMessages.length - 1] = { ...last, parts }
+                    onEvent(part as any)
+                    break
+                  }
+                }
+              }
               break
             }
 

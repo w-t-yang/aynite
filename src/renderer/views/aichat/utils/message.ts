@@ -182,6 +182,41 @@ export function updateToolResult(
   ]
 }
 
+/**
+ * Append streaming command output to the most recent run_command tool part.
+ * Updates the output incrementally as the command runs.
+ */
+export function appendCommandOutput(
+  prev: UIMessage[],
+  text: string,
+): UIMessage[] {
+  // Find the last assistant message with a run_command dynamic-tool part still executing
+  for (let i = prev.length - 1; i >= 0; i--) {
+    const msg = prev[i]
+    if (msg.role !== 'assistant') continue
+
+    const parts = [...msg.parts]
+    // Search from the end for the last run_command tool part
+    for (let j = parts.length - 1; j >= 0; j--) {
+      const p = parts[j] as any
+      if (
+        p.type === 'dynamic-tool' &&
+        p.toolName === 'run_command' &&
+        (p.state === 'input-available' || p.state === 'executing')
+      ) {
+        const currentOutput = (p as any).output || ''
+        parts[j] = {
+          ...p,
+          state: 'executing',
+          output: currentOutput + text,
+        } as any
+        return [...prev.slice(0, i), { ...msg, parts }, ...prev.slice(i + 1)]
+      }
+    }
+  }
+  return prev
+}
+
 export function appendToolInputDeltaToAssistant(
   prev: UIMessage[],
   id: string,

@@ -175,6 +175,9 @@ export async function aiChat({
     const toolContext = {
       workspaceFolders,
       activeFile,
+      onCommandProgress: (text: string) => {
+        emit({ type: 'command-output', text } as any)
+      },
     }
     const cachedTools = createTools(toolContext)
     console.log('[AI Chat] Context initialized:', toolContext)

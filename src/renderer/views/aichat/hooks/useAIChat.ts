@@ -8,6 +8,7 @@ import type { ChatInputHandle } from '../components/InputEditor'
 import { type AgentLoopConfig, runAgentLoop } from '../utils/agent'
 import { executeCommandOnly } from '../utils/commands'
 import {
+  appendCommandOutput,
   appendPartToAssistant,
   appendReasoningToAssistant,
   appendToAssistant,
@@ -143,7 +144,7 @@ export function useAIChat() {
     if (messages.length > 0 && !sessionId) {
       const newId = Date.now().toString()
       setSessionId(newId)
-      window.aynite.setConfig('activeSessionId', newId)
+      window.aynite.setConfig('activeSessionId', newId).catch(() => {})
     }
   }, [messages, sessionId])
 
@@ -357,7 +358,7 @@ export function useAIChat() {
           updatedMessages,
           agentConfig,
           workspaceFoldersRef.current,
-          (event: TextStreamPart<any>) => {
+          (event: any) => {
             setCurrentStep(event)
             switch (event.type) {
               case 'text-delta':
@@ -391,6 +392,11 @@ export function useAIChat() {
                   }),
                 )
                 loadArtifactStatus()
+                break
+              case 'command-output':
+                setMessages((prev) =>
+                  appendCommandOutput(prev, (event as any).text),
+                )
                 break
               case 'error':
                 setError({
@@ -432,6 +438,7 @@ export function useAIChat() {
   const clearChat = useCallback(() => {
     setMessages([])
     setSessionId(null)
+    window.aynite.setConfig('activeSessionId', null).catch(() => {})
     abortRef.current?.abort()
   }, [])
 
