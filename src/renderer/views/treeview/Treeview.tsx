@@ -579,7 +579,9 @@ export function Treeview() {
       <section
         ref={containerRef}
         aria-label="File Tree Container"
-        className="flex-1 overflow-hidden outline-none"
+        className={`flex-1 outline-none ${
+          changesOnly ? 'overflow-auto' : 'overflow-hidden'
+        }`}
         onContextMenu={handleContainerContextMenu}
       >
         {treeData.length > 0 ? (

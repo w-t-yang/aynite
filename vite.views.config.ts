@@ -77,33 +77,33 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/ai-browser/index.html',
         ),
-        'views/stockchart/index': resolve(
+        'views/dataview-stock/index': resolve(
           __dirname,
-          'src/renderer/views/stockchart/index.html',
+          'src/renderer/views/dataview-stock/index.html',
         ),
-        'views/datachart/index': resolve(
+        'views/dataview-chart/index': resolve(
           __dirname,
-          'src/renderer/views/datachart/index.html',
+          'src/renderer/views/dataview-chart/index.html',
         ),
-        'views/graph/index': resolve(
+        'views/dataview-graph/index': resolve(
           __dirname,
-          'src/renderer/views/graph/index.html',
+          'src/renderer/views/dataview-graph/index.html',
         ),
-        'views/mindmap/index': resolve(
+        'views/dataview-mindmap/index': resolve(
           __dirname,
-          'src/renderer/views/mindmap/index.html',
+          'src/renderer/views/dataview-mindmap/index.html',
         ),
-        'views/flow/index': resolve(
+        'views/dataview-flow/index': resolve(
           __dirname,
-          'src/renderer/views/flow/index.html',
+          'src/renderer/views/dataview-flow/index.html',
         ),
-        'views/theme-studio/index': resolve(
+        'views/dataview-theme/index': resolve(
           __dirname,
-          'src/renderer/views/theme-studio/index.html',
+          'src/renderer/views/dataview-theme/index.html',
         ),
-        'views/diagram/index': resolve(
+        'views/dataview-diagram/index': resolve(
           __dirname,
-          'src/renderer/views/diagram/index.html',
+          'src/renderer/views/dataview-diagram/index.html',
         ),
         'views/rss/index': resolve(
           __dirname,
@@ -113,9 +113,9 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/spotify/index.html',
         ),
-        'views/canvas/index': resolve(
+        'views/dataview-canvas/index': resolve(
           __dirname,
-          'src/renderer/views/canvas/index.html',
+          'src/renderer/views/dataview-canvas/index.html',
         ),
       },
       output: {

@@ -25,17 +25,17 @@ const SYSTEM_DIALOG_REGEX = /\b(showMessageBox|showErrorBox)\b/g
 const EXEMPTED_FILES: Record<string, string> = {
   // View pages that consistently use the shared iconBtn() utility for toolbar buttons
   // (iconBtn() appears on a separate line from <button>, so line-level matching misses them)
-  'src/renderer/views/canvas/CanvasPage.tsx':
+  'src/renderer/views/dataview-canvas/DataViewCanvas.tsx':
     'Toolbar buttons using iconBtn() utility',
-  'src/renderer/views/datachart/DataChartPage.tsx':
+  'src/renderer/views/dataview-chart/DataViewChart.tsx':
     'Toolbar buttons using iconBtn() + chart type dropdown with custom styling',
-  'src/renderer/views/diagram/DiagramPage.tsx':
+  'src/renderer/views/dataview-diagram/DataViewDiagram.tsx':
     'Toolbar buttons using iconBtn() utility',
-  'src/renderer/views/flow/FlowPage.tsx':
+  'src/renderer/views/dataview-flow/DataViewFlow.tsx':
     'Toolbar buttons using iconBtn() utility',
-  'src/renderer/views/graph/GraphPage.tsx':
+  'src/renderer/views/dataview-graph/DataViewGraph.tsx':
     'Toolbar buttons using iconBtn() utility',
-  'src/renderer/views/mindmap/MindMapPage.tsx':
+  'src/renderer/views/dataview-mindmap/DataViewMindMap.tsx':
     'Toolbar buttons using iconBtn() utility',
   'src/renderer/src/layout/TitleBar.tsx':
     'Layout-level buttons with custom positioning/styling',
@@ -70,9 +70,9 @@ const EXEMPTED_FILES: Record<string, string> = {
     'Timeline control buttons',
   'src/renderer/views/spotify/components/TopArtists.tsx':
     'Artist action buttons',
-  'src/renderer/views/stockchart/ChartPage.tsx':
+  'src/renderer/views/dataview-stock/DataViewStock.tsx':
     'Toolbar and interval buttons with chart-specific styling',
-  'src/renderer/views/theme-studio/ThemeStudioPage.tsx':
+  'src/renderer/views/dataview-theme/DataViewTheme.tsx':
     'Color input fields and action buttons',
   'src/renderer/views/treeview/Treeview.tsx':
     'Commit area with textarea and action buttons',

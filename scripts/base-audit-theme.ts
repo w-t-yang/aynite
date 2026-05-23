@@ -28,17 +28,17 @@ const COLOR_REGEX = /(#[0-9a-fA-F]{3,8}|rgba?\(.*?\)|hsla?\(.*?\))/g
  * here unless they have a similar legitimate need — this list should shrink, not grow.
  */
 const EXEMPTED_FILES: Record<string, string> = {
-  'src/renderer/views/datachart/DataChartPage.tsx':
+  'src/renderer/views/dataview-chart/DataViewChart.tsx':
     'Chart color palette entries and theme-conditional grid colors',
-  'src/renderer/views/flow/FlowPage.tsx':
+  'src/renderer/views/dataview-flow/DataViewFlow.tsx':
     'Node theme colors (data-driven, not UI styling)',
-  'src/renderer/views/graph/GraphPage.tsx':
+  'src/renderer/views/dataview-graph/DataViewGraph.tsx':
     'Graph node colors (data-driven, not UI styling)',
-  'src/renderer/views/mindmap/MindMapPage.tsx':
+  'src/renderer/views/dataview-mindmap/DataViewMindMap.tsx':
     'MindMap node colors (data-driven, not UI styling)',
-  'src/renderer/views/stockchart/ChartPage.tsx':
+  'src/renderer/views/dataview-stock/DataViewStock.tsx':
     'Technical indicator colors (data config, not UI styling)',
-  'src/renderer/views/theme-studio/ThemeStudioPage.tsx':
+  'src/renderer/views/dataview-theme/DataViewTheme.tsx':
     'Demo theme preview data (hardcoded color values are the content)',
 }
 
