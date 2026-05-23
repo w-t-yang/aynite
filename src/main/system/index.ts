@@ -169,13 +169,43 @@ export function setupProtocol() {
     }
   })
 
+  // MIME types for media files served via range requests
+  const _mimeTypes: Record<string, string> = {
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    mov: 'video/quicktime',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska',
+    ogg: 'video/ogg',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    flac: 'audio/flac',
+    aac: 'audio/aac',
+    m4a: 'audio/mp4',
+    opus: 'audio/ogg',
+    wma: 'audio/x-ms-wma',
+  }
+
   // aynite-resource:// protocol for arbitrary files
-  protocol.handle('aynite-resource', (request) => {
+  protocol.handle('aynite-resource', async (request) => {
     const url = request.url.replace('aynite-resource://', '')
     try {
       const decodedPath = decodeURIComponent(url)
-      const fileUrl = `file://${decodedPath.startsWith('/') ? '' : '/'}${decodedPath}`
-      return net.fetch(fileUrl)
+      const filePath = `${decodedPath.startsWith('/') ? '' : '/'}${decodedPath}`
+      const fileUrl = `file://${filePath}`
+
+      // Let net.fetch handle everything (streaming, content-type detection)
+      const response = await net.fetch(fileUrl)
+
+      // Add Accept-Ranges header so the browser knows it can seek
+      const headers = new Headers(response.headers)
+      headers.set('Accept-Ranges', 'bytes')
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      })
     } catch (e) {
       console.error('Failed to handle resource request:', e)
       return new Response('File not found', { status: 404 })
