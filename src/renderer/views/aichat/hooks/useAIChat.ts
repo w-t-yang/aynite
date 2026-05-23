@@ -64,10 +64,7 @@ export function useAIChat() {
       const id = await window.aynite.getConfig('activeSessionId')
       if (id) {
         setActiveSessionId(id)
-        const existing = ChatService.getState(id)
-        if (!existing) {
-          await ChatService.loadSessionById(id)
-        }
+        await ChatService.loadSessionById(id)
       }
     }
     loadInitial()
@@ -116,53 +113,24 @@ export function useAIChat() {
       if (event.type === 'active-tab-changed') setActiveTabPath(event.data.path)
       if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
         const { id } = event.data as { id: string }
-        if (!id) return // ignore null — session was cleared
-        setActiveSessionId(id)
-        const existing = ChatService.getState(id)
-        if (!existing) {
+        if (id) {
+          setActiveSessionId(id)
           ChatService.loadSessionById(id).catch(() => {})
         }
       }
     })
-    return () => {
-      // Note: unsubscribe only removes this React-bound listener
-      // The permanent listeners in ChatService.init() persist
-    }
   }, [subscribeToAppEvents, loadSettings, loadWorkspaceFolders])
-
-  // ── Session auto-creation on first message ──
-  // When messages arrive but no sessionId is set, create one
-  useEffect(() => {
-    if (sessionState.messages.length > 0 && !activeSessionId) {
-      ChatService.createNewSession().then((newId) => {
-        setActiveSessionId(newId)
-      })
-    }
-  }, [sessionState.messages.length, activeSessionId])
 
   // ── Actions (delegate to ChatService) ──
 
   const sendMessage = useCallback(
     async (text: string) => {
-      // Use the config as source of truth — it may have been updated by
-      // another view (e.g. WorkspaceView "+" button) before React state
-      // catches up via the async ACTIVE_SESSION_CHANGED event.
-      let sid = activeSessionId
-      if (sid) {
-        const configId = await window.aynite.getConfig('activeSessionId')
-        if (configId) {
-          if (configId !== sid) {
-            sid = configId
-            setActiveSessionId(sid)
-          }
-        } else {
-          // Config was cleared (by clearChat or other) — force a new session.
-          // Don't reuse the stale sid from the React closure.
-          sid = null
-        }
-      }
-      if (!sid) {
-        sid = await ChatService.createNewSession()
+      // Use config as source of truth for the active session ID — it may
+      // have been updated by another view (e.g. history modal) before
+      // React state catches up.
+      const configId = await window.aynite.getConfig('activeSessionId')
+      const sid = configId || (await ChatService.createNewSession())
+      if (sid !== activeSessionId) {
         setActiveSessionId(sid)
       }
       await ChatService.sendMessage(sid, text, activeTabPath)
@@ -174,15 +142,6 @@ export function useAIChat() {
     if (activeSessionId) {
       ChatService.clearChat(activeSessionId)
     }
-    // Clear both local state AND config to null. This ensures that even if
-    // sendMessage runs with a stale closure (where activeSessionId still
-    // holds the old value), the config check inside sendMessage will find
-    // null and force creation of a new session instead of reusing the old one.
-    //
-    // Safety: both the React listener and ChatService listener for
-    // ACTIVE_SESSION_CHANGED already guard against null IDs
-    // (if (!id) return / if (id && ...)), so the event that this
-    // setConfig triggers will be safely ignored.
     setActiveSessionId(null)
     window.aynite.setConfig('activeSessionId', null).catch(() => {})
   }, [activeSessionId])

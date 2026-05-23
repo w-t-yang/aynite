@@ -153,7 +153,11 @@ export function init(subscribe: SubscribeFn) {
       return
     }
 
-    // Session changes — load from disk only if not already in memory
+    // Session changes — load from disk only if not already in memory.
+    // The sessions.has() guard prevents overwriting in-memory state
+    // that may have been modified by sendMessage before this async event
+    // was processed. The file always exists because createNewSession
+    // writes it before setting the config.
     if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
       const { id } = event.data as { id: string }
       if (id && !sessions.has(id)) {
@@ -237,10 +241,13 @@ export async function loadSessionById(sessionId: string) {
 }
 
 /**
- * Create a new session ID and set it as active in config.
+ * Create a new session file on disk and set it as active in config.
+ * The file is created BEFORE setting the config so any ACTIVE_SESSION_CHANGED
+ * listener that tries to loadSessionById() will always find a valid file.
  */
 export async function createNewSession(): Promise<string> {
   const newId = Date.now().toString()
+  await window.aynite.saveSession(newId, [])
   await window.aynite.setConfig('activeSessionId', newId).catch(() => {})
   return newId
 }
