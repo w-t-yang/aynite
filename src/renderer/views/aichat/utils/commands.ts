@@ -1,13 +1,12 @@
 import type { UIMessage } from 'ai'
-import type React from 'react'
 import { genId } from './message'
 
 export async function executeCommandOnly(
   text: string,
   activeTabPath: string,
   messages: UIMessage[],
-  setMessages: React.Dispatch<React.SetStateAction<UIMessage[]>>,
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>,
+  setMessages: (msgs: UIMessage[]) => void,
+  setLoading: (loading: boolean) => void,
 ): Promise<boolean> {
   const firstCmdMatch = text.trim().match(/^>cmd\[(.*?)\]\((.*?)\)/)
   if (!firstCmdMatch) return false

@@ -12,7 +12,10 @@ export async function runAgentLoop(
   onEvent: (event: TextStreamPart<any>) => void,
   activeFile: string,
   abortSignal: AbortSignal,
-  subscribe: (handler: (event: any) => void) => () => void,
+  registerStream: (
+    requestId: string,
+    handler: (part: any) => void,
+  ) => () => void,
 ): Promise<UIMessage[]> {
   const loopMessages: UIMessage[] = []
   let reasoningAccum = ''
@@ -81,19 +84,13 @@ export async function runAgentLoop(
           fulfill([...messages, ...loopMessages])
           return
         }
-        const unsubscribe = subscribe(async (event: any) => {
-          if (
-            event.type !== 'ai-chat-delta' ||
-            event.data.requestId !== requestId
-          )
-            return
+        const unsubscribe = registerStream(requestId, (part: any) => {
           if (abortSignal.aborted) {
             unsubscribe()
             fulfill([...messages, ...loopMessages])
             return
           }
 
-          const part = event.data.part as any
           switch (part.type) {
             case 'text-delta':
               textAccum += part.text

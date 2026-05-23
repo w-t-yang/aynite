@@ -1,48 +1,30 @@
-import type { TextStreamPart, UIMessage } from 'ai'
+/**
+ * useAIChat — Thin React wrapper around ChatService.
+ *
+ * Owns only UI-level state (settings, workspace folders, artifact status, input ref).
+ * All agent loop state (messages, loading, error, approvals) lives in ChatService
+ * and survives component unmounts/remounts.
+ */
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppEvents } from '../../../../lib/constants/app'
 import { DEFAULT_SETTINGS } from '../../../../lib/constants/settings'
 import type { SettingsState } from '../../../shared/lib/types'
 import { useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
-import { type AgentLoopConfig, runAgentLoop } from '../utils/agent'
-import { executeCommandOnly } from '../utils/commands'
-import {
-  appendCommandOutput,
-  appendPartToAssistant,
-  appendReasoningToAssistant,
-  appendToAssistant,
-  appendToolInputDeltaToAssistant,
-  genId,
-  updateToolResult,
-} from '../utils/message'
-
-// import { MOCK_MESSAGES } from '../utils/mocks'
+import type { SessionState } from '../services/ChatService'
+import * as ChatService from '../services/ChatService'
 
 export function useAIChat() {
   const subscribeToAppEvents = useAppEventSubscriber()
+
+  // ── UI-level state (not agent-loop related) ──
   const [settings, setSettings] = useState<SettingsState>(
     DEFAULT_SETTINGS as SettingsState,
   )
-  const [activeTabPath, setActiveTabPath] = useState<string>('')
   const [workspaceFolders, setWorkspaceFolders] = useState<string[]>([])
-  const [messages, setMessages] = useState<UIMessage[]>([])
-  // const [messages, setMessages] = useState<UIMessage[]>(MOCK_MESSAGES)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [currentStep, setCurrentStep] = useState<TextStreamPart<any> | null>(
-    null,
-  )
-  const [error, setError] = useState<{
-    message: string
-    redacted: string
-  } | null>(null)
-
+  const [activeTabPath, setActiveTabPath] = useState<string>('')
   const inputRef = useRef<ChatInputHandle>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const loadingRef = useRef(loading)
-  /** Tracks the last saved message snapshot to avoid re-saving loaded-in-place data */
-  const lastSavedSnapshotRef = useRef<string>('')
 
   const [artifactStatus, setArtifactStatus] = useState<{
     memory: { exists: boolean; path: string }
@@ -50,19 +32,48 @@ export function useAIChat() {
     plan: { exists: boolean; path: string }
   } | null>(null)
 
-  const loadArtifactStatus = useCallback(async () => {
-    const status = await window.aynite.getArtifactsStatus()
-    setArtifactStatus(status)
+  // ── Session tracking ──
+  // Which sessionId is this component currently showing
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  // State from ChatService (subscribed)
+  const [sessionState, setSessionState] = useState<SessionState>({
+    sessionId: null,
+    messages: [],
+    loading: false,
+    error: null,
+    currentStep: null,
+    pendingApproval: null,
+  })
+
+  // ── Init ChatService on first mount ──
+  useEffect(() => {
+    ChatService.init(subscribeToAppEvents)
+  }, [subscribeToAppEvents])
+
+  // ── Subscribe to the active session's state changes ──
+  useEffect(() => {
+    if (!activeSessionId) return
+    return ChatService.subscribe(activeSessionId, (state) => {
+      setSessionState(state)
+    })
+  }, [activeSessionId])
+
+  // ── Load initial session on mount ──
+  useEffect(() => {
+    const loadInitial = async () => {
+      const id = await window.aynite.getConfig('activeSessionId')
+      if (id) {
+        setActiveSessionId(id)
+        const existing = ChatService.getState(id)
+        if (!existing) {
+          await ChatService.loadSessionById(id)
+        }
+      }
+    }
+    loadInitial()
   }, [])
 
-  useEffect(() => {
-    loadArtifactStatus()
-  }, [loadArtifactStatus])
-
-  useEffect(() => {
-    loadingRef.current = loading
-  }, [loading])
-
+  // ── Load settings & workspace ──
   const loadSettings = useCallback(async () => {
     try {
       const [resAI, resAgents, resTools, resPrompts] = await Promise.all([
@@ -86,373 +97,109 @@ export function useAIChat() {
     if (folders) setWorkspaceFolders(folders)
   }, [])
 
-  const loadSessions = useCallback(async () => {
-    const res = await window.aynite.listSessions()
-    return res || []
+  const loadArtifactStatus = useCallback(async () => {
+    const status = await window.aynite.getArtifactsStatus()
+    setArtifactStatus(status)
   }, [])
-
-  const approvalIdRef = useRef<string | null>(null)
-  const [pendingApproval, setPendingApproval] = useState<{
-    command: string
-    cwd: string
-  } | null>(null)
 
   useEffect(() => {
     loadSettings()
     loadWorkspaceFolders()
-  }, [loadSettings, loadWorkspaceFolders])
+    loadArtifactStatus()
+  }, [loadSettings, loadWorkspaceFolders, loadArtifactStatus])
 
-  useAppEventSubscriber()((event) => {
-    if (event.type === 'config-changed') loadSettings()
-    if (event.type === 'workspace-changed') loadWorkspaceFolders()
-    if (event.type === 'active-tab-changed') setActiveTabPath(event.data.path)
-    if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
-      const { id } = event.data as { id: string }
-      window.aynite.loadSession(id).then((res: any) => {
-        if (res) {
-          setMessages(res)
-          setSessionId(id)
-          // Mark snapshot so auto-save doesn't re-write the same data
-          lastSavedSnapshotRef.current = JSON.stringify(res)
+  // ── Non-agent-loop event handlers (stay in React) ──
+  useEffect(() => {
+    const _unsubscribe = subscribeToAppEvents((event: any) => {
+      if (event.type === 'config-changed') loadSettings()
+      if (event.type === 'workspace-changed') loadWorkspaceFolders()
+      if (event.type === 'active-tab-changed') setActiveTabPath(event.data.path)
+      if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
+        const { id } = event.data as { id: string }
+        if (!id) return // ignore null — session was cleared
+        setActiveSessionId(id)
+        const existing = ChatService.getState(id)
+        if (!existing) {
+          ChatService.loadSessionById(id).catch(() => {})
         }
+      }
+    })
+    return () => {
+      // Note: unsubscribe only removes this React-bound listener
+      // The permanent listeners in ChatService.init() persist
+    }
+  }, [subscribeToAppEvents, loadSettings, loadWorkspaceFolders])
+
+  // ── Session auto-creation on first message ──
+  // When messages arrive but no sessionId is set, create one
+  useEffect(() => {
+    if (sessionState.messages.length > 0 && !activeSessionId) {
+      ChatService.createNewSession().then((newId) => {
+        setActiveSessionId(newId)
       })
     }
-    if (event.type === AppEvents.AI_APPROVAL_REQUEST) {
-      const { id, command, cwd } = event.data as any
-      approvalIdRef.current = id
-      setPendingApproval({ command, cwd })
-    }
-  })
+  }, [sessionState.messages.length, activeSessionId])
 
-  useEffect(() => {
-    const loadInitialSession = async () => {
-      const activeSessionId = await window.aynite.getConfig('activeSessionId')
-      if (activeSessionId) {
-        const res = await window.aynite.loadSession(activeSessionId)
-        if (res) {
-          setMessages(res)
-          setSessionId(activeSessionId)
-          lastSavedSnapshotRef.current = JSON.stringify(res)
-        }
-      }
-    }
-
-    loadInitialSession()
-  }, [])
-
-  useEffect(() => {
-    if (messages.length > 0 && !sessionId) {
-      const newId = Date.now().toString()
-      setSessionId(newId)
-      window.aynite.setConfig('activeSessionId', newId).catch(() => {})
-    }
-  }, [messages, sessionId])
-
-  useEffect(() => {
-    if (sessionId && messages.length > 0) {
-      // Skip save if messages haven't changed since last load/save
-      const snapshot = JSON.stringify(messages)
-      if (snapshot === lastSavedSnapshotRef.current) {
-        return undefined
-      }
-
-      const timer = setTimeout(async () => {
-        try {
-          const activeId = settingsRef.current.ai?.activeId
-          const activeProvider =
-            settingsRef.current.ai?.providers?.find((p) => p.id === activeId) ||
-            settingsRef.current.ai?.providers?.[0]
-
-          const activeAgent = settingsRef.current.agents?.list?.find(
-            (a) => a.id === settingsRef.current.agents?.activeId,
-          )
-
-          const metadata = {
-            agentName: activeAgent?.name || 'Chat',
-            modelName: activeProvider?.name || activeProvider?.model || 'AI',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-
-          await window.aynite.saveSession(sessionId, messages, metadata)
-          // Update snapshot to reflect the saved state
-          lastSavedSnapshotRef.current = snapshot
-        } catch (_err) {}
-      }, 1000)
-      return () => clearTimeout(timer)
-    }
-    return undefined
-  }, [messages, sessionId])
-
-  const handleApprove = useCallback(() => {
-    if (approvalIdRef.current) {
-      window.aynite.respondToAiApproval(approvalIdRef.current, true)
-      approvalIdRef.current = null
-    }
-    setPendingApproval(null)
-  }, [])
-
-  const handleReject = useCallback(() => {
-    if (approvalIdRef.current) {
-      window.aynite.respondToAiApproval(approvalIdRef.current, false)
-      approvalIdRef.current = null
-    }
-    setPendingApproval(null)
-  }, [])
-
-  const settingsRef = useRef(settings)
-  useEffect(() => {
-    settingsRef.current = settings
-  }, [settings])
-
-  const messagesRef = useRef(messages)
-  useEffect(() => {
-    messagesRef.current = messages
-  }, [messages])
-
-  const workspaceFoldersRef = useRef(workspaceFolders)
-  useEffect(() => {
-    workspaceFoldersRef.current = workspaceFolders
-  }, [workspaceFolders])
-
-  const activeTabPathRef = useRef(activeTabPath)
-  useEffect(() => {
-    activeTabPathRef.current = activeTabPath
-  }, [activeTabPath])
+  // ── Actions (delegate to ChatService) ──
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || loadingRef.current) return
-      setError(null)
-
-      const commandMentionRegex = />cmd\[(.*?)\]\((.*?)\)/g
-      const skillMentionRegex = /\/skill\[(.*?)\]\((.*?)\)/g
-
-      if (
-        await executeCommandOnly(
-          text,
-          activeTabPathRef.current,
-          messagesRef.current,
-          setMessages,
-          setLoading,
-        )
-      )
-        return
-
-      const commandMatches = [...text.matchAll(commandMentionRegex)]
-      const commandResults: {
-        name: string
-        stdout: string
-        stderr: string
-        error?: string
-      }[] = []
-
-      if (commandMatches.length > 0) {
-        setLoading(true)
-        for (const match of commandMatches) {
-          const [_full, name, path] = match
-          try {
-            const res = await window.aynite.runDirectCommand({
-              commandPath: path,
-              params: [],
-              currentFile: activeTabPathRef.current,
-            })
-            commandResults.push({
-              name,
-              stdout: res.stdout || '',
-              stderr: res.stderr || '',
-            })
-          } catch (e: unknown) {
-            const errorMsg = e instanceof Error ? e.message : String(e)
-            commandResults.push({
-              name,
-              stdout: '',
-              stderr: errorMsg,
-              error: errorMsg,
-            })
-          }
-        }
-        setLoading(false)
-      }
-
-      const activeId = settingsRef.current.ai?.activeId
-      const activeProvider =
-        settingsRef.current.ai?.providers?.find((p) => p.id === activeId) ||
-        settingsRef.current.ai?.providers?.[0]
-
-      const activeAgent = settingsRef.current.agents?.list?.find(
-        (a) => a.id === settingsRef.current.agents?.activeId,
-      )
-      const agentPromptFiles = activeAgent?.promptFiles || []
-
-      const agentConfig: AgentLoopConfig = {
-        id: activeProvider?.id || 'chat',
-        name: activeProvider?.name || 'Chat',
-        provider: activeProvider?.provider || 'ollama',
-        apiKey: activeProvider?.apiKey || '',
-        baseUrl: activeProvider?.baseUrl || '',
-        model: activeProvider?.model || '',
-        compatibility: activeProvider?.compatibility,
-        enabledTools: settingsRef.current.aiTools,
-        agentPromptFiles,
-      }
-
-      // Build command results text inline (no separate commandResults field)
-      let resultsText = ''
-      for (const res of commandResults) {
-        const content = [res.stdout, res.stderr]
-          .filter(Boolean)
-          .join('\n')
-          .trim()
-        const result =
-          content || (res.error ? `Error: ${res.error}` : '(No output)')
-        resultsText += `> Command: ${res.name}\n${result}\n\n---\n\n`
-      }
-
-      const initialMessages = [...messagesRef.current]
-      if (initialMessages.length === 0) {
-        const globalPromptFiles = settingsRef.current.prompts?.files || []
-        const systemPrompt = await window.aynite.getMergedSystemPrompt(
-          globalPromptFiles,
-          agentPromptFiles,
-        )
-        if (systemPrompt) {
-          initialMessages.push({
-            id: genId(),
-            role: 'system',
-            parts: [{ type: 'text', text: systemPrompt }],
-          })
+      // Use the config as source of truth — it may have been updated by
+      // another view (e.g. WorkspaceView "+" button) before React state
+      // catches up via the async ACTIVE_SESSION_CHANGED event.
+      let sid = activeSessionId
+      if (sid) {
+        const configId = await window.aynite.getConfig('activeSessionId')
+        if (configId && configId !== sid) {
+          sid = configId
+          setActiveSessionId(sid)
         }
       }
-
-      // Create user message with command results inlined as text
-      const userText = resultsText
-        ? `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`
-        : text
-
-      const userMsg: UIMessage = {
-        id: genId(),
-        role: 'user',
-        parts: [{ type: 'text', text: userText }],
+      if (!sid) {
+        sid = await ChatService.createNewSession()
+        setActiveSessionId(sid)
       }
-
-      const updatedMessages = [...initialMessages, userMsg]
-      setMessages(updatedMessages)
-      setLoading(true)
-
-      const cleanText = text
-        .replace(skillMentionRegex, '')
-        .replace(commandMentionRegex, '')
-        .trim()
-
-      if (!cleanText && commandMatches.length > 0) {
-        setLoading(false)
-        return
-      }
-
-      const abort = new AbortController()
-      abortRef.current = abort
-
-      try {
-        const resultHistory = await runAgentLoop(
-          updatedMessages,
-          agentConfig,
-          workspaceFoldersRef.current,
-          (event: any) => {
-            setCurrentStep(event)
-            switch (event.type) {
-              case 'text-delta':
-                setMessages((prev) => appendToAssistant(prev, event.text))
-                break
-              case 'reasoning-delta':
-                setMessages((prev) =>
-                  appendReasoningToAssistant(prev, event.text),
-                )
-                break
-              case 'tool-input-delta':
-                setMessages((prev) =>
-                  appendToolInputDeltaToAssistant(prev, event.id, event.delta),
-                )
-                break
-              case 'tool-call':
-                setMessages((prev) =>
-                  appendPartToAssistant(prev, {
-                    toolCallId: event.toolCallId,
-                    toolName: event.toolName,
-                    input: event.input,
-                  }),
-                )
-                break
-              case 'tool-result':
-                setMessages((prev) =>
-                  updateToolResult(prev, {
-                    toolCallId: event.toolCallId,
-                    toolName: event.toolName,
-                    output: event.output,
-                  }),
-                )
-                loadArtifactStatus()
-                break
-              case 'command-output':
-                setMessages((prev) =>
-                  appendCommandOutput(prev, (event as any).text),
-                )
-                break
-              case 'error':
-                setError({
-                  message: String(event.error),
-                  redacted: String(event.error).includes('fetch failed')
-                    ? 'Connection failed. Please check if your AI provider service is running.'
-                    : String(event.error).includes('401') ||
-                        String(event.error).includes('invalid_api_key')
-                      ? 'Authentication failed. Please check your API key.'
-                      : 'An error occurred while communicating with the AI provider.',
-                })
-                break
-              case 'finish':
-                setCurrentStep(null)
-                break
-            }
-          },
-          activeTabPathRef.current,
-          abort.signal,
-          subscribeToAppEvents,
-        )
-        setMessages(resultHistory)
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e)
-        setError({
-          message: msg,
-          redacted:
-            'A system error occurred. Please check your configuration and try again.',
-        })
-      } finally {
-        setLoading(false)
-        setCurrentStep(null)
-        abortRef.current = null
-      }
+      await ChatService.sendMessage(sid, text, activeTabPath)
     },
-    [subscribeToAppEvents, loadArtifactStatus],
+    [activeSessionId, activeTabPath],
   )
 
   const clearChat = useCallback(() => {
-    setMessages([])
-    setSessionId(null)
-    window.aynite.setConfig('activeSessionId', null).catch(() => {})
-    abortRef.current?.abort()
+    if (activeSessionId) {
+      ChatService.clearChat(activeSessionId)
+    }
+    // Set local state to null so the next sendMessage creates a new session.
+    // Don't call setConfig to null — that would trigger ACTIVE_SESSION_CHANGED
+    // which could race with the new session creation.
+    setActiveSessionId(null)
+  }, [activeSessionId])
+
+  const handleApprove = useCallback(() => {
+    if (activeSessionId) ChatService.handleApprove(activeSessionId)
+  }, [activeSessionId])
+
+  const handleReject = useCallback(() => {
+    if (activeSessionId) ChatService.handleReject(activeSessionId)
+  }, [activeSessionId])
+
+  const revertToMessage = useCallback(
+    (index: number) => {
+      if (activeSessionId) ChatService.revertToMessage(activeSessionId, index)
+    },
+    [activeSessionId],
+  )
+
+  // ── Other actions (stay in React) ──
+
+  const loadSessions = useCallback(async () => {
+    const res = await window.aynite.listSessions()
+    return res || []
   }, [])
 
   const copyToClipboard = useCallback((text: string) => {
     window.aynite
       .writeClipboard(text)
       .catch((err) => console.error('[useAIChat] Failed to copy', err))
-  }, [])
-
-  const revertToMessage = useCallback((index: number) => {
-    setMessages((prev) => {
-      if (index < 0 || index >= prev.length) return prev
-      return prev.slice(0, index + 1)
-    })
   }, [])
 
   const switchAgent = useCallback(async (agentId: string) => {
@@ -467,8 +214,26 @@ export function useAIChat() {
     [loadArtifactStatus],
   )
 
-  // Token estimator: (chars / 4) * 1.1 accounting for all part types
-  const tokenCount = messages.reduce((acc, m) => {
+  // ── Derived state ──
+
+  const abortRef = useRef<{ abort: () => void } | null>(null)
+  // Provide actual abort functionality
+  abortRef.current = activeSessionId
+    ? { abort: () => ChatService.abortMessage(activeSessionId) }
+    : null
+
+  const _setError = useCallback(
+    (err: { message: string; redacted: string } | null) => {
+      if (activeSessionId) {
+        if (err === null) {
+          ChatService.clearError(activeSessionId)
+        }
+      }
+    },
+    [activeSessionId],
+  )
+
+  const tokenCount = sessionState.messages.reduce((acc, m) => {
     const textLength = m.parts.reduce((len, p) => {
       switch (p.type) {
         case 'text':
@@ -500,29 +265,38 @@ export function useAIChat() {
   }, 0)
 
   return {
+    // From settings
     settings,
-    messages,
-    loading,
-    currentStep,
-    pendingApproval,
     workspaceFolders,
+
+    // From ChatService (session state)
+    messages: sessionState.messages,
+    loading: sessionState.loading,
+    currentStep: sessionState.currentStep,
+    pendingApproval: sessionState.pendingApproval,
+    error: sessionState.error,
+    setError: (_err: { message: string; redacted: string } | null) => {
+      // local error override if needed (user dismissing)
+    },
+
+    // Refs
     inputRef,
     abortRef,
-    handleApprove,
-    handleReject,
+
+    // Artifact status
+    artifactStatus,
+    loadArtifactStatus,
+    tokenCount,
+
+    // Actions
     sendMessage,
     clearChat,
+    handleApprove,
+    handleReject,
     loadSessions,
-    setMessages,
-    setSessionId,
     copyToClipboard,
     revertToMessage,
     switchAgent,
     switchProvider,
-    error,
-    setError,
-    artifactStatus,
-    loadArtifactStatus,
-    tokenCount,
   }
 }
