@@ -434,9 +434,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       },
     )
 
-    const unbindOp = window.aynite.onAppOperation((op: string) => {
-      handlersRef.current.executeAppOperation(op)
-    })
+    const unbindOp = window.aynite.onAppOperation(
+      (op: string, data?: unknown) => {
+        handlersRef.current.executeAppOperation(op, data)
+      },
+    )
 
     return () => {
       unbindEvent()
