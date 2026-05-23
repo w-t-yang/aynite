@@ -1,11 +1,40 @@
+import { cpSync, existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 const isDev = process.env.VITE_VIEWS_DEV === 'true'
 const ayniteDir = resolve(homedir(), '.aynite')
+
+/**
+ * Copies config.json from each view's source directory into the build output.
+ * This ensures view configs ship together with the built views.
+ */
+function copyViewConfigs(): Plugin {
+  const viewsSrcDir = resolve(__dirname, 'src/renderer/views')
+  return {
+    name: 'copy-view-configs',
+    closeBundle() {
+      const outDir = resolve(__dirname, isDev ? ayniteDir : 'dist-views')
+      const viewsOutDir = join(outDir, 'views')
+
+      if (!existsSync(viewsSrcDir)) return
+
+      const entries = readdirSync(viewsSrcDir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+        const srcConfig = join(viewsSrcDir, entry.name, 'config.json')
+        if (!existsSync(srcConfig)) continue
+
+        const destDir = join(viewsOutDir, entry.name)
+        const destConfig = join(destDir, 'config.json')
+        cpSync(srcConfig, destConfig)
+      }
+    },
+  }
+}
 
 export default defineConfig({
   root: 'src/renderer',
@@ -15,7 +44,7 @@ export default defineConfig({
       '@renderer': resolve(__dirname, 'src/renderer/src'),
     },
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), copyViewConfigs()],
   build: {
     outDir: isDev ? ayniteDir : '../../dist-views',
     emptyOutDir: !isDev,

@@ -1,0 +1,54 @@
+{
+  "name": "Flow Editor",
+  "description": "Interactive node-based flow chart editor using React Flow",
+  "author": "Aynite",
+  "version": "1.0.0",
+  "expected_file_type": {
+    "ext": "json",
+    "schema": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["position", "data"],
+            "properties": {
+              "id": { "type": "string" },
+              "position": {
+                "type": "object",
+                "required": ["x", "y"],
+                "properties": {
+                  "x": { "type": "number" },
+                  "y": { "type": "number" }
+                }
+              },
+              "data": {
+                "type": "object",
+                "required": ["label"]
+              },
+              "type": { "type": "string" }
+            }
+          },
+          "minItems": 1
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "target"],
+            "properties": {
+              "id": { "type": "string" },
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        },
+        "viewport": { "type": "object" }
+      }
+    }
+  },
+  "key_bindings": {}
+}

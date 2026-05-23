@@ -1,0 +1,7 @@
+{
+  "name": "RSS Reader",
+  "description": "RSS/Atom feed reader with bookmarking and group management",
+  "author": "Aynite",
+  "version": "1.0.0",
+  "key_bindings": {}
+}

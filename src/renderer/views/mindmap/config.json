@@ -1,0 +1,28 @@
+{
+  "name": "MindMap",
+  "description": "Interactive mind map visualization with collapsible tree branches",
+  "author": "Aynite",
+  "version": "1.0.0",
+  "expected_file_type": {
+    "ext": "json",
+    "schema": {
+      "type": "object",
+      "required": ["root"],
+      "properties": {
+        "root": {
+          "type": "object",
+          "required": ["id", "label"],
+          "properties": {
+            "id": { "type": "string" },
+            "label": { "type": "string" },
+            "children": {
+              "type": "array",
+              "items": { "type": "object" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "key_bindings": {}
+}

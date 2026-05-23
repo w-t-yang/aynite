@@ -6,7 +6,8 @@ import {
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import type { MainConfig, WorkspaceConfig } from '../../lib/constants/types'
-import { DEFAULT_VIEW_CONFIGS } from '../../lib/constants/view-configs'
+// View configs are bundled with each view as config.json and copied
+// to ~/.aynite/views/<view>/config.json during dist-views sync
 import {
   PLAYBOOK_WORKSPACE_CONFIG,
   TRADER_WORKSPACE_CONFIG,
@@ -25,8 +26,6 @@ import {
   getKeybindingsConfigPath,
   getMainConfigPath,
   getPlaybookPath,
-  getViewConfigDir,
-  getViewConfigPath,
   getWelcomeMdPath,
   getWorkspaceDataPath,
   getWorkspaceDir,
@@ -186,22 +185,6 @@ export async function initAppFolders() {
       await copy(bundledDir, baseDir, { recursive: true })
     } catch (e) {
       console.error(`[Init] Error copying bundled views:`, e)
-    }
-  }
-
-  // Initialize view config files
-  await initViewConfigs()
-}
-
-/**
- * Initialize view configuration files under ~/.aynite/config/views/[view]/config.json
- */
-export async function initViewConfigs() {
-  for (const [viewName, config] of Object.entries(DEFAULT_VIEW_CONFIGS)) {
-    const configPath = getViewConfigPath(viewName)
-    if (!(await exists(configPath))) {
-      await ensureDir(getViewConfigDir(viewName))
-      await writeJson(configPath, config)
     }
   }
 }
