@@ -57,9 +57,9 @@ export function setupConfigIpc() {
         sendAppEvent(AppEvents.CONFIG_CHANGED, { key })
       } else if (key === ConfigKey.ACTIVE_FILE) {
         sendAppEvent(AppEvents.ACTIVE_FILE_CHANGED, { path: payload })
-      } else if (key === ConfigKey.ACTIVE_SESSION_ID) {
-        sendAppEvent(AppEvents.ACTIVE_SESSION_CHANGED, { id: payload })
       }
+      // Note: ACTIVE_SESSION_CHANGED is already sent by routeSetConfig (router.ts)
+      // to ensure it fires even for non-SET pathways. Do NOT duplicate here.
       return result
     },
   )

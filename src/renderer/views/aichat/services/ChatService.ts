@@ -12,9 +12,10 @@
  * listener can dispatch ai-chat-delta events to the correct active stream.
  */
 
-import type { TextStreamPart, UIMessage } from 'ai'
+import type { UIMessage } from 'ai'
 import { AppEvents } from '../../../../lib/constants/app'
 import type { AgentLoopConfig } from '../../../../lib/types/ai'
+import type { SessionState } from '../../../../lib/types/chat'
 import { runAgentLoop } from '../utils/agent'
 import { executeCommandOnly } from '../utils/commands'
 import {
@@ -28,15 +29,6 @@ import {
 } from '../utils/message'
 
 // ─── Types ────────────────────────────────────────────────────────────────
-
-export interface SessionState {
-  sessionId: string | null
-  messages: UIMessage[]
-  loading: boolean
-  error: { message: string; redacted: string } | null
-  currentStep: TextStreamPart<any> | null
-  pendingApproval: { command: string; cwd: string } | null
-}
 
 interface InternalSession {
   state: SessionState
@@ -88,8 +80,17 @@ function scheduleSave(session: InternalSession) {
   if (session.saveTimer) clearTimeout(session.saveTimer)
   session.saveTimer = setTimeout(async () => {
     try {
+      // Guard: messages may have been cleared by clearChat() while the timer
+      // callback was queued or during an await below. Don't overwrite disk
+      // data with an empty array.
+      if (session.state.messages.length === 0) return
+
       const aiConfig = await window.aynite.getConfig('ai')
       const agentsConfig = await window.aynite.getConfig('agents')
+
+      // Guard again after async IPC — clearChat() may have run during the await
+      if (session.state.messages.length === 0) return
+
       const activeProvider =
         aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
         aiConfig?.providers?.[0]
@@ -152,10 +153,12 @@ export function init(subscribe: SubscribeFn) {
       return
     }
 
-    // Session changes — load from disk
+    // Session changes — load from disk only if not already in memory
     if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
       const { id } = event.data as { id: string }
-      loadSessionById(id).catch(() => {})
+      if (id && !sessions.has(id)) {
+        loadSessionById(id).catch(() => {})
+      }
       return
     }
 

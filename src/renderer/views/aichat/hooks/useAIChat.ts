@@ -9,10 +9,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppEvents } from '../../../../lib/constants/app'
 import { DEFAULT_SETTINGS } from '../../../../lib/constants/settings'
+import type { SessionState } from '../../../../lib/types/chat'
 import type { SettingsState } from '../../../shared/lib/types'
 import { useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
-import type { SessionState } from '../services/ChatService'
 import * as ChatService from '../services/ChatService'
 
 export function useAIChat() {
@@ -150,9 +150,15 @@ export function useAIChat() {
       let sid = activeSessionId
       if (sid) {
         const configId = await window.aynite.getConfig('activeSessionId')
-        if (configId && configId !== sid) {
-          sid = configId
-          setActiveSessionId(sid)
+        if (configId) {
+          if (configId !== sid) {
+            sid = configId
+            setActiveSessionId(sid)
+          }
+        } else {
+          // Config was cleared (by clearChat or other) — force a new session.
+          // Don't reuse the stale sid from the React closure.
+          sid = null
         }
       }
       if (!sid) {
@@ -168,10 +174,17 @@ export function useAIChat() {
     if (activeSessionId) {
       ChatService.clearChat(activeSessionId)
     }
-    // Set local state to null so the next sendMessage creates a new session.
-    // Don't call setConfig to null — that would trigger ACTIVE_SESSION_CHANGED
-    // which could race with the new session creation.
+    // Clear both local state AND config to null. This ensures that even if
+    // sendMessage runs with a stale closure (where activeSessionId still
+    // holds the old value), the config check inside sendMessage will find
+    // null and force creation of a new session instead of reusing the old one.
+    //
+    // Safety: both the React listener and ChatService listener for
+    // ACTIVE_SESSION_CHANGED already guard against null IDs
+    // (if (!id) return / if (id && ...)), so the event that this
+    // setConfig triggers will be safely ignored.
     setActiveSessionId(null)
+    window.aynite.setConfig('activeSessionId', null).catch(() => {})
   }, [activeSessionId])
 
   const handleApprove = useCallback(() => {
