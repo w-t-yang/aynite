@@ -108,7 +108,7 @@ export function DataViewMindMapView() {
   // Load view config
   useEffect(() => {
     ;(window as any).aynite
-      ?.getConfig('view-config', { view: 'mindmap' })
+      ?.getConfig('view-config', { view: 'dataview-mindmap' })
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })

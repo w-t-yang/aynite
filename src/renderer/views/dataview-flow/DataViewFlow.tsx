@@ -116,7 +116,7 @@ function DataViewFlowCanvas() {
   // Load view config
   useEffect(() => {
     ;(window as any).aynite
-      ?.getConfig('view-config', { view: 'flow' })
+      ?.getConfig('view-config', { view: 'dataview-flow' })
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })

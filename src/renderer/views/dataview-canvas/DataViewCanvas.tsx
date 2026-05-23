@@ -58,7 +58,7 @@ export function DataViewCanvas() {
   // Load view config
   useEffect(() => {
     ;(window as any).aynite
-      ?.getConfig('view-config', { view: 'canvas' })
+      ?.getConfig('view-config', { view: 'dataview-canvas' })
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })

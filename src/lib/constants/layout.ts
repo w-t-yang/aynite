@@ -27,8 +27,18 @@ export const PLAYBOOK_LAYOUTS: LayoutConfig[] = [
       direction: 'vertical',
       size: 100,
       children: [
-        { id: 'tile-pb-canvas', type: 'leaf', name: 'canvas', size: 60 },
-        { id: 'tile-pb-mindmap', type: 'leaf', name: 'mindmap', size: 40 },
+        {
+          id: 'tile-pb-canvas',
+          type: 'leaf',
+          name: 'dataview-canvas',
+          size: 60,
+        },
+        {
+          id: 'tile-pb-mindmap',
+          type: 'leaf',
+          name: 'dataview-mindmap',
+          size: 40,
+        },
       ],
     },
   },
@@ -47,8 +57,18 @@ export const PLAYBOOK_LAYOUTS: LayoutConfig[] = [
           direction: 'horizontal',
           size: 50,
           children: [
-            { id: 'tile-pb-flow', type: 'leaf', name: 'flow', size: 50 },
-            { id: 'tile-pb-diagram', type: 'leaf', name: 'diagram', size: 50 },
+            {
+              id: 'tile-pb-flow',
+              type: 'leaf',
+              name: 'dataview-flow',
+              size: 50,
+            },
+            {
+              id: 'tile-pb-diagram',
+              type: 'leaf',
+              name: 'dataview-diagram',
+              size: 50,
+            },
           ],
         },
         {
@@ -60,10 +80,15 @@ export const PLAYBOOK_LAYOUTS: LayoutConfig[] = [
             {
               id: 'tile-pb-datachart',
               type: 'leaf',
-              name: 'datachart',
+              name: 'dataview-chart',
               size: 50,
             },
-            { id: 'tile-pb-graph', type: 'leaf', name: 'graph', size: 50 },
+            {
+              id: 'tile-pb-graph',
+              type: 'leaf',
+              name: 'dataview-graph',
+              size: 50,
+            },
           ],
         },
       ],
@@ -83,7 +108,12 @@ export const TRADER_LAYOUTS: LayoutConfig[] = [
       direction: 'horizontal',
       size: 100,
       children: [
-        { id: 'tile-trader-stock', type: 'leaf', name: 'stockchart', size: 70 },
+        {
+          id: 'tile-trader-stock',
+          type: 'leaf',
+          name: 'dataview-stock',
+          size: 70,
+        },
         { id: 'tile-trader-chat', type: 'leaf', name: 'aichat', size: 30 },
       ],
     },
@@ -103,9 +133,24 @@ export const TRADER_LAYOUTS: LayoutConfig[] = [
           direction: 'horizontal',
           size: 50,
           children: [
-            { id: 'tile-tp-s1', type: 'leaf', name: 'stockchart', size: 33.3 },
-            { id: 'tile-tp-s2', type: 'leaf', name: 'stockchart', size: 33.3 },
-            { id: 'tile-tp-s3', type: 'leaf', name: 'stockchart', size: 33.4 },
+            {
+              id: 'tile-tp-s1',
+              type: 'leaf',
+              name: 'dataview-stock',
+              size: 33.3,
+            },
+            {
+              id: 'tile-tp-s2',
+              type: 'leaf',
+              name: 'dataview-stock',
+              size: 33.3,
+            },
+            {
+              id: 'tile-tp-s3',
+              type: 'leaf',
+              name: 'dataview-stock',
+              size: 33.4,
+            },
           ],
         },
         {
@@ -114,9 +159,24 @@ export const TRADER_LAYOUTS: LayoutConfig[] = [
           direction: 'horizontal',
           size: 50,
           children: [
-            { id: 'tile-tp-s4', type: 'leaf', name: 'stockchart', size: 33.3 },
-            { id: 'tile-tp-s5', type: 'leaf', name: 'stockchart', size: 33.3 },
-            { id: 'tile-tp-s6', type: 'leaf', name: 'stockchart', size: 33.4 },
+            {
+              id: 'tile-tp-s4',
+              type: 'leaf',
+              name: 'dataview-stock',
+              size: 33.3,
+            },
+            {
+              id: 'tile-tp-s5',
+              type: 'leaf',
+              name: 'dataview-stock',
+              size: 33.3,
+            },
+            {
+              id: 'tile-tp-s6',
+              type: 'leaf',
+              name: 'dataview-stock',
+              size: 33.4,
+            },
           ],
         },
       ],
@@ -190,10 +250,15 @@ export const WRITER_LAYOUTS: LayoutConfig[] = [
             {
               id: 'tile-quill-mindmap',
               type: 'leaf',
-              name: 'mindmap',
+              name: 'dataview-mindmap',
               size: 50,
             },
-            { id: 'tile-quill-graph', type: 'leaf', name: 'graph', size: 50 },
+            {
+              id: 'tile-quill-graph',
+              type: 'leaf',
+              name: 'dataview-graph',
+              size: 50,
+            },
           ],
         },
         { id: 'tile-quill-bs-chat', type: 'leaf', name: 'aichat', size: 40 },
@@ -206,7 +271,7 @@ export const WRITER_LAYOUTS: LayoutConfig[] = [
     layout: {
       id: 'tile-quill-canvas',
       type: 'leaf',
-      name: 'canvas',
+      name: 'dataview-canvas',
       size: 100,
     },
   },

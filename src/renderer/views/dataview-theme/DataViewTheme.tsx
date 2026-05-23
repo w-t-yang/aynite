@@ -92,7 +92,7 @@ export function DataViewThemeView() {
   // Load view config
   useEffect(() => {
     ;(window as any).aynite
-      ?.getConfig('view-config', { view: 'theme-studio' })
+      ?.getConfig('view-config', { view: 'dataview-theme' })
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })

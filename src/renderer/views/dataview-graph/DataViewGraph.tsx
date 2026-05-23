@@ -93,7 +93,7 @@ export function DataViewGraphView() {
   // Load view config
   useEffect(() => {
     ;(window as any).aynite
-      ?.getConfig('view-config', { view: 'graph' })
+      ?.getConfig('view-config', { view: 'dataview-graph' })
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })

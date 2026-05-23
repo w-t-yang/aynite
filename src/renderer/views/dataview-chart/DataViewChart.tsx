@@ -88,7 +88,7 @@ export function DataViewChartView() {
   // Load view config
   useEffect(() => {
     ;(window as any).aynite
-      ?.getConfig('view-config', { view: 'datachart' })
+      ?.getConfig('view-config', { view: 'dataview-chart' })
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })

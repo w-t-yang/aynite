@@ -280,7 +280,7 @@ export function DataViewStockView() {
   // Load view config
   useEffect(() => {
     ;(window as any).aynite
-      ?.getConfig('view-config', { view: 'stockchart' })
+      ?.getConfig('view-config', { view: 'dataview-stock' })
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })
