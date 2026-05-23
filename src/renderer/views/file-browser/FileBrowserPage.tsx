@@ -248,6 +248,26 @@ export function FileBrowserPage() {
 
   const [isEditing, setIsEditing] = useState(false)
 
+  // ─── HTML Mode (rendered preview vs source view) ──────────────────────
+  const [htmlMode, setHtmlMode] = useState(false)
+
+  // Default HTML files to rendered preview; reset on file switch
+  useEffect(() => {
+    const ext = fileInfo?.extension?.toLowerCase()
+    if (ext === 'html' || ext === 'htm') {
+      setHtmlMode(true)
+    } else {
+      setHtmlMode(false)
+    }
+  }, [fileInfo])
+
+  const handleHtmlModeChange = useCallback((val: boolean) => {
+    setHtmlMode(val)
+    if (val) {
+      setIsEditing(false)
+    }
+  }, [])
+
   // ─── View Preview State ─────────────────────────────────────────────────
   const [matchingViews, setMatchingViews] = useState<MatchingView[]>([])
   const [activeView, setActiveView] = useState<string | null>(null)
@@ -326,6 +346,7 @@ export function FileBrowserPage() {
           loading={loading}
           error={error}
           isEditing={isEditing}
+          htmlMode={htmlMode}
           onContentChange={setContent}
           activeView={activeView}
         />
@@ -334,6 +355,8 @@ export function FileBrowserPage() {
         <StatusBar
           isEditing={isEditing}
           setIsEditing={setIsEditing}
+          htmlMode={htmlMode}
+          onHtmlModeChange={handleHtmlModeChange}
           fileInfo={fileInfo}
           content={content}
           onSave={handleSave}

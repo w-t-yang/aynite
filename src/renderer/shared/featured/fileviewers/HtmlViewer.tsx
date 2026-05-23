@@ -1,16 +1,16 @@
-import type React from 'react'
 import type { FileInfo } from '../../lib/file-handlers'
-import { UnifiedViewer } from './UnifiedViewer'
 
-export const HtmlViewer: React.FC<{ file: FileInfo; content?: string }> = ({
-  file,
-  content,
-}) => {
-  const dirPath = file.path.substring(0, file.path.lastIndexOf('/'))
+interface HtmlViewerProps {
+  file: FileInfo
+  content?: string
+}
 
+export function HtmlViewer({ file, content }: HtmlViewerProps) {
   if (!content) return null
 
-  // Prepare theme styles
+  const dirPath = file.path.substring(0, file.path.lastIndexOf('/'))
+
+  // Inject theme variables and base href for relative resource resolution
   const rootStyle = getComputedStyle(document.documentElement)
   const themeVars = [
     '--background',
@@ -39,7 +39,6 @@ export const HtmlViewer: React.FC<{ file: FileInfo; content?: string }> = ({
     </style>
   `
 
-  // Inject into <head> or at the beginning
   let finalContent = content
   if (finalContent.includes('<head>')) {
     finalContent = finalContent.replace('<head>', `<head>${inject}`)
@@ -52,5 +51,13 @@ export const HtmlViewer: React.FC<{ file: FileInfo; content?: string }> = ({
     finalContent = `<!DOCTYPE html><html><head>${inject}</head><body>${finalContent}</body></html>`
   }
 
-  return <UnifiedViewer srcDoc={finalContent} padding="p-0" />
+  return (
+    <div className="h-full flex flex-col bg-background overflow-hidden">
+      <iframe
+        srcDoc={finalContent}
+        className="flex-1 w-full border-none"
+        title="HTML Preview"
+      />
+    </div>
+  )
 }

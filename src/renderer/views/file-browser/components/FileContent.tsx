@@ -5,6 +5,7 @@ import { FileHandlerComponents } from '../../../../lib/constants/renderer/ui'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
 import { DiffViewer } from '../../../shared/featured/fileviewers/DiffViewer'
+import { HtmlViewer } from '../../../shared/featured/fileviewers/HtmlViewer'
 import { MarkdownViewer } from '../../../shared/featured/fileviewers/MarkdownViewer'
 import { TextEditor } from '../../../shared/featured/fileviewers/TextEditor'
 import { TextViewer } from '../../../shared/featured/fileviewers/TextViewer'
@@ -19,6 +20,7 @@ interface FileContentProps {
   loading: boolean
   error: string | null
   isEditing?: boolean
+  htmlMode?: boolean
   onContentChange?: (content: string) => void
   /** Active view preview mode (null = default rendering) */
   activeView?: string | null
@@ -31,6 +33,7 @@ export function FileContent({
   loading,
   error,
   isEditing = false,
+  htmlMode = false,
   onContentChange,
   activeView = null,
 }: FileContentProps) {
@@ -144,7 +147,7 @@ export function FileContent({
     return <MarkdownViewer content={content || ''} file={fileInfo} />
   }
 
-  if (category === 'text' || category === 'html') {
+  if (category === 'text') {
     if (isEditing) {
       return (
         <TextEditor
@@ -166,6 +169,37 @@ export function FileContent({
           onHunkProcessed={handleHunkProcessed}
         />
       )
+    }
+    return (
+      <TextViewer content={content || ''} file={fileInfo} className="flex-1" />
+    )
+  }
+
+  if (category === 'html') {
+    if (isEditing) {
+      return (
+        <TextEditor
+          content={content || ''}
+          onChange={onContentChange || (() => {})}
+          file={fileInfo}
+          className="flex-1"
+        />
+      )
+    }
+    if (baseContent) {
+      return (
+        <DiffViewer
+          headContent={baseContent}
+          currentContent={localContent ?? content ?? ''}
+          extension={fileInfo.extension}
+          filePath={path}
+          className="flex-1"
+          onHunkProcessed={handleHunkProcessed}
+        />
+      )
+    }
+    if (htmlMode) {
+      return <HtmlViewer file={fileInfo} content={content || undefined} />
     }
     return (
       <TextViewer content={content || ''} file={fileInfo} className="flex-1" />

@@ -1,4 +1,4 @@
-import { Eye, Pencil, Save } from 'lucide-react'
+import { Eye, Globe, Pencil, Save } from 'lucide-react'
 import type { MatchingView } from '../../../../lib/types/file-browser'
 import type { FileInfo } from '../../../../lib/types/files'
 import { cn } from '../../../shared/lib/utils'
@@ -6,6 +6,8 @@ import { cn } from '../../../shared/lib/utils'
 interface StatusBarProps {
   isEditing: boolean
   setIsEditing: (val: boolean) => void
+  htmlMode?: boolean
+  onHtmlModeChange?: (val: boolean) => void
   fileInfo: FileInfo | null
   content: string | null
   onSave?: () => void
@@ -21,6 +23,8 @@ interface StatusBarProps {
 export function StatusBar({
   isEditing,
   setIsEditing,
+  htmlMode = false,
+  onHtmlModeChange,
   fileInfo,
   content,
   onSave,
@@ -32,6 +36,9 @@ export function StatusBar({
   const wordCount = content ? content.trim().split(/\s+/).length : 0
   const lineCount = content ? content.split('\n').length : 0
   const isPdf = fileInfo?.extension?.toLowerCase() === 'pdf'
+  const isHtml =
+    fileInfo?.extension?.toLowerCase() === 'html' ||
+    fileInfo?.extension?.toLowerCase() === 'htm'
 
   return (
     <div className="h-[26px] shrink-0 bg-sidebar border-t border-border flex items-center px-3 text-[11px] text-muted-foreground/70 select-none">
@@ -61,16 +68,37 @@ export function StatusBar({
             <div className="w-px h-3 bg-border/30" />
           )}
 
+          {/* Html mode (rendered preview) — only for HTML files */}
+          {isHtml && (
+            <button
+              type="button"
+              onClick={() => {
+                onHtmlModeChange?.(true)
+                onSelectView?.(null)
+              }}
+              className={cn(
+                'flex items-center gap-1 px-2 py-0.5 transition-colors',
+                htmlMode
+                  ? 'text-foreground/80'
+                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+              )}
+            >
+              <Globe size={11} />
+              <span>Html</span>
+            </button>
+          )}
+
           {/* View mode (text viewer) */}
           <button
             type="button"
             onClick={() => {
+              onHtmlModeChange?.(false)
               setIsEditing(false)
               onSelectView?.(null)
             }}
             className={cn(
               'flex items-center gap-1 px-2 py-0.5 transition-colors',
-              !isEditing && activeView === null
+              !isEditing && !htmlMode && activeView === null
                 ? 'text-foreground/80'
                 : 'text-muted-foreground/40 hover:text-muted-foreground/70',
             )}
@@ -84,6 +112,7 @@ export function StatusBar({
             <button
               type="button"
               onClick={() => {
+                onHtmlModeChange?.(false)
                 setIsEditing(true)
                 onSelectView?.(null)
               }}
