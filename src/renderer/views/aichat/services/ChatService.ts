@@ -241,14 +241,17 @@ export async function loadSessionById(sessionId: string) {
 }
 
 /**
- * Create a new session file on disk and set it as active in config.
- * The file is created BEFORE setting the config so any ACTIVE_SESSION_CHANGED
- * listener that tries to loadSessionById() will always find a valid file.
+ * Create a new session file on disk and return its ID.
+ * Does NOT write to global config — the caller (useAIChat) is responsible
+ * for managing the session ID locally. This makes ChatService tile-agnostic:
+ * each AI Chat tile can create sessions independently without conflicting.
+ *
+ * To persist the session for the next app start, the caller should save
+ * the session ID to config (or tile data) separately.
  */
 export async function createNewSession(): Promise<string> {
   const newId = Date.now().toString()
   await window.aynite.saveSession(newId, [])
-  await window.aynite.setConfig('activeSessionId', newId).catch(() => {})
   return newId
 }
 
@@ -264,7 +267,7 @@ export async function sendMessage(
   const session = getOrCreateSession(sessionId)
   if (!text.trim() || session.state.loading) return
 
-  // Fetch config directly via IPC — no React dependency
+  // Fetch config directly via IPC — no React dependency.
   const [
     aiConfig,
     agentsConfig,

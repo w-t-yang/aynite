@@ -9,6 +9,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
 } from 'react'
 import type { ChatInputHandle } from '../../../../lib/types/ui'
@@ -65,6 +66,12 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
     const fileItemsRef = React.useRef<SuggestionItem[]>([])
     const skillItemsRef = React.useRef<SuggestionItem[]>([])
     const commandItemsRef = React.useRef<SuggestionItem[]>([])
+    // Ref for onSend to avoid stale closures in the TipTap keyboard shortcut handler.
+    // The Enter key handler captures onSend at extension creation time (useEditor with
+    // [] deps doesn't re-register keyboard shortcuts). Using a ref ensures it always
+    // calls the latest onSend function, even when the editor's extensions are frozen.
+    const onSendRef = useRef(onSend)
+    onSendRef.current = onSend
 
     const BaseMention = React.useMemo(
       () =>
@@ -153,7 +160,7 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
                 if (loading) return false
                 const text = serializeTiptapToText(this.editor.getJSON())
                 if (!text.trim()) return false
-                onSend(text)
+                onSendRef.current(text)
                 this.editor.commands.clearContent()
                 return true
               },
@@ -161,7 +168,7 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
           },
         }),
       ],
-      [BaseMention, placeholder, loading, onSend],
+      [BaseMention, placeholder, loading],
     )
 
     // Unified effect for indexing workspace files, skills, and commands
@@ -283,9 +290,9 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       const text = serializeTiptapToText(json)
       if (!text.trim()) return
 
-      onSend(text)
+      onSendRef.current(text)
       editor.commands.clearContent()
-    }, [editor, disabled, onSend])
+    }, [editor, disabled])
 
     // Update editable when disabled changes
     useEffect(() => {

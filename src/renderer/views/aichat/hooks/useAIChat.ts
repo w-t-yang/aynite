@@ -115,7 +115,13 @@ export function useAIChat() {
         const { id } = event.data as { id: string }
         if (id) {
           setActiveSessionId(id)
-          ChatService.loadSessionById(id).catch(() => {})
+          // Only load from disk if not already in memory — otherwise the
+          // disk data might be stale (empty for a newly created session,
+          // or outdated for a session that was modified in-memory).
+          // This mirrors ChatService's own !sessions.has(id) guard.
+          if (!ChatService.hasSession(id)) {
+            ChatService.loadSessionById(id).catch(() => {})
+          }
         }
       }
     })
@@ -125,14 +131,24 @@ export function useAIChat() {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      // Use config as source of truth for the active session ID — it may
-      // have been updated by another view (e.g. history modal) before
-      // React state catches up.
-      const configId = await window.aynite.getConfig('activeSessionId')
-      const sid = configId || (await ChatService.createNewSession())
-      if (sid !== activeSessionId) {
-        setActiveSessionId(sid)
+      // Step 1: Use the local session ID directly. This tile is showing this
+      // session — the message MUST go here. Config is NOT used for routing;
+      // it's only read for the initial load (see loadInitial).
+      //
+      // In multi-tile mode, each tile has its own activeSessionId, so they
+      // are completely independent.
+      let sid = activeSessionId
+
+      // Step 2: If no session is loaded (e.g., cleared by new chat), create one.
+      if (!sid) {
+        sid = await ChatService.createNewSession()
       }
+
+      // Step 3: Persist this session ID for the next app start (fire-and-forget).
+      // In multi-tile, this would save to the tile's data instead of global config.
+      window.aynite.setConfig('activeSessionId', sid).catch(() => {})
+
+      setActiveSessionId(sid)
       await ChatService.sendMessage(sid, text, activeTabPath)
     },
     [activeSessionId, activeTabPath],
@@ -143,7 +159,11 @@ export function useAIChat() {
       ChatService.clearChat(activeSessionId)
     }
     setActiveSessionId(null)
-    window.aynite.setConfig('activeSessionId', null).catch(() => {})
+    // NOTE: No config write here. This is a tile-local operation.
+    // In multi-tile mode, clearing one tile's session should not affect
+    // other tiles (which would react to the global ACTIVE_SESSION_CHANGED event).
+    // The session ID in config will be overwritten when the user sends their
+    // first message in the new session (see sendMessage's fire-and-forget write).
   }, [activeSessionId])
 
   const handleApprove = useCallback(() => {
