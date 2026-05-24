@@ -181,7 +181,7 @@ This is where you write code to transform the raw data into the target JSON form
 
 **Always validate your approach before writing complex code:**
 1. First read and understand the source data structure
-2. Read the target schema (via `show_dataview_info.py` or the reference doc)
+2. Read the target schema (via `show_dataview_info.py`)
 3. Write a transformation script (you can use Python, Node.js, or any tool available)
 4. Run the script to produce the output JSON
 
@@ -264,21 +264,19 @@ field that's present), double-check the schema with `show_dataview_info.py`.
 
 When validation passes and the user is happy with the result:
 
-1. **Ask the user where to save it.** Good default options:
-   - The user's current workspace folder (where they are working)
-   - `~/.aynite/views/<dataview-id>/data/` (if they want to load it from the view)
-   - A custom path they specify
+1. **Save next to the source.** The output JSON goes alongside the input:
+   - **If the source is a file** — save the `.json` file in the **same directory** as the source file, with a descriptive name (e.g., `my-data-chart.json`).
+   - **If the source is a folder** — save the `.json` file **inside that folder**, so the data and its visualization are kept together.
+   - **If the source is clipboard/text** — ask the user where they'd like it saved (default: their current workspace directory).
 
-2. **Copy/save the file** to the chosen location:
+2. **If you're unsure** (e.g., the input is a file inside a deeply nested path and the user might want the output elsewhere), ask the user to confirm the output location before saving.
+
+3. **Copy/save the file:**
    ```bash
-   cp /tmp/output.json /path/to/chosen/output.json
+   cp /tmp/output.json /path/to/next/to/input/output.json
    ```
 
-3. **Tell the user the full path** where the file was saved.
-
-4. **Explain how to open it:** The user can open the file in Aynite's File Browser
-   or configure the appropriate view to load it. If saved to `~/.aynite/views/<dataview-id>/data/`,
-   the view should pick it up automatically.
+4. **Tell the user the full path** where the file was saved.
 
 ---
 
@@ -290,9 +288,7 @@ When validation passes and the user is happy with the result:
 | Show schema details for one dataview | `scripts/show_dataview_info.py <id>` |
 | Validate output against schema | `scripts/validate_schema.py <id> <file>` |
 
-There's also `references/dataview-schemas.md` which has all 8 schemas in one
-place with examples — read it for a quick overview when you need to understand
-the target format at a glance.
+All schema information is fetched live from each view's `config.json` — no static reference needed.
 
 ---
 

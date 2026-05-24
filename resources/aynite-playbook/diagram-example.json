@@ -1,5 +1,0 @@
-{
-  "title": "System Architecture",
-  "type": "flowchart",
-  "definition": "graph TD\n    Client[Web Client] --> API[API Gateway]\n    API --> Auth[Auth Service]\n    API --> Data[Data Service]\n    Auth --> DB[(User DB)]\n    Data --> DB2[(Data DB)]\n    Data --> Cache[(Redis Cache)]\n    Auth --> Cache"
-}

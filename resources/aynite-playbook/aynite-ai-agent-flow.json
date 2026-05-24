@@ -1,0 +1,36 @@
+{
+  "nodes": [
+    { "id": "user-msg", "position": { "x": 50, "y": 200 }, "data": { "label": "💬 User sends\na message" } },
+    { "id": "chat-service", "position": { "x": 50, "y": 360 }, "data": { "label": "📨 ChatService\nreceives message" } },
+
+    { "id": "select-agent", "position": { "x": 300, "y": 120 }, "data": { "label": "🎭 Select Agent\nAlpha · Aynite · Ghost\nPrism · Sonic · Void" } },
+    { "id": "select-provider", "position": { "x": 300, "y": 300 }, "data": { "label": "🔌 Select Provider\nOllama · Gemini · DeepSeek\nClaude · OpenAI" } },
+    { "id": "ai-process", "position": { "x": 300, "y": 480 }, "data": { "label": "🧠 AI processes\nwith context\n(memory + skills)" } },
+
+    { "id": "tool-files", "position": { "x": 550, "y": 40 }, "data": { "label": "📄 File Tools\nread_file · write_file\nedit_file" } },
+    { "id": "tool-command", "position": { "x": 550, "y": 180 }, "data": { "label": "⚡ Command Tool\nrun_command\n(real-time streaming)" } },
+    { "id": "tool-search", "position": { "x": 550, "y": 320 }, "data": { "label": "🔍 Search Tools\nglob_search · grep_search\nread_file" } },
+    { "id": "tool-plan", "position": { "x": 550, "y": 460 }, "data": { "label": "📋 Planning Tools\npropose_plan · create_task\nupdate_task" } },
+    { "id": "tool-memory", "position": { "x": 550, "y": 600 }, "data": { "label": "💾 Memory Tools\nread_memory · update_memory\ninitialize_memory" } },
+
+    { "id": "stream-output", "position": { "x": 800, "y": 180 }, "data": { "label": "📡 Stream response\nin real-time with\ncommand progress" } },
+    { "id": "user-receives", "position": { "x": 800, "y": 400 }, "data": { "label": "✅ User sees result\nApprove/reject\ncommands as needed" } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "user-msg", "target": "chat-service", "label": "types message" },
+    { "id": "e2", "source": "chat-service", "target": "ai-process", "label": "forwards to AI" },
+    { "id": "e3", "source": "select-agent", "target": "ai-process", "label": "configures behavior" },
+    { "id": "e4", "source": "select-provider", "target": "ai-process", "label": "provides LLM" },
+    { "id": "e5", "source": "ai-process", "target": "tool-files", "label": "decides tool call" },
+    { "id": "e6", "source": "ai-process", "target": "tool-command", "label": "decides tool call" },
+    { "id": "e7", "source": "ai-process", "target": "tool-search", "label": "decides tool call" },
+    { "id": "e8", "source": "ai-process", "target": "tool-plan", "label": "decides tool call" },
+    { "id": "e9", "source": "ai-process", "target": "tool-memory", "label": "decides tool call" },
+    { "id": "e10", "source": "tool-files", "target": "stream-output", "label": "result" },
+    { "id": "e11", "source": "tool-command", "target": "stream-output", "label": "streaming output" },
+    { "id": "e12", "source": "tool-search", "target": "stream-output", "label": "result" },
+    { "id": "e13", "source": "tool-plan", "target": "stream-output", "label": "plan created" },
+    { "id": "e14", "source": "tool-memory", "target": "stream-output", "label": "memory updated" },
+    { "id": "e15", "source": "stream-output", "target": "user-receives", "label": "delivers to UI" }
+  ]
+}

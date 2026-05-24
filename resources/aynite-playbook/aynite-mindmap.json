@@ -1,0 +1,219 @@
+{
+  "root": {
+    "id": "aynite",
+    "label": "🚀 Aynite — AI-Native Workspace",
+    "children": [
+      {
+        "id": "views",
+        "label": "📺 16 Views",
+        "children": [
+          {
+            "id": "views-data",
+            "label": "Data-Driven (8)",
+            "children": [
+              { "id": "view-chart", "label": "📊 Data Chart — Bar/Line/Pie" },
+              { "id": "view-graph", "label": "🕸️ Graph — Force-Directed" },
+              { "id": "view-flow", "label": "🔀 Flow — Node Editor" },
+              { "id": "view-diagram", "label": "📐 Diagram — Mermaid" },
+              { "id": "view-mindmap", "label": "🌳 MindMap — Collapsible Tree" },
+              { "id": "view-canvas", "label": "✏️ Canvas — Excalidraw" },
+              { "id": "view-stock", "label": "📈 Stock — Candlestick" },
+              { "id": "view-theme", "label": "🎨 Theme Studio" }
+            ]
+          },
+          {
+            "id": "views-functional",
+            "label": "Functional (8)",
+            "children": [
+              { "id": "view-files", "label": "📂 File Browser" },
+              { "id": "view-tree", "label": "🌲 Treeview + Git Diff" },
+              { "id": "view-workspace", "label": "📁 Workspace View" },
+              { "id": "view-aichat", "label": "🤖 AI Chat" },
+              { "id": "view-aibrowser", "label": "🔍 AI Browser" },
+              { "id": "view-rss", "label": "📰 RSS Reader" },
+              { "id": "view-spotify", "label": "🎵 Spotify" },
+              { "id": "view-settings", "label": "⚙️ Settings" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ai",
+        "label": "🤖 AI Engine",
+        "children": [
+          {
+            "id": "ai-providers",
+            "label": "Multi-Provider",
+            "children": [
+              { "id": "ai-ollama", "label": "🦙 Ollama (Local)" },
+              { "id": "ai-gemini", "label": "🔮 Gemini" },
+              { "id": "ai-deepseek", "label": "🧠 DeepSeek" },
+              { "id": "ai-claude", "label": "🟣 Claude (Anthropic)" },
+              { "id": "ai-openai", "label": "🟢 OpenAI" }
+            ]
+          },
+          {
+            "id": "ai-agents",
+            "label": "Agent System",
+            "children": [
+              { "id": "agent-alpha", "label": "Alpha — Balanced" },
+              { "id": "agent-aynite", "label": "Aynite — Smart" },
+              { "id": "agent-ghost", "label": "Ghost — Minimal" },
+              { "id": "agent-prism", "label": "Prism — Analytical" },
+              { "id": "agent-sonic", "label": "Sonic — Fast" },
+              { "id": "agent-void", "label": "Void — Creative" }
+            ]
+          },
+          {
+            "id": "ai-features",
+            "label": "Capabilities",
+            "children": [
+              { "id": "ai-chat", "label": "Session Chat" },
+              { "id": "ai-tools", "label": "File / Command Tools" },
+              { "id": "ai-memory", "label": "Project Memory" },
+              { "id": "ai-plan", "label": "Planning System" },
+              { "id": "ai-skills", "label": "Skill System" },
+              { "id": "ai-streaming", "label": "Real-Time Output" }
+            ]
+          },
+          {
+            "id": "ai-spells",
+            "label": "Spells System",
+            "children": [
+              { "id": "spell-commands", "label": "Custom Commands" },
+              { "id": "spell-skills", "label": "Extensible Skills" },
+              { "id": "spell-prompts", "label": "System Prompts" },
+              { "id": "spell-creators", "label": "Spell Creators" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "arch",
+        "label": "🏗️ Architecture",
+        "children": [
+          {
+            "id": "arch-electron",
+            "label": "Electron 3-Process",
+            "children": [
+              { "id": "arch-main", "label": "Main — System IPC, Config, Git" },
+              { "id": "arch-renderer", "label": "Renderer — React UI, Views" },
+              { "id": "arch-preload", "label": "Preload — Secure Bridge" }
+            ]
+          },
+          {
+            "id": "arch-tech",
+            "label": "Tech Stack",
+            "children": [
+              { "id": "tech-react", "label": "React 19" },
+              { "id": "tech-vite", "label": "Electron-Vite + Vite" },
+              { "id": "tech-tailwind", "label": "Tailwind CSS v4" },
+              { "id": "tech-biome", "label": "Biome Linter" },
+              { "id": "tech-ts", "label": "TypeScript 5.8" },
+              { "id": "tech-vitest", "label": "Vitest Testing" }
+            ]
+          },
+          {
+            "id": "arch-ipc",
+            "label": "IPC Bridge",
+            "children": [
+              { "id": "ipc-config", "label": "Config Channels" },
+              { "id": "ipc-file", "label": "File System Channels" },
+              { "id": "ipc-git", "label": "Git Channels" },
+              { "id": "ipc-ai", "label": "AI Chat Channels" },
+              { "id": "ipc-spells", "label": "Spells Channels" },
+              { "id": "ipc-events", "label": "App Event Bus" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "devtools",
+        "label": "🛠️ Developer Tooling",
+        "children": [
+          {
+            "id": "dev-audit",
+            "label": "Audit Scripts",
+            "children": [
+              { "id": "audit-base", "label": "Base — Types, Constants, Preload" },
+              { "id": "audit-standalone", "label": "Standalone — Bridge, Patterns" },
+              { "id": "audit-tools", "label": "Tools — Duplication, Dead Code" },
+              { "id": "audit-ast", "label": "ast-grep Structural Linting" }
+            ]
+          },
+          {
+            "id": "dev-quality",
+            "label": "Quality Gates",
+            "children": [
+              { "id": "qa-lint", "label": "Biome Lint on Commit" },
+              { "id": "qa-husky", "label": "Husky Git Hooks" },
+              { "id": "qa-knip", "label": "Knip Dead Code Detection" },
+              { "id": "qa-jscpd", "label": "Copy-Paste Detection" },
+              { "id": "qa-madge", "label": "Circular Dependency Check" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "integrations",
+        "label": "🔌 Integrations",
+        "children": [
+          {
+            "id": "int-git",
+            "label": "Git Integration",
+            "children": [
+              { "id": "git-status", "label": "File Status (M/A/U/D/R)" },
+              { "id": "git-diff", "label": "Inline Diff Viewer" },
+              { "id": "git-commit", "label": "AI Commit Messages" },
+              { "id": "git-auto", "label": "Auto-Refresh on File Change" }
+            ]
+          },
+          { "id": "int-rss", "label": "📰 RSS Feeds" },
+          { "id": "int-spotify", "label": "🎵 Spotify Player" },
+          {
+            "id": "int-files",
+            "label": "File System",
+            "children": [
+              { "id": "fs-viewer", "label": "Image / Audio / Video / PDF" },
+              { "id": "fs-editor", "label": "Code Editor with Highlighting" },
+              { "id": "fs-html", "label": "HTML Preview (3-Mode Toggle)" },
+              { "id": "fs-watch", "label": "Single-File Watching" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "workspace",
+        "label": "📂 Workspace System",
+        "children": [
+          { "id": "ws-multi", "label": "Multiple Workspaces" },
+          { "id": "ws-tiles", "label": "Tile Layout Manager" },
+          { "id": "ws-playbook", "label": "Playbook — Welcome / Examples" },
+          { "id": "ws-artifacts", "label": "Artifacts — Plans, Tasks" },
+          { "id": "ws-config", "label": "Per-Workspace Config" }
+        ]
+      },
+      {
+        "id": "customize",
+        "label": "🎨 Customization",
+        "children": [
+          {
+            "id": "cust-themes",
+            "label": "Themes (6 built-in)",
+            "children": [
+              { "id": "theme-dark", "label": "🌙 Dark" },
+              { "id": "theme-light", "label": "☀️ Light" },
+              { "id": "theme-nord", "label": "❄️ Nord" },
+              { "id": "theme-aurora", "label": "🌌 Aurora" },
+              { "id": "theme-ember", "label": "🔥 Ember" },
+              { "id": "theme-pinky", "label": "💖 Pinky" }
+            ]
+          },
+          { "id": "cust-keybindings", "label": "⌨️ Custom Keybindings" },
+          { "id": "cust-config", "label": "⚙️ Full Config System" },
+          { "id": "cust-views", "label": "📺 View Layout Customization" }
+        ]
+      }
+    ]
+  }
+}

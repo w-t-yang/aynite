@@ -1,0 +1,3 @@
+{
+  "definition": "flowchart LR\n    subgraph Main[\"Main Process\"]\n        direction TB\n        MConfig[\"Config\"]\n        MGit[\"Git\"]\n        MFile[\"File System\"]\n        MAI[\"AI Engine\"]\n        MSpells[\"Spells\"]\n        MTheme[\"Theme\"]\n    end\n    subgraph Preload[\"Preload Bridge\"]\n        PB[\"IPC Bridge\"]\n    end\n    subgraph Renderer[\"Renderer\"]\n        direction TB\n        RT[\"Tile Manager\"]\n        VW[\"16 Views\"]\n        SH[\"Shared Components\"]\n    end\n\n    MConfig --> PB\n    MGit --> PB\n    MFile --> PB\n    MAI --> PB\n    MSpells --> PB\n    MTheme --> PB\n    PB --> RT\n    RT --> VW\n    RT --> SH"
+}
