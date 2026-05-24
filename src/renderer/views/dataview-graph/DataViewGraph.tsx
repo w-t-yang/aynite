@@ -32,6 +32,108 @@ interface NodePos extends DataViewGraphNode {
   vy: number
 }
 
+/**
+ * Compute a bipartite ordering (rank) for each node using the barycenter heuristic.
+ * Returns a Map<nodeId, rank> where rank is 0..N-1 representing optimal vertical position
+ * to minimize edge crossings in a bipartite layout.
+ *
+ * Left side = groups 0 & 1 (consumers), Right side = group 2 (dependencies).
+ */
+function computeBipartiteOrder(
+  graphData: DataViewGraph,
+  _width: number,
+  height: number,
+): Map<string, number> {
+  const leftNodes: { id: string; y: number }[] = []
+  const rightNodes: { id: string; y: number }[] = []
+
+  graphData.nodes.forEach((node) => {
+    if (node.group === 2) {
+      rightNodes.push({ id: node.id, y: 0 })
+    } else {
+      leftNodes.push({ id: node.id, y: 0 })
+    }
+  })
+
+  // Initial evenly-spaced vertical positions
+  leftNodes.forEach((n, i) => {
+    n.y = ((i + 1) * height) / (leftNodes.length + 1)
+  })
+  rightNodes.forEach((n, i) => {
+    n.y = ((i + 1) * height) / (rightNodes.length + 1)
+  })
+
+  // Build adjacency
+  const leftSet = new Set(leftNodes.map((n) => n.id))
+  const rightSet = new Set(rightNodes.map((n) => n.id))
+  const leftAdj = new Map<string, string[]>()
+  const rightAdj = new Map<string, string[]>()
+
+  for (const n of leftNodes) leftAdj.set(n.id, [])
+  for (const n of rightNodes) rightAdj.set(n.id, [])
+
+  graphData.links.forEach((link) => {
+    const source =
+      typeof link.source === 'string' ? link.source : (link.source as any).id
+    const target =
+      typeof link.target === 'string' ? link.target : (link.target as any).id
+
+    if (leftSet.has(source) && rightSet.has(target)) {
+      leftAdj.get(source)?.push(target)
+      rightAdj.get(target)?.push(source)
+    } else if (leftSet.has(target) && rightSet.has(source)) {
+      leftAdj.get(target)?.push(source)
+      rightAdj.get(source)?.push(target)
+    }
+  })
+
+  // Barycenter heuristic (15 iterations)
+  for (let iter = 0; iter < 15; iter++) {
+    // Sort right nodes by avg y of connected left nodes
+    for (const n of rightNodes) {
+      const ids = rightAdj.get(n.id) || []
+      if (ids.length > 0) {
+        const connected = leftNodes.filter((l) => ids.includes(l.id))
+        ;(n as any).__bary =
+          connected.reduce((s, l) => s + l.y, 0) / connected.length
+      } else {
+        ;(n as any).__bary = n.y
+      }
+    }
+    rightNodes.sort((a, b) => (a as any).__bary - (b as any).__bary)
+    rightNodes.forEach((n, i) => {
+      n.y = ((i + 1) * height) / (rightNodes.length + 1)
+    })
+
+    // Sort left nodes by avg y of connected right nodes
+    for (const n of leftNodes) {
+      const ids = leftAdj.get(n.id) || []
+      if (ids.length > 0) {
+        const connected = rightNodes.filter((r) => ids.includes(r.id))
+        ;(n as any).__bary =
+          connected.reduce((s, r) => s + r.y, 0) / connected.length
+      } else {
+        ;(n as any).__bary = n.y
+      }
+    }
+    leftNodes.sort((a, b) => (a as any).__bary - (b as any).__bary)
+    leftNodes.forEach((n, i) => {
+      n.y = ((i + 1) * height) / (leftNodes.length + 1)
+    })
+  }
+
+  // Build final ranking: left nodes first (rank 0..L-1), then right nodes (rank L..L+R-1)
+  const rank = new Map<string, number>()
+  for (let i = 0; i < leftNodes.length; i++) {
+    rank.set(leftNodes[i].id, i)
+  }
+  for (let i = 0; i < rightNodes.length; i++) {
+    rank.set(rightNodes[i].id, leftNodes.length + i)
+  }
+
+  return rank
+}
+
 export function DataViewGraphView() {
   const [data, setData] = useState<DataViewGraph | null>(null)
   const [nodes, setNodes] = useState<NodePos[]>([])
@@ -50,6 +152,7 @@ export function DataViewGraphView() {
   const requestRef = useRef<number>(null)
   const stabilizedRef = useRef(false)
   const stabilizationFrames = useRef(0)
+  const nodeRanksRef = useRef<Map<string, number>>(new Map())
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
@@ -77,13 +180,21 @@ export function DataViewGraphView() {
     const width = containerRef.current?.clientWidth || 800
     const height = containerRef.current?.clientHeight || 600
 
-    // Place nodes in a tighter circle for faster convergence
+    // Compute bipartite ordering for crossing-minimized initial placement
+    const ranks = computeBipartiteOrder(graphData, width, height)
+    nodeRanksRef.current = ranks
+
+    // Place nodes in a circle, ordered by their bipartite rank
+    // This clusters connected nodes together on the same side of the circle
     const centerX = width / 2
     const centerY = height / 2
     const radius = Math.min(width, height) * 0.35
 
-    const newNodes = graphData.nodes.map((node, i) => {
-      const angle = (2 * Math.PI * i) / graphData.nodes.length
+    const maxRank = ranks.size - 1
+    const newNodes = graphData.nodes.map((node) => {
+      const rank = ranks.get(node.id) ?? 0
+      // Map rank to angle: 0→0, maxRank→2π (ordered clockwise)
+      const angle = (2 * Math.PI * rank) / (maxRank + 1)
       return {
         ...node,
         x: centerX + radius * Math.cos(angle),
@@ -170,7 +281,7 @@ export function DataViewGraphView() {
     }
   }, [loadInitialFile, loadPlaybookFile])
 
-  // Simulation Loop with fast stabilization (~1 second)
+  // Simulation Loop — force-directed layout with a gentle bipartite ranking force
   const animate = useCallback(
     (_time: number) => {
       if (!data || nodes.length === 0) return
@@ -180,12 +291,16 @@ export function DataViewGraphView() {
       const centerX = width / 2
       const centerY = height / 2
 
-      // Boosted forces for fast convergence
       const kRepulsion = 5000
       const kAttraction = 0.03
       const kCenter = 0.03
+      // Gentle ranking force — guides nodes toward bipartite order without being rigid
+      const kRanking = 0.006
       const damping = 0.1
       const idealEdgeLength = 300
+
+      const ranks = nodeRanksRef.current
+      const maxRank = ranks.size - 1
 
       setNodes((prevNodes) => {
         const nextNodes = prevNodes.map((n) => ({ ...n }))
@@ -194,7 +309,7 @@ export function DataViewGraphView() {
         for (let i = 0; i < nextNodes.length; i++) {
           const node = nextNodes[i]
 
-          // Skip dragged node physics or keep it attached to mouse
+          // Skip dragged node
           if (node.id === draggedNode) continue
 
           // Repulsion
@@ -212,6 +327,13 @@ export function DataViewGraphView() {
           // Centering
           node.vx += (centerX - node.x) * kCenter
           node.vy += (centerY - node.y) * kCenter
+
+          // Bipartite ranking force: gently pull toward rank-ordered vertical position
+          const rank = ranks.get(node.id)
+          if (rank !== undefined) {
+            const targetY = ((rank + 1) * height) / (maxRank + 2)
+            node.vy += (targetY - node.y) * kRanking
+          }
         }
 
         // Attraction (Links)
@@ -258,7 +380,7 @@ export function DataViewGraphView() {
         return nextNodes
       })
 
-      // Stabilization detection: check if total movement is below threshold
+      // Stabilization detection
       setNodes((prevNodes) => {
         const totalEnergy = prevNodes.reduce(
           (sum, n) => sum + Math.abs(n.vx) + Math.abs(n.vy),
@@ -273,7 +395,6 @@ export function DataViewGraphView() {
           stabilizedRef.current = false
         }
 
-        // After 5 consecutive stable frames, stop the loop
         if (stabilizationFrames.current > 5) {
           stabilizedRef.current = true
           if (requestRef.current) {
@@ -291,7 +412,6 @@ export function DataViewGraphView() {
   )
 
   useEffect(() => {
-    // Restart simulation when data changes
     stabilizedRef.current = false
     stabilizationFrames.current = 0
     if (requestRef.current) cancelAnimationFrame(requestRef.current)
@@ -305,7 +425,6 @@ export function DataViewGraphView() {
   const prevDraggedNode = useRef<string | null>(null)
   useEffect(() => {
     if (prevDraggedNode.current && !draggedNode) {
-      // Drag just ended — restart simulation
       stabilizedRef.current = false
       stabilizationFrames.current = 0
       if (requestRef.current) cancelAnimationFrame(requestRef.current)
