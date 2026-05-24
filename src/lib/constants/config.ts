@@ -26,4 +26,5 @@ export enum ConfigKey {
   TILE_DATA = 'tile-data',
   VIEW_CONFIG = 'view-config',
   MATCHING_VIEWS = 'matching-views',
+  PLAYBOOK_PATH = 'playbook-path',
 }

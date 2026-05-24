@@ -1,6 +1,8 @@
 import {
   Activity,
   AlertCircle,
+  ArrowLeftRight,
+  ArrowUpDown,
   Check,
   ChevronDown,
   FolderOpen,
@@ -145,36 +147,6 @@ const CustomTooltip = ({
   )
 }
 
-const generateMockData = (count = 300): DataViewStock[] => {
-  const data: DataViewStock[] = []
-  let price = 150 + Math.random() * 50
-  const now = new Date()
-
-  for (let i = 0; i < count; i++) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - (count - i))
-
-    const open = price + (Math.random() - 0.5) * 5
-    const close = open + (Math.random() - 0.5) * 10
-    const high = Math.max(open, close) + Math.random() * 5
-    const low = Math.min(open, close) - Math.random() * 5
-    const volume = Math.floor(Math.random() * 10000000) + 1000000
-
-    data.push({
-      time: date.toISOString().split('T')[0],
-      open,
-      high,
-      low,
-      close,
-      volume,
-      sma20: price + Math.random() * 2, // Mock indicators
-      rsi: 40 + Math.random() * 20,
-    })
-    price = close
-  }
-  return data
-}
-
 export function DataViewStockView() {
   const { themes, activeThemeId } = useView()
   const executeOperation = useAppOperation()
@@ -188,7 +160,6 @@ export function DataViewStockView() {
   const [indicators, setIndicators] = useState(DEFAULT_INDICATORS)
   const [compareData, setCompareData] = useState<DataViewStock[] | null>(null)
   const [compareSymbol, setCompareSymbol] = useState<string | null>(null)
-  const [isMock, setIsMock] = useState(false)
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
@@ -235,12 +206,6 @@ export function DataViewStockView() {
     return { data: parsedData, symbol: parsedSymbol }
   }, [])
 
-  const loadMockData = useCallback(() => {
-    setSymbol('SIMULATED AAPL')
-    setRawHistory(generateMockData(300))
-    setIsMock(true)
-  }, [])
-
   const loadInitialFile = useCallback(
     async (path: string) => {
       try {
@@ -256,7 +221,6 @@ export function DataViewStockView() {
         setSymbol(parsedSymbol)
         setRawHistory(parsedData)
         currentFile.current = path
-        setIsMock(false)
       } catch (err) {
         console.error('Failed to load initial file:', err)
         const schemaStr = viewConfig?.expected_file_type?.schema
@@ -266,16 +230,26 @@ export function DataViewStockView() {
           message: `Failed to load file: ${path}. File might be missing or in an invalid format.`,
           expected: schemaStr,
         })
-        loadMockData()
       }
     },
-    [
-      symbol,
-      parseJsonData,
-      loadMockData,
-      viewConfig?.expected_file_type?.schema,
-    ],
+    [symbol, parseJsonData, viewConfig?.expected_file_type?.schema],
   )
+
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-stock.json',
+      )
+      await loadInitialFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadInitialFile])
 
   // Load view config
   useEffect(() => {
@@ -306,9 +280,9 @@ export function DataViewStockView() {
     if (initialFile) {
       loadInitialFile(initialFile)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   // Listen for data updates
   useAppEvent('chart-data', (payload: any) => {
@@ -319,7 +293,6 @@ export function DataViewStockView() {
         time: item.time || item.date,
       }))
       setRawHistory(mappedData)
-      setIsMock(false)
     }
     if (payload.symbol) setSymbol(payload.symbol)
     if (payload.timeframe) setTimeframe(payload.timeframe)
@@ -358,7 +331,6 @@ export function DataViewStockView() {
         setSymbol(parsedSymbol)
         setRawHistory(parsedData)
         currentFile.current = path
-        setIsMock(false)
 
         // Save to tile config for persistence
         if (tileId) {
@@ -397,11 +369,6 @@ export function DataViewStockView() {
     setTimeframe(tf)
     // Request new data from parent if in an active trading context
     executeOperation('fetch-chart-data', { symbol, interval: tf })
-
-    // For mock demonstration
-    if (isMock) {
-      loadMockData()
-    }
   }
 
   const handleZoomIn = () => {
@@ -419,9 +386,9 @@ export function DataViewStockView() {
       // Re-trigger load from current file path
       loadInitialFile(currentFile.current)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const toggleIndicator = (key: keyof typeof indicators) => {
     setIndicators((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -633,44 +600,6 @@ export function DataViewStockView() {
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       {!isPreview && (
         <ViewHeader icon={<Activity size={16} />} title="Stock Chart">
-          <div className="flex items-center gap-1 text-[10px] font-bold">
-            {[
-              TimeInterval.D1,
-              TimeInterval.W1,
-              TimeInterval.M1,
-              TimeInterval.Y1,
-            ].map((tf) => (
-              <button
-                type="button"
-                key={tf}
-                onClick={() => handleTimeframeChange(tf)}
-                className={`px-2 py-1 rounded transition-colors uppercase ${
-                  timeframe === tf
-                    ? 'text-primary-foreground bg-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-              >
-                {tf}
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            className={iconBtn()}
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className={iconBtn()}
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
           <button
             type="button"
             onClick={handleRefresh}
@@ -679,104 +608,6 @@ export function DataViewStockView() {
           >
             <RefreshCw size={14} />
           </button>
-          {/* Indicators Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsIndicatorMenuOpen(!isIndicatorMenuOpen)}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              <Activity size={14} /> INDICATORS <ChevronDown size={12} />
-            </button>
-
-            {isIndicatorMenuOpen && (
-              <>
-                <button
-                  type="button"
-                  className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
-                  onClick={() => setIsIndicatorMenuOpen(false)}
-                  aria-label="Close menu"
-                />
-                <div className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-xl z-popover overflow-hidden py-1 max-h-[70vh] overflow-y-auto backdrop-blur-md">
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
-                    Trend & Moving Averages
-                  </div>
-                  {[
-                    { id: 'sma5', label: 'SMA 5' },
-                    { id: 'sma10', label: 'SMA 10' },
-                    { id: 'sma20', label: 'SMA 20' },
-                    { id: 'sma50', label: 'SMA 50' },
-                    { id: 'sma100', label: 'SMA 100' },
-                    { id: 'sma200', label: 'SMA 200' },
-                    { id: 'ema12', label: 'EMA 12' },
-                    { id: 'ema26', label: 'EMA 26' },
-                    { id: 'ema50', label: 'EMA 50' },
-                    { id: 'ema200', label: 'EMA 200' },
-                    { id: 'vwap', label: 'VWAP' },
-                    { id: 'sar', label: 'Parabolic SAR' },
-                  ].map((ind) => (
-                    <button
-                      type="button"
-                      key={ind.id}
-                      onClick={() => toggleIndicator(ind.id as any)}
-                      className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
-                    >
-                      {ind.label}{' '}
-                      {indicators[ind.id as keyof typeof indicators] && (
-                        <Check size={12} className="text-primary" />
-                      )}
-                    </button>
-                  ))}
-
-                  <div className="border-t border-border my-1"></div>
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
-                    Channels & Bands
-                  </div>
-                  {[
-                    { id: 'bollinger', label: 'Bollinger Bands' },
-                    { id: 'donchian', label: 'Donchian Channels' },
-                    { id: 'keltner', label: 'Keltner Channels' },
-                  ].map((ind) => (
-                    <button
-                      type="button"
-                      key={ind.id}
-                      onClick={() => toggleIndicator(ind.id as any)}
-                      className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
-                    >
-                      {ind.label}{' '}
-                      {indicators[ind.id as keyof typeof indicators] && (
-                        <Check size={12} className="text-primary" />
-                      )}
-                    </button>
-                  ))}
-
-                  <div className="border-t border-border my-1"></div>
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase opacity-50">
-                    Oscillators
-                  </div>
-                  {[
-                    { id: 'macd', label: 'MACD' },
-                    { id: 'rsi', label: 'RSI' },
-                    { id: 'stoch', label: 'Stochastic' },
-                    { id: 'cci', label: 'CCI' },
-                    { id: 'atr', label: 'ATR' },
-                  ].map((ind) => (
-                    <button
-                      type="button"
-                      key={ind.id}
-                      onClick={() => toggleIndicator(ind.id as any)}
-                      className="w-full text-left px-4 py-1.5 text-xs hover:bg-muted flex justify-between items-center text-popover-foreground"
-                    >
-                      {ind.label}{' '}
-                      {indicators[ind.id as keyof typeof indicators] && (
-                        <Check size={12} className="text-primary" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
           <button
             type="button"
             onClick={handleSelectSystemFile}
@@ -798,15 +629,6 @@ export function DataViewStockView() {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Mock Watermark */}
-        {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden opacity-[0.03] dark:opacity-[0.05]">
-            <span className="text-[15vw] font-black tracking-tighter rotate-12 whitespace-nowrap">
-              SIMULATED DATA
-            </span>
-          </div>
-        )}
-
         {/* Error Overlay */}
         {error && (
           <div className="absolute inset-0 z-modal flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
@@ -936,7 +758,6 @@ export function DataViewStockView() {
               strokeDasharray="3 3"
               opacity={0.5}
             />
-
             <XAxis
               dataKey="time"
               axisLine={false}
@@ -946,7 +767,6 @@ export function DataViewStockView() {
               height={20}
               padding={{ left: 0, right: 0 }}
             />
-
             <YAxis
               yAxisId="volume"
               orientation="left"
@@ -968,7 +788,6 @@ export function DataViewStockView() {
             />
             <YAxis yAxisId="cci" orientation="right" domain={cciDomain} hide />
             <YAxis yAxisId="atr" orientation="right" domain={atrDomain} hide />
-
             <YAxis
               yAxisId="price"
               domain={priceAxisDomain}
@@ -981,7 +800,6 @@ export function DataViewStockView() {
               allowDecimals={true}
               type="number"
             />
-
             <Tooltip
               cursor={{
                 stroke: textColor,
@@ -996,7 +814,6 @@ export function DataViewStockView() {
                 />
               }
             />
-
             <Bar
               dataKey="volume"
               yAxisId="volume"
@@ -1014,7 +831,6 @@ export function DataViewStockView() {
                 />
               ))}
             </Bar>
-
             {indicators.macd && (
               <>
                 <Bar
@@ -1054,7 +870,6 @@ export function DataViewStockView() {
                 />
               </>
             )}
-
             {indicators.rsi && (
               <>
                 <Line
@@ -1083,7 +898,6 @@ export function DataViewStockView() {
                 />
               </>
             )}
-
             {indicators.cci && (
               <>
                 <Line
@@ -1119,7 +933,6 @@ export function DataViewStockView() {
                 />
               </>
             )}
-
             {indicators.atr && (
               <Line
                 yAxisId="atr"
@@ -1132,7 +945,6 @@ export function DataViewStockView() {
                 name="ATR"
               />
             )}
-
             {indicators.stoch && (
               <>
                 <Line
@@ -1171,7 +983,6 @@ export function DataViewStockView() {
                 />
               </>
             )}
-
             {indicators.bollinger && (
               <>
                 <Line
@@ -1196,7 +1007,6 @@ export function DataViewStockView() {
                 />
               </>
             )}
-
             <Bar
               dataKey={(d) => [d.low, d.high]}
               yAxisId="price"
@@ -1207,7 +1017,6 @@ export function DataViewStockView() {
               name="Price"
               barSize={6}
             />
-
             {indicators.sma5 && (
               <Line
                 yAxisId="price"
@@ -1280,7 +1089,6 @@ export function DataViewStockView() {
                 name="SMA 200"
               />
             )}
-
             {indicators.ema12 && (
               <Line
                 yAxisId="price"
@@ -1329,7 +1137,6 @@ export function DataViewStockView() {
                 name="EMA 200"
               />
             )}
-
             {indicators.vwap && (
               <Line
                 yAxisId="price"
@@ -1343,7 +1150,6 @@ export function DataViewStockView() {
                 name="VWAP"
               />
             )}
-
             {indicators.donchian && (
               <>
                 <Line
@@ -1370,7 +1176,6 @@ export function DataViewStockView() {
                 />
               </>
             )}
-
             {indicators.keltner && (
               <>
                 <Line
@@ -1407,7 +1212,6 @@ export function DataViewStockView() {
                 />
               </>
             )}
-
             {indicators.sar && (
               <Scatter
                 yAxisId="price"
@@ -1418,7 +1222,6 @@ export function DataViewStockView() {
                 name="SAR"
               />
             )}
-
             {compareData && (
               <Line
                 yAxisId="price"
@@ -1431,7 +1234,6 @@ export function DataViewStockView() {
                 name={compareSymbol || 'Compare'}
               />
             )}
-
             <ReferenceLine
               yAxisId="price"
               y={latest.close}
@@ -1441,6 +1243,174 @@ export function DataViewStockView() {
             />
           </ComposedChart>
         </ResponsiveContainer>
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          {/* Timeframe buttons */}
+          <div className="flex items-center gap-0.5">
+            {[
+              TimeInterval.D1,
+              TimeInterval.W1,
+              TimeInterval.M1,
+              TimeInterval.Y1,
+            ].map((tf) => (
+              <button
+                type="button"
+                key={tf}
+                onClick={() => handleTimeframeChange(tf)}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors uppercase ${
+                  timeframe === tf
+                    ? 'text-primary-foreground bg-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Indicators Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsIndicatorMenuOpen(!isIndicatorMenuOpen)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              <Activity size={12} /> IND <ChevronDown size={10} />
+            </button>
+
+            {isIndicatorMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
+                  onClick={() => setIsIndicatorMenuOpen(false)}
+                  aria-label="Close menu"
+                />
+                <div className="absolute bottom-full left-0 mb-1 w-52 bg-popover border border-border rounded-lg shadow-xl z-layout overflow-hidden py-1 max-h-[50vh] overflow-y-auto backdrop-blur-md">
+                  <div className="px-3 py-1.5 text-[9px] font-bold text-muted-foreground uppercase opacity-50">
+                    Trend & Moving Averages
+                  </div>
+                  {[
+                    { id: 'sma5', label: 'SMA 5' },
+                    { id: 'sma10', label: 'SMA 10' },
+                    { id: 'sma20', label: 'SMA 20' },
+                    { id: 'sma50', label: 'SMA 50' },
+                    { id: 'sma100', label: 'SMA 100' },
+                    { id: 'sma200', label: 'SMA 200' },
+                    { id: 'ema12', label: 'EMA 12' },
+                    { id: 'ema26', label: 'EMA 26' },
+                    { id: 'ema50', label: 'EMA 50' },
+                    { id: 'ema200', label: 'EMA 200' },
+                    { id: 'vwap', label: 'VWAP' },
+                    { id: 'sar', label: 'Parabolic SAR' },
+                  ].map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.id}
+                      onClick={() => toggleIndicator(ind.id as any)}
+                      className="w-full text-left px-4 py-1.5 text-[11px] hover:bg-muted flex justify-between items-center text-popover-foreground"
+                    >
+                      {ind.label}{' '}
+                      {indicators[ind.id as keyof typeof indicators] && (
+                        <Check size={11} className="text-primary" />
+                      )}
+                    </button>
+                  ))}
+                  <div className="border-t border-border my-1"></div>
+                  <div className="px-3 py-1.5 text-[9px] font-bold text-muted-foreground uppercase opacity-50">
+                    Channels & Bands
+                  </div>
+                  {[
+                    { id: 'bollinger', label: 'Bollinger Bands' },
+                    { id: 'donchian', label: 'Donchian Channels' },
+                    { id: 'keltner', label: 'Keltner Channels' },
+                  ].map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.id}
+                      onClick={() => toggleIndicator(ind.id as any)}
+                      className="w-full text-left px-4 py-1.5 text-[11px] hover:bg-muted flex justify-between items-center text-popover-foreground"
+                    >
+                      {ind.label}{' '}
+                      {indicators[ind.id as keyof typeof indicators] && (
+                        <Check size={11} className="text-primary" />
+                      )}
+                    </button>
+                  ))}
+                  <div className="border-t border-border my-1"></div>
+                  <div className="px-3 py-1.5 text-[9px] font-bold text-muted-foreground uppercase opacity-50">
+                    Oscillators
+                  </div>
+                  {[
+                    { id: 'macd', label: 'MACD' },
+                    { id: 'rsi', label: 'RSI' },
+                    { id: 'stoch', label: 'Stochastic' },
+                    { id: 'cci', label: 'CCI' },
+                    { id: 'atr', label: 'ATR' },
+                  ].map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.id}
+                      onClick={() => toggleIndicator(ind.id as any)}
+                      className="w-full text-left px-4 py-1.5 text-[11px] hover:bg-muted flex justify-between items-center text-popover-foreground"
+                    >
+                      {ind.label}{' '}
+                      {indicators[ind.id as keyof typeof indicators] && (
+                        <Check size={11} className="text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!data) return
+              setVisibleCount(data.length)
+              setStartIndex(0)
+            }}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!data) return
+              setVisibleCount(data.length)
+              setStartIndex(0)
+            }}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
+        </div>
       </section>
     </div>
   )

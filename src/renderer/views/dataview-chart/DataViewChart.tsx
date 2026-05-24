@@ -1,6 +1,8 @@
 import {
   AlertCircle,
   AreaChart as AreaChartIcon,
+  ArrowLeftRight,
+  ArrowUpDown,
   BarChart3,
   ChevronDown,
   FolderOpen,
@@ -50,20 +52,6 @@ const COLORS = [
   '#6366f1',
 ]
 
-const MOCK_DATA: DataViewChart = {
-  title: 'Sample Business Performance',
-  keys: ['Revenue', 'Profit', 'Expenses'],
-  data: [
-    { name: 'Mon', Revenue: 4000, Profit: 2400, Expenses: 1600 },
-    { name: 'Tue', Revenue: 3000, Profit: 1398, Expenses: 1602 },
-    { name: 'Wed', Revenue: 2000, Profit: 9800, Expenses: 2200 },
-    { name: 'Thu', Revenue: 2780, Profit: 3908, Expenses: 2000 },
-    { name: 'Fri', Revenue: 1890, Profit: 4800, Expenses: 2181 },
-    { name: 'Sat', Revenue: 2390, Profit: 3800, Expenses: 2500 },
-    { name: 'Sun', Revenue: 3490, Profit: 4300, Expenses: 2100 },
-  ],
-}
-
 export function DataViewChartView() {
   const { themes, activeThemeId } = useView()
   const [chartType, setChartType] = useState<ChartType>(ChartType.AREA)
@@ -73,11 +61,11 @@ export function DataViewChartView() {
     expected: string
   } | null>(null)
   const [viewConfig, setViewConfig] = useState<any>(null)
-  const [isMock, setIsMock] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false)
 
   const currentFile = useRef<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
@@ -102,11 +90,6 @@ export function DataViewChartView() {
   const currentTheme = themes.find((t) => t.id === activeThemeId)
   const themeType = currentTheme?.type || 'dark'
 
-  const loadMockData = useCallback(() => {
-    setData(MOCK_DATA)
-    setIsMock(true)
-  }, [])
-
   const loadInitialFile = useCallback(
     async (path: string) => {
       try {
@@ -129,7 +112,6 @@ export function DataViewChartView() {
         setError(null)
         setData(json)
         currentFile.current = path
-        setIsMock(false)
       } catch (err) {
         console.error('Failed to load initial file:', err)
         const schemaStr = viewConfig?.expected_file_type?.schema
@@ -139,11 +121,26 @@ export function DataViewChartView() {
           message: `Failed to load file: ${path}. File might be missing or in an invalid format.`,
           expected: schemaStr,
         })
-        loadMockData()
       }
     },
-    [loadMockData, viewConfig?.expected_file_type?.schema],
+    [viewConfig?.expected_file_type?.schema],
   )
+
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-git-activity.json',
+      )
+      await loadInitialFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadInitialFile])
 
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '')
@@ -164,9 +161,9 @@ export function DataViewChartView() {
     if (initialFile) {
       loadInitialFile(initialFile)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const handleSelectFile = async () => {
     try {
@@ -201,9 +198,9 @@ export function DataViewChartView() {
     if (currentFile.current) {
       loadInitialFile(currentFile.current)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const renderChart = () => {
     if (!data) return null
@@ -439,62 +436,6 @@ export function DataViewChartView() {
     <div className="w-full h-full flex flex-col bg-background transition-colors overflow-hidden">
       {!isPreview && (
         <ViewHeader icon={<BarChart3 size={16} />} title="Chart">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              {chartIcons[chartType]} {chartType.toUpperCase()}{' '}
-              <ChevronDown size={12} />
-            </button>
-
-            {isTypeMenuOpen && (
-              <>
-                <button
-                  type="button"
-                  className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
-                  onClick={() => setIsTypeMenuOpen(false)}
-                  aria-label="Close menu"
-                />
-                <div className="absolute top-full left-0 mt-1 w-40 bg-popover border border-border rounded-lg shadow-xl z-layout overflow-hidden py-1 backdrop-blur-md">
-                  {Object.values(ChartType).map((type) => (
-                    <button
-                      type="button"
-                      key={type}
-                      onClick={() => {
-                        setChartType(type)
-                        setIsTypeMenuOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition-colors ${
-                        chartType === type
-                          ? 'text-primary'
-                          : 'text-popover-foreground'
-                      }`}
-                    >
-                      {chartIcons[type]} {type.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setZoom((z) => Math.min(z * 1.3, 5))}
-            className={iconBtn()}
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoom((z) => Math.max(z / 1.3, 0.3))}
-            className={iconBtn()}
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
           <button
             type="button"
             onClick={handleRefresh}
@@ -515,18 +456,10 @@ export function DataViewChartView() {
       )}
 
       <section
+        ref={containerRef}
         aria-label="Data Chart"
         className="flex-1 relative overflow-hidden bg-background"
       >
-        {/* Mock Watermark */}
-        {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden opacity-[0.03] dark:opacity-[0.05]">
-            <span className="text-[10vw] font-black tracking-tighter rotate-12 whitespace-nowrap">
-              SIMULATED DATA
-            </span>
-          </div>
-        )}
-
         {/* Error Overlay */}
         {error && (
           <div className="absolute inset-0 z-modal flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
@@ -577,6 +510,85 @@ export function DataViewChartView() {
           <ResponsiveContainer width="100%" height="100%">
             {renderChart()}
           </ResponsiveContainer>
+        </div>
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              {chartIcons[chartType]} {chartType.toUpperCase()}{' '}
+              <ChevronDown size={10} />
+            </button>
+
+            {isTypeMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-base w-full h-full bg-transparent border-none cursor-default"
+                  onClick={() => setIsTypeMenuOpen(false)}
+                  aria-label="Close menu"
+                />
+                <div className="absolute bottom-full left-0 mb-1 w-36 bg-popover border border-border rounded-lg shadow-xl z-layout overflow-hidden py-1 backdrop-blur-md">
+                  {Object.values(ChartType).map((type) => (
+                    <button
+                      type="button"
+                      key={type}
+                      onClick={() => {
+                        setChartType(type)
+                        setIsTypeMenuOpen(false)
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-[11px] flex items-center gap-2 hover:bg-muted transition-colors ${
+                        chartType === type
+                          ? 'text-primary'
+                          : 'text-popover-foreground'
+                      }`}
+                    >
+                      {chartIcons[type]} {type.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(z * 1.3, 5))}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(z / 1.3, 0.3))}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
         </div>
       </section>
     </div>

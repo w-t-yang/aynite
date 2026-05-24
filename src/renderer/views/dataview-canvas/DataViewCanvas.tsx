@@ -2,9 +2,10 @@ import { Excalidraw } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import {
   AlertCircle,
+  ArrowLeftRight,
+  ArrowUpDown,
   FolderOpen,
   RefreshCw,
-  Save,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -155,10 +156,30 @@ export function DataViewCanvas() {
   // Load initial file when Excalidraw API becomes available
   const [excalidrawReady, setExcalidrawReady] = useState(false)
 
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-canvas-sketch.json',
+      )
+      await loadFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadFile])
+
   useEffect(() => {
-    if (!excalidrawReady || !initialFilePath) return
-    loadFile(initialFilePath)
-  }, [excalidrawReady, initialFilePath, loadFile])
+    if (!excalidrawReady) return
+    if (initialFilePath) {
+      loadFile(initialFilePath)
+    } else {
+      loadPlaybookFile()
+    }
+  }, [excalidrawReady, initialFilePath, loadFile, loadPlaybookFile])
 
   const handleSelectFile = async () => {
     try {
@@ -192,7 +213,7 @@ export function DataViewCanvas() {
     }
   }, [loadFile])
 
-  const handleSave = useCallback(async () => {
+  const _handleSave = useCallback(async () => {
     const api = excRef.current
     if (!api) return
     try {
@@ -261,30 +282,6 @@ export function DataViewCanvas() {
         >
           <button
             type="button"
-            onClick={handleZoomIn}
-            className={iconBtn()}
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className={iconBtn()}
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className={iconBtn()}
-            title="Save"
-          >
-            <Save size={14} />
-          </button>
-          <button
-            type="button"
             onClick={handleRefresh}
             className={iconBtn()}
             title="Reload"
@@ -327,6 +324,42 @@ export function DataViewCanvas() {
             } as any
           }
         />
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
+        </div>
 
         {/* Error Overlay */}
         {error && (

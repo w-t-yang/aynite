@@ -1,9 +1,10 @@
 import {
   AlertCircle,
+  ArrowLeftRight,
+  ArrowUpDown,
   FileType,
   FolderOpen,
   RefreshCw,
-  Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -13,19 +14,6 @@ import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import type { DataViewDiagram } from './types'
-
-const MOCK_DATA: DataViewDiagram = {
-  title: 'System Architecture',
-  type: 'flowchart',
-  definition: `graph TD
-    Client[Web Client] --> API[API Gateway]
-    API --> Auth[Auth Service]
-    API --> Data[Data Service]
-    Auth --> DB[(User DB)]
-    Data --> DB2[(Data DB)]
-    Data --> Cache[(Redis Cache)]
-    Auth --> Cache`,
-}
 
 // Initialize mermaid once
 let initialized = false
@@ -49,7 +37,6 @@ export function DataViewDiagramView() {
     expected: string
   } | null>(null)
   const [viewConfig, setViewConfig] = useState<any>(null)
-  const [isMock, setIsMock] = useState(false)
   const [svgHtml, setSvgHtml] = useState<string>('')
   const [renderError, setRenderError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
@@ -81,11 +68,6 @@ export function DataViewDiagramView() {
       })
   }, [])
 
-  const loadMockData = useCallback(() => {
-    setData(MOCK_DATA)
-    setIsMock(true)
-  }, [])
-
   const loadInitialFile = useCallback(
     async (path: string) => {
       try {
@@ -108,7 +90,6 @@ export function DataViewDiagramView() {
         setError(null)
         setData(json)
         currentFile.current = path
-        setIsMock(false)
       } catch (err) {
         console.error('Failed to load diagram file:', err)
         const schemaStr = viewConfig?.expected_file_type?.schema
@@ -118,11 +99,26 @@ export function DataViewDiagramView() {
           message: `Failed to load file. File might be missing or invalid.`,
           expected: schemaStr,
         })
-        loadMockData()
       }
     },
-    [loadMockData, viewConfig?.expected_file_type?.schema],
+    [viewConfig?.expected_file_type?.schema],
   )
+
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-architecture.json',
+      )
+      await loadInitialFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadInitialFile])
 
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '')
@@ -142,9 +138,9 @@ export function DataViewDiagramView() {
     if (initialFile) {
       loadInitialFile(initialFile)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const handleSelectFile = async () => {
     try {
@@ -176,9 +172,9 @@ export function DataViewDiagramView() {
     if (currentFile.current) {
       loadInitialFile(currentFile.current)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   // Render diagram whenever data or theme changes
   useEffect(() => {
@@ -226,30 +222,6 @@ export function DataViewDiagramView() {
         <ViewHeader icon={<FileType size={16} />} title="Diagram">
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.min(z * 1.2, 5))}
-            className={iconBtn()}
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoom((z) => Math.max(z / 1.2, 0.1))}
-            className={iconBtn()}
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoom(1)}
-            className={iconBtn()}
-            title="Reset Zoom"
-          >
-            <Undo2 size={14} />
-          </button>
-          <button
-            type="button"
             onClick={handleRefresh}
             className={iconBtn()}
             title="Reload"
@@ -283,14 +255,6 @@ export function DataViewDiagramView() {
           )
         }}
       >
-        {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-base">
-            <span className="text-[12vw] font-black rotate-12">
-              DIAGRAM MOCK
-            </span>
-          </div>
-        )}
-
         {data && (
           <div className="w-full h-full overflow-auto p-6">
             {data.title && (
@@ -333,6 +297,42 @@ export function DataViewDiagramView() {
             )}
           </div>
         )}
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(z * 1.2, 5))}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(z / 1.2, 0.1))}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
+        </div>
 
         {!data && (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">

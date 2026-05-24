@@ -9,8 +9,9 @@ import {
 } from '@xyflow/react'
 import {
   AlertCircle,
+  ArrowLeftRight,
+  ArrowUpDown,
   FolderOpen,
-  Maximize2,
   RefreshCw,
   Workflow,
   ZoomIn,
@@ -23,69 +24,6 @@ import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import type { DataViewFlow } from './types'
 
-const MOCK_DATA: DataViewFlow = {
-  nodes: [
-    {
-      id: 'input-1',
-      type: 'input',
-      position: { x: 50, y: 100 },
-      data: { label: 'User Request' },
-    },
-    {
-      id: 'process-1',
-      type: 'default',
-      position: { x: 300, y: 50 },
-      data: { label: 'Validate Input' },
-    },
-    {
-      id: 'process-2',
-      type: 'default',
-      position: { x: 300, y: 200 },
-      data: { label: 'Process Data' },
-    },
-    {
-      id: 'decision-1',
-      type: 'default',
-      position: { x: 550, y: 125 },
-      data: { label: 'Check Quality?' },
-    },
-    {
-      id: 'output-1',
-      type: 'output',
-      position: { x: 800, y: 50 },
-      data: { label: 'Approved' },
-    },
-    {
-      id: 'output-2',
-      type: 'output',
-      position: { x: 800, y: 200 },
-      data: { label: 'Rejected' },
-    },
-  ],
-  edges: [
-    { id: 'e-input-validate', source: 'input-1', target: 'process-1' },
-    { id: 'e-input-process', source: 'input-1', target: 'process-2' },
-    {
-      id: 'e-validate-decision',
-      source: 'process-1',
-      target: 'decision-1',
-    },
-    { id: 'e-process-decision', source: 'process-2', target: 'decision-1' },
-    {
-      id: 'e-decision-approved',
-      source: 'decision-1',
-      target: 'output-1',
-      label: 'Pass',
-    },
-    {
-      id: 'e-decision-rejected',
-      source: 'decision-1',
-      target: 'output-2',
-      label: 'Fail',
-    },
-  ],
-}
-
 function DataViewFlowCanvas() {
   const { themes, activeThemeId } = useView()
   const reactFlow = useReactFlow()
@@ -95,7 +33,6 @@ function DataViewFlowCanvas() {
     expected: string
   } | null>(null)
   const [viewConfig, setViewConfig] = useState<any>(null)
-  const [isMock, setIsMock] = useState(false)
 
   const currentFile = useRef<string | null>(null)
 
@@ -122,11 +59,6 @@ function DataViewFlowCanvas() {
       })
   }, [])
 
-  const loadMockData = useCallback(() => {
-    setData(MOCK_DATA)
-    setIsMock(true)
-  }, [])
-
   const loadInitialFile = useCallback(
     async (path: string) => {
       try {
@@ -149,7 +81,6 @@ function DataViewFlowCanvas() {
         setError(null)
         setData(json)
         currentFile.current = path
-        setIsMock(false)
       } catch (err) {
         console.error('Failed to load flow file:', err)
         const schemaStr = viewConfig?.expected_file_type?.schema
@@ -159,11 +90,26 @@ function DataViewFlowCanvas() {
           message: `Failed to load file. File might be missing or invalid.`,
           expected: schemaStr,
         })
-        loadMockData()
       }
     },
-    [loadMockData, viewConfig?.expected_file_type?.schema],
+    [viewConfig?.expected_file_type?.schema],
   )
+
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-ai-agent-flow.json',
+      )
+      await loadInitialFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadInitialFile])
 
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '')
@@ -183,9 +129,9 @@ function DataViewFlowCanvas() {
     if (initialFile) {
       loadInitialFile(initialFile)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   // Apply viewport when data changes
   useEffect(() => {
@@ -226,9 +172,9 @@ function DataViewFlowCanvas() {
     if (currentFile.current) {
       loadInitialFile(currentFile.current)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
@@ -311,30 +257,6 @@ function DataViewFlowCanvas() {
         <ViewHeader icon={<Workflow size={16} />} title="Flow Editor">
           <button
             type="button"
-            onClick={() => reactFlow.zoomIn()}
-            className={iconBtn()}
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => reactFlow.zoomOut()}
-            className={iconBtn()}
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => reactFlow.fitView({ duration: 200 })}
-            className={iconBtn()}
-            title="Fit View"
-          >
-            <Maximize2 size={14} className="rotate-45" />
-          </button>
-          <button
-            type="button"
             onClick={handleRefresh}
             className={iconBtn()}
             title="Reload"
@@ -354,12 +276,6 @@ function DataViewFlowCanvas() {
 
       {/* Canvas */}
       <section className="flex-1 relative">
-        {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-base">
-            <span className="text-[12vw] font-black rotate-12">FLOW MOCK</span>
-          </div>
-        )}
-
         {data ? (
           <ReactFlow
             nodes={nodes}
@@ -384,6 +300,52 @@ function DataViewFlowCanvas() {
             </div>
           </div>
         )}
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          <button
+            type="button"
+            onClick={() => reactFlow.zoomIn()}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => reactFlow.zoomOut()}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              reactFlow.fitView({
+                duration: 200,
+                nodes: data?.nodes?.filter(() => true),
+              })
+            }
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              reactFlow.fitView({
+                duration: 200,
+                nodes: data?.nodes?.filter(() => true),
+              })
+            }
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
+        </div>
 
         {/* Stats overlay */}
         {data && (

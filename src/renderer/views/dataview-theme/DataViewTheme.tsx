@@ -1,40 +1,18 @@
 import {
   AlertCircle,
-  Check,
-  Clipboard,
-  Eye,
-  EyeOff,
+  ArrowLeftRight,
+  ArrowUpDown,
   Palette,
+  RefreshCw,
   Upload,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import type { DataViewTheme } from './types'
-
-const MOCK_DATA: DataViewTheme = {
-  id: 'aurora-night',
-  name: 'Aurora Night',
-  type: 'dark',
-  colors: {
-    background: '#0f1729',
-    foreground: '#e2e8f0',
-    primary: '#38bdf8',
-    'primary-foreground': '#0f1729',
-    muted: '#1e293b',
-    'muted-foreground': '#94a3b8',
-    border: '#334155',
-    card: '#1a2332',
-    'card-foreground': '#e2e8f0',
-    info: '#60a5fa',
-    success: '#34d399',
-    warning: '#fbbf24',
-    destructive: '#f87171',
-    popover: '#1a2332',
-    'popover-foreground': '#e2e8f0',
-  },
-}
 
 const COLOR_GROUPS: { label: string; keys: string[] }[] = [
   {
@@ -70,10 +48,10 @@ export function DataViewThemeView() {
     expected: string
   } | null>(null)
   const [viewConfig, setViewConfig] = useState<any>(null)
-  const [isMock, setIsMock] = useState(false)
   const [editedColors, setEditedColors] = useState<Record<string, string>>({})
-  const [copied, setCopied] = useState(false)
-  const [showJson, setShowJson] = useState(false)
+  const currentFile = useRef<string | null>(null)
+  const [_copied, setCopied] = useState(false)
+  const [showJson, _setShowJson] = useState(false)
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
@@ -96,12 +74,6 @@ export function DataViewThemeView() {
       .then((cfg: any) => {
         if (cfg) setViewConfig(cfg)
       })
-  }, [])
-
-  const loadMockData = useCallback(() => {
-    setData(MOCK_DATA)
-    setEditedColors(MOCK_DATA.colors)
-    setIsMock(true)
   }, [])
 
   const loadInitialFile = useCallback(
@@ -130,7 +102,6 @@ export function DataViewThemeView() {
         setError(null)
         setData(json)
         setEditedColors(json.colors)
-        setIsMock(false)
       } catch (err) {
         console.error('Failed to load theme file:', err)
         const schemaStr = viewConfig?.expected_file_type?.schema
@@ -140,11 +111,26 @@ export function DataViewThemeView() {
           message: `Failed to load file. File might be missing or invalid.`,
           expected: schemaStr,
         })
-        loadMockData()
       }
     },
-    [loadMockData, viewConfig?.expected_file_type?.schema],
+    [viewConfig?.expected_file_type?.schema],
   )
+
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-deep-theme.json',
+      )
+      await loadInitialFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadInitialFile])
 
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '')
@@ -164,9 +150,17 @@ export function DataViewThemeView() {
     if (initialFile) {
       loadInitialFile(initialFile)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
+
+  const handleRefresh = useCallback(() => {
+    if (currentFile.current) {
+      loadInitialFile(currentFile.current)
+    } else {
+      loadPlaybookFile()
+    }
+  }, [loadInitialFile, loadPlaybookFile])
 
   // Live preview: apply edited colors to :root
   useEffect(() => {
@@ -211,7 +205,7 @@ export function DataViewThemeView() {
     setEditedColors((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleApplyTheme = async () => {
+  const _handleApplyTheme = async () => {
     if (!data) return
     try {
       const key = 'activeTheme'
@@ -224,7 +218,7 @@ export function DataViewThemeView() {
     }
   }
 
-  const handleExportJson = async () => {
+  const _handleExportJson = async () => {
     if (!data) return
     const exportData = { ...data, colors: editedColors }
     await navigator.clipboard.writeText(JSON.stringify(exportData, null, 2))
@@ -242,35 +236,11 @@ export function DataViewThemeView() {
         <ViewHeader icon={<Palette size={16} />} title="Theme Studio">
           <button
             type="button"
-            onClick={() => setShowJson((v) => !v)}
-            className={iconBtn(
-              showJson ? 'bg-primary text-primary-foreground' : '',
-            )}
-            title={showJson ? 'Hide JSON' : 'Show JSON'}
-          >
-            {showJson ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
-          <button
-            type="button"
-            onClick={handleExportJson}
+            onClick={handleRefresh}
             className={iconBtn()}
-            title="Export theme as JSON"
+            title="Reload"
           >
-            {copied ? (
-              <Check size={14} className="text-success" />
-            ) : (
-              <Clipboard size={14} />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={handleApplyTheme}
-            className={iconBtn(
-              'bg-primary text-primary-foreground hover:opacity-90',
-            )}
-            title="Apply theme"
-          >
-            <Check size={14} />
+            <RefreshCw size={14} />
           </button>
           <button
             type="button"
@@ -285,12 +255,6 @@ export function DataViewThemeView() {
 
       {/* Content */}
       <section className="flex-1 flex overflow-hidden relative bg-background">
-        {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-base">
-            <span className="text-[12vw] font-black rotate-12">THEME MOCK</span>
-          </div>
-        )}
-
         {data ? (
           <>
             {/* Color Picker Grid */}
@@ -383,6 +347,42 @@ export function DataViewThemeView() {
             </div>
           </div>
         )}
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          <button
+            type="button"
+            onClick={() => {}}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {}}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {}}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {}}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
+        </div>
 
         {/* Error Overlay */}
         {error && (

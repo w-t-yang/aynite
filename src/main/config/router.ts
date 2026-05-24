@@ -16,6 +16,7 @@ import {
   getAynitePath,
   getKeybindingsConfigPath,
   getMainConfigPath,
+  getPlaybookPath,
   getViewConfigPath,
   getWorkspaceDataPath,
   readdir,
@@ -260,6 +261,10 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
       const viewName = payload?.view as string
       if (!viewName) return null
       return await readJson(getViewConfigPath(viewName), null)
+    }
+
+    case ConfigKey.PLAYBOOK_PATH: {
+      return getPlaybookPath()
     }
 
     case ConfigKey.MATCHING_VIEWS: {

@@ -1,9 +1,10 @@
 import {
   AlertCircle,
+  ArrowLeftRight,
+  ArrowUpDown,
   FolderOpen,
   RefreshCw,
   Share2,
-  Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -24,37 +25,6 @@ const COLORS = [
   '#06b6d4', // cyan
 ]
 
-const MOCK_DATA: DataViewGraph = {
-  nodes: [
-    { id: 'aynite', label: 'Aynite Core', group: 0, val: 20 },
-    { id: 'renderer', label: 'Renderer', group: 1, val: 15 },
-    { id: 'main', label: 'Main Process', group: 1, val: 15 },
-    { id: 'bridge', label: 'IPC Bridge', group: 2, val: 12 },
-    { id: 'views', label: 'Micro-apps', group: 3, val: 10 },
-    { id: 'stock', label: 'StockChart', group: 3, val: 8 },
-    { id: 'data', label: 'DataChart', group: 3, val: 8 },
-    { id: 'graph', label: 'GraphView', group: 3, val: 12 },
-    { id: 'plugin', label: 'Plugin System', group: 4, val: 10 },
-    { id: 'theme', label: 'Theme Engine', group: 4, val: 8 },
-    { id: 'config', label: 'Config Router', group: 2, val: 10 },
-  ],
-  links: [
-    { source: 'aynite', target: 'renderer' },
-    { source: 'aynite', target: 'main' },
-    { source: 'renderer', target: 'bridge' },
-    { source: 'main', target: 'bridge' },
-    { source: 'bridge', target: 'views' },
-    { source: 'views', target: 'stock' },
-    { source: 'views', target: 'data' },
-    { source: 'views', target: 'graph' },
-    { source: 'aynite', target: 'plugin' },
-    { source: 'renderer', target: 'theme' },
-    { source: 'main', target: 'config' },
-    { source: 'bridge', target: 'config' },
-    { source: 'graph', target: 'renderer' },
-  ],
-}
-
 interface NodePos extends DataViewGraphNode {
   x: number
   y: number
@@ -70,7 +40,6 @@ export function DataViewGraphView() {
     expected: string
   } | null>(null)
   const [viewConfig, setViewConfig] = useState<any>(null)
-  const [isMock, setIsMock] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
@@ -126,12 +95,6 @@ export function DataViewGraphView() {
     setNodes(newNodes)
   }, [])
 
-  const loadMockData = useCallback(() => {
-    setData(MOCK_DATA)
-    initializeNodes(MOCK_DATA)
-    setIsMock(true)
-  }, [initializeNodes])
-
   const loadInitialFile = useCallback(
     async (path: string) => {
       try {
@@ -155,7 +118,6 @@ export function DataViewGraphView() {
         setData(json)
         initializeNodes(json)
         currentFile.current = path
-        setIsMock(false)
       } catch (err) {
         console.error('Failed to load graph file:', err)
         const schemaStr = viewConfig?.expected_file_type?.schema
@@ -165,11 +127,26 @@ export function DataViewGraphView() {
           message: `Failed to load file: ${path}. File might be missing or invalid.`,
           expected: schemaStr,
         })
-        loadMockData()
       }
     },
-    [initializeNodes, loadMockData, viewConfig?.expected_file_type?.schema],
+    [initializeNodes, viewConfig?.expected_file_type?.schema],
   )
+
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-view-dependencies.json',
+      )
+      await loadInitialFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadInitialFile])
 
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '')
@@ -189,9 +166,9 @@ export function DataViewGraphView() {
     if (initialFile) {
       loadInitialFile(initialFile)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   // Simulation Loop with fast stabilization (~1 second)
   const animate = useCallback(
@@ -368,9 +345,9 @@ export function DataViewGraphView() {
     if (currentFile.current) {
       loadInitialFile(currentFile.current)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return // Only left click
@@ -415,33 +392,6 @@ export function DataViewGraphView() {
         <ViewHeader icon={<Share2 size={16} />} title="Graph Explorer">
           <button
             type="button"
-            onClick={() => setZoom((z) => z * 1.2)}
-            className={iconBtn()}
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoom((z) => z / 1.2)}
-            className={iconBtn()}
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setZoom(1)
-              setOffset({ x: 0, y: 0 })
-            }}
-            className={iconBtn()}
-            title="Reset Zoom"
-          >
-            <Undo2 size={14} />
-          </button>
-          <button
-            type="button"
             onClick={handleRefresh}
             className={iconBtn()}
             title="Reload"
@@ -469,12 +419,6 @@ export function DataViewGraphView() {
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
       >
-        {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05]">
-            <span className="text-[12vw] font-black rotate-12">GRAPH MOCK</span>
-          </div>
-        )}
-
         <div
           className="absolute inset-0"
           style={{
@@ -582,6 +526,65 @@ export function DataViewGraphView() {
               })}
             </g>
           </svg>
+        </div>
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => z * 1.2)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => z / 1.2)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setZoom(1)
+              const container = containerRef.current
+              if (container && nodes.length > 0) {
+                const xs = nodes.map((n) => n.x)
+                const width = Math.max(...xs) - Math.min(...xs) + 100
+                const fitZ = Math.max(
+                  0.1,
+                  Math.min(container.clientWidth / width, 5),
+                )
+                setZoom(fitZ)
+              }
+            }}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const container = containerRef.current
+              if (container && nodes.length > 0) {
+                const ys = nodes.map((n) => n.y)
+                const height = Math.max(...ys) - Math.min(...ys) + 100
+                const fitZ = Math.max(
+                  0.1,
+                  Math.min(container.clientHeight / height, 5),
+                )
+                setZoom(fitZ)
+              }
+            }}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
         </div>
 
         {/* Info Overlay */}

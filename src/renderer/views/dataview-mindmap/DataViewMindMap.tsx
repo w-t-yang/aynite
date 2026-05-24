@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
 import {
   AlertCircle,
+  ArrowLeftRight,
+  ArrowUpDown,
   FolderOpen,
   Network,
   RefreshCw,
-  Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -14,58 +15,6 @@ import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { validateJsonSchema } from '../../shared/lib/schema-validator'
 import { useView } from '../ViewContext'
 import type { DataViewMindMap, DataViewMindMapNode } from './types'
-
-const MOCK_DATA: DataViewMindMap = {
-  root: {
-    id: 'root',
-    label: 'Aynite Architecture',
-    children: [
-      {
-        id: 'main',
-        label: 'Main Process',
-        children: [
-          { id: 'm1', label: 'Window Management' },
-          { id: 'm2', label: 'Config System' },
-          { id: 'm3', label: 'Workspace Logic' },
-          { id: 'm4', label: 'AI Bridge' },
-        ],
-      },
-      {
-        id: 'renderer',
-        label: 'Renderer Process',
-        children: [
-          {
-            id: 'hub',
-            label: 'View Hub',
-            children: [
-              { id: 'h1', label: 'Tile Layout' },
-              { id: 'h2', label: 'IPC Preload' },
-            ],
-          },
-          {
-            id: 'views',
-            label: 'Micro-Apps',
-            children: [
-              { id: 'v1', label: 'StockChart' },
-              { id: 'v2', label: 'DataChart' },
-              { id: 'v3', label: 'GraphView' },
-              { id: 'v4', label: 'MindMap' },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'infra',
-        label: 'Infrastructure',
-        children: [
-          { id: 'i1', label: 'Vite / Rollup' },
-          { id: 'i2', label: 'Tailwind CSS' },
-          { id: 'i3', label: 'Biome Linting' },
-        ],
-      },
-    ],
-  },
-}
 
 interface PositionedNode extends DataViewMindMapNode {
   x: number
@@ -82,7 +31,6 @@ export function DataViewMindMapView() {
     expected: string
   } | null>(null)
   const [viewConfig, setViewConfig] = useState<any>(null)
-  const [isMock, setIsMock] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -115,11 +63,6 @@ export function DataViewMindMapView() {
       })
   }, [])
 
-  const loadMockData = useCallback(() => {
-    setData(MOCK_DATA)
-    setIsMock(true)
-  }, [])
-
   const loadInitialFile = useCallback(
     async (path: string) => {
       try {
@@ -142,7 +85,6 @@ export function DataViewMindMapView() {
         setError(null)
         setData(json)
         currentFile.current = path
-        setIsMock(false)
       } catch (err) {
         console.error('Failed to load mindmap file:', err)
         const schemaStr = viewConfig?.expected_file_type?.schema
@@ -152,11 +94,26 @@ export function DataViewMindMapView() {
           message: `Failed to load file: ${path}. File might be missing or invalid.`,
           expected: schemaStr,
         })
-        loadMockData()
       }
     },
-    [loadMockData, viewConfig?.expected_file_type?.schema],
+    [viewConfig?.expected_file_type?.schema],
   )
+
+  const loadPlaybookFile = useCallback(async () => {
+    try {
+      const playbookPath = await (window as any).aynite.getConfig(
+        'playbook-path',
+      )
+      if (!playbookPath) return
+      const filePath = (window as any).aynite.joinPath(
+        playbookPath,
+        'aynite-mindmap.json',
+      )
+      await loadInitialFile(filePath)
+    } catch (err) {
+      console.error('Failed to load playbook file:', err)
+    }
+  }, [loadInitialFile])
 
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '')
@@ -176,9 +133,9 @@ export function DataViewMindMapView() {
     if (initialFile) {
       loadInitialFile(initialFile)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const toggleCollapse = (id: string) => {
     setCollapsedNodes((prev) => {
@@ -221,7 +178,7 @@ export function DataViewMindMapView() {
         const totalChildrenHeight = node.children.length * 80
         let childY = curY - totalChildrenHeight / 2 + 40
         for (const child of node.children) {
-          traverse(child, depth + 1, curX + 250, childY)
+          traverse(child, _depth + 1, curX + 250, childY)
           childY += 80
         }
       }
@@ -344,9 +301,9 @@ export function DataViewMindMapView() {
     if (currentFile.current) {
       loadInitialFile(currentFile.current)
     } else {
-      loadMockData()
+      loadPlaybookFile()
     }
-  }, [loadInitialFile, loadMockData])
+  }, [loadInitialFile, loadPlaybookFile])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return
@@ -379,33 +336,6 @@ export function DataViewMindMapView() {
         <ViewHeader icon={<Network size={16} />} title="MindMap">
           <button
             type="button"
-            onClick={() => setZoom((z) => z * 1.1)}
-            className={iconBtn()}
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoom((z) => z / 1.1)}
-            className={iconBtn()}
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setZoom(1)
-              setOffset({ x: 0, y: 0 })
-            }}
-            className={iconBtn()}
-            title="Reset Zoom"
-          >
-            <Undo2 size={14} />
-          </button>
-          <button
-            type="button"
             onClick={handleRefresh}
             className={iconBtn()}
             title="Reload"
@@ -433,14 +363,6 @@ export function DataViewMindMapView() {
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
       >
-        {isMock && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05]">
-            <span className="text-[12vw] font-black rotate-12">
-              MIND MAP MOCK
-            </span>
-          </div>
-        )}
-
         <div
           className="absolute inset-0"
           style={{
@@ -544,6 +466,69 @@ export function DataViewMindMapView() {
               ))}
             </g>
           </svg>
+        </div>
+
+        {/* Bottom Controls */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-layout flex items-center gap-1 bg-popover/90 backdrop-blur-md border border-border rounded-full px-3 py-1.5 shadow-xl">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => z * 1.1)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => z / 1.1)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const container = containerRef.current
+              if (container && positionedNodes.length > 0) {
+                const xs = positionedNodes.map((n) => n.x)
+                const _ys = positionedNodes.map((n) => n.y)
+                const centerX = (Math.min(...xs) + Math.max(...xs)) / 2
+                const treeWidth = Math.max(...xs) - Math.min(...xs) + 100
+                const fitZ = container.clientWidth / treeWidth
+                setZoom(Math.min(Math.max(fitZ, 0.1), 5))
+                setOffset({
+                  x: container.clientWidth / 2 - centerX * fitZ,
+                  y: offset.y,
+                })
+              }
+            }}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Width"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const container = containerRef.current
+              if (container && positionedNodes.length > 0) {
+                const ys = positionedNodes.map((n) => n.y)
+                const centerY = (Math.min(...ys) + Math.max(...ys)) / 2
+                const treeHeight = Math.max(...ys) - Math.min(...ys) + 100
+                const fitZ = container.clientHeight / treeHeight
+                setZoom(Math.min(Math.max(fitZ, 0.1), 5))
+                setOffset({
+                  x: offset.x,
+                  y: container.clientHeight / 2 - centerY * fitZ,
+                })
+              }
+            }}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Fit Height"
+          >
+            <ArrowUpDown size={14} />
+          </button>
         </div>
 
         {error && (
