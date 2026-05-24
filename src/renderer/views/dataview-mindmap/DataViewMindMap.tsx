@@ -71,6 +71,7 @@ interface PositionedNode extends DataViewMindMapNode {
   x: number
   y: number
   depth: number
+  nodeWidth: number
 }
 
 export function DataViewMindMapView() {
@@ -188,14 +189,76 @@ export function DataViewMindMapView() {
     })
   }
 
+  // Auto-fit zoom when data loads: fit the full tree in the viewport
+  useEffect(() => {
+    if (!data || !containerRef.current) return
+    const containerWidth = containerRef.current.clientWidth
+    const containerHeight = containerRef.current.clientHeight
+
+    // Compute tree bounds directly from data without depending on positionedNodes
+    let maxX = -Infinity
+    let maxY = -Infinity
+    let minX = Infinity
+    let minY = Infinity
+
+    // Calculate node width the same way as the useMemo
+    const getNodeWidth = (label: string) =>
+      Math.max(120, Math.min(label.length * 8.5, 280))
+
+    const traverse = (
+      node: { id: string; label: string; children?: any[] },
+      _depth: number,
+      curX: number,
+      curY: number,
+    ) => {
+      const nw = getNodeWidth(node.label)
+      minX = Math.min(minX, curX - nw / 2)
+      maxX = Math.max(maxX, curX + nw / 2)
+      minY = Math.min(minY, curY - 30)
+      maxY = Math.max(maxY, curY + 30)
+
+      if (node.children) {
+        const totalChildrenHeight = node.children.length * 80
+        let childY = curY - totalChildrenHeight / 2 + 40
+        for (const child of node.children) {
+          traverse(child, depth + 1, curX + 250, childY)
+          childY += 80
+        }
+      }
+    }
+
+    traverse(data.root, 0, 100, 0)
+
+    const treeWidth = maxX - minX + 80
+    const treeHeight = maxY - minY + 80
+
+    const fitZoom = Math.min(
+      containerWidth / treeWidth,
+      containerHeight / treeHeight,
+      1.2,
+    )
+
+    setZoom(Math.max(Math.min(fitZoom, 2), 0.3))
+
+    const centerX = (minX + maxX) / 2
+    const centerY = (minY + maxY) / 2
+    setOffset({
+      x: containerWidth / 2 - centerX * fitZoom,
+      y: containerHeight / 2 - centerY * fitZoom,
+    })
+  }, [data])
+
   const positionedNodes = useMemo(() => {
     if (!data) return []
 
     const nodes: PositionedNode[] = []
-    const _nodeWidth = 180
-    const _nodeHeight = 60
     const levelSpacing = 250
     const siblingSpacing = 80
+
+    // Calculate node width based on text length (min 120, max 280)
+    const getNodeWidth = (label: string) => {
+      return Math.max(120, Math.min(label.length * 8.5, 280))
+    }
 
     const layout = (
       node: DataViewMindMapNode,
@@ -223,7 +286,7 @@ export function DataViewMindMapView() {
       }
 
       const y = startY + totalHeight / 2
-      nodes.push({ ...node, x, y, depth, parentId })
+      nodes.push({ ...node, x, y, depth, parentId, nodeWidth: 0 })
 
       // Update the node's y in the nodes array after children are layouted
       const index = nodes.findIndex(
@@ -245,6 +308,7 @@ export function DataViewMindMapView() {
 
     return nodes.map((n) => ({
       ...n,
+      nodeWidth: getNodeWidth(n.label),
       y: n.y - centerOffset + (containerRef.current?.clientHeight || 600) / 2,
     }))
   }, [data, collapsedNodes])
@@ -438,9 +502,9 @@ export function DataViewMindMapView() {
                   aria-label={`Node ${node.label}`}
                 >
                   <rect
-                    x={node.x - 70}
+                    x={node.x - node.nodeWidth / 2}
                     y={node.y - 20}
-                    width={140}
+                    width={node.nodeWidth}
                     height={40}
                     rx={8}
                     fill={node.depth === 0 ? 'var(--primary)' : 'var(--card)'}
@@ -465,7 +529,7 @@ export function DataViewMindMapView() {
                   </text>
                   {node.children && node.children.length > 0 && (
                     <circle
-                      cx={node.x + 70}
+                      cx={node.x + node.nodeWidth / 2}
                       cy={node.y}
                       r={6}
                       fill={

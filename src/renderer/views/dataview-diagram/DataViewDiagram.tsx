@@ -271,6 +271,17 @@ export function DataViewDiagramView() {
       <section
         ref={containerRef}
         className="flex-1 relative bg-background overflow-hidden"
+        onWheel={(e) => {
+          if (e.ctrlKey || e.metaKey) return
+          const delta = -e.deltaY
+          const scaleFactor = 1.08
+          setZoom((z) =>
+            Math.min(
+              Math.max(delta > 0 ? z * scaleFactor : z / scaleFactor, 0.1),
+              5,
+            ),
+          )
+        }}
       >
         {isMock && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-base">
@@ -311,9 +322,9 @@ export function DataViewDiagramView() {
             )}
 
             {svgHtml && !renderError && (
-              <div className="w-full h-full flex items-center justify-center">
+              <div className="min-w-full min-h-full">
                 <div
-                  className="transition-transform duration-200"
+                  className="inline-block transition-transform duration-200 origin-top-left"
                   style={{ transform: `scale(${zoom})` }}
                   // biome-ignore lint/security/noDangerouslySetInnerHtml: intentional, rendering generated SVG
                   dangerouslySetInnerHTML={{ __html: svgHtml }}

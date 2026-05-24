@@ -11,7 +11,6 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { validateJsonSchema } from '../../shared/lib/schema-validator'
-import { useView } from '../ViewContext'
 import type { DataViewGraph, DataViewGraphNode } from './types'
 
 const COLORS = [
@@ -64,7 +63,6 @@ interface NodePos extends DataViewGraphNode {
 }
 
 export function DataViewGraphView() {
-  const { themes, activeThemeId } = useView()
   const [data, setData] = useState<DataViewGraph | null>(null)
   const [nodes, setNodes] = useState<NodePos[]>([])
   const [error, setError] = useState<{
@@ -81,6 +79,8 @@ export function DataViewGraphView() {
 
   const containerRef = useRef<HTMLDivElement>(null)
   const requestRef = useRef<number>(null)
+  const stabilizedRef = useRef(false)
+  const stabilizationFrames = useRef(0)
 
   const tileId = useMemo(() => {
     const hash = window.location.hash
@@ -104,20 +104,25 @@ export function DataViewGraphView() {
     return new URLSearchParams(hash).get('preview') === '1'
   }, [])
 
-  const currentTheme = themes.find((t) => t.id === activeThemeId)
-  const _isDark = currentTheme?.type === 'dark'
-
   const initializeNodes = useCallback((graphData: DataViewGraph) => {
     const width = containerRef.current?.clientWidth || 800
     const height = containerRef.current?.clientHeight || 600
 
-    const newNodes = graphData.nodes.map((node) => ({
-      ...node,
-      x: Math.random() * width,
-      y: Math.random() * height,
-      vx: 0,
-      vy: 0,
-    }))
+    // Place nodes in a tighter circle for faster convergence
+    const centerX = width / 2
+    const centerY = height / 2
+    const radius = Math.min(width, height) * 0.35
+
+    const newNodes = graphData.nodes.map((node, i) => {
+      const angle = (2 * Math.PI * i) / graphData.nodes.length
+      return {
+        ...node,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+        vx: 0,
+        vy: 0,
+      }
+    })
     setNodes(newNodes)
   }, [])
 
@@ -188,7 +193,7 @@ export function DataViewGraphView() {
     }
   }, [loadInitialFile, loadMockData])
 
-  // Simulation Loop
+  // Simulation Loop with fast stabilization (~1 second)
   const animate = useCallback(
     (_time: number) => {
       if (!data || nodes.length === 0) return
@@ -198,10 +203,12 @@ export function DataViewGraphView() {
       const centerX = width / 2
       const centerY = height / 2
 
-      const kRepulsion = 1500
-      const kAttraction = 0.05
-      const kCenter = 0.01
-      const damping = 0.9
+      // Boosted forces for fast convergence
+      const kRepulsion = 5000
+      const kAttraction = 0.03
+      const kCenter = 0.03
+      const damping = 0.1
+      const idealEdgeLength = 300
 
       setNodes((prevNodes) => {
         const nextNodes = prevNodes.map((n) => ({ ...n }))
@@ -247,7 +254,7 @@ export function DataViewGraphView() {
             const dy = target.y - source.y
             const dist = Math.sqrt(dx * dx + dy * dy)
             if (dist === 0) return
-            const force = kAttraction * (dist - 100)
+            const force = kAttraction * (dist - idealEdgeLength)
             const fx = (dx / dist) * force
             const fy = (dy / dist) * force
 
@@ -274,17 +281,61 @@ export function DataViewGraphView() {
         return nextNodes
       })
 
-      requestRef.current = requestAnimationFrame(animate)
+      // Stabilization detection: check if total movement is below threshold
+      setNodes((prevNodes) => {
+        const totalEnergy = prevNodes.reduce(
+          (sum, n) => sum + Math.abs(n.vx) + Math.abs(n.vy),
+          0,
+        )
+        const isStable = totalEnergy < 3.0
+
+        if (isStable) {
+          stabilizationFrames.current++
+        } else {
+          stabilizationFrames.current = 0
+          stabilizedRef.current = false
+        }
+
+        // After 5 consecutive stable frames, stop the loop
+        if (stabilizationFrames.current > 5) {
+          stabilizedRef.current = true
+          if (requestRef.current) {
+            cancelAnimationFrame(requestRef.current)
+            requestRef.current = null
+          }
+          return prevNodes
+        }
+
+        requestRef.current = requestAnimationFrame(animate)
+        return prevNodes
+      })
     },
     [data, nodes.length, draggedNode],
   )
 
   useEffect(() => {
+    // Restart simulation when data changes
+    stabilizedRef.current = false
+    stabilizationFrames.current = 0
+    if (requestRef.current) cancelAnimationFrame(requestRef.current)
     requestRef.current = requestAnimationFrame(animate)
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current)
     }
   }, [animate])
+
+  // Restart simulation on drag end
+  const prevDraggedNode = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevDraggedNode.current && !draggedNode) {
+      // Drag just ended — restart simulation
+      stabilizedRef.current = false
+      stabilizationFrames.current = 0
+      if (requestRef.current) cancelAnimationFrame(requestRef.current)
+      requestRef.current = requestAnimationFrame(animate)
+    }
+    prevDraggedNode.current = draggedNode
+  }, [draggedNode, animate])
 
   const handleSelectFile = async () => {
     try {
@@ -514,18 +565,18 @@ export function DataViewGraphView() {
                       strokeWidth={2}
                       className="transition-all duration-300"
                     />
-                    {(isHovered || zoom > 0.8) && (
-                      <text
-                        x={node.x}
-                        y={node.y + radius + 15}
-                        textAnchor="middle"
-                        fill="var(--card-foreground)"
-                        fontSize={12 / zoom}
-                        className="font-bold pointer-events-none select-none drop-shadow-sm"
-                      >
-                        {node.label}
-                      </text>
-                    )}
+                    <text
+                      x={node.x}
+                      y={node.y + radius + 14}
+                      textAnchor="middle"
+                      fill="var(--card-foreground)"
+                      fontSize={Math.max(7, 11 / zoom)}
+                      fontWeight="bold"
+                      className="pointer-events-none select-none"
+                      opacity={isHovered ? 1 : 0.85}
+                    >
+                      {node.label}
+                    </text>
                   </g>
                 )
               })}
