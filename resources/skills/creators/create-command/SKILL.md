@@ -1,5 +1,5 @@
 ---
-name: command-creator
+name: create-command
 description: Create new direct commands, modify existing commands. Use when users want to create a deterministic command that is directly executed by the editor via a shell script.
 ---
 

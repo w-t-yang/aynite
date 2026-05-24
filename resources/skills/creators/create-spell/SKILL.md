@@ -1,5 +1,5 @@
 ---
-name: spell-creator
+name: create-spell
 description: Create a new "spell" in Aynite. A spell is a unified concept — it can be either a command (deterministic script, invoked with >) or a skill (AI-guided workflow, invoked with /). Use this skill whenever a user wants to create a spell, cast magic, automate something, or build a new capability but isn't sure whether it should be a command or a skill. Also use when users say "I want to make a spell", "teach Aynite to...", "I wish Aynite could...", or describe a task they want to automate or delegate.
 ---
 
