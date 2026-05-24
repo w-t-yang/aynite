@@ -31,6 +31,7 @@ import {
   getWorkspaceDir,
   getWorkspacesConfigPath,
   joinPaths,
+  readdir,
   readJson,
   unlink,
   writeJson,
@@ -47,7 +48,6 @@ import {
   getCommandsConfig,
   getSkillsConfig,
   restoreCommand,
-  restoreSkill,
   restoreSpell,
 } from '../spells'
 import { initThemes } from '../theme'
@@ -159,15 +159,17 @@ export async function initAppFolders() {
     }
   }
 
-  // Ensure default skills/commands
-  for (const skillName of [
-    'skill-creator',
-    'command-creator',
-    'hello-skill',
-    'theme-creator',
-  ]) {
-    if (!(await exists(joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS, skillName)))) {
-      await restoreSkill(skillName)
+  // Sync bundled skills to ~/.aynite/skills/ (only missing items)
+  const bundledSkillsDir = joinPaths(getBundledResourcesPath(), 'skills')
+  if (await exists(bundledSkillsDir)) {
+    const entries = await readdir(bundledSkillsDir)
+    for (const entry of entries) {
+      const destPath = joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS, entry.name)
+      if (!(await exists(destPath))) {
+        await copy(joinPaths(bundledSkillsDir, entry.name), destPath, {
+          recursive: true,
+        })
+      }
     }
   }
   for (const cmdName of ['hello-command']) {
