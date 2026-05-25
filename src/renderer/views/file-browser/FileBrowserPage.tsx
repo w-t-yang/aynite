@@ -287,43 +287,59 @@ export function FileBrowserPage() {
   const [activeFileview, setActiveFileview] = useState<string | null>(null)
   const [isViewOnly, setIsViewOnly] = useState(true)
 
-  // Load fileview configs and match against current file extension
+  // Single source of truth for ALL mode initialization when file changes.
+  // Resets every mode state and determines the correct starting mode:
+  //   Fileview mode > View mode (isViewOnly) > Edit mode (never auto)
   useEffect(() => {
-    setMatchedFileviews([])
-    setActiveFileview(null)
-    setIsViewOnly(true)
+    // Reset ALL mode states to defaults
     setIsEditing(false)
+    setActiveFileview(null)
+    setActiveView(null)
+    setMatchedFileviews([])
 
-    if (!activePath || !fileInfo) return
+    if (!activePath) {
+      setIsViewOnly(true)
+      return
+    }
 
-    const ext = fileInfo.extension?.toLowerCase()
-    if (!ext) return
+    const ext = activePath.split('.').pop()?.toLowerCase()
+    if (!ext) {
+      setIsViewOnly(true)
+      return
+    }
 
     let cancelled = false
     ;(async () => {
       const matches: Array<{ view: string; config: FileviewConfig }> = []
       for (const viewName of FILEVIEW_NAMES) {
-        const config = (await window.aynite.getConfig('view-config', {
-          view: viewName,
-        })) as FileviewConfig | null
-        if (!config?.file_extensions) continue
-        if (config.file_extensions.includes(ext)) {
-          matches.push({ view: viewName, config })
+        try {
+          const config = (await window.aynite.getConfig('view-config', {
+            view: viewName,
+          })) as FileviewConfig | null
+          if (!config?.file_extensions) continue
+          if (config.file_extensions.includes(ext)) {
+            matches.push({ view: viewName, config })
+          }
+        } catch {
+          // Silently skip unavailable fileviews
         }
       }
       if (cancelled) return
       setMatchedFileviews(matches)
 
-      // Auto-select first matching fileview as the active mode
       if (matches.length > 0) {
+        // Fileview found → show fileview mode
         setActiveFileview(matches[0].view)
         setIsViewOnly(false)
+      } else {
+        // No fileview → default to view mode
+        setIsViewOnly(true)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [activePath, fileInfo])
+  }, [activePath])
 
   const handleSelectFileview = useCallback((view: string | null) => {
     setActiveFileview(view)
@@ -391,11 +407,6 @@ export function FileBrowserPage() {
       console.error('Failed to save file:', e)
     }
   }, [activePath, content])
-
-  // Reset editing mode when switching files (empty deps = runs once on mount)
-  useEffect(() => {
-    setIsEditing(false)
-  }, [])
 
   // ─── Keyboard Shortcuts ───────────────────────────────────────────────
   useEffect(() => {

@@ -53,6 +53,33 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   const lines = useMemo(() => content.split('\n'), [content])
   const scrollRef = useRef<HTMLDivElement>(null)
   const lineNumbersRef = useRef<HTMLDivElement>(null)
+  const editorRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // Merge the external textareaRef with our internal one
+  const mergedRef = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      editorRef.current = el
+      if (textareaRef && 'current' in textareaRef) {
+        ;(
+          textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>
+        ).current = el
+      }
+    },
+    [textareaRef],
+  )
+
+  // Set caret color directly on the textarea DOM element
+  useEffect(() => {
+    try {
+      if (editorRef.current) {
+        editorRef.current.style.caretColor = readOnly
+          ? 'rgba(161, 161, 170, 0.5)'
+          : '#fafafa'
+      }
+    } catch {
+      // Ignore — caret color is non-critical
+    }
+  }, [readOnly])
 
   // Sync line numbers scroll with content scroll
   const handleScroll = useCallback(
@@ -91,14 +118,6 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     scrollRef.current.scrollTop =
       line * lineHeight - scrollRef.current.clientHeight / 3
   }, [content, searchQuery, activeMatchIndex])
-
-  // Set caret color directly on the textarea DOM element
-  useEffect(() => {
-    const el = textareaRef?.current
-    if (el) {
-      el.style.caretColor = readOnly ? 'rgba(161, 161, 170, 0.5)' : '#fafafa'
-    }
-  }, [readOnly, textareaRef])
 
   return (
     <div
@@ -143,15 +162,15 @@ export const TextEditor: React.FC<TextEditorProps> = ({
           readOnly={readOnly}
           textareaId={textareaId}
           // @ts-expect-error - ref prop is supported by react-simple-code-editor but not always in types
-          ref={textareaRef}
+          ref={mergedRef}
           onKeyUp={() => {
-            if (onCursorChange && textareaRef?.current) {
-              onCursorChange(textareaRef.current.selectionStart)
+            if (onCursorChange && editorRef.current) {
+              onCursorChange(editorRef.current.selectionStart)
             }
           }}
           onClick={() => {
-            if (onCursorChange && textareaRef?.current) {
-              onCursorChange(textareaRef.current.selectionStart)
+            if (onCursorChange && editorRef.current) {
+              onCursorChange(editorRef.current.selectionStart)
             }
           }}
           className="min-h-full font-mono text-sm leading-relaxed outline-none"
