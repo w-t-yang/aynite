@@ -1,0 +1,8 @@
+{
+  "name": "Markdown",
+  "description": "Rendered markdown preview",
+  "author": "Aynite",
+  "version": "1.0.0",
+  "file_extensions": ["md", "markdown", "mdx"],
+  "key_bindings": {}
+}

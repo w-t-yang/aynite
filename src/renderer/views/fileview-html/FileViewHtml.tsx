@@ -1,11 +1,11 @@
-import type { FileInfo } from '../../lib/file-handlers'
+import type { FileInfo } from '../../shared/lib/file-handlers'
 
-interface HtmlViewerProps {
+interface FileViewHtmlProps {
   file: FileInfo
   content?: string
 }
 
-export function HtmlViewer({ file, content }: HtmlViewerProps) {
+export function FileViewHtml({ file, content }: FileViewHtmlProps) {
   if (!content) return null
 
   const dirPath = file.path.substring(0, file.path.lastIndexOf('/'))

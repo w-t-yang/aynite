@@ -1,16 +1,12 @@
 import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AppOperation } from '../../../../lib/constants/app'
-import { FileHandlerComponents } from '../../../../lib/constants/renderer/ui'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
 import { DiffViewer } from '../../../shared/featured/fileviewers/DiffViewer'
-import { HtmlViewer } from '../../../shared/featured/fileviewers/HtmlViewer'
-import { MarkdownViewer } from '../../../shared/featured/fileviewers/MarkdownViewer'
 import { TextEditor } from '../../../shared/featured/fileviewers/TextEditor'
-import { TextViewer } from '../../../shared/featured/fileviewers/TextViewer'
-import { getFileCategory } from '../../../shared/lib/file-handlers'
 import { useAppOperation } from '../../ViewContext'
+import { fileviewComponents } from '../fileview-registry'
 import { ViewPreview } from './ViewPreview'
 
 interface FileContentProps {
@@ -20,10 +16,15 @@ interface FileContentProps {
   loading: boolean
   error: string | null
   isEditing?: boolean
-  htmlMode?: boolean
+  /** When true, shows a read-only TextEditor (same appearance as edit) */
+  isViewOnly?: boolean
   onContentChange?: (content: string) => void
   /** Active view preview mode (null = default rendering) */
   activeView?: string | null
+  /** Active fileview directory name (e.g. 'fileview-markdown'), null = no fileview mode */
+  activeFileview?: string | null
+  /** Whether the file is text-based (determines if edit mode is available) */
+  isText?: boolean
   /** Search query for highlighting matches */
   searchQuery?: string
   /** Index of the active (current) search match */
@@ -39,9 +40,11 @@ export function FileContent({
   loading,
   error,
   isEditing = false,
-  htmlMode = false,
+  isViewOnly = false,
   onContentChange,
   activeView = null,
+  activeFileview = null,
+  isText = false,
   searchQuery,
   activeMatchIndex,
   onSearchResult,
@@ -131,63 +134,40 @@ export function FileContent({
 
   if (!fileInfo) return null
 
-  // Render view preview if a matching view is active
+  // Render view preview if a matching dataview is active
   if (activeView && path) {
     return <ViewPreview viewName={activeView} filePath={path} />
   }
 
-  const category = getFileCategory(
-    fileInfo.extension,
-    fileInfo.isText,
-    fileInfo.path,
-  )
+  // ─── Mode-based rendering ──────────────────────────────────────────
+  // Priority: Fileview mode > Git diff > Edit mode > View mode
 
-  if (category === 'markdown') {
-    if (isEditing) {
-      return (
-        <TextEditor
-          content={content || ''}
-          onChange={onContentChange || (() => {})}
-          file={fileInfo}
-          className="flex-1"
-          searchQuery={searchQuery}
-          activeMatchIndex={activeMatchIndex}
-          onSearchResult={onSearchResult}
-        />
-      )
-    }
-    return <MarkdownViewer content={content || ''} file={fileInfo} />
+  // 1. Fileview mode: render the matched fileview component
+  if (activeFileview && fileviewComponents[activeFileview]) {
+    const FileViewComponent = fileviewComponents[activeFileview]
+    return <FileViewComponent file={fileInfo} content={content ?? undefined} />
   }
 
-  if (category === 'text') {
-    if (isEditing) {
-      return (
-        <TextEditor
-          content={content || ''}
-          onChange={onContentChange || (() => {})}
-          file={fileInfo}
-          className="flex-1"
-          searchQuery={searchQuery}
-          activeMatchIndex={activeMatchIndex}
-          onSearchResult={onSearchResult}
-        />
-      )
-    }
-    if (baseContent) {
-      return (
-        <DiffViewer
-          headContent={baseContent}
-          currentContent={localContent ?? content ?? ''}
-          extension={fileInfo.extension}
-          filePath={path}
-          className="flex-1"
-          onHunkProcessed={handleHunkProcessed}
-        />
-      )
-    }
+  // 2. Git diff mode (show diff when file has unstaged changes)
+  if (baseContent && !isEditing && !isViewOnly) {
     return (
-      <TextViewer
+      <DiffViewer
+        headContent={baseContent}
+        currentContent={localContent ?? content ?? ''}
+        extension={fileInfo.extension}
+        filePath={path}
+        className="flex-1"
+        onHunkProcessed={handleHunkProcessed}
+      />
+    )
+  }
+
+  // 3. Edit mode (only for text files)
+  if (isEditing && isText) {
+    return (
+      <TextEditor
         content={content || ''}
+        onChange={onContentChange || (() => {})}
         file={fileInfo}
         className="flex-1"
         searchQuery={searchQuery}
@@ -197,53 +177,17 @@ export function FileContent({
     )
   }
 
-  if (category === 'html') {
-    if (isEditing) {
-      return (
-        <TextEditor
-          content={content || ''}
-          onChange={onContentChange || (() => {})}
-          file={fileInfo}
-          className="flex-1"
-          searchQuery={searchQuery}
-          activeMatchIndex={activeMatchIndex}
-          onSearchResult={onSearchResult}
-        />
-      )
-    }
-    if (baseContent) {
-      return (
-        <DiffViewer
-          headContent={baseContent}
-          currentContent={localContent ?? content ?? ''}
-          extension={fileInfo.extension}
-          filePath={path}
-          className="flex-1"
-          onHunkProcessed={handleHunkProcessed}
-        />
-      )
-    }
-    if (htmlMode) {
-      return <HtmlViewer file={fileInfo} content={content || undefined} />
-    }
-    return (
-      <TextViewer
-        content={content || ''}
-        file={fileInfo}
-        className="flex-1"
-        searchQuery={searchQuery}
-        activeMatchIndex={activeMatchIndex}
-        onSearchResult={onSearchResult}
-      />
-    )
-  }
-
-  const Handler =
-    FileHandlerComponents[category] || FileHandlerComponents.unsupported
-
+  // 4. View mode (read-only TextEditor — same appearance as edit)
   return (
-    <div className="flex-1 overflow-hidden relative">
-      <Handler file={fileInfo} content={content || undefined} />
-    </div>
+    <TextEditor
+      content={content || ''}
+      onChange={() => {}}
+      file={fileInfo}
+      className="flex-1"
+      readOnly
+      searchQuery={searchQuery}
+      activeMatchIndex={activeMatchIndex}
+      onSearchResult={onSearchResult}
+    />
   )
 }

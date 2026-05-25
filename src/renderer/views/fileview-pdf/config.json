@@ -1,0 +1,8 @@
+{
+  "name": "PDF",
+  "description": "PDF document viewer",
+  "author": "Aynite",
+  "version": "1.0.0",
+  "file_extensions": ["pdf"],
+  "key_bindings": {}
+}

@@ -10,8 +10,8 @@ import {
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { FileInfo } from '../../../../lib/types/files'
-import { Button } from '../../basic/Button'
+import type { FileInfo } from '../../../lib/types/files'
+import { Button } from '../../shared/basic/Button'
 
 // Register the pdfjs worker — Vite recognizes new URL with import.meta.url
 GlobalWorkerOptions.workerSrc = new URL(
@@ -19,7 +19,7 @@ GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString()
 
-interface PdfViewerProps {
+interface FileViewPdfProps {
   file: FileInfo
   content?: string
 }
@@ -29,7 +29,7 @@ const MAX_SCALE = 4.0
 const SCALE_STEP = 0.25
 const DEFAULT_SCALE = 1.5
 
-export function PdfViewer({ file }: PdfViewerProps) {
+export function FileViewPdf({ file }: FileViewPdfProps) {
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [numPages, setNumPages] = useState(0)
@@ -114,7 +114,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
       if (renderErr instanceof Error && renderErr.message.includes('Worker')) {
         return
       }
-      console.error('[PdfViewer] Render error:', renderErr)
+      console.error('[FileViewPdf] Render error:', renderErr)
     } finally {
       isRenderingRef.current = false
     }
@@ -162,7 +162,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
     try {
       const page = await pdf.getPage(currentPage)
       const viewport = page.getViewport({ scale: 1 })
-      const containerWidth = container.clientWidth - 48 // p-6 padding on both sides
+      const containerWidth = container.clientWidth - 48
       const fitScale = containerWidth / viewport.width
       setScale(
         Math.max(
@@ -182,7 +182,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
     try {
       const page = await pdf.getPage(currentPage)
       const viewport = page.getViewport({ scale: 1 })
-      const containerHeight = container.clientHeight - 48 // p-6 padding on both sides
+      const containerHeight = container.clientHeight - 48
       const fitScale = containerHeight / viewport.height
       setScale(
         Math.max(

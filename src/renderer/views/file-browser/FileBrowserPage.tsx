@@ -24,6 +24,7 @@ export function FileBrowserPage() {
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isText, setIsText] = useState(false)
 
   // Track dirty state per path
   const [dirtyPaths, setDirtyPaths] = useState<Set<string>>(new Set())
@@ -184,7 +185,8 @@ export function FileBrowserPage() {
       setLoading(true)
       setError(null)
       try {
-        const isText = await window.aynite.checkIsTextFile(activePath)
+        const textStatus = await window.aynite.checkIsTextFile(activePath)
+        setIsText(textStatus)
         const info = await window.aynite.getFileInfo(activePath)
         setFileInfo({
           ...info,
@@ -192,8 +194,8 @@ export function FileBrowserPage() {
           modifiedAt: new Date(info.modifiedAt),
         })
 
-        // Read all text files (including HTML/Markdown) as text
-        if (isText) {
+        // Read all text files as text
+        if (textStatus) {
           const text = await window.aynite.readFile(activePath)
           setContent(text)
           setOriginalContent(text)
@@ -228,8 +230,9 @@ export function FileBrowserPage() {
       // For simplicity, we just trigger a refresh
       const refresh = async () => {
         try {
-          const isText = await window.aynite.checkIsTextFile(activePath)
-          if (isText) {
+          const textStatus = await window.aynite.checkIsTextFile(activePath)
+          setIsText(textStatus)
+          if (textStatus) {
             const text = await window.aynite.readFile(activePath)
             setContent(text)
           }
@@ -272,27 +275,60 @@ export function FileBrowserPage() {
     setTotalMatchCount(total)
   }, [])
 
-  // ─── HTML Mode (rendered preview vs source view) ──────────────────────
-  const [htmlMode, setHtmlMode] = useState(false)
+  // ─── Fileview Mode (matched viewers like Markdown, HTML, Image, etc.) ──
+  const [matchedFileviews, setMatchedFileviews] = useState<
+    Array<{ view: string; config: FileviewConfig }>
+  >([])
+  const [activeFileview, setActiveFileview] = useState<string | null>(null)
+  const [isViewOnly, setIsViewOnly] = useState(true)
 
-  // Default HTML files to rendered preview; reset on file switch
+  // Load fileview configs and match against current file extension
   useEffect(() => {
-    const ext = fileInfo?.extension?.toLowerCase()
-    if (ext === 'html' || ext === 'htm') {
-      setHtmlMode(true)
-    } else {
-      setHtmlMode(false)
-    }
-  }, [fileInfo])
+    setMatchedFileviews([])
+    setActiveFileview(null)
+    setIsViewOnly(true)
+    setIsEditing(false)
 
-  const handleHtmlModeChange = useCallback((val: boolean) => {
-    setHtmlMode(val)
-    if (val) {
+    if (!activePath || !fileInfo) return
+
+    const ext = fileInfo.extension?.toLowerCase()
+    if (!ext) return
+
+    let cancelled = false
+    ;(async () => {
+      const matches: Array<{ view: string; config: FileviewConfig }> = []
+      for (const viewName of FILEVIEW_NAMES) {
+        const config = (await window.aynite.getConfig('view-config', {
+          view: viewName,
+        })) as FileviewConfig | null
+        if (!config?.file_extensions) continue
+        if (config.file_extensions.includes(ext)) {
+          matches.push({ view: viewName, config })
+        }
+      }
+      if (cancelled) return
+      setMatchedFileviews(matches)
+
+      // Auto-select first matching fileview as the active mode
+      if (matches.length > 0) {
+        setActiveFileview(matches[0].view)
+        setIsViewOnly(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [activePath, fileInfo])
+
+  const handleSelectFileview = useCallback((view: string | null) => {
+    setActiveFileview(view)
+    if (view !== null) {
       setIsEditing(false)
+      setIsViewOnly(false)
     }
   }, [])
 
-  // ─── View Preview State ─────────────────────────────────────────────────
+  // ─── View Preview State (dataview matching for JSON files) ──────────────
   const [matchingViews, setMatchingViews] = useState<MatchingView[]>([])
   const [activeView, setActiveView] = useState<string | null>(null)
 
@@ -329,8 +365,10 @@ export function FileBrowserPage() {
 
   const handleSelectView = useCallback((viewName: string | null) => {
     setActiveView(viewName)
+    setActiveFileview(null)
     if (viewName !== null) {
       setIsEditing(false) // preview mode overrides edit
+      setIsViewOnly(false)
     }
   }, [])
 
@@ -345,7 +383,7 @@ export function FileBrowserPage() {
     }
   }, [activePath, content])
 
-  // Reset editing mode when switching files
+  // Reset editing mode when switching files (empty deps = runs once on mount)
   useEffect(() => {
     setIsEditing(false)
   }, [])
@@ -500,9 +538,11 @@ export function FileBrowserPage() {
           loading={loading}
           error={error}
           isEditing={isEditing}
-          htmlMode={htmlMode}
+          isViewOnly={isViewOnly}
           onContentChange={setContent}
           activeView={activeView}
+          activeFileview={activeFileview}
+          isText={isText}
           searchQuery={showSearch ? searchQuery : undefined}
           activeMatchIndex={activeMatchIndex}
           onSearchResult={handleSearchResult}
@@ -512,15 +552,19 @@ export function FileBrowserPage() {
         <StatusBar
           isEditing={isEditing}
           setIsEditing={setIsEditing}
-          htmlMode={htmlMode}
-          onHtmlModeChange={handleHtmlModeChange}
+          isViewOnly={isViewOnly}
+          setIsViewOnly={setIsViewOnly}
           fileInfo={fileInfo}
           content={content}
           onSave={handleSave}
           isDirty={isDirty}
+          isText={isText}
           matchingViews={matchingViews}
           activeView={activeView}
           onSelectView={handleSelectView}
+          matchedFileviews={matchedFileviews}
+          activeFileview={activeFileview}
+          onSelectFileview={handleSelectFileview}
         />
       )}
     </div>

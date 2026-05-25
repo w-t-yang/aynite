@@ -3,10 +3,10 @@ import type React from 'react'
 import { useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Button } from '../../basic/Button'
-import type { FileInfo } from '../../lib/file-handlers'
-import { highlightCode } from '../../lib/syntax'
-import { cn } from '../../lib/utils'
+import { Button } from '../../shared/basic/Button'
+import type { FileInfo } from '../../shared/lib/file-handlers'
+import { highlightCode } from '../../shared/lib/syntax'
+import { cn } from '../../shared/lib/utils'
 
 interface CodeBlockProps {
   language?: string
@@ -55,7 +55,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, value }) => {
   )
 }
 
-export const MarkdownViewer: React.FC<{
+export const FileViewMarkdown: React.FC<{
   file: FileInfo
   content?: string
   className?: string

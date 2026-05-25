@@ -1,56 +1,94 @@
-import { Eye, Globe, Pencil, Save } from 'lucide-react'
+import { Eye, Pencil, Save } from 'lucide-react'
 import type { MatchingView } from '../../../../lib/types/file-browser'
 import type { FileInfo } from '../../../../lib/types/files'
 import { cn } from '../../../shared/lib/utils'
 
+export interface FileviewConfig {
+  name: string
+  description: string
+  author: string
+  version: string
+  file_extensions: string[]
+  key_bindings: Record<string, unknown>
+}
+
 interface StatusBarProps {
   isEditing: boolean
   setIsEditing: (val: boolean) => void
-  htmlMode?: boolean
-  onHtmlModeChange?: (val: boolean) => void
+  /** When true, shows a read-only text editor instead of fileview */
+  isViewOnly: boolean
+  setIsViewOnly: (val: boolean) => void
   fileInfo: FileInfo | null
   content: string | null
   onSave?: () => void
   isDirty?: boolean
+  /** Whether the file is text-based (determines if edit mode is available) */
+  isText?: boolean
   /** Views whose schema matches the current file */
   matchingViews?: MatchingView[]
   /** Currently selected view preview mode (null = default) */
   activeView?: string | null
   /** Called when user selects a view or default */
   onSelectView?: (viewName: string | null) => void
+  /** Fileview configs that match the current file's extension */
+  matchedFileviews?: Array<{ view: string; config: FileviewConfig }>
+  /** Currently active fileview directory name (null = none) */
+  activeFileview?: string | null
+  /** Called when user selects a fileview */
+  onSelectFileview?: (view: string | null) => void
 }
 
 export function StatusBar({
   isEditing,
   setIsEditing,
-  htmlMode = false,
-  onHtmlModeChange,
+  isViewOnly,
+  setIsViewOnly,
   fileInfo,
   content,
   onSave,
   isDirty = false,
+  isText = false,
   matchingViews = [],
   activeView = null,
   onSelectView,
+  matchedFileviews = [],
+  activeFileview = null,
+  onSelectFileview,
 }: StatusBarProps) {
   const wordCount = content ? content.trim().split(/\s+/).length : 0
   const lineCount = content ? content.split('\n').length : 0
   const isPdf = fileInfo?.extension?.toLowerCase() === 'pdf'
-  const isHtml =
-    fileInfo?.extension?.toLowerCase() === 'html' ||
-    fileInfo?.extension?.toLowerCase() === 'htm'
+
+  const handleView = () => {
+    setIsEditing(false)
+    setIsViewOnly(true)
+    onSelectFileview?.(null)
+    onSelectView?.(null)
+  }
+
+  const handleEdit = () => {
+    setIsEditing(true)
+    setIsViewOnly(false)
+    onSelectFileview?.(null)
+    onSelectView?.(null)
+  }
 
   return (
     <div className="h-[26px] shrink-0 bg-sidebar border-t border-border flex items-center px-3 text-[11px] text-muted-foreground/70 select-none">
       {/* Left section: mode + save */}
       <div className="flex items-center gap-1">
         <div className="flex items-center text-[10px] font-medium tracking-wider">
-          {/* Matching view buttons */}
+          {/* Matching view preview buttons (dataviews) */}
           {matchingViews.map((view, i) => (
             <button
               key={view.name}
               type="button"
-              onClick={() => onSelectView?.(view.name)}
+              onClick={() => {
+                onSelectFileview?.(null)
+                setIsEditing(false)
+                setIsViewOnly(false)
+                onSelectView?.(view.name)
+              }}
               title={view.config.description}
               className={cn(
                 'flex items-center gap-1 px-2 py-0.5 transition-colors',
@@ -68,37 +106,44 @@ export function StatusBar({
             <div className="w-px h-3 bg-border/30" />
           )}
 
-          {/* Html mode (rendered preview) — only for HTML files */}
-          {isHtml && (
+          {/* Fileview mode buttons (e.g. Markdown, HTML, Image, Audio, PDF, Video) */}
+          {matchedFileviews.map((fv, i) => (
             <button
+              key={fv.view}
               type="button"
               onClick={() => {
-                onHtmlModeChange?.(true)
+                onSelectFileview?.(fv.view)
+                setIsEditing(false)
+                setIsViewOnly(false)
                 onSelectView?.(null)
               }}
+              title={fv.config.description}
               className={cn(
                 'flex items-center gap-1 px-2 py-0.5 transition-colors',
-                htmlMode
+                activeFileview === fv.view
                   ? 'text-foreground/80'
                   : 'text-muted-foreground/40 hover:text-muted-foreground/70',
               )}
             >
-              <Globe size={11} />
-              <span>Html</span>
+              {i > 0 && <div className="w-px h-3 bg-border/30 mr-1" />}
+              <span>{fv.config.name}</span>
             </button>
+          ))}
+
+          {matchedFileviews.length > 0 && (
+            <div className="w-px h-3 bg-border/30" />
           )}
 
-          {/* View mode (text viewer) */}
+          {/* View mode (read-only text editor) */}
           <button
             type="button"
-            onClick={() => {
-              onHtmlModeChange?.(false)
-              setIsEditing(false)
-              onSelectView?.(null)
-            }}
+            onClick={handleView}
             className={cn(
               'flex items-center gap-1 px-2 py-0.5 transition-colors',
-              !isEditing && !htmlMode && activeView === null
+              isViewOnly &&
+                !isEditing &&
+                activeFileview === null &&
+                activeView === null
                 ? 'text-foreground/80'
                 : 'text-muted-foreground/40 hover:text-muted-foreground/70',
             )}
@@ -107,15 +152,11 @@ export function StatusBar({
             <span>View</span>
           </button>
 
-          {/* Edit mode — hidden for PDF (read-only binary format) */}
-          {!isPdf && (
+          {/* Edit mode — only for text files */}
+          {isText && !isPdf && (
             <button
               type="button"
-              onClick={() => {
-                onHtmlModeChange?.(false)
-                setIsEditing(true)
-                onSelectView?.(null)
-              }}
+              onClick={handleEdit}
               className={cn(
                 'flex items-center gap-1 px-2 py-0.5 transition-colors',
                 isEditing

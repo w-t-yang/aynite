@@ -1,0 +1,8 @@
+{
+  "name": "Video",
+  "description": "Video player with zoom controls",
+  "author": "Aynite",
+  "version": "1.0.0",
+  "file_extensions": ["mp4", "webm", "mov", "avi", "mkv", "ogg"],
+  "key_bindings": {}
+}

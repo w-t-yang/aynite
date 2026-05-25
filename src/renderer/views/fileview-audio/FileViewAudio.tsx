@@ -1,8 +1,8 @@
 import { Music } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { type FileInfo, formatFileSize } from '../../lib/file-handlers'
+import { type FileInfo, formatFileSize } from '../../shared/lib/file-handlers'
 
-interface AudioViewerProps {
+interface FileViewAudioProps {
   file: FileInfo
 }
 
@@ -20,7 +20,7 @@ function mimeType(ext: string): string {
   return map[ext] || 'audio/mpeg'
 }
 
-export function AudioViewer({ file }: AudioViewerProps) {
+export function FileViewAudio({ file }: FileViewAudioProps) {
   const [src, setSrc] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const urlRef = useRef<string | null>(null)

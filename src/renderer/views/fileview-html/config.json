@@ -1,0 +1,8 @@
+{
+  "name": "HTML",
+  "description": "Rendered HTML preview",
+  "author": "Aynite",
+  "version": "1.0.0",
+  "file_extensions": ["html", "htm"],
+  "key_bindings": {}
+}
