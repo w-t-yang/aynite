@@ -126,25 +126,27 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
   if (toolName.includes('write')) Icon = Save
   if (toolName.includes('task')) Icon = Clipboard
 
-  // Robust title extraction: prefer the command, then the primary argument, then the tool name
+  // Title always starts with the tool name, followed by the primary argument if available
   const getToolTitle = () => {
+    const formattedName = toolName.toUpperCase().replace(/_/g, ' ')
+
     // Special handling for task tools
     if (toolName === 'create_task' || toolName === 'update_task') {
       const actualArgs = toolArgs?.args || toolArgs?.input || toolArgs
       if (toolName === 'create_task') {
         const tasks = actualArgs?.tasks
         if (Array.isArray(tasks) && tasks.length > 0) {
-          return `Create Task (${tasks.length} items)`
+          return `${formattedName}  │  ${tasks.length} items`
         }
-        return 'Create Task'
+        return formattedName
       }
       if (toolName === 'update_task') {
         const idx = actualArgs?.taskIndex
         const status = actualArgs?.status
         if (idx !== undefined) {
-          return `Update Task ${idx + 1} → ${status || 'updated'}`
+          return `${formattedName}  │  Task ${idx + 1} → ${status || 'updated'}`
         }
-        return 'Update Task'
+        return formattedName
       }
     }
 
@@ -169,9 +171,9 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
       cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
     }
 
-    if (cmd) return cmd
+    if (cmd) return `${formattedName}  │  ${cmd}`
 
-    return toolName.toUpperCase().replace(/_/g, ' ')
+    return formattedName
   }
 
   const title = getToolTitle()
@@ -189,6 +191,16 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
       compact
     >
       <div className="space-y-2">
+        {toolArgs && (
+          <div className="px-1">
+            <div className="text-[10px] font-bold mb-1 opacity-50 uppercase tracking-wider">
+              Arguments
+            </div>
+            <pre className="text-[10px] font-mono px-2 py-1 bg-black/5 rounded overflow-auto max-h-20">
+              {formatArgs(toolArgs)}
+            </pre>
+          </div>
+        )}
         <pre
           className={cn(
             'text-[12px] font-mono whitespace-pre-wrap max-h-96 overflow-auto py-2 px-3 rounded bg-black/10',
@@ -212,16 +224,6 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
             </div>
           )}
         </pre>
-        {toolName !== 'run_command' && toolArgs && (
-          <div className="px-1 opacity-40 hover:opacity-100 transition-opacity">
-            <div className="text-[10px] font-bold mb-1 opacity-50 uppercase tracking-wider">
-              Arguments
-            </div>
-            <pre className="text-[10px] font-mono px-2 py-1 bg-black/5 rounded overflow-auto max-h-20">
-              {formatArgs(toolArgs)}
-            </pre>
-          </div>
-        )}
       </div>
     </Collapsible>
   )
