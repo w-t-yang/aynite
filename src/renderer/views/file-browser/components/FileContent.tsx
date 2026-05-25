@@ -1,5 +1,4 @@
 import { Plus } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { AppOperation } from '../../../../lib/constants/app'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
@@ -24,6 +23,12 @@ interface FileContentProps {
   activeView?: string | null
   /** Active fileview directory name (e.g. 'fileview-markdown'), null = no fileview mode */
   activeFileview?: string | null
+  /** When true, shows the git diff view for the file */
+  showDiff?: boolean
+  /** Git head/index content for the diff view */
+  diffHeadContent?: string | null
+  /** Git current/working content for the diff view */
+  diffCurrentContent?: string | null
   /** Whether the file is text-based (determines if edit mode is available) */
   isText?: boolean
   /** Search query for highlighting matches */
@@ -45,51 +50,15 @@ export function FileContent({
   onContentChange,
   activeView = null,
   activeFileview = null,
+  showDiff = false,
+  diffHeadContent = null,
+  diffCurrentContent = null,
   isText = false,
   searchQuery,
   activeMatchIndex,
   onSearchResult,
 }: FileContentProps) {
   const execOp = useAppOperation()
-  const [baseContent, setBaseContent] = useState<string | null>(null)
-  const [localContent, setLocalContent] = useState<string | null>(null)
-  const [refreshKey, setRefreshKey] = useState(0)
-
-  useEffect(() => {
-    setBaseContent(null)
-    setLocalContent(null)
-    if (!path) return
-
-    // Satisfy Biome's noUnusedVariables — used as deps for refetch triggers
-    void refreshKey
-    void isEditing
-
-    let cancelled = false
-    ;(async () => {
-      try {
-        const statusMap = await (window as any).aynite.getGitStatus(path)
-        if (cancelled) return
-        if (statusMap?.[path]) {
-          // Index content (staged) — shows only unstaged changes
-          const [base, current] = await Promise.all([
-            (window as any).aynite.getGitIndexContent(path),
-            (window as any).aynite.readFile(path),
-          ])
-          if (!cancelled) {
-            setBaseContent(base || null)
-            setLocalContent(current || null)
-          }
-        }
-      } catch {
-        // not a git file — no diff view
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [path, refreshKey, isEditing])
-
-  const handleHunkProcessed = () => setRefreshKey((k) => k + 1)
 
   if (!path) {
     return (
@@ -141,24 +110,23 @@ export function FileContent({
   }
 
   // ─── Mode-based rendering ──────────────────────────────────────────
-  // Priority: Fileview mode > Git diff > Edit mode > View mode
+  // Priority: Fileview > Diff > Edit > View > Unsupported
 
-  // 1. Fileview mode: render the matched fileview component
+  // 1. Fileview mode
   if (activeFileview && fileviewComponents[activeFileview]) {
     const FileViewComponent = fileviewComponents[activeFileview]
     return <FileViewComponent file={fileInfo} content={content ?? undefined} />
   }
 
-  // 2. Git diff mode (show diff when file has unstaged changes)
-  if (baseContent && !isEditing && !isViewOnly) {
+  // 2. Diff mode
+  if (showDiff && diffHeadContent && path) {
     return (
       <DiffViewer
-        headContent={baseContent}
-        currentContent={localContent ?? content ?? ''}
+        headContent={diffHeadContent}
+        currentContent={diffCurrentContent ?? content ?? ''}
         extension={fileInfo.extension}
         filePath={path}
         className="flex-1"
-        onHunkProcessed={handleHunkProcessed}
       />
     )
   }

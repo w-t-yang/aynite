@@ -1,6 +1,7 @@
-import { Eye, Pencil, Save } from 'lucide-react'
+import { Eye, GitCompare, Pencil, Save } from 'lucide-react'
 import type { MatchingView } from '../../../../lib/types/file-browser'
 import type { FileInfo } from '../../../../lib/types/files'
+import { Tooltip } from '../../../shared/basic/Tooltip'
 import { cn } from '../../../shared/lib/utils'
 
 export interface FileviewConfig {
@@ -18,6 +19,12 @@ interface StatusBarProps {
   /** When true, shows a read-only text editor instead of fileview */
   isViewOnly: boolean
   setIsViewOnly: (val: boolean) => void
+  /** When true, the file has git changes available for diff view */
+  hasDiff?: boolean
+  /** When true, the diff view is currently shown */
+  showDiff?: boolean
+  /** Called when user clicks the diff mode button */
+  onShowDiff?: () => void
   fileInfo: FileInfo | null
   content: string | null
   onSave?: () => void
@@ -43,6 +50,9 @@ export function StatusBar({
   setIsEditing,
   isViewOnly,
   setIsViewOnly,
+  hasDiff = false,
+  showDiff = false,
+  onShowDiff,
   fileInfo,
   content,
   onSave,
@@ -58,6 +68,16 @@ export function StatusBar({
   const wordCount = content ? content.trim().split(/\s+/).length : 0
   const lineCount = content ? content.split('\n').length : 0
   const isPdf = fileInfo?.extension?.toLowerCase() === 'pdf'
+
+  const hasAnyMode = matchedFileviews.length > 0 || hasDiff || isText
+
+  const handleDiff = () => {
+    onSelectFileview?.(null)
+    onSelectView?.(null)
+    setIsEditing(false)
+    setIsViewOnly(false)
+    onShowDiff?.()
+  }
 
   const handleView = () => {
     onSelectFileview?.(null)
@@ -77,112 +97,131 @@ export function StatusBar({
     <div className="h-[26px] shrink-0 bg-sidebar border-t border-border flex items-center px-3 text-[11px] text-muted-foreground/70 select-none">
       {/* Left section: mode + save */}
       <div className="flex items-center gap-1">
-        <div className="flex items-center text-[10px] font-medium tracking-wider">
-          {/* Matching view preview buttons (dataviews) */}
-          {matchingViews.map((view, i) => (
-            <button
-              key={view.name}
-              type="button"
-              onClick={() => {
-                onSelectFileview?.(null)
-                onSelectView?.(view.name)
-              }}
-              title={view.config.description}
-              className={cn(
-                'flex items-center gap-1 px-2 py-0.5 transition-colors',
-                activeView === view.name
-                  ? 'text-foreground/80'
-                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+        {/* ─── Mode buttons ──────────────────────────── */}
+        {hasAnyMode && (
+          <div className="flex items-center gap-0.5">
+            {/* Dataview preview buttons */}
+            {matchingViews.map((view) => (
+              <Tooltip key={view.name} content={view.config.description}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectFileview?.(null)
+                    onSelectView?.(view.name)
+                  }}
+                  className={cn(
+                    'px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wider transition-colors',
+                    activeView === view.name
+                      ? 'text-foreground/80'
+                      : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+                  )}
+                >
+                  {view.config.name}
+                </button>
+              </Tooltip>
+            ))}
+
+            {/* Fileview mode buttons */}
+            {matchedFileviews.map((fv) => (
+              <Tooltip key={fv.view} content={fv.config.description}>
+                <button
+                  type="button"
+                  onClick={() => onSelectFileview?.(fv.view)}
+                  className={cn(
+                    'px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wider transition-colors',
+                    activeFileview === fv.view
+                      ? 'text-foreground/80'
+                      : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+                  )}
+                >
+                  {fv.config.name}
+                </button>
+              </Tooltip>
+            ))}
+
+            {/* Separator before action modes */}
+            {(matchedFileviews.length > 0 || matchingViews.length > 0) &&
+              (hasDiff || isText) && (
+                <div className="w-px h-3 bg-border/30 mx-0.5" />
               )}
-            >
-              {i > 0 && <div className="w-px h-3 bg-border/30 mr-1" />}
-              <span>{view.config.name}</span>
-            </button>
-          ))}
 
-          {matchingViews.length > 0 && (
-            <div className="w-px h-3 bg-border/30" />
-          )}
-
-          {/* Fileview mode buttons (e.g. Markdown, HTML, Image, Audio, PDF, Video) */}
-          {matchedFileviews.map((fv, i) => (
-            <button
-              key={fv.view}
-              type="button"
-              onClick={() => {
-                onSelectFileview?.(fv.view)
-                // Don't call onSelectView — it would reset activeFileview
-              }}
-              title={fv.config.description}
-              className={cn(
-                'flex items-center gap-1 px-2 py-0.5 transition-colors',
-                activeFileview === fv.view
-                  ? 'text-foreground/80'
-                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
-              )}
-            >
-              {i > 0 && <div className="w-px h-3 bg-border/30 mr-1" />}
-              <span>{fv.config.name}</span>
-            </button>
-          ))}
-
-          {matchedFileviews.length > 0 && isText && (
-            <div className="w-px h-3 bg-border/30" />
-          )}
-
-          {/* View mode (read-only text editor) — only for text files */}
-          {isText && (
-            <button
-              type="button"
-              onClick={handleView}
-              className={cn(
-                'flex items-center gap-1 px-2 py-0.5 transition-colors',
-                isViewOnly &&
-                  !isEditing &&
-                  activeFileview === null &&
-                  activeView === null
-                  ? 'text-foreground/80'
-                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
-              )}
-            >
-              <Eye size={11} />
-              <span>View</span>
-            </button>
-          )}
-
-          {/* Edit mode — only for text files */}
-          {isText && !isPdf && (
-            <button
-              type="button"
-              onClick={handleEdit}
-              className={cn(
-                'flex items-center gap-1 px-2 py-0.5 transition-colors',
-                isEditing
-                  ? 'text-foreground/80'
-                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
-              )}
-            >
-              <Pencil size={11} />
-              <span>Edit</span>
-            </button>
-          )}
-        </div>
-
-        {isEditing && (
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={!isDirty}
-            className={cn(
-              'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-all ml-1',
-              isDirty
-                ? 'text-primary hover:bg-primary/10 cursor-pointer'
-                : 'text-muted-foreground/20 cursor-default',
+            {/* Diff mode */}
+            {hasDiff && (
+              <Tooltip content="View git diff">
+                <button
+                  type="button"
+                  onClick={handleDiff}
+                  className={cn(
+                    'p-1 rounded transition-colors',
+                    showDiff
+                      ? 'text-foreground/80'
+                      : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+                  )}
+                >
+                  <GitCompare size={13} />
+                </button>
+              </Tooltip>
             )}
-          >
-            <Save size={11} />
-            <span>Save</span>
-          </button>
+
+            {/* View mode */}
+            {isText && (
+              <Tooltip content="View file (read-only)">
+                <button
+                  type="button"
+                  onClick={handleView}
+                  className={cn(
+                    'p-1 rounded transition-colors',
+                    isViewOnly &&
+                      !isEditing &&
+                      !showDiff &&
+                      activeFileview === null &&
+                      activeView === null
+                      ? 'text-foreground/80'
+                      : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+                  )}
+                >
+                  <Eye size={13} />
+                </button>
+              </Tooltip>
+            )}
+
+            {/* Edit mode */}
+            {isText && !isPdf && (
+              <Tooltip content="Edit file">
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className={cn(
+                    'p-1 rounded transition-colors',
+                    isEditing
+                      ? 'text-foreground/80'
+                      : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+                  )}
+                >
+                  <Pencil size={13} />
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        )}
+
+        {/* Save button — only shown in edit mode */}
+        {isEditing && (
+          <Tooltip content="Save (Ctrl+S)">
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={!isDirty}
+              className={cn(
+                'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all ml-1',
+                isDirty
+                  ? 'text-primary hover:bg-primary/10 cursor-pointer'
+                  : 'text-muted-foreground/20 cursor-default',
+              )}
+            >
+              <Save size={11} />
+            </button>
+          </Tooltip>
         )}
       </div>
 

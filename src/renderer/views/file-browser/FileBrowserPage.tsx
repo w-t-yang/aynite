@@ -287,15 +287,26 @@ export function FileBrowserPage() {
   const [activeFileview, setActiveFileview] = useState<string | null>(null)
   const [isViewOnly, setIsViewOnly] = useState(true)
 
-  // Single source of truth for ALL mode initialization when file changes.
-  // Resets every mode state and determines the correct starting mode:
-  //   Fileview mode > View mode (isViewOnly) > Edit mode (never auto)
+  // ─── Diff Mode ────────────────────────────────────────────────────────
+  const [hasDiff, setHasDiff] = useState(false)
+  const [showDiff, setShowDiff] = useState(false)
+  const [diffHeadContent, setDiffHeadContent] = useState<string | null>(null)
+  const [diffCurrentContent, setDiffCurrentContent] = useState<string | null>(
+    null,
+  )
+
+  // Single effect that checks BOTH fileviews AND git diff status.
+  // Ensures deterministic mode selection: Fileview > Diff > View (> Edit never auto)
   useEffect(() => {
-    // Reset ALL mode states to defaults
+    // Reset ALL mode states
     setIsEditing(false)
     setActiveFileview(null)
     setActiveView(null)
     setMatchedFileviews([])
+    setHasDiff(false)
+    setShowDiff(false)
+    setDiffHeadContent(null)
+    setDiffCurrentContent(null)
 
     if (!activePath) {
       setIsViewOnly(true)
@@ -310,6 +321,7 @@ export function FileBrowserPage() {
 
     let cancelled = false
     ;(async () => {
+      // 1. Load fileview configs
       const matches: Array<{ view: string; config: FileviewConfig }> = []
       for (const viewName of FILEVIEW_NAMES) {
         try {
@@ -324,15 +336,45 @@ export function FileBrowserPage() {
           // Silently skip unavailable fileviews
         }
       }
+
+      // 2. Check git diff status
+      let diffResult: { head: string; current: string } | null = null
+      try {
+        const statusMap = await (window as any).aynite.getGitStatus(activePath)
+        if (!cancelled && statusMap?.[activePath]) {
+          const [base, current] = await Promise.all([
+            (window as any).aynite.getGitIndexContent(activePath),
+            (window as any).aynite.readFile(activePath),
+          ])
+          if (base) diffResult = { head: base, current: current || '' }
+        }
+      } catch {
+        // not a git file
+      }
+
       if (cancelled) return
+
+      // 3. Set all states at once — deterministic priority
       setMatchedFileviews(matches)
 
       if (matches.length > 0) {
         // Fileview found → show fileview mode
         setActiveFileview(matches[0].view)
+        setHasDiff(!!diffResult)
+        if (diffResult) {
+          setDiffHeadContent(diffResult.head)
+          setDiffCurrentContent(diffResult.current)
+        }
+        setIsViewOnly(false)
+      } else if (diffResult) {
+        // No fileview but diff available → show diff mode
+        setHasDiff(true)
+        setShowDiff(true)
+        setDiffHeadContent(diffResult.head)
+        setDiffCurrentContent(diffResult.current)
         setIsViewOnly(false)
       } else {
-        // No fileview → default to view mode
+        // No fileview, no diff → view mode
         setIsViewOnly(true)
       }
     })()
@@ -344,13 +386,21 @@ export function FileBrowserPage() {
   const handleSelectFileview = useCallback((view: string | null) => {
     setActiveFileview(view)
     setActiveView(null)
+    setShowDiff(false)
     if (view !== null) {
       setIsEditing(false)
       setIsViewOnly(false)
     } else {
-      // Switching to no fileview → default to view mode
       setIsViewOnly(true)
     }
+  }, [])
+
+  const handleShowDiff = useCallback(() => {
+    setShowDiff(true)
+    setActiveFileview(null)
+    setActiveView(null)
+    setIsEditing(false)
+    setIsViewOnly(false)
   }, [])
 
   // ─── View Preview State (dataview matching for JSON files) ──────────────
@@ -391,8 +441,9 @@ export function FileBrowserPage() {
   const handleSelectView = useCallback((viewName: string | null) => {
     setActiveView(viewName)
     setActiveFileview(null)
+    setShowDiff(false)
     if (viewName !== null) {
-      setIsEditing(false) // preview mode overrides edit
+      setIsEditing(false)
       setIsViewOnly(false)
     }
   }, [])
@@ -567,6 +618,9 @@ export function FileBrowserPage() {
           onContentChange={setContent}
           activeView={activeView}
           activeFileview={activeFileview}
+          showDiff={showDiff}
+          diffHeadContent={diffHeadContent}
+          diffCurrentContent={diffCurrentContent}
           isText={isText}
           searchQuery={showSearch ? searchQuery : undefined}
           activeMatchIndex={activeMatchIndex}
@@ -579,6 +633,9 @@ export function FileBrowserPage() {
           setIsEditing={setIsEditing}
           isViewOnly={isViewOnly}
           setIsViewOnly={setIsViewOnly}
+          showDiff={showDiff}
+          hasDiff={hasDiff}
+          onShowDiff={handleShowDiff}
           fileInfo={fileInfo}
           content={content}
           onSave={handleSave}
