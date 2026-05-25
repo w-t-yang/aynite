@@ -14,6 +14,8 @@
  * for newly created windows.
  */
 
+import { readFileSync } from 'node:fs'
+import { getWorkspacesConfigPath } from '../lib/path'
 import type { WindowSession } from '../lib/types/window'
 import { getWorkspacesList } from './workspace/logic'
 
@@ -40,25 +42,26 @@ export function onWindowClose(winId: number, cleanup: () => void): void {
 /**
  * Register a window. Called when a BrowserWindow instance is created.
  * The window inherits the globally-active workspace as its default.
+ * Reads from disk synchronously to avoid race conditions.
  */
 export function registerWindow(winId: number): WindowSession {
-  // Read the global default workspace
-  const session: WindowSession = {
-    workspaceId: 'Aynite Playbook', // fallback
-    workspacePinned: false,
+  // Read the global active workspace from disk synchronously
+  let workspaceId = 'Aynite Playbook' // fallback
+  try {
+    const configPath = getWorkspacesConfigPath()
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw)
+    if (config?.active && typeof config.active === 'string') {
+      workspaceId = config.active
+    }
+  } catch {
+    // Config file may not exist yet, use fallback
   }
 
-  // Try to load the global active workspace as the starting default
-  getWorkspacesList()
-    .then((wsConfig) => {
-      if (wsConfig?.active) {
-        session.workspaceId = wsConfig.active
-        windowRegistry.set(winId, session)
-      }
-    })
-    .catch(() => {
-      // If workspaces config doesn't exist yet, use fallback
-    })
+  const session: WindowSession = {
+    workspaceId,
+    workspacePinned: false,
+  }
 
   windowRegistry.set(winId, session)
   return session
