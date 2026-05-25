@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { jsonSchema } from '@ai-sdk/provider-utils'
 import { TOOL_METADATA } from '../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../lib/constants/messages'
@@ -7,7 +8,6 @@ import {
   getWorkspaceDataPath,
   getWorkspaceMemoryPath,
   getWorkspaceTaskPath,
-  readJson,
   secureEditFile,
   secureGetFileTree,
   secureGlobSearch,
@@ -36,8 +36,29 @@ function getWorkspaceName(context: ToolContext): string {
   return context.workspaceFolders[0] || 'Aynite Playbook'
 }
 
+/**
+ * Read workspace folders from the authoritative config file on disk.
+ * Falls back to context.workspaceFolders if the file can't be read.
+ */
+function readWorkspaceFolders(context: ToolContext): string[] {
+  const workspaceName = getWorkspaceName(context)
+  try {
+    const configPath = getWorkspaceDataPath(workspaceName)
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw)
+    if (Array.isArray(config.folders)) {
+      return config.folders
+    }
+  } catch {
+    // Config file may not exist yet, fallback to context value
+  }
+  return context.workspaceFolders
+}
+
 export function createTools(context: ToolContext) {
-  const domains = [...context.workspaceFolders, getAyniteDir()]
+  // Resolve workspace folders from disk (authoritative source)
+  const workspaceFolders = readWorkspaceFolders(context)
+  const domains = [...workspaceFolders, getAyniteDir()]
   const workspaceName = getWorkspaceName(context)
   const tools: any = {
     read_file: {
@@ -91,7 +112,7 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.run_command.description,
       inputSchema: jsonSchema(TOOL_METADATA.run_command.inputSchema),
       execute: async ({ command, cwd }: { command: string; cwd?: string }) => {
-        const runCwd = cwd || context.workspaceFolders[0] || '.'
+        const runCwd = cwd || workspaceFolders[0] || '.'
 
         const approved = await requestAiApproval({
           command,
@@ -464,7 +485,7 @@ export function createTools(context: ToolContext) {
           return await secureGetFileTree(dirPath, domains, depth)
         } else {
           let fullOutput = ''
-          for (const folder of context.workspaceFolders) {
+          for (const folder of workspaceFolders) {
             fullOutput += `Workspace Folder: ${folder}\n`
             fullOutput += await secureGetFileTree(folder, domains, depth)
             fullOutput += '\n'
@@ -477,26 +498,11 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.get_workspace_info.description,
       inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),
       execute: async () => {
-        // Read folders directly from the workspace config file
-        // instead of relying on the potentially stale context.
-        let workspaceFolders = context.workspaceFolders
-        const workspaceName = context.workspaceName
-        if (workspaceName) {
-          try {
-            const configPath = getWorkspaceDataPath(workspaceName)
-            const config = await readJson<{ folders?: string[] }>(configPath)
-            if (config?.folders) {
-              workspaceFolders = config.folders
-            }
-          } catch {
-            // fallback to context value
-          }
-        }
         return {
           workspaceFolders,
           configDir: getAyniteDir(),
           activeFile: context.activeFile || null,
-          workspaceName: workspaceName || null,
+          workspaceName,
         }
       },
     },
