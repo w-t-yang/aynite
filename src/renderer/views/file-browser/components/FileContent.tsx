@@ -1,12 +1,12 @@
 import { Plus } from 'lucide-react'
 import { AppOperation } from '../../../../lib/constants/app'
+import { fileviewComponents } from '../../../../lib/constants/fileview-components'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
 import { DiffViewer } from '../../../shared/featured/fileviewers/DiffViewer'
 import { TextEditor } from '../../../shared/featured/fileviewers/TextEditor'
 import { UnsupportedViewer } from '../../../shared/featured/fileviewers/UnsupportedViewer'
 import { useAppOperation } from '../../ViewContext'
-import { fileviewComponents } from '../fileview-registry'
 import { ViewPreview } from './ViewPreview'
 
 interface FileContentProps {
@@ -46,7 +46,7 @@ export function FileContent({
   loading,
   error,
   isEditing = false,
-  isViewOnly = false,
+  _isViewOnly = false,
   onContentChange,
   activeView = null,
   activeFileview = null,

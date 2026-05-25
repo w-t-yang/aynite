@@ -5,7 +5,7 @@
  * can independently select which workspace it's working on, which file
  * is active, which session is active, etc.
  *
- * The registry is keyed by Electron's BrowserWindow.id (a unique integer).
+ * The registry is keyed by Electron's BrowserWindow identifier (a unique integer).
  * On window creation, the window is registered with a default workspace.
  * On window close, it is unregistered.
  *
@@ -14,17 +14,8 @@
  * for newly created windows.
  */
 
-import { BrowserWindow } from 'electron'
+import type { WindowSession } from '../lib/types/window'
 import { getWorkspacesList } from './workspace/logic'
-
-// ─── Types ────────────────────────────────────────────────────────────────
-
-export interface WindowSession {
-  /** The workspace this window is currently using */
-  workspaceId: string
-  /** Tracks whether the workspace was explicitly changed from the default */
-  workspacePinned: boolean
-}
 
 // ─── Module-level registry ────────────────────────────────────────────────
 
@@ -47,7 +38,7 @@ export function onWindowClose(winId: number, cleanup: () => void): void {
 // ─── Public API ───────────────────────────────────────────────────────────
 
 /**
- * Register a window. Called when a new BrowserWindow is created.
+ * Register a window. Called when a BrowserWindow instance is created.
  * The window inherits the globally-active workspace as its default.
  */
 export function registerWindow(winId: number): WindowSession {
@@ -74,7 +65,7 @@ export function registerWindow(winId: number): WindowSession {
 }
 
 /**
- * Unregister a window. Called when a BrowserWindow is closed.
+ * Unregister a window. Called when a BrowserWindow instance is closed.
  * Fires all cleanup callbacks registered for this window.
  */
 export function unregisterWindow(winId: number): void {
@@ -145,13 +136,4 @@ export function hasWindow(winId: number): boolean {
  */
 export function getAllWindowIds(): number[] {
   return Array.from(windowRegistry.keys())
-}
-
-/**
- * Get the BrowserWindow ID from an IPC event's sender WebContents.
- * This is the standard way to identify which window sent an IPC message.
- */
-export function getWinIdFromSender(sender: Electron.WebContents): number {
-  const win = BrowserWindow.fromWebContents(sender)
-  return win?.id ?? -1
 }

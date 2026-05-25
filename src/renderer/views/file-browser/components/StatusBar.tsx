@@ -1,17 +1,11 @@
 import { Eye, GitCompare, Pencil, Save } from 'lucide-react'
-import type { MatchingView } from '../../../../lib/types/file-browser'
+import type {
+  FileviewConfig,
+  MatchingView,
+} from '../../../../lib/types/file-browser'
 import type { FileInfo } from '../../../../lib/types/files'
 import { Tooltip } from '../../../shared/basic/Tooltip'
 import { cn } from '../../../shared/lib/utils'
-
-export interface FileviewConfig {
-  name: string
-  description: string
-  author: string
-  version: string
-  file_extensions: string[]
-  key_bindings: Record<string, unknown>
-}
 
 interface StatusBarProps {
   isEditing: boolean

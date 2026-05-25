@@ -6,15 +6,12 @@ import { getIgnorePatterns } from '../config'
 import { gitService } from '../git/index'
 import {
   broadcastAppEvent,
+  getWinIdFromSender,
   sendOperationToWindow,
   sendToWindow,
   showOpenDialog,
 } from '../window'
-import {
-  getWindowWorkspace,
-  getWinIdFromSender,
-  setWindowWorkspace,
-} from '../window-state'
+import { getWindowWorkspace, setWindowWorkspace } from '../window-state'
 import {
   addWorkspaceFolder,
   createWorkspace,

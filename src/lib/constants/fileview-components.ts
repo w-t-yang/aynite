@@ -1,11 +1,11 @@
 import type React from 'react'
-import type { FileInfo } from '../../../lib/types/files'
-import { FileViewAudio } from '../fileview-audio/FileViewAudio'
-import { FileViewHtml } from '../fileview-html/FileViewHtml'
-import { FileViewImage } from '../fileview-image/FileViewImage'
-import { FileViewMarkdown } from '../fileview-markdown/FileViewMarkdown'
-import { FileViewPdf } from '../fileview-pdf/FileViewPdf'
-import { FileViewVideo } from '../fileview-video/FileViewVideo'
+import { FileViewAudio } from '../../renderer/views/fileview-audio/FileViewAudio'
+import { FileViewHtml } from '../../renderer/views/fileview-html/FileViewHtml'
+import { FileViewImage } from '../../renderer/views/fileview-image/FileViewImage'
+import { FileViewMarkdown } from '../../renderer/views/fileview-markdown/FileViewMarkdown'
+import { FileViewPdf } from '../../renderer/views/fileview-pdf/FileViewPdf'
+import { FileViewVideo } from '../../renderer/views/fileview-video/FileViewVideo'
+import type { FileInfo } from '../types/files'
 
 interface FileViewComponentProps {
   file: FileInfo

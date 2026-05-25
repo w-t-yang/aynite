@@ -73,8 +73,8 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     try {
       if (editorRef.current) {
         editorRef.current.style.caretColor = readOnly
-          ? 'rgba(161, 161, 170, 0.5)'
-          : '#fafafa'
+          ? 'color-mix(in srgb, var(--foreground) 50%, transparent)'
+          : 'var(--foreground)'
       }
     } catch {
       // Ignore — caret color is non-critical

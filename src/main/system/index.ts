@@ -16,11 +16,11 @@ import {
 } from '../../lib/path'
 import {
   createNewWindow,
+  getWinIdFromSender,
   sendToWindow,
   showOpenDialog,
   showSaveDialog,
 } from '../window'
-import { getWinIdFromSender } from '../window-state'
 import { getAvailableViews, getSystemFonts } from './logic'
 
 let clipboardPath: string | null = null

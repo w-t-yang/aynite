@@ -327,3 +327,15 @@ function setupUpdaterListeners() {
     broadcastAppEvent(AppEvents.UPDATE_DOWNLOADED, info)
   })
 }
+
+// ─── IPC Sender Resolution ────────────────────────────────────────────────
+
+/**
+ * Get the BrowserWindow ID from an IPC event's sender WebContents.
+ * This is the standard way to identify which window sent an IPC message.
+ * Lives here because only window.ts should import BrowserWindow.
+ */
+export function getWinIdFromSender(sender: Electron.WebContents): number {
+  const win = BrowserWindow.fromWebContents(sender)
+  return win?.id ?? -1
+}
