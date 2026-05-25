@@ -19,7 +19,17 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const api = {
       saveActiveTab: () => {}, // TODO
-      reload: () => window.location.reload(),
+      reload: () => {
+        const activeTile = document.querySelector('.tile.border-primary')
+        if (activeTile) {
+          const iframe = activeTile.querySelector(
+            'iframe',
+          ) as HTMLIFrameElement | null
+          if (iframe?.contentWindow) {
+            iframe.contentWindow.location.reload()
+          }
+        }
+      },
       toggleLeftPanel: () => {},
       toggleRightPanel: () => {},
       focusChat: () => {},

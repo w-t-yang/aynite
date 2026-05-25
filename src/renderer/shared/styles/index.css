@@ -511,3 +511,18 @@ pre[class*="language-"] {
 .token.entity {
   cursor: help;
 }
+
+/* ─── Search Match Highlighting ──────────────────────────────────── */
+
+mark.search-match {
+  background: color-mix(in srgb, var(--warning) 30%, transparent);
+  border-radius: 2px;
+  color: inherit;
+}
+
+mark.search-match-active {
+  background: color-mix(in srgb, var(--warning) 60%, transparent);
+  border-radius: 2px;
+  outline: 1px solid color-mix(in srgb, var(--warning) 50%, transparent);
+  color: inherit;
+}

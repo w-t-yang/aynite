@@ -144,9 +144,17 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
     return
   }
 
-  if (checkMatch(e, kb.app[AppOperation.REFRESH_APP])) {
+  if (checkMatch(e, kb.app[AppOperation.REFRESH_TILE])) {
     e.preventDefault()
-    globalApi.reload()
+    const activeTile = document.querySelector('.tile.border-primary')
+    if (activeTile) {
+      const iframe = activeTile.querySelector(
+        'iframe',
+      ) as HTMLIFrameElement | null
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.location.reload()
+      }
+    }
     return
   }
   if (checkMatch(e, kb.app[AppOperation.TOGGLE_LEFT_PANEL])) {
@@ -175,13 +183,8 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
     return
   }
 
-  // 2.5 Tab Refresh (Catch early to prevent browser reload)
-  if (
-    checkMatch(
-      e,
-      kb.view[ViewOperation.REFRESH] || kb.app[AppOperation.REFRESH_APP],
-    )
-  ) {
+  // 2.5 View Refresh (catch early to prevent browser reload)
+  if (checkMatch(e, kb.view[ViewOperation.REFRESH])) {
     e.preventDefault()
     if (activeTabId && tabApis.has(activeTabId)) {
       tabApis.get(activeTabId)?.refresh()

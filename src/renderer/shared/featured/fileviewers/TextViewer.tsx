@@ -1,6 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { FileInfo } from '../../../../lib/types/files'
-import { highlightCode } from '../../lib/syntax'
+import {
+  getSearchMatchLine,
+  highlightCode,
+  highlightWithSearch,
+} from '../../lib/syntax'
 import { cn } from '../../lib/utils'
 
 interface TextViewerProps {
@@ -9,6 +13,12 @@ interface TextViewerProps {
   extension?: string
   className?: string
   showLineNumbers?: boolean
+  /** Search query for highlighting matches */
+  searchQuery?: string
+  /** Index of the active (current) search match */
+  activeMatchIndex?: number
+  /** Called with total match count whenever search highlights are computed */
+  onSearchResult?: (total: number) => void
 }
 
 /**
@@ -21,14 +31,50 @@ export function TextViewer({
   extension,
   className,
   showLineNumbers = true,
+  searchQuery,
+  activeMatchIndex,
+  onSearchResult,
 }: TextViewerProps) {
   const effectiveExtension = extension || file?.extension || 'txt'
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const highlightedHtml = useMemo(() => {
-    return highlightCode(content, effectiveExtension)
-  }, [content, effectiveExtension])
+    return searchQuery
+      ? highlightWithSearch(
+          content,
+          effectiveExtension,
+          searchQuery,
+          activeMatchIndex,
+        )
+      : highlightCode(content, effectiveExtension)
+  }, [content, effectiveExtension, searchQuery, activeMatchIndex])
 
   const lines = useMemo(() => content.split('\n'), [content])
+
+  // Track match count
+  const totalMatches = useMemo(() => {
+    if (!searchQuery) return 0
+    const escaped = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(escaped, 'gi')
+    const matches = content.match(regex)
+    return matches?.length ?? 0
+  }, [content, searchQuery])
+
+  // Report match count
+  useEffect(() => {
+    onSearchResult?.(totalMatches)
+  }, [totalMatches, onSearchResult])
+
+  // Scroll to the active match
+  useEffect(() => {
+    if (!searchQuery || !scrollRef.current) return
+    const line = getSearchMatchLine(content, searchQuery, activeMatchIndex ?? 0)
+    if (line === null) return
+    const lineHeight = 24 // matches leading-relaxed
+    const _padding = 16
+    scrollRef.current.scrollTop =
+      line * lineHeight - scrollRef.current.clientHeight / 3
+  }, [content, searchQuery, activeMatchIndex])
 
   return (
     <div
@@ -47,7 +93,7 @@ export function TextViewer({
           ))}
         </div>
       )}
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={scrollRef} className="flex-1 overflow-auto p-4">
         <pre
           className="m-0 p-0 leading-relaxed selection:bg-primary/30"
           style={{

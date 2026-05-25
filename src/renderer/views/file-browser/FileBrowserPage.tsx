@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { MatchingView } from '../../../lib/types/file-browser'
 import type { FileInfo } from '../../../lib/types/files'
@@ -248,6 +249,29 @@ export function FileBrowserPage() {
 
   const [isEditing, setIsEditing] = useState(false)
 
+  // ─── Search Bar State ───────────────────────────────────────────────────
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0)
+  const [totalMatchCount, setTotalMatchCount] = useState(0)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Focus search input when shown
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [showSearch])
+
+  // Reset active match index when query changes
+  useEffect(() => {
+    setActiveMatchIndex(0)
+  }, [])
+
+  const handleSearchResult = useCallback((total: number) => {
+    setTotalMatchCount(total)
+  }, [])
+
   // ─── HTML Mode (rendered preview vs source view) ──────────────────────
   const [htmlMode, setHtmlMode] = useState(false)
 
@@ -326,6 +350,69 @@ export function FileBrowserPage() {
     setIsEditing(false)
   }, [])
 
+  // ─── Keyboard Shortcuts ───────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey
+
+      // Save: Ctrl+S / Cmd+S
+      if (isMod && e.key === 's') {
+        e.preventDefault()
+        if (isEditing) {
+          handleSave()
+        }
+        return
+      }
+
+      // Search: Ctrl+F / Cmd+F (only in edit mode)
+      if (isMod && e.key === 'f' && isEditing) {
+        e.preventDefault()
+        setShowSearch((prev) => !prev)
+        setSearchQuery('')
+        setActiveMatchIndex(0)
+        return
+      }
+
+      // Search navigation (only when search bar is open)
+      if (showSearch) {
+        // Next match: Ctrl+N
+        if (isMod && e.key === 'n') {
+          e.preventDefault()
+          setActiveMatchIndex((prev) =>
+            totalMatchCount > 0 ? (prev + 1) % totalMatchCount : 0,
+          )
+          return
+        }
+        // Previous match: Ctrl+P
+        if (isMod && e.key === 'p') {
+          e.preventDefault()
+          setActiveMatchIndex((prev) =>
+            totalMatchCount > 0
+              ? (prev - 1 + totalMatchCount) % totalMatchCount
+              : 0,
+          )
+          return
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isEditing, handleSave, showSearch, totalMatchCount])
+
+  // Close search on Escape (separate handler)
+  useEffect(() => {
+    if (!showSearch) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSearch(false)
+        setSearchQuery('')
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [showSearch])
+
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden">
       {activePath && (
@@ -338,6 +425,73 @@ export function FileBrowserPage() {
           onCloseAll={closeAll}
         />
       )}
+
+      {/* ─── Search Bar ──────────────────────────────────────────────── */}
+      {showSearch && activePath && (
+        <div className="shrink-0 bg-sidebar border-b border-border flex items-center gap-2 px-3 py-1.5 select-none">
+          <Search size={13} className="text-muted-foreground shrink-0" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Find in file…"
+            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/40"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setShowSearch(false)
+                setSearchQuery('')
+              }
+            }}
+          />
+          {searchQuery && (
+            <span className="text-[11px] text-muted-foreground/50 shrink-0">
+              {totalMatchCount > 0
+                ? `${activeMatchIndex + 1} of ${totalMatchCount} matches`
+                : 'No matches'}
+            </span>
+          )}
+
+          {totalMatchCount > 0 && (
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveMatchIndex(
+                    (prev) => (prev - 1 + totalMatchCount) % totalMatchCount,
+                  )
+                }
+                title="Previous match (Ctrl+P)"
+                className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              >
+                <ChevronUp size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveMatchIndex((prev) => (prev + 1) % totalMatchCount)
+                }
+                title="Next match (Ctrl+N)"
+                className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowSearch(false)
+              setSearchQuery('')
+            }}
+            className="text-muted-foreground/40 hover:text-muted-foreground transition-colors ml-0.5"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-hidden flex flex-col relative">
         <FileContent
           path={activePath}
@@ -349,6 +503,9 @@ export function FileBrowserPage() {
           htmlMode={htmlMode}
           onContentChange={setContent}
           activeView={activeView}
+          searchQuery={showSearch ? searchQuery : undefined}
+          activeMatchIndex={activeMatchIndex}
+          onSearchResult={handleSearchResult}
         />
       </div>
       {activePath && (

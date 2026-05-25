@@ -305,9 +305,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     (operation: string, payload?: unknown) => {
       // 1. Handle Global/Non-Layout Operations
       switch (operation) {
-        case 'REFRESH_APP':
-          window.location.reload()
+        case 'REFRESH_TILE': {
+          const activeTile = document.querySelector('.tile.border-primary')
+          if (activeTile) {
+            const iframe = activeTile.querySelector(
+              'iframe',
+            ) as HTMLIFrameElement | null
+            if (iframe?.contentWindow) {
+              iframe.contentWindow.location.reload()
+            }
+          }
           return
+        }
         case 'TOGGLE_LEFT_PANEL':
           // We could add state for panels here later
           console.log('[App] Toggle Left Panel')

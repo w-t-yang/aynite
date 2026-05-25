@@ -22,10 +22,8 @@ export const DEFAULT_KEYBINDINGS = {
       shift: true,
       key: 'arrowdown',
     },
-    [AppOperation.QUIT]: { ctrl: true, shift: true, key: 'q' },
-
     // Global & Navigation
-    [AppOperation.REFRESH_APP]: { ctrl: true, key: 'r' },
+    [AppOperation.REFRESH_TILE]: { ctrl: true, key: 'r' },
     [AppOperation.TOGGLE_LEFT_PANEL]: { ctrl: true, key: 'b' },
     [AppOperation.TOGGLE_RIGHT_PANEL]: { ctrl: true, key: 'i' },
     [AppOperation.FOCUS_CHAT]: { ctrl: true, key: 'l' },

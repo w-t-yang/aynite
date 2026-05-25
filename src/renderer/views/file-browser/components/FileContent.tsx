@@ -24,6 +24,12 @@ interface FileContentProps {
   onContentChange?: (content: string) => void
   /** Active view preview mode (null = default rendering) */
   activeView?: string | null
+  /** Search query for highlighting matches */
+  searchQuery?: string
+  /** Index of the active (current) search match */
+  activeMatchIndex?: number
+  /** Called with total match count */
+  onSearchResult?: (total: number) => void
 }
 
 export function FileContent({
@@ -36,6 +42,9 @@ export function FileContent({
   htmlMode = false,
   onContentChange,
   activeView = null,
+  searchQuery,
+  activeMatchIndex,
+  onSearchResult,
 }: FileContentProps) {
   const execOp = useAppOperation()
   const [baseContent, setBaseContent] = useState<string | null>(null)
@@ -141,6 +150,9 @@ export function FileContent({
           onChange={onContentChange || (() => {})}
           file={fileInfo}
           className="flex-1"
+          searchQuery={searchQuery}
+          activeMatchIndex={activeMatchIndex}
+          onSearchResult={onSearchResult}
         />
       )
     }
@@ -155,6 +167,9 @@ export function FileContent({
           onChange={onContentChange || (() => {})}
           file={fileInfo}
           className="flex-1"
+          searchQuery={searchQuery}
+          activeMatchIndex={activeMatchIndex}
+          onSearchResult={onSearchResult}
         />
       )
     }
@@ -171,7 +186,14 @@ export function FileContent({
       )
     }
     return (
-      <TextViewer content={content || ''} file={fileInfo} className="flex-1" />
+      <TextViewer
+        content={content || ''}
+        file={fileInfo}
+        className="flex-1"
+        searchQuery={searchQuery}
+        activeMatchIndex={activeMatchIndex}
+        onSearchResult={onSearchResult}
+      />
     )
   }
 
@@ -183,6 +205,9 @@ export function FileContent({
           onChange={onContentChange || (() => {})}
           file={fileInfo}
           className="flex-1"
+          searchQuery={searchQuery}
+          activeMatchIndex={activeMatchIndex}
+          onSearchResult={onSearchResult}
         />
       )
     }
@@ -202,7 +227,14 @@ export function FileContent({
       return <HtmlViewer file={fileInfo} content={content || undefined} />
     }
     return (
-      <TextViewer content={content || ''} file={fileInfo} className="flex-1" />
+      <TextViewer
+        content={content || ''}
+        file={fileInfo}
+        className="flex-1"
+        searchQuery={searchQuery}
+        activeMatchIndex={activeMatchIndex}
+        onSearchResult={onSearchResult}
+      />
     )
   }
 

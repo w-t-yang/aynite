@@ -1,8 +1,12 @@
 import type React from 'react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import Editor from 'react-simple-code-editor'
 import type { FileInfo } from '../../../../lib/types/files'
-import { highlightCode } from '../../lib/syntax'
+import {
+  getSearchMatchLine,
+  highlightCode,
+  highlightWithSearch,
+} from '../../lib/syntax'
 import { cn } from '../../lib/utils'
 
 interface TextEditorProps {
@@ -17,6 +21,12 @@ interface TextEditorProps {
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void
   textareaId?: string
   textareaRef?: React.RefObject<HTMLTextAreaElement>
+  /** Search query for highlighting matches */
+  searchQuery?: string
+  /** Index of the active (current) search match */
+  activeMatchIndex?: number
+  /** Called with total match count whenever search highlights are computed */
+  onSearchResult?: (total: number) => void
 }
 
 /**
@@ -34,9 +44,39 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   onScroll,
   textareaId,
   textareaRef,
+  searchQuery,
+  activeMatchIndex,
+  onSearchResult,
 }) => {
   const effectiveExtension = extension || file?.extension || 'txt'
   const lines = useMemo(() => content.split('\n'), [content])
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Track match count
+  const totalMatches = useMemo(() => {
+    if (!searchQuery) return 0
+    const escaped = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(escaped, 'gi')
+    const matches = content.match(regex)
+    const count = matches?.length ?? 0
+    return count
+  }, [content, searchQuery])
+
+  // Report match count
+  useEffect(() => {
+    onSearchResult?.(totalMatches)
+  }, [totalMatches, onSearchResult])
+
+  // Scroll to the active match
+  useEffect(() => {
+    if (!searchQuery || !scrollRef.current) return
+    const line = getSearchMatchLine(content, searchQuery, activeMatchIndex ?? 0)
+    if (line === null) return
+    const lineHeight = 24 // matches the leading-relaxed h-6 (1.5rem ≈ 24px)
+    const _padding = 16 // matches Editor padding
+    scrollRef.current.scrollTop =
+      line * lineHeight - scrollRef.current.clientHeight / 3
+  }, [content, searchQuery, activeMatchIndex])
 
   return (
     <div
@@ -55,11 +95,24 @@ export const TextEditor: React.FC<TextEditorProps> = ({
           ))}
         </div>
       )}
-      <div className="flex-1 overflow-auto relative h-full" onScroll={onScroll}>
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-auto relative h-full"
+        onScroll={onScroll}
+      >
         <Editor
           value={content}
           onValueChange={onChange}
-          highlight={(code) => highlightCode(code, effectiveExtension)}
+          highlight={(code) =>
+            searchQuery
+              ? highlightWithSearch(
+                  code,
+                  effectiveExtension,
+                  searchQuery,
+                  activeMatchIndex,
+                )
+              : highlightCode(code, effectiveExtension)
+          }
           padding={16}
           readOnly={readOnly}
           textareaId={textareaId}

@@ -3,5 +3,26 @@
   "description": "Multi-tab file editor with syntax highlighting",
   "author": "Aynite",
   "version": "1.0.0",
-  "key_bindings": {}
+  "key_bindings": {
+    "edit": {
+      "save": {
+        "ctrl": true,
+        "key": "s"
+      },
+      "search": {
+        "ctrl": true,
+        "key": "f"
+      }
+    },
+    "search": {
+      "next": {
+        "ctrl": true,
+        "key": "n"
+      },
+      "previous": {
+        "ctrl": true,
+        "key": "p"
+      }
+    }
+  }
 }

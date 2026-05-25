@@ -3,10 +3,12 @@
 ## chat view
 
 1. [] stream writing file, editing file for large files.
+2. [] improve the block display, e.g. grep function name, line break, etc.
 
 ## dataview
 
 1. [] improve dataviews in the future
+2. [] html view and markdown view (or maybe more views) should be moved to dataview
 
 ## agent
 
