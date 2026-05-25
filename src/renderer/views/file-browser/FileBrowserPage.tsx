@@ -6,6 +6,8 @@ import type {
   MatchingView,
 } from '../../../lib/types/file-browser'
 import type { FileInfo } from '../../../lib/types/files'
+import { Button } from '../../shared/basic/Button'
+import { Input } from '../../shared/basic/Input'
 import { useAppEvent } from '../ViewContext'
 import { FileContent } from './components/FileContent'
 import { StatusBar } from './components/StatusBar'
@@ -296,6 +298,8 @@ export function FileBrowserPage() {
   const [diffCurrentContent, setDiffCurrentContent] = useState<string | null>(
     null,
   )
+  // Incremented on git-status-changed to re-evaluate diff state for open files
+  const [_diffRefreshKey, setDiffRefreshKey] = useState(0)
 
   // Single effect that checks BOTH fileviews AND git diff status.
   // Ensures deterministic mode selection: Fileview > Diff > View (> Edit never auto)
@@ -384,6 +388,19 @@ export function FileBrowserPage() {
       cancelled = true
     }
   }, [activePath])
+
+  // Re-evaluate diff state when git status changes (e.g., after a commit).
+  // If the active file is no longer dirty in git, the mode-selection effect
+  // above will re-run and clear the diff view.
+  // Using ref + useCallback to avoid listener re-registration on every render.
+  const activePathRef = useRef(activePath)
+  activePathRef.current = activePath
+  const handleGitStatusChanged = useCallback((data: { root: string }) => {
+    if (data?.root && activePathRef.current?.startsWith(data.root)) {
+      setDiffRefreshKey((prev) => prev + 1)
+    }
+  }, [])
+  useAppEvent('git-status-changed', handleGitStatusChanged)
 
   const handleSelectFileview = useCallback((view: string | null) => {
     setActiveFileview(view)
@@ -541,25 +558,28 @@ export function FileBrowserPage() {
       {showSearch && activePath && (
         <div className="shrink-0 bg-sidebar border-b border-border flex items-center gap-2 px-3 py-1.5 select-none">
           <Search size={13} className="text-muted-foreground shrink-0" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Find in file…"
-            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/40"
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                setShowSearch(false)
-                setSearchQuery('')
-              } else if (e.key === 'Enter') {
-                e.preventDefault()
-                setActiveMatchIndex((prev) =>
-                  totalMatchCount > 0 ? (prev + 1) % totalMatchCount : 0,
-                )
-              }
-            }}
-          />
+          <div className="flex-1 min-w-0">
+            <Input
+              ref={searchInputRef}
+              unstyled
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Find in file…"
+              className="w-full text-sm text-foreground placeholder:text-muted-foreground/40"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setShowSearch(false)
+                  setSearchQuery('')
+                } else if (e.key === 'Enter') {
+                  e.preventDefault()
+                  setActiveMatchIndex((prev) =>
+                    totalMatchCount > 0 ? (prev + 1) % totalMatchCount : 0,
+                  )
+                }
+              }}
+            />
+          </div>
           {searchQuery && (
             <span className="text-[11px] text-muted-foreground/50 shrink-0">
               {totalMatchCount > 0
@@ -570,7 +590,9 @@ export function FileBrowserPage() {
 
           {totalMatchCount > 0 && (
             <div className="flex items-center gap-0.5">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 type="button"
                 onClick={() =>
                   setActiveMatchIndex(
@@ -578,33 +600,37 @@ export function FileBrowserPage() {
                   )
                 }
                 title="Previous match (Ctrl+P)"
-                className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="p-0.5 size-auto"
               >
                 <ChevronUp size={14} />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 type="button"
                 onClick={() =>
                   setActiveMatchIndex((prev) => (prev + 1) % totalMatchCount)
                 }
                 title="Next match (Ctrl+N)"
-                className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="p-0.5 size-auto"
               >
                 <ChevronDown size={14} />
-              </button>
+              </Button>
             </div>
           )}
 
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             type="button"
             onClick={() => {
               setShowSearch(false)
               setSearchQuery('')
             }}
-            className="text-muted-foreground/40 hover:text-muted-foreground transition-colors ml-0.5"
+            className="ml-0.5"
           >
             <X size={13} />
-          </button>
+          </Button>
         </div>
       )}
 

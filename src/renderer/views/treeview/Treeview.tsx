@@ -585,54 +585,58 @@ export function Treeview() {
         onContextMenu={handleContainerContextMenu}
       >
         {treeData.length > 0 ? (
-          changesOnly ? (
-            <GitDiffView
-              folders={treeData.map((n) => n.id)}
-              onSelectFile={(path) =>
-                onSelectFile({
-                  name: path.split('/').pop() || path,
-                  isDirectory: false,
-                  path,
-                })
-              }
-            />
-          ) : (
-            <Tree
-              ref={treeRef}
-              data={treeData}
-              width="100%"
-              height={treeHeight - 16}
-              indent={12}
-              rowHeight={28}
-              openByDefault={false}
-              onMove={onMove}
-              onToggle={handleToggle}
-              className="scrollbar-gutter-stable"
-              disableDrop={({ parentNode }) => {
-                if (
-                  !parentNode ||
-                  parentNode.isInternal ||
-                  parentNode.level === -1
-                )
-                  return false
-                return !parentNode.data?.isDirectory
-              }}
-            >
-              {(props) => (
-                <NodeRenderer
-                  {...props}
-                  onSelectFile={onSelectFile}
-                  setContextMenu={setContextMenu}
-                  dirtyFiles={[]}
-                  activeFilePath={activeFilePath}
-                  gitStatuses={gitStatuses}
-                  gitRoots={gitRoots}
-                  diffStats={{}}
-                  changesOnly={false}
-                />
-              )}
-            </Tree>
-          )
+          <div className="relative h-full">
+            {/* Keep Tree mounted at all times to preserve expand/collapse state */}
+            <div className={changesOnly ? 'hidden' : 'h-full'}>
+              <Tree
+                ref={treeRef}
+                data={treeData}
+                width="100%"
+                height={treeHeight - 16}
+                indent={12}
+                rowHeight={28}
+                openByDefault={false}
+                onMove={onMove}
+                onToggle={handleToggle}
+                className="scrollbar-gutter-stable"
+                disableDrop={({ parentNode }) => {
+                  if (
+                    !parentNode ||
+                    parentNode.isInternal ||
+                    parentNode.level === -1
+                  )
+                    return false
+                  return !parentNode.data?.isDirectory
+                }}
+              >
+                {(props) => (
+                  <NodeRenderer
+                    {...props}
+                    onSelectFile={onSelectFile}
+                    setContextMenu={setContextMenu}
+                    dirtyFiles={[]}
+                    activeFilePath={activeFilePath}
+                    gitStatuses={gitStatuses}
+                    gitRoots={gitRoots}
+                    diffStats={{}}
+                    changesOnly={false}
+                  />
+                )}
+              </Tree>
+            </div>
+            <div className={changesOnly ? 'h-full' : 'hidden'}>
+              <GitDiffView
+                folders={treeData.map((n) => n.id)}
+                onSelectFile={(path) =>
+                  onSelectFile({
+                    name: path.split('/').pop() || path,
+                    isDirectory: false,
+                    path,
+                  })
+                }
+              />
+            </div>
+          </div>
         ) : (
           <div className="p-4 text-xs text-muted-foreground flex flex-col gap-2">
             <Button
