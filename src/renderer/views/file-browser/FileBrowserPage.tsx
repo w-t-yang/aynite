@@ -300,28 +300,53 @@ export function FileBrowserPage() {
   )
   // Incremented on git-status-changed to re-evaluate diff state for open files
   const [_diffRefreshKey, setDiffRefreshKey] = useState(0)
+  // Tracks whether the user has manually chosen a mode (edit/diff/view/fileview).
+  // When true, the mode-selection effect's async block won't override the user's choice.
+  const userModeRef = useRef(false)
 
   // Single effect that checks BOTH fileviews AND git diff status.
-  // Ensures deterministic mode selection: Fileview > Diff > View (> Edit never auto)
+  // Ensures deterministic mode selection: Fileview > Diff > View (> Edit never auto).
+  // NOTE: Async block can race with user clicking Edit in StatusBar.
+  // If userModeRef is set (user manually chose a mode), the async block
+  // only updates metadata (hasDiff/diffContent) but does NOT override mode.
   useEffect(() => {
-    // Reset ALL mode states
-    setIsEditing(false)
-    setActiveFileview(null)
-    setActiveView(null)
-    setMatchedFileviews([])
-    setHasDiff(false)
-    setShowDiff(false)
-    setDiffHeadContent(null)
-    setDiffCurrentContent(null)
+    const prevActivePath = activePathRef.current
+
+    // Reset userMode when a new file is opened (not on diffRefreshKey)
+    if (activePath !== prevActivePath) {
+      userModeRef.current = false
+    }
+
+    // Only reset mode states if user hasn't manually overridden
+    // OR if it's a new file (userMode was just reset above)
+    if (!userModeRef.current) {
+      setIsEditing(false)
+      setActiveFileview(null)
+      setActiveView(null)
+      setMatchedFileviews([])
+      setHasDiff(false)
+      setShowDiff(false)
+      setDiffHeadContent(null)
+      setDiffCurrentContent(null)
+    } else {
+      // Even with user override, always reset diff metadata before refetch
+      setHasDiff(false)
+      setDiffHeadContent(null)
+      setDiffCurrentContent(null)
+    }
 
     if (!activePath) {
-      setIsViewOnly(true)
+      if (!userModeRef.current) {
+        setIsViewOnly(true)
+      }
       return
     }
 
     const ext = activePath.split('.').pop()?.toLowerCase()
     if (!ext) {
-      setIsViewOnly(true)
+      if (!userModeRef.current) {
+        setIsViewOnly(true)
+      }
       return
     }
 
@@ -360,28 +385,29 @@ export function FileBrowserPage() {
 
       if (cancelled) return
 
-      // 3. Set all states at once — deterministic priority
+      // 3. Always update fileview matches and diff metadata
+      // (needed for StatusBar button display even when user overrode mode)
       setMatchedFileviews(matches)
-
-      if (matches.length > 0) {
-        // Fileview found → show fileview mode
-        setActiveFileview(matches[0].view)
-        setHasDiff(!!diffResult)
-        if (diffResult) {
-          setDiffHeadContent(diffResult.head)
-          setDiffCurrentContent(diffResult.current)
-        }
-        setIsViewOnly(false)
-      } else if (diffResult) {
-        // No fileview but diff available → show diff mode
+      if (diffResult) {
         setHasDiff(true)
-        setShowDiff(true)
         setDiffHeadContent(diffResult.head)
         setDiffCurrentContent(diffResult.current)
-        setIsViewOnly(false)
-      } else {
-        // No fileview, no diff → view mode
-        setIsViewOnly(true)
+      }
+
+      // 4. Auto-select mode ONLY if user hasn't manually chosen one
+      if (!userModeRef.current) {
+        if (matches.length > 0) {
+          // Fileview found → show fileview mode
+          setActiveFileview(matches[0].view)
+          setIsViewOnly(false)
+        } else if (diffResult) {
+          // No fileview but diff available → show diff mode
+          setShowDiff(true)
+          setIsViewOnly(false)
+        } else {
+          // No fileview, no diff → view mode
+          setIsViewOnly(true)
+        }
       }
     })()
     return () => {
@@ -403,6 +429,7 @@ export function FileBrowserPage() {
   useAppEvent('git-status-changed', handleGitStatusChanged)
 
   const handleSelectFileview = useCallback((view: string | null) => {
+    userModeRef.current = true
     setActiveFileview(view)
     setActiveView(null)
     setShowDiff(false)
@@ -415,6 +442,7 @@ export function FileBrowserPage() {
   }, [])
 
   const handleShowDiff = useCallback(() => {
+    userModeRef.current = true
     setShowDiff(true)
     setActiveFileview(null)
     setActiveView(null)
@@ -458,6 +486,7 @@ export function FileBrowserPage() {
   }, [activePath, fileInfo])
 
   const handleSelectView = useCallback((viewName: string | null) => {
+    userModeRef.current = true
     setActiveView(viewName)
     setActiveFileview(null)
     setShowDiff(false)
@@ -465,6 +494,13 @@ export function FileBrowserPage() {
       setIsEditing(false)
       setIsViewOnly(false)
     }
+  }, [])
+
+  // Wrap setIsEditing to also flag userModeRef — prevents the mode-selection
+  // effect's async block from overriding the user's choice.
+  const handleSetEditing = useCallback((val: boolean) => {
+    if (val) userModeRef.current = true
+    setIsEditing(val)
   }, [])
 
   const handleSave = useCallback(async () => {
@@ -658,7 +694,7 @@ export function FileBrowserPage() {
       {activePath && (
         <StatusBar
           isEditing={isEditing}
-          setIsEditing={setIsEditing}
+          setIsEditing={handleSetEditing}
           isViewOnly={isViewOnly}
           setIsViewOnly={setIsViewOnly}
           showDiff={showDiff}
