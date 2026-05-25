@@ -3,8 +3,8 @@
   - [x] ollama connection
   - [x] gemini connection
   - [x] deepseek connection
-  - [] claude
-  - [] openai
+  - [x] claude
+  - [x] openai
   - [] other api key connections
 - Key binding
   - [x] basics
@@ -13,18 +13,18 @@
 ## Agent
 - [x] calling tools
 - [x] tag files and folders
-- [] artifact files, e.g. tasks, plans, temporary scripts, etc.
-- [] how to access files? system prompt, memory, artifacts?
-- [] memory
-- [] plan
+- [x] artifact files, e.g. tasks, plans, temporary scripts, etc.
+- [x] how to access files? system prompt, memory, artifacts?
+- [x] memory
+- [x] plan
 - [] tools (include skills and tasks)?
 - [] advanced agent features
 - [] rag
 
 ## git
-- []treeview
-- []file state
-- []view diff
+- [x]treeview
+- [x]file state
+- [x]view diff
 - []other git functions
 
 ## Editor
@@ -71,23 +71,24 @@
 ### Files
 - [] Notes, knowlege base, memory
 - [] Pdf to markdown - using the MS open source project in command
-- [] Mindmap
+- [x] Mindmap
 - [] Video
 - [] Image
 - [] Slides - nodejs, slides to video
 - [] Spreadsheet, tables
 
 ### Data processing and viewing
-- [] Stock - Trading view
+- [x] Stock - Trading view
 
 ### Integration
-- [] Rss
+- [x] Rss
 - [] Instagram
 - [] Email
 - [] Slack, discord
 - [] Googe drive
 - [] Figma
 - [] NotebookLM
+- [x] Spotify
 
 
 
