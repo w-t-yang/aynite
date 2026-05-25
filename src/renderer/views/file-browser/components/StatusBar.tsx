@@ -60,17 +60,17 @@ export function StatusBar({
   const isPdf = fileInfo?.extension?.toLowerCase() === 'pdf'
 
   const handleView = () => {
-    setIsEditing(false)
-    setIsViewOnly(true)
     onSelectFileview?.(null)
     onSelectView?.(null)
+    setIsViewOnly(true)
+    setIsEditing(false)
   }
 
   const handleEdit = () => {
-    setIsEditing(true)
-    setIsViewOnly(false)
     onSelectFileview?.(null)
     onSelectView?.(null)
+    setIsEditing(true)
+    setIsViewOnly(false)
   }
 
   return (
@@ -85,8 +85,6 @@ export function StatusBar({
               type="button"
               onClick={() => {
                 onSelectFileview?.(null)
-                setIsEditing(false)
-                setIsViewOnly(false)
                 onSelectView?.(view.name)
               }}
               title={view.config.description}
@@ -113,9 +111,7 @@ export function StatusBar({
               type="button"
               onClick={() => {
                 onSelectFileview?.(fv.view)
-                setIsEditing(false)
-                setIsViewOnly(false)
-                onSelectView?.(null)
+                // Don't call onSelectView — it would reset activeFileview
               }}
               title={fv.config.description}
               className={cn(

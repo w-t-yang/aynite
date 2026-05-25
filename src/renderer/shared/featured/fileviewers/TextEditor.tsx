@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import Editor from 'react-simple-code-editor'
 import type { FileInfo } from '../../../../lib/types/files'
 import {
@@ -52,6 +52,20 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   const effectiveExtension = extension || file?.extension || 'txt'
   const lines = useMemo(() => content.split('\n'), [content])
   const scrollRef = useRef<HTMLDivElement>(null)
+  const lineNumbersRef = useRef<HTMLDivElement>(null)
+
+  // Sync line numbers scroll with content scroll
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (lineNumbersRef.current) {
+        lineNumbersRef.current.scrollTop = (
+          e.target as HTMLDivElement
+        ).scrollTop
+      }
+      onScroll?.(e)
+    },
+    [onScroll],
+  )
 
   // Track match count
   const totalMatches = useMemo(() => {
@@ -73,11 +87,18 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     if (!searchQuery || !scrollRef.current) return
     const line = getSearchMatchLine(content, searchQuery, activeMatchIndex ?? 0)
     if (line === null) return
-    const lineHeight = 24 // matches the leading-relaxed h-6 (1.5rem ≈ 24px)
-    const _padding = 16 // matches Editor padding
+    const lineHeight = 24
     scrollRef.current.scrollTop =
       line * lineHeight - scrollRef.current.clientHeight / 3
   }, [content, searchQuery, activeMatchIndex])
+
+  // Set caret color directly on the textarea DOM element
+  useEffect(() => {
+    const el = textareaRef?.current
+    if (el) {
+      el.style.caretColor = readOnly ? 'rgba(161, 161, 170, 0.5)' : '#fafafa'
+    }
+  }, [readOnly, textareaRef])
 
   return (
     <div
@@ -87,7 +108,11 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       )}
     >
       {showLineNumbers && (
-        <div className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-40 overflow-hidden select-none">
+        <div
+          ref={lineNumbersRef}
+          className="w-12 shrink-0 bg-sidebar border-r border-border text-right pr-2 py-4 text-muted-foreground opacity-40 overflow-hidden select-none"
+          style={{ overflowY: 'hidden' }}
+        >
           {lines.map((_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: Line numbers are stable
             <div key={i + 1} className="leading-relaxed h-6">
@@ -99,7 +124,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       <div
         ref={scrollRef}
         className="flex-1 overflow-auto relative h-full"
-        onScroll={onScroll}
+        onScroll={handleScroll}
       >
         <Editor
           value={content}
@@ -134,7 +159,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             fontFamily: '"Fira Code", monospace',
             minHeight: '100%',
           }}
-          textareaClassName="outline-none focus:ring-0 !caret-primary"
+          textareaClassName="outline-none focus:ring-0"
           preClassName="selection:bg-primary/30"
         />
       </div>

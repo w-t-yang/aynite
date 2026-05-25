@@ -327,9 +327,13 @@ export function FileBrowserPage() {
 
   const handleSelectFileview = useCallback((view: string | null) => {
     setActiveFileview(view)
+    setActiveView(null)
     if (view !== null) {
       setIsEditing(false)
       setIsViewOnly(false)
+    } else {
+      // Switching to no fileview → default to view mode
+      setIsViewOnly(true)
     }
   }, [])
 
@@ -407,8 +411,8 @@ export function FileBrowserPage() {
         return
       }
 
-      // Search: Ctrl+F / Cmd+F (only in edit mode)
-      if (isMod && e.key === 'f' && isEditing) {
+      // Search: Ctrl+F / Cmd+F (works in both view and edit mode)
+      if (isMod && e.key === 'f') {
         e.preventDefault()
         setShowSearch((prev) => !prev)
         setSearchQuery('')
@@ -484,6 +488,11 @@ export function FileBrowserPage() {
               if (e.key === 'Escape') {
                 setShowSearch(false)
                 setSearchQuery('')
+              } else if (e.key === 'Enter') {
+                e.preventDefault()
+                setActiveMatchIndex((prev) =>
+                  totalMatchCount > 0 ? (prev + 1) % totalMatchCount : 0,
+                )
               }
             }}
           />
