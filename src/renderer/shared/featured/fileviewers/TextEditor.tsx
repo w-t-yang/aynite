@@ -30,7 +30,8 @@ interface TextEditorProps {
 }
 
 /**
- * TextEditor provides a themed, syntax-highlighted editor that matches the look of TextViewer.
+ * TextEditor provides a themed, syntax-highlighted code editor.
+ * Used by both Edit mode (editable) and View mode (readOnly).
  */
 export const TextEditor: React.FC<TextEditorProps> = ({
   content,

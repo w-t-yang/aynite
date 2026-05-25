@@ -130,27 +130,29 @@ export function StatusBar({
             </button>
           ))}
 
-          {matchedFileviews.length > 0 && (
+          {matchedFileviews.length > 0 && isText && (
             <div className="w-px h-3 bg-border/30" />
           )}
 
-          {/* View mode (read-only text editor) */}
-          <button
-            type="button"
-            onClick={handleView}
-            className={cn(
-              'flex items-center gap-1 px-2 py-0.5 transition-colors',
-              isViewOnly &&
-                !isEditing &&
-                activeFileview === null &&
-                activeView === null
-                ? 'text-foreground/80'
-                : 'text-muted-foreground/40 hover:text-muted-foreground/70',
-            )}
-          >
-            <Eye size={11} />
-            <span>View</span>
-          </button>
+          {/* View mode (read-only text editor) — only for text files */}
+          {isText && (
+            <button
+              type="button"
+              onClick={handleView}
+              className={cn(
+                'flex items-center gap-1 px-2 py-0.5 transition-colors',
+                isViewOnly &&
+                  !isEditing &&
+                  activeFileview === null &&
+                  activeView === null
+                  ? 'text-foreground/80'
+                  : 'text-muted-foreground/40 hover:text-muted-foreground/70',
+              )}
+            >
+              <Eye size={11} />
+              <span>View</span>
+            </button>
+          )}
 
           {/* Edit mode — only for text files */}
           {isText && !isPdf && (

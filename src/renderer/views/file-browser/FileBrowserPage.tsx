@@ -4,8 +4,13 @@ import type { MatchingView } from '../../../lib/types/file-browser'
 import type { FileInfo } from '../../../lib/types/files'
 import { useAppEvent } from '../ViewContext'
 import { FileContent } from './components/FileContent'
+import type { FileviewConfig } from './components/StatusBar'
 import { StatusBar } from './components/StatusBar'
 import { TabBar } from './components/TabBar'
+import { fileviewComponents } from './fileview-registry'
+
+// Known fileview directory names (used to load their configs for extension matching)
+const FILEVIEW_NAMES = Object.keys(fileviewComponents)
 
 interface Tab {
   name: string

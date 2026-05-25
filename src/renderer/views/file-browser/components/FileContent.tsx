@@ -5,6 +5,7 @@ import type { FileInfo } from '../../../../lib/types/files'
 import { Button } from '../../../shared/basic/Button'
 import { DiffViewer } from '../../../shared/featured/fileviewers/DiffViewer'
 import { TextEditor } from '../../../shared/featured/fileviewers/TextEditor'
+import { UnsupportedViewer } from '../../../shared/featured/fileviewers/UnsupportedViewer'
 import { useAppOperation } from '../../ViewContext'
 import { fileviewComponents } from '../fileview-registry'
 import { ViewPreview } from './ViewPreview'
@@ -177,7 +178,12 @@ export function FileContent({
     )
   }
 
-  // 4. View mode (read-only TextEditor — same appearance as edit)
+  // 4. Non-text file with no matching fileview → unsupported
+  if (!isText && !activeFileview) {
+    return <UnsupportedViewer file={fileInfo} reason="binary" />
+  }
+
+  // 5. View mode (read-only TextEditor)
   return (
     <TextEditor
       content={content || ''}
