@@ -4,8 +4,10 @@ import { TOOL_METADATA } from '../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../lib/constants/messages'
 import {
   getAyniteDir,
+  getWorkspaceDataPath,
   getWorkspaceMemoryPath,
   getWorkspaceTaskPath,
+  readJson,
   secureEditFile,
   secureGetFileTree,
   secureGlobSearch,
@@ -475,11 +477,26 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.get_workspace_info.description,
       inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),
       execute: async () => {
+        // Read folders directly from the workspace config file
+        // instead of relying on the potentially stale context.
+        let workspaceFolders = context.workspaceFolders
+        const workspaceName = context.workspaceName
+        if (workspaceName) {
+          try {
+            const configPath = getWorkspaceDataPath(workspaceName)
+            const config = await readJson<{ folders?: string[] }>(configPath)
+            if (config?.folders) {
+              workspaceFolders = config.folders
+            }
+          } catch {
+            // fallback to context value
+          }
+        }
         return {
-          workspaceFolders: context.workspaceFolders,
+          workspaceFolders,
           configDir: getAyniteDir(),
           activeFile: context.activeFile || null,
-          workspaceName: context.workspaceName || null,
+          workspaceName: workspaceName || null,
         }
       },
     },
