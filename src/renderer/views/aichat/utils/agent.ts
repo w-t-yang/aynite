@@ -16,6 +16,7 @@ export async function runAgentLoop(
     requestId: string,
     handler: (part: any) => void,
   ) => () => void,
+  workspaceName?: string,
 ): Promise<UIMessage[]> {
   const loopMessages: UIMessage[] = []
   let reasoningAccum = ''
@@ -77,6 +78,7 @@ export async function runAgentLoop(
         },
         workspaceFolders,
         activeFile,
+        workspaceName,
       })
       .then((res: { requestId?: string }) => {
         const requestId = res.requestId

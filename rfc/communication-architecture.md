@@ -38,7 +38,11 @@ The application is split into three distinct layers, each with a specific respon
  │  ┌────▼─────────────▼──────────────▼─────────────▼──────────────▼─────┐ │
  │  │                    window.ts (Broadcast Center)                     │ │
  │  │                                                                     │ │
- │  │  sendAppEvent(type, data)       sendAppOperation(op, data)          │ │
+ │  │  sendToWindow(winId, type, data)   (targeted to one window)         │ │
+ │  │  broadcastAppEvent(type, data)     (sent to ALL windows)            │ │
+ │  │  sendOperationToWindow(winId, op)  (targeted operation)             │ │
+ │  │  sendAppEvent(type, data)          (legacy, first window only)      │ │
+ │  │  sendAppOperation(op, data)        (legacy, first window only)      │ │
  │  └─────────────────────┬─────────────────────────────┬─────────────────┘ │
  └────────────────────────┼─────────────────────────────┼───────────────────┘
                           │                             │
@@ -106,11 +110,19 @@ The application is split into three distinct layers, each with a specific respon
 
 There are exactly **three** communication primitives in the system:
 
-### 1. App Event — Broadcast (`aynite:app-event`)
+### 1. App Event — Window-Scoped or Broadcast (`aynite:app-event`)
 
-A push notification from the main process that flows through the renderer and is broadcast to
-**all** iframe views. Used for system-wide state changes: theme changes, file changes,
-workspace switches, AI deltas, updates, etc.
+A push notification from the main process that flows through the renderer and is relayed to
+iframe views. Events can be **window-scoped** (targeting one specific Electron window) or
+**broadcast** (sent to all windows).
+
+**Which to use:**
+
+| Scope | Function | When |
+|-------|----------|------|
+| **Window-scoped** | `sendToWindow(winId, type, data)` | Events related to a specific window's workspace: `ACTIVE_FILE_CHANGED`, `AI_CHAT_DELTA`, `ACTIVE_SESSION_CHANGED`, `TILE_ACTIVATED`, `WINDOW_*` states |
+| **Broadcast** | `broadcastAppEvent(type, data)` | Global events affecting all windows: `THEME_CHANGED`, `CONFIG_CHANGED`, `FS_CHANGE`, `GIT_STATUS_CHANGED`, `UPDATE_*`, `CONFIG_ERROR`, `WORKSPACE_CHANGED` (deletion) |
+| **Legacy** | `sendAppEvent(type, data)` | Deprecated — sends to first window only. Keep for backward compat but prefer scoped variants. |
 
 ```
  ┌──────────┐      ┌──────────────┐      ┌─────────────┐      ┌──────────────┐
@@ -119,7 +131,7 @@ workspace switches, AI deltas, updates, etc.
  │  .ts     │      │              │      │             │      │              │
  └────┬─────┘      └──────┬───────┘      └──────┬──────┘      └──────┬───────┘
       │                   │                      │                   │
-      │ sendAppEvent      │                      │                   │
+      │ sendToWindow(win) │  or broadcastAppEvent()                  │
       │ (type, data)      │                      │                   │
       │──────────────────►│                      │                   │
       │                   │ webContents.send     │                   │
@@ -139,7 +151,15 @@ workspace switches, AI deltas, updates, etc.
       │                   │                      │                   │ (type, cb)
 ```
 
-**Source:** `src/main/window.ts` → `sendAppEvent(type, data)`  
+**Resolution:** A `WindowSession` registry (`src/main/window-state.ts`) maps `BrowserWindow.id`
+to the window's selected workspace. IPC handlers use `event.sender` → `getWinIdFromSender()`
+to identify the calling window.
+
+**Source functions** (defined in `src/main/window.ts`):
+- `sendToWindow(winId, type, data)` — Send event to a specific window
+- `broadcastAppEvent(type, data)` — Send to ALL registered windows
+- `sendAppEvent(type, data)` — Legacy, sends to first window only
+
 **Consumed by:** `src/renderer/src/AppContext.tsx` → `onAppEvent` listener  
 **Relayed to:** All iframes via `contentWindow.postMessage({ type: 'aynite:{type}', data }, '*')`  
 **Received by:** `src/renderer/views/ViewContext.tsx` → `useAppEvent(type, callback)`  
@@ -265,26 +285,30 @@ travels from the caller to the main process and back, bypassing the Hub entirely
 
 ## Concrete Flow Examples
 
-### Example 1: Treeview opens a file
+### Example 1: Treeview opens a file (single window)
 
 A user clicks a file in the treeview. The treeview calls the main process to open the file.
-The main process updates its state, then broadcasts an event so other views (like a file
-browser tab) react accordingly:
+The main process updates the calling **window's** workspace state, then sends a **window-scoped**
+event so other views in the same window react:
 
 ```
 Treeview                     Main Process                  AppContext              FileBrowser
  (iframe)                    (src/main/)                   (Hub)                    (iframe)
     │                            │                            │                       │
     │  window.aynite            │                            │                       │
-    │  .openFile(path)          │                            │                       │
+    │  .setConfig(              │                            │                       │
+    │   'activeFile', path)     │                            │                       │
     │──────────────────────────►│                            │                       │
-    │                           │  Save activeFile           │                       │
-    │                           │  to config                 │                       │
-    │                           │  Open file in OS           │                       │
+    │                           │  getWinIdFromSender()      │                       │
+    │                           │  → win A                   │                       │
+    │                           │  getWindowWorkspace(win A) │                       │
+    │                           │  → "Project X"             │                       │
+    │                           │  saveWorkspaceState("X",   │                       │
+    │                           │    { activeFile: path })   │                       │
     │                           │                            │                       │
-    │                           │  sendAppEvent              │                       │
-    │                           │  (ACTIVE_FILE_CHANGED,     │                       │
-    │                           │   { path })                │                       │
+    │                           │  sendToWindow(             │                       │
+    │                           │   win A, ACTIVE_FILE_      │                       │
+    │                           │   CHANGED, { path })       │                       │
     │                           │───────────────────────────►│                       │
     │                           │                            │  Update state         │
     │                           │                            │  setActiveFile(path)  │
@@ -308,6 +332,14 @@ Treeview                     Main Process                  AppContext           
     │                           │                            │                       │  Open tab with
     │                           │                            │                       │  content
 ```
+
+**Key difference:** The main process identifies **which window** made the request via
+`getWinIdFromSender(event.sender)`, resolves that window's workspace via `getWindowWorkspace(winId)`,
+and sends the result event **only** to that window via `sendToWindow(winId, ...)`. Other
+windows with different workspaces remain unaffected.
+
+Global events (theme changes, file system changes, updates) use `broadcastAppEvent()` instead,
+which sends to all registered windows.
 
 ### Example 2: FileBrowser switches active tab
 
@@ -374,7 +406,8 @@ Keyboard                      Main Process                  AppContext
 
 | Component | File | Key Export |
 |-----------|------|------------|
-| Broadcast Center | `src/main/window.ts` | `sendAppEvent()`, `sendAppOperation()` |
+| Broadcast Center | `src/main/window.ts` | `sendToWindow()`, `sendOperationToWindow()`, `broadcastAppEvent()`, `sendAppEvent()` (legacy), `sendAppOperation()` (legacy) |
+| Window State Registry | `src/main/window-state.ts` | `registerWindow()`, `unregisterWindow()`, `getWindowWorkspace()`, `setWindowWorkspace()`, `getWinIdFromSender()`, `onWindowClose()` |
 | IPC Channel Constants | `src/lib/constants/ipc-channels.ts` | `AppEventChannel`, `AppOperationChannel` |
 | Event/Operation Enums | `src/lib/constants/app.ts` | `AppEvents`, `AppOperation`, `ViewOperation` |
 | Preload Bridge | `src/preload/index.ts` | `contextBridge` → `window.aynite` |
@@ -422,28 +455,71 @@ Beyond what the audit enforces, the following conventions must be followed:
 
 ## Summary
 
+Events can be **window-scoped** (targeted to one window) or **broadcast** (to all windows):
+
 ```
-                  sendAppEvent()           onAppEvent()
-  Main Process ──────────────────► Preload ───────────► AppContext (Hub)
-  (data source)                   (IPC)       │            │
-       ▲                                      │       postMessage
-       │                                      │            │
-       │         invoke/handle                │       aynite:{type}
-       │◄─────────────────────────────────────┤            │
-       │                                      │            ▼
-       │                            useAppEvent()    View Spokes
-       │                            (type, cb)◄─────── (iframes)
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                      WINDOW-SCOPED EVENTS                               │
+  │                                                                         │
+  │  sendToWindow(winId, type, data)                                        │
+  │  ──→ Only the specified Electron window receives the event              │
+  │                                                                         │
+  │  Used for: ACTIVE_FILE_CHANGED, AI_CHAT_DELTA,                         │
+  │            ACTIVE_SESSION_CHANGED, TILE_ACTIVATED,                      │
+  │            WORKSPACE_CHANGED (folder ops)                               │
+  └─────────────────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                      BROADCAST EVENTS                                   │
+  │                                                                         │
+  │  broadcastAppEvent(type, data)                                          │
+  │  ──→ ALL registered Electron windows receive the event                  │
+  │                                                                         │
+  │  Used for: THEME_CHANGED, FS_CHANGE, GIT_STATUS_CHANGED,              │
+  │            UPDATE_*, CONFIG_CHANGED, CONFIG_ERROR                      │
+  └─────────────────────────────────────────────────────────────────────────┘
+```
+
+Full control flow:
+
+```
+                    sendToWindow(winId) or           onAppEvent()
+                    broadcastAppEvent()
+  Main Process ─────────────────────────────────► Preload ───────────► AppContext (Hub)
+  (data source,                                 (IPC)       │            │
+   window-state.ts)                                          │       postMessage
+       ▲                                                    │            │
+       │         invoke/handle                              │       aynite:{type}
+       │◄───────────────────────────────────────────────────┤            │
+       │                                                    │            ▼
+       │                                          useAppEvent()    View Spokes
+       │                                          (type, cb)◄─────── (iframes)
        │
-       │   sendAppOperation()      onAppOperation()   executeAppOperation()
-       ├─────────────────────────► Preload ──────────► AppContext (Hub)
-       │                                                    │
-       │                                                    │ layout/state only
-       │                                                    ▼ (no iframe)
-       │                                            Tile System
+       │   sendOperationToWindow(winId)   onAppOperation()   executeAppOperation()
+       ├─────────────────────────────────► Preload ──────────► AppContext (Hub)
+       │                                                          │
+       │                                                          │ layout/state only
+       │                                                          ▼ (no iframe)
+       │                                                  Tile System
        │
        └──── window.aynite.*() ──── invoke/handle ──── Main handles
             (from any layer)
 ```
+
+### Window Identity Resolution
+
+Every IPC handler can identify the calling window:
+
+```typescript
+// src/main/config/router.ts
+ipcMain.handle(ConfigChannels.GET, async (event, { key, payload }) => {
+  const winId = getWinIdFromSender(event.sender)
+  const workspaceName = await getWindowWorkspace(winId)
+  // ... resolve key against workspaceName
+})
+```
+
+The `BrowserWindow.id` is the unique identifier. The registry (`window-state.ts`) maps
+these IDs to per-window state (workspace, active file, sessions).
 
 ---
 

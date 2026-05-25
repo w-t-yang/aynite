@@ -17,7 +17,6 @@ import {
 } from '../../lib/path'
 import type { ToolContext } from '../../lib/types/ai'
 import { requestAiApproval } from '../window'
-import { getWorkspacesList } from '../workspace'
 
 export type { ToolContext }
 
@@ -28,8 +27,16 @@ export function getToolsMetadata() {
   }))
 }
 
+function getWorkspaceName(context: ToolContext): string {
+  // Use the explicit workspaceName from context (window-scoped)
+  if (context.workspaceName) return context.workspaceName
+  // Fallback: use the first workspace folder's stem (legacy behavior)
+  return context.workspaceFolders[0] || 'Aynite Playbook'
+}
+
 export function createTools(context: ToolContext) {
   const domains = [...context.workspaceFolders, getAyniteDir()]
+  const workspaceName = getWorkspaceName(context)
   const tools: any = {
     read_file: {
       description: TOOL_METADATA.read_file.description,
@@ -241,8 +248,7 @@ export function createTools(context: ToolContext) {
         tasks: string[]
         filename?: string
       }) => {
-        const { active } = await getWorkspacesList()
-        const taskPath = getWorkspaceTaskPath(active, filename)
+        const taskPath = getWorkspaceTaskPath(workspaceName, filename)
         const content = tasks.map((t) => `- [ ] ${t}`).join('\n')
         await writeText(taskPath, content)
         return `Created task list at ${taskPath}`
@@ -260,8 +266,7 @@ export function createTools(context: ToolContext) {
         status: 'todo' | 'in_progress' | 'done'
         filename?: string
       }) => {
-        const { active } = await getWorkspacesList()
-        const taskPath = getWorkspaceTaskPath(active, filename)
+        const taskPath = getWorkspaceTaskPath(workspaceName, filename)
         try {
           const content = await secureReadText(taskPath, domains)
           if (content.startsWith('Error')) return content
@@ -300,8 +305,7 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.get_tasks.description,
       inputSchema: jsonSchema(TOOL_METADATA.get_tasks.inputSchema),
       execute: async ({ filename }: { filename?: string }) => {
-        const { active } = await getWorkspacesList()
-        const taskPath = getWorkspaceTaskPath(active, filename)
+        const taskPath = getWorkspaceTaskPath(workspaceName, filename)
         return await secureReadText(taskPath, domains)
       },
     },
@@ -323,8 +327,10 @@ export function createTools(context: ToolContext) {
         verificationPlan: string
         openQuestions?: string[]
       }) => {
-        const { active } = await getWorkspacesList()
-        const planPath = getWorkspaceTaskPath(active, 'implementation_plan.md')
+        const planPath = getWorkspaceTaskPath(
+          workspaceName,
+          'implementation_plan.md',
+        )
 
         const content = [
           '# Implementation Plan',
@@ -358,8 +364,7 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.initialize_memory.description,
       inputSchema: jsonSchema(TOOL_METADATA.initialize_memory.inputSchema),
       execute: async () => {
-        const { active } = await getWorkspacesList()
-        const memoryPath = getWorkspaceMemoryPath(active)
+        const memoryPath = getWorkspaceMemoryPath(workspaceName)
 
         // Gather intelligence
         const pkgPath = domains[0] ? `${domains[0]}/package.json` : null
@@ -417,8 +422,7 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.update_memory.description,
       inputSchema: jsonSchema(TOOL_METADATA.update_memory.inputSchema),
       execute: async ({ update }: { update: string }) => {
-        const { active } = await getWorkspacesList()
-        const memoryPath = getWorkspaceMemoryPath(active)
+        const memoryPath = getWorkspaceMemoryPath(workspaceName)
         try {
           const current = await secureReadText(memoryPath, domains)
           const content = current.startsWith('Error')
@@ -436,8 +440,7 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.read_memory.description,
       inputSchema: jsonSchema(TOOL_METADATA.read_memory.inputSchema),
       execute: async () => {
-        const { active } = await getWorkspacesList()
-        const memoryPath = getWorkspaceMemoryPath(active)
+        const memoryPath = getWorkspaceMemoryPath(workspaceName)
         const content = await secureReadText(memoryPath, domains)
         if (content.startsWith('Error')) {
           return 'No project memory found. You can initialize it using "initialize_memory".'
@@ -476,6 +479,7 @@ export function createTools(context: ToolContext) {
           workspaceFolders: context.workspaceFolders,
           configDir: getAyniteDir(),
           activeFile: context.activeFile || null,
+          workspaceName: context.workspaceName || null,
         }
       },
     },

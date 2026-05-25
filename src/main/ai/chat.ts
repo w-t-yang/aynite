@@ -14,7 +14,7 @@ import {
   writeJson,
 } from '../../lib/path'
 import type { SessionMetadata } from '../../lib/types/chat'
-import { sendAppEvent } from '../window'
+import { sendToWindow } from '../window'
 import type { AIProvider } from './factory'
 import { getAIModel } from './factory'
 import { createTools } from './tools'
@@ -49,7 +49,8 @@ export async function saveSession(
     }
   }
 
-  sendAppEvent(AppEvents.SESSION_SAVED, id)
+  // Session saved notification is no longer sent globally.
+  // The caller (window-scoped IPC handler) is responsible for any event emission.
 }
 
 export async function loadSession(
@@ -158,23 +159,29 @@ export async function listSessions(workspace: string) {
   )
 }
 
-export async function aiChat({
-  messages,
-  config,
-  workspaceFolders,
-  activeFile,
-}: {
+export async function aiChat(params: {
   messages: UIMessage[]
   config: AIProvider & { enabledTools?: Record<string, boolean> }
   workspaceFolders: string[]
   activeFile?: string
+  workspaceName?: string
+  _winId?: number
 }) {
+  const {
+    messages,
+    config,
+    workspaceFolders,
+    activeFile,
+    workspaceName,
+    _winId,
+  } = params
   const requestId = Math.random().toString(36).slice(2, 10)
   const model = getAIModel(config)
   try {
     const toolContext = {
       workspaceFolders,
       activeFile,
+      workspaceName,
       onCommandProgress: (text: string) => {
         emit({ type: 'command-output', text } as any)
       },
@@ -192,7 +199,13 @@ export async function aiChat({
     })
 
     const emit = (part: TextStreamPart<any>) => {
-      sendAppEvent(AppEvents.AI_CHAT_DELTA, { requestId, part })
+      // Send AI chat delta events to the window that initiated the request
+      if (_winId && _winId > 0) {
+        sendToWindow(_winId, AppEvents.AI_CHAT_DELTA, { requestId, part })
+      } else {
+        // Legacy fallback: don't send to any specific window
+        console.warn('[AI Chat] No _winId provided, AI delta not sent')
+      }
     }
 
     // Extract system message and convert to model messages

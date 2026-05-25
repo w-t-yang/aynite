@@ -15,6 +15,11 @@ import {
   AppOperationChannel,
 } from '../lib/constants/ipc-channels'
 import { getPreloadPath, getRendererHtmlPath } from '../lib/path'
+import {
+  getAllWindowIds,
+  registerWindow,
+  unregisterWindow,
+} from './window-state'
 
 let mainWindow: BrowserWindow | null = null
 let appDirname: string = ''
@@ -56,19 +61,36 @@ export function createMainWindow(dirname: string): void {
 
   mainWindow.setMenuBarVisibility(false)
 
-  // Broadcast window state changes
+  // Register window in the per-window state registry
+  registerWindow(mainWindow.id)
+
+  // Unregister on close (triggers cleanup callbacks like file watcher teardown)
+  mainWindow.on('closed', () => {
+    unregisterWindow(mainWindow?.id)
+    mainWindow = null
+  })
+
+  // Broadcast window state changes to this window only
   mainWindow.on('maximize', () => {
-    sendAppEvent(AppEvents.WINDOW_MAXIMIZED_CHANGED, { isMaximized: true })
+    sendToWindow(mainWindow?.id, AppEvents.WINDOW_MAXIMIZED_CHANGED, {
+      isMaximized: true,
+    })
   })
   mainWindow.on('unmaximize', () => {
-    sendAppEvent(AppEvents.WINDOW_MAXIMIZED_CHANGED, { isMaximized: false })
+    sendToWindow(mainWindow?.id, AppEvents.WINDOW_MAXIMIZED_CHANGED, {
+      isMaximized: false,
+    })
   })
   // Track fullscreen state changes
   mainWindow.on('enter-full-screen', () => {
-    sendAppEvent(AppEvents.FULLSCREEN_CHANGED, { isFullscreen: true })
+    sendToWindow(mainWindow?.id, AppEvents.FULLSCREEN_CHANGED, {
+      isFullscreen: true,
+    })
   })
   mainWindow.on('leave-full-screen', () => {
-    sendAppEvent(AppEvents.FULLSCREEN_CHANGED, { isFullscreen: false })
+    sendToWindow(mainWindow?.id, AppEvents.FULLSCREEN_CHANGED, {
+      isFullscreen: false,
+    })
   })
 
   // Initialize listeners here to comply with "no listeners outside window.ts" rule
@@ -95,11 +117,55 @@ export function isWindowActive(): boolean {
 
 // ─── Main-to-Renderer Send Helpers ─────────────────────────────────────────
 
+/**
+ * Send an app event to a specific window by ID.
+ * This is the primary send function — most events should be window-scoped.
+ */
+export function sendToWindow(winId: number, type: string, data: any) {
+  const win = BrowserWindow.fromId(winId)
+  if (win && !win.isDestroyed()) {
+    win.webContents.send(AppEventChannel, { type, data })
+  }
+}
+
+/**
+ * Send an app event to all registered windows.
+ * Use sparingly — only for truly global events (theme changes, updates).
+ */
+export function broadcastAppEvent(type: string, data: any) {
+  for (const winId of getAllWindowIds()) {
+    sendToWindow(winId, type, data)
+  }
+}
+
+/**
+ * Send an app operation to a specific window by ID.
+ */
+export function sendOperationToWindow(
+  winId: number,
+  operation: string,
+  data?: unknown,
+) {
+  const win = BrowserWindow.fromId(winId)
+  if (win && !win.isDestroyed()) {
+    win.webContents.send(AppOperationChannel, operation, data)
+  }
+}
+
+/**
+ * Legacy: Send app event to the FIRST window only.
+ * Kept for backward compatibility during migration.
+ * @deprecated Use sendToWindow() or broadcastAppEvent() instead.
+ */
 export function sendAppEvent(type: string, data: any) {
   if (!mainWindow) return
   mainWindow.webContents.send(AppEventChannel, { type, data })
 }
 
+/**
+ * Legacy: Send app operation to the FIRST window only.
+ * @deprecated Use sendOperationToWindow() instead.
+ */
 export function sendAppOperation(operation: string, data?: unknown) {
   if (!mainWindow) return
   mainWindow.webContents.send(AppOperationChannel, operation, data)
@@ -154,6 +220,14 @@ export function createNewWindow() {
   }
 
   win.setMenuBarVisibility(false)
+
+  // Register new window in the per-window state registry
+  registerWindow(win.id)
+
+  // Unregister on close (triggers cleanup callbacks like file watcher teardown)
+  win.on('closed', () => {
+    unregisterWindow(win.id)
+  })
 }
 
 // ─── AI Approval Helpers ───────────────────────────────────────────────────
@@ -230,26 +304,26 @@ export function onBeforeInputEvent(
  */
 function setupUpdaterListeners() {
   autoUpdater.on('checking-for-update', () => {
-    sendAppEvent(AppEvents.UPDATE_CHECKING, null)
+    broadcastAppEvent(AppEvents.UPDATE_CHECKING, null)
   })
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
-    sendAppEvent(AppEvents.UPDATE_AVAILABLE, info)
+    broadcastAppEvent(AppEvents.UPDATE_AVAILABLE, info)
   })
 
   autoUpdater.on('update-not-available', () => {
-    sendAppEvent(AppEvents.UPDATE_NOT_AVAILABLE, null)
+    broadcastAppEvent(AppEvents.UPDATE_NOT_AVAILABLE, null)
   })
 
   autoUpdater.on('error', (err) => {
-    sendAppEvent(AppEvents.UPDATE_ERROR, err.message)
+    broadcastAppEvent(AppEvents.UPDATE_ERROR, err.message)
   })
 
   autoUpdater.on('download-progress', (progressObj) => {
-    sendAppEvent(AppEvents.UPDATE_PROGRESS, progressObj)
+    broadcastAppEvent(AppEvents.UPDATE_PROGRESS, progressObj)
   })
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
-    sendAppEvent(AppEvents.UPDATE_DOWNLOADED, info)
+    broadcastAppEvent(AppEvents.UPDATE_DOWNLOADED, info)
   })
 }

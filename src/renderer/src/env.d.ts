@@ -39,6 +39,7 @@ interface AiChatPayload {
   config: any
   workspaceFolders: string[]
   activeFile?: string
+  workspaceName?: string
 }
 
 interface DirectCommandPayload {

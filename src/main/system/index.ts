@@ -16,10 +16,11 @@ import {
 } from '../../lib/path'
 import {
   createNewWindow,
-  sendAppEvent,
+  sendToWindow,
   showOpenDialog,
   showSaveDialog,
 } from '../window'
+import { getWinIdFromSender } from '../window-state'
 import { getAvailableViews, getSystemFonts } from './logic'
 
 let clipboardPath: string | null = null
@@ -128,8 +129,9 @@ export function setupSystemIpc() {
 
   ipcMain.handle(
     SystemChannels.TILE_ACTIVATE,
-    async (_event, tileId: string) => {
-      sendAppEvent(AppEvents.TILE_ACTIVATED, tileId)
+    async (event, tileId: string) => {
+      const winId = getWinIdFromSender(event.sender)
+      sendToWindow(winId, AppEvents.TILE_ACTIVATED, tileId)
       return true
     },
   )

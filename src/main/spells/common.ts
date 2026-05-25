@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { reportedErrors } from '../../lib/constants/spells'
 import { getAbsolutePath, joinPaths, readdir } from '../../lib/path'
-import { sendAppEvent } from '../window'
+import { broadcastAppEvent } from '../window'
 
 export { reportedErrors }
 
@@ -14,7 +14,7 @@ export function notifyError(
   if (reportedErrors.get(path) === error) return
   reportedErrors.set(path, error)
 
-  sendAppEvent(AppEvents.CONFIG_ERROR, { type, path, error })
+  broadcastAppEvent(AppEvents.CONFIG_ERROR, { type, path, error })
 }
 
 export function getBundledResourcesPath(): string {

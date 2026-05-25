@@ -1,4 +1,3 @@
-import { AppEvents } from '../../lib/constants/app'
 import type { LayoutConfig, WorkspaceConfig } from '../../lib/constants/types'
 import {
   getPathSep,
@@ -14,7 +13,6 @@ import type {
   AddFolderResult,
   WorkspacesConfig,
 } from '../../lib/types/workspace'
-import { sendAppEvent } from '../window'
 
 const FALLBACK_WORKSPACE_ID = 'Aynite Playbook'
 
@@ -312,6 +310,5 @@ export async function updateTileData(
 
   if (anyModified) {
     await writeJson(getWorkspaceDataPath(targetWs), wsConfig)
-    sendAppEvent(AppEvents.WORKSPACE_UPDATED, { id: targetWs })
   }
 }

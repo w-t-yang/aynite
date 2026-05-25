@@ -275,6 +275,7 @@ export async function sendMessage(
     promptsConfig,
     folders,
     activeFilePath,
+    workspaceName,
   ] = await Promise.all([
     window.aynite.getConfig('ai'),
     window.aynite.getConfig('agents'),
@@ -282,6 +283,7 @@ export async function sendMessage(
     window.aynite.getConfig('prompts'),
     window.aynite.getWorkspaceFolders(),
     _activeFile || window.aynite.getConfig('activeFile'),
+    window.aynite.getConfig('activeWorkspace'),
   ])
 
   const workspaceFolders: string[] = folders || []
@@ -495,6 +497,7 @@ export async function sendMessage(
         registerStreamHandler(requestId, handler)
         return () => unregisterStreamHandler(requestId)
       },
+      workspaceName,
     )
     updateState(session, { messages: resultHistory })
   } catch (e: unknown) {

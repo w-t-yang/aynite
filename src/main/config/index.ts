@@ -2,7 +2,8 @@ import { ipcMain } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { ConfigKey } from '../../lib/constants/config'
 import { ConfigChannels } from '../../lib/constants/ipc-channels'
-import { sendAppEvent } from '../window'
+import { broadcastAppEvent, sendToWindow } from '../window'
+import { getWinIdFromSender } from '../window-state'
 import { loadConfig, saveConfig } from './logic'
 import { routeGetConfig, routeSetConfig } from './router'
 
@@ -28,22 +29,24 @@ export function setupConfigIpc() {
 
   ipcMain.handle(
     ConfigChannels.GET,
-    async (_event, { key, payload }: ConfigGetPayload) => {
-      return await routeGetConfig(key, payload)
+    async (event, { key, payload }: ConfigGetPayload) => {
+      const winId = getWinIdFromSender(event.sender)
+      return await routeGetConfig(key, payload, winId)
     },
   )
 
   ipcMain.handle(
     ConfigChannels.SET,
-    async (_event, { key, payload }: ConfigSetPayload) => {
-      const result = await routeSetConfig(key, payload)
-      // Broadcast specific changes via the unified app event channel
+    async (event, { key, payload }: ConfigSetPayload) => {
+      const winId = getWinIdFromSender(event.sender)
+      const result = await routeSetConfig(key, payload, winId)
+      // Broadcast global changes to all windows
       if (key === ConfigKey.ACTIVE_THEME || key === ConfigKey.THEME) {
         const themeId =
           key === ConfigKey.ACTIVE_THEME
             ? payload
             : (payload as { id: string }).id
-        sendAppEvent(AppEvents.THEME_CHANGED, { themeId })
+        broadcastAppEvent(AppEvents.THEME_CHANGED, { themeId })
       } else if (
         [
           ConfigKey.AI,
@@ -54,9 +57,10 @@ export function setupConfigIpc() {
           ConfigKey.TOOLS,
         ].includes(key as ConfigKey)
       ) {
-        sendAppEvent(AppEvents.CONFIG_CHANGED, { key })
+        broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key })
       } else if (key === ConfigKey.ACTIVE_FILE) {
-        sendAppEvent(AppEvents.ACTIVE_FILE_CHANGED, { path: payload })
+        // Active file change is window-scoped
+        sendToWindow(winId, AppEvents.ACTIVE_FILE_CHANGED, { path: payload })
       }
       // Note: ACTIVE_SESSION_CHANGED is already sent by routeSetConfig (router.ts)
       // to ensure it fires even for non-SET pathways. Do NOT duplicate here.

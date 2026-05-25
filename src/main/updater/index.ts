@@ -4,7 +4,7 @@ import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { AppEvents } from '../../lib/constants/app'
 import { UpdateChannels } from '../../lib/constants/ipc-channels'
-import { sendAppEvent } from '../window'
+import { broadcastAppEvent } from '../window'
 
 // Configure logger
 autoUpdater.logger = log
@@ -14,7 +14,7 @@ export function setupUpdater() {
   ipcMain.handle(UpdateChannels.CHECK, async () => {
     if (isDev) {
       console.log('Update check skipped in development mode.')
-      sendAppEvent(AppEvents.UPDATE_NOT_AVAILABLE, null)
+      broadcastAppEvent(AppEvents.UPDATE_NOT_AVAILABLE, null)
       return null
     }
     try {
@@ -22,7 +22,7 @@ export function setupUpdater() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       console.error('Failed to check for updates:', err)
-      sendAppEvent(AppEvents.UPDATE_ERROR, message)
+      broadcastAppEvent(AppEvents.UPDATE_ERROR, message)
       return null
     }
   })

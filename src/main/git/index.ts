@@ -16,7 +16,7 @@ import type { DiffStats, GitStatusType } from '../../lib/types/files'
 import { getAIModel } from '../ai'
 import { loadConfig } from '../config'
 import { execInUserShell } from '../system'
-import { sendAppEvent } from '../window'
+import { broadcastAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
 
 const execAsync = promisify(exec)
@@ -489,7 +489,7 @@ ${diffContent.slice(0, 1200)}`
         const oldStatus = this.statusCache.get(root)
         if (JSON.stringify(oldStatus) !== JSON.stringify(newStatus)) {
           this.statusCache.set(root, newStatus)
-          sendAppEvent(AppEvents.GIT_STATUS_CHANGED, {
+          broadcastAppEvent(AppEvents.GIT_STATUS_CHANGED, {
             root,
             status: newStatus,
           })

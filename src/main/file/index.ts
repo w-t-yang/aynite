@@ -21,9 +21,14 @@ import {
 } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
 import { gitService } from '../git/index'
-import { sendAppEvent } from '../window'
+import { broadcastAppEvent, sendToWindow } from '../window'
+import { getWinIdFromSender, onWindowClose } from '../window-state'
 
-let activeFileWatcher: ReturnType<typeof fsWatch> | null = null
+// Per-window active file watchers: windowId → { path, watcher }
+const activeFileWatchers = new Map<
+  number,
+  { path: string; watcher: ReturnType<typeof fsWatch> }
+>()
 
 // ─── Payload types ─────────────────────────────────────────────────────────
 interface FileCreatePayload {
@@ -120,8 +125,8 @@ export function setupFileIpc() {
       } else {
         await writeText(filePath, '')
       }
-      // Notify renderer so treeview/file-browser can refresh
-      sendAppEvent(AppEventTypes.FS_CHANGE, {
+      // Notify all windows so treeview/file-browser can refresh
+      broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'add',
         path: filePath,
       })
@@ -134,8 +139,8 @@ export function setupFileIpc() {
     FileChannels.RENAME,
     async (_event, { oldPath, newPath }: FileRenamePayload) => {
       await rename(oldPath, newPath)
-      sendAppEvent(AppEventTypes.FILE_RENAMED, { oldPath, newPath })
-      sendAppEvent(AppEventTypes.FS_CHANGE, {
+      broadcastAppEvent(AppEventTypes.FILE_RENAMED, { oldPath, newPath })
+      broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'rename',
         path: newPath,
       })
@@ -148,7 +153,7 @@ export function setupFileIpc() {
     FileChannels.COPY,
     async (_event, { srcPath, destPath }: FileCopyPayload) => {
       await copy(srcPath, destPath, { recursive: true })
-      sendAppEvent(AppEventTypes.FS_CHANGE, {
+      broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'add',
         path: destPath,
       })
@@ -159,8 +164,8 @@ export function setupFileIpc() {
 
   ipcMain.handle(FileChannels.DELETE, async (_event, filePath: string) => {
     await remove(filePath, { recursive: true, force: true })
-    sendAppEvent(AppEventTypes.FILE_DELETED, { path: filePath })
-    sendAppEvent(AppEventTypes.FS_CHANGE, {
+    broadcastAppEvent(AppEventTypes.FILE_DELETED, { path: filePath })
+    broadcastAppEvent(AppEventTypes.FS_CHANGE, {
       event: 'unlink',
       path: filePath,
     })
@@ -172,7 +177,7 @@ export function setupFileIpc() {
     FileChannels.SAVE,
     async (_event, { path: filePath, content }: FileSavePayload) => {
       await writeText(filePath, content)
-      sendAppEvent(AppEventTypes.FS_CHANGE, {
+      broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'change',
         path: filePath,
       })
@@ -182,27 +187,41 @@ export function setupFileIpc() {
   )
 
   /**
-   * Watch a single file for external changes (e.g. git checkout, another editor).
-   * Only the currently open file needs watching — saves thousands of FDs.
+   * Watch a file for external changes (e.g. git checkout, another editor).
+   * Per-window tracking: each window can watch a different active file.
    */
   ipcMain.handle(
     FileChannels.WATCH_FILE,
-    async (_event, filePath: string | null) => {
-      // Close previous watcher
-      if (activeFileWatcher) {
-        activeFileWatcher.close()
-        activeFileWatcher = null
+    async (event, filePath: string | null) => {
+      const winId = getWinIdFromSender(event.sender)
+
+      // Close this window's previous watcher
+      const existing = activeFileWatchers.get(winId)
+      if (existing) {
+        existing.watcher.close()
+        activeFileWatchers.delete(winId)
       }
 
       if (!filePath) return
 
       try {
-        activeFileWatcher = fsWatch(filePath, (eventType) => {
+        const watcher = fsWatch(filePath, (eventType) => {
           if (eventType === 'change') {
-            sendAppEvent(AppEventTypes.FS_CHANGE, {
+            // Send fs-change to the specific window that's watching this file
+            sendToWindow(winId, AppEventTypes.FS_CHANGE, {
               event: 'change',
               path: filePath,
             })
+          }
+        })
+        activeFileWatchers.set(winId, { path: filePath, watcher })
+
+        // Register cleanup so the watcher is closed when the window is destroyed
+        onWindowClose(winId, () => {
+          const existing = activeFileWatchers.get(winId)
+          if (existing) {
+            existing.watcher.close()
+            activeFileWatchers.delete(winId)
           }
         })
       } catch (err) {

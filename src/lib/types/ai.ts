@@ -24,6 +24,8 @@ export interface Agent {
 export interface ToolContext {
   workspaceFolders: string[]
   activeFile?: string
+  /** The workspace name this AI chat session belongs to */
+  workspaceName?: string
   /** Callback to stream real-time command output during run_command tool execution */
   onCommandProgress?: (text: string) => void
 }

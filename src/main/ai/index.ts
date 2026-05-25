@@ -2,8 +2,8 @@ import type { UIMessage } from 'ai'
 import { ipcMain } from 'electron'
 import { AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
-import { sendAppOperation, showOpenDialog } from '../window'
-import { getWorkspacesList } from '../workspace'
+import { sendOperationToWindow, showOpenDialog } from '../window'
+import { getWindowWorkspace, getWinIdFromSender } from '../window-state'
 import { aiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
@@ -14,6 +14,7 @@ interface AiChatPayload {
   config: any
   workspaceFolders: string[]
   activeFile?: string
+  workspaceName?: string
 }
 
 interface SessionSavePayload {
@@ -38,10 +39,11 @@ export function setupAiIpc() {
     return await getToolsMetadata()
   })
 
-  ipcMain.handle(AiChannels.CHAT, async (_event, params: AiChatPayload) => {
+  ipcMain.handle(AiChannels.CHAT, async (event, params: AiChatPayload) => {
+    const winId = getWinIdFromSender(event.sender)
     const provider = params.config?.provider?.toLowerCase()
     if (provider === 'ollama' && !params.config.baseUrl) {
-      sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+      sendOperationToWindow(winId, AppOperation.SHOW_NOTIFICATION, {
         type: 'warning',
         title: 'Ollama URL not configured',
         message:
@@ -51,34 +53,37 @@ export function setupAiIpc() {
       (provider === 'openai' || provider === 'anthropic') &&
       !params.config.apiKey
     ) {
-      sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+      sendOperationToWindow(winId, AppOperation.SHOW_NOTIFICATION, {
         type: 'error',
         title: 'API Key Missing',
         message: `No API key configured for ${provider}. Add it in Settings > AI Providers.`,
       })
     }
-    return await aiChat(params)
+    return await aiChat({ ...params, _winId: winId })
   })
 
   ipcMain.handle(
     AiChannels.SESSION_SAVE,
-    async (_event, { sessionId, messages, metadata }: SessionSavePayload) => {
-      const { active } = await getWorkspacesList()
-      return await saveSession(active, sessionId, messages, metadata)
+    async (event, { sessionId, messages, metadata }: SessionSavePayload) => {
+      const winId = getWinIdFromSender(event.sender)
+      const workspaceName = await getWindowWorkspace(winId)
+      return await saveSession(workspaceName, sessionId, messages, metadata)
     },
   )
 
   ipcMain.handle(
     AiChannels.SESSION_LOAD,
-    async (_event, { sessionId, date }: SessionLoadPayload) => {
-      const { active } = await getWorkspacesList()
-      return await loadSession(active, sessionId, date)
+    async (event, { sessionId, date }: SessionLoadPayload) => {
+      const winId = getWinIdFromSender(event.sender)
+      const workspaceName = await getWindowWorkspace(winId)
+      return await loadSession(workspaceName, sessionId, date)
     },
   )
 
-  ipcMain.handle(AiChannels.SESSION_LIST, async () => {
-    const { active } = await getWorkspacesList()
-    return await listSessions(active)
+  ipcMain.handle(AiChannels.SESSION_LIST, async (event) => {
+    const winId = getWinIdFromSender(event.sender)
+    const workspaceName = await getWindowWorkspace(winId)
+    return await listSessions(workspaceName)
   })
 
   ipcMain.handle(AiChannels.PROMPT_RESTORE, async () => {
@@ -93,8 +98,10 @@ export function setupAiIpc() {
     if (canceled || filePaths.length === 0) return null
     return filePaths[0]
   })
-  ipcMain.handle(AiChannels.ARTIFACTS_STATUS, async () => {
-    const { active } = await getWorkspacesList()
+
+  ipcMain.handle(AiChannels.ARTIFACTS_STATUS, async (event) => {
+    const winId = getWinIdFromSender(event.sender)
+    const workspaceName = await getWindowWorkspace(winId)
     const {
       exists,
       getWorkspaceMemoryPath,
@@ -102,9 +109,9 @@ export function setupAiIpc() {
       getWorkspacePlanPath,
     } = await import('../../lib/path')
 
-    const memoryPath = getWorkspaceMemoryPath(active)
-    const taskPath = getWorkspaceTaskPath(active)
-    const planPath = getWorkspacePlanPath(active)
+    const memoryPath = getWorkspaceMemoryPath(workspaceName)
+    const taskPath = getWorkspaceTaskPath(workspaceName)
+    const planPath = getWorkspacePlanPath(workspaceName)
 
     const [memoryExists, taskExists, planExists] = await Promise.all([
       exists(memoryPath),

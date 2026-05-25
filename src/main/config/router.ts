@@ -3,6 +3,10 @@
  *
  * Maps ConfigKey-based getConfig/setConfig calls from the renderer
  * to the correct backend logic across modules.
+ *
+ * Each handler receives a `winId` parameter identifying which Electron
+ * window made the request. Window-scoped keys (activeFile, activeSessionId,
+ * etc.) resolve against the calling window's workspace.
  */
 import { app } from 'electron'
 import { DEFAULT_AI_TOOLS } from '../../lib/constants/ai'
@@ -33,7 +37,8 @@ import {
   saveSession,
 } from '../ai'
 import { deleteTheme, getTheme, getThemesList, saveTheme } from '../theme'
-import { sendAppEvent } from '../window'
+import { sendToWindow } from '../window'
+import { getWindowWorkspace, setWindowWorkspace } from '../window-state'
 import {
   getWorkspaceState,
   getWorkspacesList,
@@ -136,8 +141,13 @@ function validateAgainstSchema(data: unknown, schema: any): boolean {
 
 /**
  * getConfig — route a ConfigKey to the appropriate data source.
+ * @param winId The Electron window ID of the calling window (-1 if unknown)
  */
-export async function routeGetConfig(key: string, payload?: any): Promise<any> {
+export async function routeGetConfig(
+  key: string,
+  payload?: any,
+  winId?: number,
+): Promise<any> {
   switch (key) {
     case ConfigKey.WORKSPACES: {
       const wsConfig = await getWorkspacesList()
@@ -150,6 +160,10 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
     }
 
     case ConfigKey.ACTIVE_WORKSPACE: {
+      if (winId && winId > 0) {
+        return await getWindowWorkspace(winId)
+      }
+      // Fallback to global config
       const wsConfig = await getWorkspacesList()
       return wsConfig.active
     }
@@ -179,14 +193,18 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
     }
 
     case ConfigKey.CHAT_LOGS: {
-      const wsConfig = await getWorkspacesList()
-      return await listSessions(wsConfig.active)
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      return await listSessions(workspaceName)
     }
 
     case ConfigKey.LOAD_CHAT_LOG: {
       if (payload?.id && payload.date) {
-        const wsConfig = await getWorkspacesList()
-        return await loadSession(wsConfig.active, payload.id, payload.date)
+        const workspaceName = winId
+          ? await getWindowWorkspace(winId)
+          : (await getWorkspacesList()).active
+        return await loadSession(workspaceName, payload.id, payload.date)
       }
       return null
     }
@@ -205,8 +223,10 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
 
     case ConfigKey.AGENTS: {
       const mainConfig = await loadConfig()
-      const wsConfig = await getWorkspacesList()
-      const workspaceState = await getWorkspaceState(wsConfig.active)
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      const workspaceState = await getWorkspaceState(workspaceName)
       return {
         activeId:
           workspaceState.activeAgentId ||
@@ -242,18 +262,24 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
       return app.getVersion()
     }
     case ConfigKey.ACTIVE_FILE: {
-      const wsConfig = await getWorkspacesList()
-      const state = await getWorkspaceState(wsConfig.active)
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      const state = await getWorkspaceState(workspaceName)
       return state.activeFile || null
     }
     case ConfigKey.OPENED_FILES: {
-      const wsConfig = await getWorkspacesList()
-      const state = await getWorkspaceState(wsConfig.active)
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      const state = await getWorkspaceState(workspaceName)
       return state.files || []
     }
     case ConfigKey.ACTIVE_SESSION_ID: {
-      const wsConfig = await getWorkspacesList()
-      const state = await getWorkspaceState(wsConfig.active)
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      const state = await getWorkspaceState(workspaceName)
       return state.activeSessionId || null
     }
 
@@ -321,15 +347,21 @@ export async function routeGetConfig(key: string, payload?: any): Promise<any> {
 
 /**
  * setConfig — route a ConfigKey to the appropriate data sink.
+ * @param winId The Electron window ID of the calling window (-1 if unknown)
  */
 export async function routeSetConfig(
   key: string,
   payload: any,
+  winId?: number,
 ): Promise<boolean> {
   switch (key) {
     case ConfigKey.ACTIVE_WORKSPACE: {
       const id = payload as string
       await switchWorkspace(id)
+      // Also set the window's workspace independently
+      if (winId && winId > 0) {
+        setWindowWorkspace(winId, id)
+      }
       return true
     }
 
@@ -374,8 +406,10 @@ export async function routeSetConfig(
 
     case ConfigKey.SAVE_CHAT_LOG: {
       if (payload?.id && payload.messages) {
-        const wsConfig = await getWorkspacesList()
-        await saveSession(wsConfig.active, payload.id, payload.messages)
+        const workspaceName = winId
+          ? await getWindowWorkspace(winId)
+          : (await getWorkspacesList()).active
+        await saveSession(workspaceName, payload.id, payload.messages)
       }
       return true
     }
@@ -408,8 +442,10 @@ export async function routeSetConfig(
     case ConfigKey.AGENTS: {
       // Split: activeId -> workspace config, list -> global config
       if (payload?.activeId) {
-        const wsConfig = await getWorkspacesList()
-        await saveWorkspaceState(wsConfig.active, {
+        const workspaceName = winId
+          ? await getWindowWorkspace(winId)
+          : (await getWorkspacesList()).active
+        await saveWorkspaceState(workspaceName, {
           activeAgentId: payload.activeId,
         })
       }
@@ -424,21 +460,29 @@ export async function routeSetConfig(
       return true
     }
     case ConfigKey.ACTIVE_FILE: {
-      const path = payload as string
-      const wsConfig = await getWorkspacesList()
-      await saveWorkspaceState(wsConfig.active, { activeFile: path })
+      const filePath = payload as string
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      await saveWorkspaceState(workspaceName, { activeFile: filePath })
       return true
     }
     case ConfigKey.OPENED_FILES: {
       const files = payload as string[]
-      const wsConfig = await getWorkspacesList()
-      await saveWorkspaceState(wsConfig.active, { files })
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      await saveWorkspaceState(workspaceName, { files })
       return true
     }
     case ConfigKey.ACTIVE_SESSION_ID: {
-      const wsConfig = await getWorkspacesList()
-      await saveWorkspaceState(wsConfig.active, { activeSessionId: payload })
-      sendAppEvent(AppEvents.ACTIVE_SESSION_CHANGED, { id: payload })
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      await saveWorkspaceState(workspaceName, { activeSessionId: payload })
+      if (winId && winId > 0) {
+        sendToWindow(winId, AppEvents.ACTIVE_SESSION_CHANGED, { id: payload })
+      }
       return true
     }
     case ConfigKey.TILE_DATA: {
@@ -447,13 +491,21 @@ export async function routeSetConfig(
         data: Record<string, any>
       }
       await updateTileData(tileId, data)
+      // Broadcast tile data updates so other windows with the same workspace can sync
+      if (winId && winId > 0) {
+        sendToWindow(winId, AppEvents.WORKSPACE_UPDATED, { id: tileId })
+      }
       return true
     }
     case ConfigKey.SESSION_DELETE: {
       const id = payload as string
-      const wsConfig = await getWorkspacesList()
-      await deleteSession(wsConfig.active, id)
-      sendAppEvent(AppEvents.SESSION_DELETED, { id })
+      const workspaceName = winId
+        ? await getWindowWorkspace(winId)
+        : (await getWorkspacesList()).active
+      await deleteSession(workspaceName, id)
+      if (winId && winId > 0) {
+        sendToWindow(winId, AppEvents.SESSION_DELETED, { id })
+      }
       return true
     }
 

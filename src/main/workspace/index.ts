@@ -4,7 +4,17 @@ import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
 import { gitService } from '../git/index'
-import { sendAppEvent, sendAppOperation, showOpenDialog } from '../window'
+import {
+  broadcastAppEvent,
+  sendOperationToWindow,
+  sendToWindow,
+  showOpenDialog,
+} from '../window'
+import {
+  getWindowWorkspace,
+  getWinIdFromSender,
+  setWindowWorkspace,
+} from '../window-state'
 import {
   addWorkspaceFolder,
   createWorkspace,
@@ -18,8 +28,8 @@ import {
 } from './logic'
 
 export function setupWorkspaceIpc(): void {
-  const notifyChanged = (folders: string[]) => {
-    sendAppEvent(AppEvents.WORKSPACE_CHANGED, { folders })
+  const notifyChanged = (winId: number, folders: string[]) => {
+    sendToWindow(winId, AppEvents.WORKSPACE_CHANGED, { folders })
     gitService.refreshWatchers(folders)
   }
 
@@ -33,48 +43,56 @@ export function setupWorkspaceIpc(): void {
 
   ipcMain.handle(WorkspaceChannels.DELETE, async (_event, name: string) => {
     const result = await deleteWorkspace(name)
-    sendAppEvent(AppEvents.WORKSPACE_CHANGED, { deleted: name })
+    broadcastAppEvent(AppEvents.WORKSPACE_CHANGED, { deleted: name })
     return result
   })
 
-  ipcMain.handle(WorkspaceChannels.SWITCH, async (_event, name: string) => {
+  ipcMain.handle(WorkspaceChannels.SWITCH, async (event, name: string) => {
+    const winId = getWinIdFromSender(event.sender)
+
+    // Switch the global config (for backward compatibility + new windows)
     const success = await switchWorkspace(name)
     if (success) {
-      const folders = await getWorkspaceFolders()
-      notifyChanged(folders)
+      // Track this window's workspace independently
+      setWindowWorkspace(winId, name)
+      const folders = await getWorkspaceFolders(name)
+      notifyChanged(winId, folders)
     }
     return success
   })
 
-  ipcMain.handle(WorkspaceChannels.ADD_FOLDER, async () => {
+  ipcMain.handle(WorkspaceChannels.ADD_FOLDER, async (event) => {
+    const winId = getWinIdFromSender(event.sender)
+    const workspaceName = await getWindowWorkspace(winId)
+
     const { canceled, filePaths } = await showOpenDialog({
       properties: ['openDirectory'],
     })
     if (canceled || filePaths.length === 0) return null
     const folderPath = filePaths[0]
-    const result = await addWorkspaceFolder(folderPath)
+    const result = await addWorkspaceFolder(folderPath, workspaceName)
 
     if (result.success) {
-      const folders = await getWorkspaceFolders()
-      notifyChanged(folders)
+      const folders = await getWorkspaceFolders(workspaceName)
+      notifyChanged(winId, folders)
 
-      // Send detailed update event
-      sendAppEvent(AppEvents.WORKSPACE_UPDATED, result)
+      // Send detailed update event to this window
+      sendToWindow(winId, AppEvents.WORKSPACE_UPDATED, result)
 
       if (result.reason === 'is_child_of_existing') {
-        sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+        sendOperationToWindow(winId, AppOperation.SHOW_NOTIFICATION, {
           type: 'info',
           title: 'Folder already covered',
           message: `The folder is already covered by parent: ${result.parentPath}`,
         })
       } else if (result.reason === 'is_parent_of_existing') {
-        sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+        sendOperationToWindow(winId, AppOperation.SHOW_NOTIFICATION, {
           type: 'success',
           title: 'Workspace updated',
           message: `Replaced ${result.removed.length} subfolder(s) with parent folder.`,
         })
       } else if (result.reason === 'already_exists') {
-        sendAppOperation(AppOperation.SHOW_NOTIFICATION, {
+        sendOperationToWindow(winId, AppOperation.SHOW_NOTIFICATION, {
           type: 'info',
           title: 'Folder already exists',
           message: 'The selected folder is already in the workspace.',
@@ -84,20 +102,26 @@ export function setupWorkspaceIpc(): void {
     return folderPath
   })
 
-  ipcMain.handle(WorkspaceChannels.FOLDER_LIST, async () => {
-    return await getWorkspaceFolders()
+  ipcMain.handle(WorkspaceChannels.FOLDER_LIST, async (event) => {
+    const winId = getWinIdFromSender(event.sender)
+    const workspaceName = await getWindowWorkspace(winId)
+    return await getWorkspaceFolders(workspaceName)
   })
 
-  ipcMain.handle(WorkspaceChannels.STATE_LOAD, async () => {
-    return await getWorkspaceState()
+  ipcMain.handle(WorkspaceChannels.STATE_LOAD, async (event) => {
+    const winId = getWinIdFromSender(event.sender)
+    const workspaceName = await getWindowWorkspace(winId)
+    return await getWorkspaceState(workspaceName)
   })
 
   ipcMain.handle(
     WorkspaceChannels.FOLDER_REORDER,
-    async (_event, folders: string[]) => {
-      const success = await reorderWorkspaceFolders(folders)
+    async (event, folders: string[]) => {
+      const winId = getWinIdFromSender(event.sender)
+      const workspaceName = await getWindowWorkspace(winId)
+      const success = await reorderWorkspaceFolders(folders, workspaceName)
       if (success) {
-        notifyChanged(folders)
+        notifyChanged(winId, folders)
       }
       return success
     },
@@ -105,18 +129,22 @@ export function setupWorkspaceIpc(): void {
 
   ipcMain.handle(
     WorkspaceChannels.FOLDER_REMOVE,
-    async (_event, folderPath: string) => {
-      const success = await removeWorkspaceFolder(folderPath)
+    async (event, folderPath: string) => {
+      const winId = getWinIdFromSender(event.sender)
+      const workspaceName = await getWindowWorkspace(winId)
+      const success = await removeWorkspaceFolder(folderPath, workspaceName)
       if (success) {
-        const folders = await getWorkspaceFolders()
-        notifyChanged(folders)
+        const folders = await getWorkspaceFolders(workspaceName)
+        notifyChanged(winId, folders)
       }
       return success
     },
   )
 
-  ipcMain.handle(WorkspaceChannels.FILE_SCAN, async () => {
-    const folders = await getWorkspaceFolders()
+  ipcMain.handle(WorkspaceChannels.FILE_SCAN, async (event) => {
+    const winId = getWinIdFromSender(event.sender)
+    const workspaceName = await getWindowWorkspace(winId)
+    const folders = await getWorkspaceFolders(workspaceName)
     const allFiles: { name: string; path: string; isDirectory: boolean }[] = []
     const ignorePatterns = await getIgnorePatterns()
 
