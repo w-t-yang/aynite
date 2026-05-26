@@ -34,5 +34,10 @@ export default defineConfig({
       },
     },
     plugins: [react(), tailwindcss()],
+    // Disable file watching in dev so source file changes (e.g. AI agent
+    // edits) don't trigger renderer HMR/reload and interrupt the app.
+    server: {
+      watch: null,
+    },
   },
 })
