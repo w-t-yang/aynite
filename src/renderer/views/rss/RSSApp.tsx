@@ -49,11 +49,18 @@ export function RSSApp() {
 
   const handleSelectSource = useCallback(
     (sourceId: string | null) => {
+      setView('all')
       rss.selectSource(sourceId)
       rss.selectItem(null)
     },
     [rss],
   )
+
+  const handleSelectToday = useCallback(() => {
+    setView('all')
+    rss.selectSource('__today__')
+    rss.selectItem(null)
+  }, [rss])
 
   const handleSelectItem = useCallback(
     (itemId: string) => {
@@ -63,14 +70,23 @@ export function RSSApp() {
     [rss],
   )
 
-  const handleMarkAllRead = useCallback(() => {
-    if (rss.selectedSourceId) {
-      rss.markAllRead(rss.selectedSourceId)
-    } else {
-      for (const source of rss.config?.sources || []) {
-        rss.markAllRead(source.id)
+  const handleViewChange = useCallback(
+    (newView: ViewMode) => {
+      setView(newView)
+      // Clear source selection when switching to bookmarks
+      if (newView === 'bookmarks') {
+        rss.selectSource(null)
+      } else {
+        // Switching back to 'all' — keep current source selection
       }
-    }
+      rss.selectItem(null)
+    },
+    [rss],
+  )
+
+  const handleMarkAllRead = useCallback(() => {
+    const sourceId = rss.selectedSourceId || '__today__'
+    rss.markAllRead(sourceId)
   }, [rss])
 
   const handleOpenExternal = useCallback((url: string) => {
@@ -194,9 +210,21 @@ export function RSSApp() {
   const isItemBookmarked = selectedItem
     ? !!rss.bookmarks[selectedItem.id]
     : false
-  const sourceTitle = rss.selectedSourceId
-    ? rss.config?.sources.find((s: any) => s.id === rss.selectedSourceId)?.title
-    : undefined
+  const sourceTitle =
+    rss.selectedSourceId && rss.selectedSourceId !== '__today__'
+      ? rss.config?.sources.find((s: any) => s.id === rss.selectedSourceId)
+          ?.title
+      : rss.selectedSourceId === '__today__'
+        ? 'Today'
+        : undefined
+
+  // Determine if we should show date grouping and source badges
+  const isSingleFeed =
+    rss.selectedSourceId !== null &&
+    rss.selectedSourceId !== '__today__' &&
+    view !== 'bookmarks'
+  const showSourceBadge =
+    rss.selectedSourceId === null || rss.selectedSourceId === '__today__'
 
   if (rss.loading) {
     return (
@@ -241,7 +269,8 @@ export function RSSApp() {
           view={view}
           width={sidebarWidth}
           onSelectSource={handleSelectSource}
-          onViewChange={setView}
+          onSelectToday={handleSelectToday}
+          onViewChange={handleViewChange}
           onAddGroup={() => setShowAddGroup(true)}
           onAddSource={() => setShowAddSource(true)}
           onDeleteGroup={handleDeleteGroup}
@@ -269,6 +298,8 @@ export function RSSApp() {
           sourceTitle={view === 'bookmarks' ? 'Bookmarks' : sourceTitle}
           loading={rss.loading}
           width={articleListWidth}
+          groupByDate={isSingleFeed}
+          showSourceBadge={showSourceBadge}
           onSelectItem={handleSelectItem}
           onMarkAllRead={handleMarkAllRead}
           onOpenExternal={handleOpenExternal}

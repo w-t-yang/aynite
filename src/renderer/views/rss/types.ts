@@ -8,6 +8,4 @@ export type {
   RssSource,
 } from '../../../../src/lib/types/rss'
 
-type ViewMode = 'all' | 'bookmarks'
-
-export type { ViewMode }
+export type ViewMode = 'all' | 'bookmarks'

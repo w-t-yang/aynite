@@ -31,7 +31,7 @@ export function useRSS() {
     loading: true,
     fetching: false,
     error: null,
-    selectedSourceId: null,
+    selectedSourceId: '__today__',
     selectedItemId: null,
     panelWidths: { sidebar: 220, articleList: 340 },
   })
@@ -124,6 +124,14 @@ export function useRSS() {
     }))
   }, [])
 
+  const selectToday = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      selectedSourceId: '__today__',
+      selectedItemId: null,
+    }))
+  }, [])
+
   const selectItem = useCallback((itemId: string | null) => {
     setState((s) => ({ ...s, selectedItemId: itemId }))
   }, [])
@@ -131,6 +139,32 @@ export function useRSS() {
   const getCurrentItems = useCallback((): RssItem[] => {
     const { config, contents, selectedSourceId } = state
     if (!config) return []
+
+    if (selectedSourceId === '__today__') {
+      const today = new Date()
+      const todayStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+      ).getTime()
+      const todayEnd = todayStart + 86_400_000 // end of today
+
+      const all: RssItem[] = []
+      for (const source of config.sources) {
+        const store = contents[source.id]
+        if (!store) continue
+        for (const item of store.items) {
+          const itemTime = new Date(item.pubDate).getTime()
+          if (itemTime >= todayStart && itemTime < todayEnd) {
+            all.push(item)
+          }
+        }
+      }
+      all.sort(
+        (a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime(),
+      )
+      return all
+    }
 
     if (!selectedSourceId) {
       const all: RssItem[] = []
@@ -145,7 +179,12 @@ export function useRSS() {
     }
 
     const store = contents[selectedSourceId]
-    return store ? store.items : []
+    return store
+      ? [...store.items].sort(
+          (a, b) =>
+            new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime(),
+        )
+      : []
   }, [state])
 
   const getBookmarkedItems = useCallback((): RssItem[] => {
@@ -170,9 +209,19 @@ export function useRSS() {
 
   const getSelectedItem = useCallback((): RssItem | null => {
     if (!state.selectedItemId || !state.config) return null
-    const items = getCurrentItems()
-    return items.find((i: RssItem) => i.id === state.selectedItemId) || null
-  }, [state, getCurrentItems])
+    // Search in all sources (needed for __today__ mode where items come from multiple sources)
+    const { config, contents } = state
+    for (const source of config.sources) {
+      const store = contents[source.id]
+      if (store) {
+        const found = store.items.find(
+          (i: RssItem) => i.id === state.selectedItemId,
+        )
+        if (found) return found
+      }
+    }
+    return null
+  }, [state])
 
   const fetchAll = useCallback(async () => {
     setState((s) => ({ ...s, fetching: true }))
@@ -200,8 +249,91 @@ export function useRSS() {
 
   const markRead = useCallback(
     async (itemId: string) => {
-      const sourceId = state.selectedSourceId
-      if (!sourceId) return
+      const { config, contents, selectedSourceId } = state
+      // For __today__ or null source, find which source the item belongs to
+      const actualSourceId =
+        selectedSourceId && selectedSourceId !== '__today__'
+          ? selectedSourceId
+          : null
+
+      if (!actualSourceId) {
+        // Search all sources for this item
+        if (!config) return
+        for (const source of config.sources) {
+          const store = contents[source.id]
+          if (store?.items.some((i: RssItem) => i.id === itemId)) {
+            setState((s) => {
+              const target = s.contents[source.id]
+              if (!target) return s
+              return {
+                ...s,
+                contents: {
+                  ...s.contents,
+                  [source.id]: {
+                    ...target,
+                    items: target.items.map((i: RssItem) =>
+                      i.id === itemId ? { ...i, isRead: true } : i,
+                    ),
+                  },
+                },
+              }
+            })
+            await aw().rssMarkRead(source.id, itemId)
+            return
+          }
+        }
+        return
+      }
+
+      setState((s) => {
+        const store = s.contents[actualSourceId]
+        if (!store) return s
+        return {
+          ...s,
+          contents: {
+            ...s.contents,
+            [actualSourceId]: {
+              ...store,
+              items: store.items.map((i: RssItem) =>
+                i.id === itemId ? { ...i, isRead: true } : i,
+              ),
+            },
+          },
+        }
+      })
+      await aw().rssMarkRead(actualSourceId, itemId)
+    },
+    [state],
+  )
+
+  const markAllRead = useCallback(
+    async (sourceId: string) => {
+      // If called from __today__ or all view, mark all sources as read
+      if (sourceId === '__today__' || !sourceId) {
+        const config = state.config
+        if (!config) return
+        setState((s) => {
+          const newContents = { ...s.contents }
+          for (const source of config.sources) {
+            const store = newContents[source.id]
+            if (store) {
+              newContents[source.id] = {
+                ...store,
+                items: store.items.map((i: RssItem) => ({
+                  ...i,
+                  isRead: true,
+                })),
+              }
+            }
+          }
+          return { ...s, contents: newContents }
+        })
+        for (const source of config.sources) {
+          await aw().rssMarkAllRead(source.id)
+        }
+        return
+      }
+
       setState((s) => {
         const store = s.contents[sourceId]
         if (!store) return s
@@ -211,35 +343,15 @@ export function useRSS() {
             ...s.contents,
             [sourceId]: {
               ...store,
-              items: store.items.map((i: RssItem) =>
-                i.id === itemId ? { ...i, isRead: true } : i,
-              ),
+              items: store.items.map((i: RssItem) => ({ ...i, isRead: true })),
             },
           },
         }
       })
-      await aw().rssMarkRead(sourceId, itemId)
+      await aw().rssMarkAllRead(sourceId)
     },
-    [state.selectedSourceId],
+    [state.config],
   )
-
-  const markAllRead = useCallback(async (sourceId: string) => {
-    setState((s) => {
-      const store = s.contents[sourceId]
-      if (!store) return s
-      return {
-        ...s,
-        contents: {
-          ...s.contents,
-          [sourceId]: {
-            ...store,
-            items: store.items.map((i: RssItem) => ({ ...i, isRead: true })),
-          },
-        },
-      }
-    })
-    await aw().rssMarkAllRead(sourceId)
-  }, [])
 
   const toggleBookmark = useCallback(async (item: RssItem) => {
     await aw().rssToggleBookmark(item.id, {
@@ -391,6 +503,7 @@ export function useRSS() {
     loadAll,
     savePanelWidths,
     selectSource,
+    selectToday,
     selectItem,
     getCurrentItems,
     getBookmarkedItems,

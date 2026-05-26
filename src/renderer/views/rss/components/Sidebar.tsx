@@ -1,7 +1,7 @@
 import {
   Bookmark,
+  Clock,
   ExternalLink,
-  FolderPlus,
   Globe,
   Plus,
   Rss,
@@ -18,6 +18,7 @@ interface SidebarProps {
   view: ViewMode
   width: number
   onSelectSource: (sourceId: string | null) => void
+  onSelectToday: () => void
   onViewChange: (view: ViewMode) => void
   onAddGroup: () => void
   onAddSource: () => void
@@ -35,6 +36,27 @@ function getUnreadCount(
   return store.items.filter((i) => !i.isRead).length
 }
 
+// Count today's unread items across all sources
+function getTodayUnreadCount(
+  config: RssConfig,
+  contents: Record<string, RssContentStore>,
+): number {
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const todayTime = todayStart.getTime()
+
+  let count = 0
+  for (const source of config.sources) {
+    const store = contents[source.id]
+    if (!store) continue
+    count += store.items.filter((i) => {
+      const itemDate = new Date(i.pubDate).getTime()
+      return itemDate >= todayTime && !i.isRead
+    }).length
+  }
+  return count
+}
+
 export function Sidebar({
   config,
   contents,
@@ -42,6 +64,7 @@ export function Sidebar({
   view,
   width,
   onSelectSource,
+  onSelectToday,
   onViewChange,
   onAddGroup,
   onAddSource,
@@ -57,12 +80,14 @@ export function Sidebar({
     groupedSources.set(source.groupId, list)
   }
 
+  const todayUnread = getTodayUnreadCount(config, contents)
+
   return (
     <div
       className="shrink-0 border-r border-border flex flex-col bg-sidebar/50"
       style={{ width }}
     >
-      {/* View mode toggles */}
+      {/* View mode toggles: All | Saved */}
       <div className="flex items-center gap-1 p-2 border-b border-border/40">
         <button
           type="button"
@@ -92,23 +117,34 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Add Feed button */}
-      <div className="p-2 border-b border-border/40">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onAddSource}
-          className="w-full text-xs gap-1"
-        >
-          <Plus size={12} /> Add Feed
-        </Button>
-      </div>
-
       {/* Groups & Sources */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {config.groups.length === 0 && config.sources.length === 0 && (
           <div className="p-4 text-center text-muted-foreground text-xs">
             No feeds yet. Add a feed to get started.
+          </div>
+        )}
+
+        {/* Today - special item before all groups */}
+        {config.sources.length > 0 && (
+          // biome-ignore lint/a11y/noStaticElementInteractions: clickable item
+          <div
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer group hover:bg-accent/30 transition-colors',
+              selectedSourceId === '__today__' &&
+                'bg-accent text-accent-foreground',
+              selectedSourceId !== '__today__' && 'text-muted-foreground',
+            )}
+            onClick={onSelectToday}
+            onKeyDown={() => {}}
+          >
+            <Clock size={12} className="shrink-0 text-muted-foreground" />
+            <span className="flex-1 truncate font-medium">Today</span>
+            {todayUnread > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                {todayUnread}
+              </span>
+            )}
           </div>
         )}
 
@@ -250,15 +286,23 @@ export function Sidebar({
         })()}
       </div>
 
-      {/* New Group button */}
-      <div className="p-2 border-t border-border/40">
+      {/* Bottom action bar: +Feed and +Group in a row */}
+      <div className="p-2 border-t border-border/40 flex gap-2">
         <Button
-          variant="ghost"
+          variant="outline"
+          size="sm"
+          onClick={onAddSource}
+          className="flex-1 text-xs gap-1"
+        >
+          <Plus size={12} /> Feed
+        </Button>
+        <Button
+          variant="outline"
           size="sm"
           onClick={onAddGroup}
-          className="w-full text-xs gap-1 text-muted-foreground"
+          className="flex-1 text-xs gap-1"
         >
-          <FolderPlus size={12} /> New Group
+          <Plus size={12} /> Group
         </Button>
       </div>
     </div>

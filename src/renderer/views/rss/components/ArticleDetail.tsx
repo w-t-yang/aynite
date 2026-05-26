@@ -1,4 +1,5 @@
 import { Bookmark, BookmarkCheck, ExternalLink } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
 import { cn } from '../../../shared/lib/utils'
 import type { RssItem } from '../types'
@@ -16,6 +17,56 @@ export function ArticleDetail({
   onToggleBookmark,
   onOpenExternal,
 }: ArticleDetailProps) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  const openExternalRef = useRef(onOpenExternal)
+  openExternalRef.current = onOpenExternal
+
+  // Capture link clicks at the document level with capture phase,
+  // but only intercept clicks inside the content div
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Only intercept if click is inside our content area
+      const contentEl = contentRef.current
+      if (!contentEl?.contains(target)) return
+
+      const link = target.closest('a')
+      if (!link) return
+      const href = link.getAttribute('href')
+      if (!href) return
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+        openExternalRef.current(href)
+      }
+    }
+    // Use capture phase at document level for earliest possible interception
+    document.addEventListener('click', handler, true)
+    return () => document.removeEventListener('click', handler, true)
+  }, [])
+
+  // Override window.open to catch any target="_blank" navigations
+  useEffect(() => {
+    const originalOpen = window.open
+    window.open = (
+      url?: string | URL,
+      _target?: string,
+      _features?: string,
+    ) => {
+      if (url) {
+        const urlStr = typeof url === 'string' ? url : url.toString()
+        if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+          openExternalRef.current(urlStr)
+        }
+      }
+      return null
+    }
+    return () => {
+      window.open = originalOpen
+    }
+  }, [])
+
   if (!item) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-w-[320px] p-8 text-center">
@@ -31,7 +82,7 @@ export function ArticleDetail({
     <div className="flex-1 flex flex-col min-w-[320px] bg-card">
       {/* Article content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="p-6">
+        <div className="max-w-3xl mx-auto p-6">
           {/* Title */}
           <h1 className="text-xl font-bold text-foreground leading-tight mb-3">
             {item.title}
@@ -112,6 +163,7 @@ export function ArticleDetail({
           {/* Content */}
           {item.content ? (
             <div
+              ref={contentRef}
               className="prose prose-sm max-w-none"
               // biome-ignore lint/security/noDangerouslySetInnerHtml: RSS content from trusted feeds
               dangerouslySetInnerHTML={{ __html: item.content }}
