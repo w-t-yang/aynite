@@ -19,7 +19,7 @@
 
 ## file browser
 
-1. [] basic key bindings - save, search
+1. [x] basic key bindings - save, search
 
 ## workspace view
 

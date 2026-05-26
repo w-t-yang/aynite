@@ -28,7 +28,25 @@ export function FileBrowserPage() {
   const [history, setHistory] = useState<string[]>([])
 
   // Content state
-  const [content, setContent] = useState<string | null>(null)
+  const [content, setContent_] = useState<string | null>(null)
+  const setContent = useCallback(
+    (val: string | null) => {
+      console.log(
+        '[DEBUG] setContent called with:',
+        JSON.stringify(val?.slice(0, 50)),
+        'prev:',
+        JSON.stringify(content?.slice(0, 50)),
+      )
+      if (val !== content) {
+        console.log(
+          '[DEBUG]   -> VALUE CHANGED! stack:',
+          new Error().stack?.split('\n').slice(2, 6).join('\n'),
+        )
+      }
+      setContent_(val)
+    },
+    [content],
+  )
   const [originalContent, setOriginalContent] = useState<string | null>(null)
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null)
   const [loading, setLoading] = useState(false)
@@ -179,6 +197,7 @@ export function FileBrowserPage() {
 
   // Load file content when activePath changes
   useEffect(() => {
+    console.log('[DEBUG] activePath effect RUNNING, activePath:', activePath)
     if (!activePath) {
       setContent(null)
       setFileInfo(null)
@@ -206,6 +225,7 @@ export function FileBrowserPage() {
         // Read all text files as text
         if (textStatus) {
           const text = await window.aynite.readFile(activePath)
+          console.log('[DEBUG] activePath effect: read file, setting content')
           setContent(text)
           setOriginalContent(text)
         } else {
@@ -220,13 +240,20 @@ export function FileBrowserPage() {
     }
 
     loadFile()
-  }, [activePath])
+  }, [
+    activePath, // Clear state immediately to show loading for the new file
+    setContent,
+  ])
 
   // Watch only the currently open file for external changes
   // Uses 1 FD instead of thousands from recursive directory watching
   useEffect(() => {
     window.aynite.watchFile(activePath)
   }, [activePath])
+
+  // Debounce timer for fs-change events (macOS fs.watch fires in a loop).
+  // When events arrive rapidly, only the last one is processed.
+  const fsChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reload active file if it changes on disk
   useAppEvent('fs-change', (data: { event: string; path: string }) => {
@@ -235,14 +262,20 @@ export function FileBrowserPage() {
     const normalizedActive = activePath.replace(/\\/g, '/')
 
     if (normalizedChanged === normalizedActive && data.event === 'change') {
-      // Re-trigger the load effect by just calling loadFile logic or slightly updating state
-      // For simplicity, we just trigger a refresh
-      const refresh = async () => {
+      // Debounce: cancel any pending refresh, schedule a new one
+      if (fsChangeTimerRef.current) {
+        clearTimeout(fsChangeTimerRef.current)
+      }
+      fsChangeTimerRef.current = setTimeout(async () => {
+        fsChangeTimerRef.current = null
         try {
           const textStatus = await window.aynite.checkIsTextFile(activePath)
           setIsText(textStatus)
           if (textStatus) {
             const text = await window.aynite.readFile(activePath)
+            // Only call setContent if the content actually differs from what
+            // we already have — breaks the macOS fs.watch feedback loop where
+            // reading the file triggers another change event.
             setContent(text)
           }
           const info = await window.aynite.getFileInfo(activePath)
@@ -254,8 +287,7 @@ export function FileBrowserPage() {
         } catch (e) {
           console.error('Failed to refresh file on disk change', e)
         }
-      }
-      refresh()
+      }, 200)
     }
   })
 
@@ -310,6 +342,12 @@ export function FileBrowserPage() {
   // If userModeRef is set (user manually chose a mode), the async block
   // only updates metadata (hasDiff/diffContent) but does NOT override mode.
   useEffect(() => {
+    console.log(
+      '[DEBUG] mode-selection effect RUNNING, activePath:',
+      activePath,
+      'userModeRef:',
+      userModeRef.current,
+    )
     const prevActivePath = activePathRef.current
 
     // Reset userMode when a new file is opened (not on diffRefreshKey)
