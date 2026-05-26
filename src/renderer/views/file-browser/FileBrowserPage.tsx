@@ -28,25 +28,7 @@ export function FileBrowserPage() {
   const [history, setHistory] = useState<string[]>([])
 
   // Content state
-  const [content, setContent_] = useState<string | null>(null)
-  const setContent = useCallback(
-    (val: string | null) => {
-      console.log(
-        '[DEBUG] setContent called with:',
-        JSON.stringify(val?.slice(0, 50)),
-        'prev:',
-        JSON.stringify(content?.slice(0, 50)),
-      )
-      if (val !== content) {
-        console.log(
-          '[DEBUG]   -> VALUE CHANGED! stack:',
-          new Error().stack?.split('\n').slice(2, 6).join('\n'),
-        )
-      }
-      setContent_(val)
-    },
-    [content],
-  )
+  const [content, setContent] = useState<string | null>(null)
   const [originalContent, setOriginalContent] = useState<string | null>(null)
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null)
   const [loading, setLoading] = useState(false)
@@ -197,7 +179,6 @@ export function FileBrowserPage() {
 
   // Load file content when activePath changes
   useEffect(() => {
-    console.log('[DEBUG] activePath effect RUNNING, activePath:', activePath)
     if (!activePath) {
       setContent(null)
       setFileInfo(null)
@@ -225,7 +206,6 @@ export function FileBrowserPage() {
         // Read all text files as text
         if (textStatus) {
           const text = await window.aynite.readFile(activePath)
-          console.log('[DEBUG] activePath effect: read file, setting content')
           setContent(text)
           setOriginalContent(text)
         } else {
@@ -240,10 +220,7 @@ export function FileBrowserPage() {
     }
 
     loadFile()
-  }, [
-    activePath, // Clear state immediately to show loading for the new file
-    setContent,
-  ])
+  }, [activePath])
 
   // Watch only the currently open file for external changes
   // Uses 1 FD instead of thousands from recursive directory watching
@@ -262,7 +239,9 @@ export function FileBrowserPage() {
     const normalizedActive = activePath.replace(/\\/g, '/')
 
     if (normalizedChanged === normalizedActive && data.event === 'change') {
-      // Debounce: cancel any pending refresh, schedule a new one
+      // Debounce: cancel any pending refresh, schedule a new one.
+      // macOS fs.watch can fire rapidly in a loop — debouncing coalesces
+      // these into a single read, breaking the feedback loop.
       if (fsChangeTimerRef.current) {
         clearTimeout(fsChangeTimerRef.current)
       }
@@ -273,9 +252,6 @@ export function FileBrowserPage() {
           setIsText(textStatus)
           if (textStatus) {
             const text = await window.aynite.readFile(activePath)
-            // Only call setContent if the content actually differs from what
-            // we already have — breaks the macOS fs.watch feedback loop where
-            // reading the file triggers another change event.
             setContent(text)
           }
           const info = await window.aynite.getFileInfo(activePath)
@@ -342,12 +318,6 @@ export function FileBrowserPage() {
   // If userModeRef is set (user manually chose a mode), the async block
   // only updates metadata (hasDiff/diffContent) but does NOT override mode.
   useEffect(() => {
-    console.log(
-      '[DEBUG] mode-selection effect RUNNING, activePath:',
-      activePath,
-      'userModeRef:',
-      userModeRef.current,
-    )
     const prevActivePath = activePathRef.current
 
     // Reset userMode when a new file is opened (not on diffRefreshKey)

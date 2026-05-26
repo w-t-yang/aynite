@@ -26,7 +26,14 @@ const AppContent: React.FC = () => {
             'iframe',
           ) as HTMLIFrameElement | null
           if (iframe?.contentWindow) {
-            iframe.contentWindow.location.reload()
+            try {
+              iframe.contentWindow.location.reload()
+            } catch {
+              iframe.contentWindow.postMessage(
+                { type: 'aynite:refresh-tile' },
+                '*',
+              )
+            }
           }
         }
       },

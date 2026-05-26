@@ -148,7 +148,21 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
       w.aynite.activateTile(tileId)
     }
     window.addEventListener('mousedown', handleMouseDown, true)
-    return () => window.removeEventListener('mousedown', handleMouseDown, true)
+
+    // Listen for refresh-tile messages from the parent (Cmd+R).
+    // On same-origin iframes, the parent can reload directly.
+    // On cross-origin iframes (file://), it sends a postMessage instead.
+    const handleRefresh = (e: MessageEvent) => {
+      if (e.data?.type === 'aynite:refresh-tile') {
+        window.location.reload()
+      }
+    }
+    window.addEventListener('message', handleRefresh)
+
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown, true)
+      window.removeEventListener('message', handleRefresh)
+    }
   }, [])
 
   return (

@@ -152,7 +152,13 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
         'iframe',
       ) as HTMLIFrameElement | null
       if (iframe?.contentWindow) {
-        iframe.contentWindow.location.reload()
+        try {
+          // Same-origin: reload directly
+          iframe.contentWindow.location.reload()
+        } catch {
+          // Cross-origin iframe (e.g. file:// views): send message instead
+          iframe.contentWindow.postMessage({ type: 'aynite:refresh-tile' }, '*')
+        }
       }
     }
     return

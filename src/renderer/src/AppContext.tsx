@@ -312,7 +312,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
               'iframe',
             ) as HTMLIFrameElement | null
             if (iframe?.contentWindow) {
-              iframe.contentWindow.location.reload()
+              try {
+                iframe.contentWindow.location.reload()
+              } catch {
+                iframe.contentWindow.postMessage(
+                  { type: 'aynite:refresh-tile' },
+                  '*',
+                )
+              }
             }
           }
           return
