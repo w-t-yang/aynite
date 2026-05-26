@@ -13,7 +13,7 @@ import {
   joinPaths,
 } from '../../lib/path'
 import type { DiffStats, GitStatusType } from '../../lib/types/files'
-import { getAIModel } from '../ai'
+import { DISABLED_REASONING_OPTIONS, getAIModel } from '../ai'
 import { loadConfig } from '../config'
 import { execInUserShell } from '../system'
 import { broadcastAppEvent } from '../window'
@@ -356,12 +356,7 @@ ${diffContent.slice(0, 1200)}`
               maxOutputTokens: 300,
               temperature: 0.6,
               abortSignal: controller.signal,
-              providerOptions: {
-                anthropic: { thinking: { type: 'disabled' } },
-                deepseek: { thinking: { type: 'disabled' } },
-                google: { thinkingConfig: { thinkingLevel: 'minimal' } },
-                openai: { reasoning_effort: null },
-              },
+              providerOptions: DISABLED_REASONING_OPTIONS,
             })
 
             let fullText = ''

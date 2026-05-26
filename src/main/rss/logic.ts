@@ -24,7 +24,7 @@ import type {
   RssItem,
   RssSource,
 } from '../../lib/types/rss'
-import { getAIModel } from '../ai/factory'
+import { DISABLED_REASONING_OPTIONS, getAIModel } from '../ai/factory'
 
 const MAX_ITEMS_PER_SOURCE = 500
 
@@ -565,12 +565,7 @@ export async function summarizeArticle(
         content: `Please summarize this article:\n\n${articleText}`,
       },
     ],
-    providerOptions: {
-      anthropic: { thinking: { type: 'disabled' } },
-      deepseek: { thinking: { type: 'disabled' } },
-      google: { thinkingConfig: { thinkingLevel: 'minimal' } },
-      openai: { reasoning_effort: null },
-    },
+    providerOptions: DISABLED_REASONING_OPTIONS,
   })
 
   // 5. Cache and return

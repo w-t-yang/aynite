@@ -138,7 +138,7 @@ export {
   loadSession,
   saveSession,
 } from './chat'
-export { getAIModel } from './factory'
+export { DISABLED_REASONING_OPTIONS, getAIModel } from './factory'
 export {
   ensureDefaultPromptFiles,
   getDefaultGlobalPrompts,
