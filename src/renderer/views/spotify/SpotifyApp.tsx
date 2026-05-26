@@ -1,9 +1,6 @@
 import { Disc3, Loader2, LogOut, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
-import {
-  SPOTIFY_AUTH_CALLBACK,
-  SPOTIFY_AUTH_CALLBACK_HTTP,
-} from '../../../lib/constants/app'
+import { SPOTIFY_AUTH_CALLBACK_HTTP } from '../../../lib/constants/app'
 import { PlayerBar } from './components/PlayerBar'
 import { Playlists } from './components/Playlists'
 import { PlaylistTracks } from './components/PlaylistTracks'
@@ -20,10 +17,7 @@ export type { Section }
 export function SpotifyApp() {
   const spotify = useSpotify()
   const clientIdRef = useRef<HTMLInputElement>(null)
-
-  const oauthCallbackUrl = spotify.protocolAvailable
-    ? SPOTIFY_AUTH_CALLBACK
-    : SPOTIFY_AUTH_CALLBACK_HTTP
+  const oauthCallbackUrl = SPOTIFY_AUTH_CALLBACK_HTTP
 
   // Pre-fill stored client ID once loaded
   useEffect(() => {
@@ -120,8 +114,7 @@ export function SpotifyApp() {
             type="button"
             onClick={() => {
               const input = clientIdRef.current
-              if (input?.value)
-                handleConnect(input.value, spotify.protocolAvailable)
+              if (input?.value) handleConnect(input.value, false)
             }}
             disabled={spotify.fetching}
             className="w-full px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity disabled:opacity-30"
@@ -171,13 +164,6 @@ export function SpotifyApp() {
               </li>
             </ol>
           </div>
-
-          {!spotify.protocolAvailable && (
-            <p className="text-[10px] text-muted-foreground/60">
-              The app will start a temporary server on port 18080 to receive the
-              OAuth callback after you authorize.
-            </p>
-          )}
         </div>
       </div>
     )
