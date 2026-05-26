@@ -464,7 +464,23 @@ export async function routeSetConfig(
       const workspaceName = winId
         ? await getWindowWorkspace(winId)
         : (await getWorkspacesList()).active
-      await saveWorkspaceState(workspaceName, { activeFile: filePath })
+      // Single atomic update: set activeFile and ensure the file is in
+      // the opened files list. This eliminates the race between two
+      // separate setConfig calls (Treeview sets activeFile, the effect
+      // in FileBrowserPage sets openedFiles) that could overwrite each
+      // other due to concurrent read-modify-write in saveWorkspaceState.
+      const state = await getWorkspaceState(workspaceName)
+      const files = state.files || []
+      const updatedFiles =
+        filePath && !files.includes(filePath)
+          ? [...files, filePath]
+          : filePath === null
+            ? []
+            : files
+      await saveWorkspaceState(workspaceName, {
+        activeFile: filePath,
+        files: updatedFiles,
+      })
       return true
     }
     case ConfigKey.OPENED_FILES: {
