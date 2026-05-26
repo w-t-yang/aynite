@@ -40,29 +40,11 @@ const VIBE_LAYOUTS: Record<VibeType, LayoutNode> = {
       { id: 'vibe-code-ai', type: 'leaf', name: 'aichat', size: 30 },
     ],
   },
-  surprise: {
-    id: 'vibe-surprise',
-    type: 'split',
-    direction: 'vertical',
+  empty: {
+    id: 'vibe-empty',
+    type: 'leaf',
     size: 100,
-    children: [
-      { id: 'vibe-surp-tree', type: 'leaf', name: 'treeview', size: 25 },
-      {
-        id: 'split-vibe-surp',
-        type: 'split',
-        direction: 'horizontal',
-        size: 75,
-        children: [
-          {
-            id: 'vibe-surp-browser',
-            type: 'leaf',
-            name: 'file-browser',
-            size: 50,
-          },
-          { id: 'vibe-surp-ai', type: 'leaf', name: 'aichat', size: 50 },
-        ],
-      },
-    ],
+    // no `name` property — renders as an empty tile with no view configured
   },
 }
 

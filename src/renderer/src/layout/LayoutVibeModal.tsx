@@ -1,4 +1,4 @@
-import { Code, Files, MessageSquare, Sparkles } from 'lucide-react'
+import { Code, Files, Layout, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
@@ -36,11 +36,12 @@ const VIBES = [
     color: 'bg-purple-500/10 border-purple-500/20 hover:border-purple-500/50',
   },
   {
-    id: 'surprise' as VibeType,
-    label: 'Surprise Me',
-    description: 'Start with a blank canvas and build your own unique vibe.',
-    icon: <Sparkles className="text-amber-500" size={24} />,
-    color: 'bg-amber-500/10 border-amber-500/20 hover:border-amber-500/50',
+    id: 'empty' as VibeType,
+    label: 'Empty Layout',
+    description: 'Start with a single empty tile, then choose a view to load.',
+    icon: <Layout className="text-neutral-500" size={24} />,
+    color:
+      'bg-neutral-500/10 border-neutral-500/20 hover:border-neutral-500/50',
   },
 ]
 

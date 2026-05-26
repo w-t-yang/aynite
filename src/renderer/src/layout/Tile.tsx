@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppOperation } from '../../../lib/constants/app'
 import type { LeafNode } from '../../../lib/constants/types'
 
@@ -43,6 +43,23 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     ...viewOptions,
     { id: 'divider-1', type: 'divider' },
     { id: 'close', label: 'Close Tile', className: 'text-destructive' },
+  ]
+
+  // Menu for empty tile — no close option since there's nothing to close
+  const loadViewItems = useMemo(() => viewOptions, [viewOptions])
+
+  const handleLoadView = (selectedUrl: string) => {
+    setLoaded(false)
+    if (loadTimerRef.current) clearTimeout(loadTimerRef.current)
+    updateTileView(id, { name: selectedUrl })
+  }
+
+  const SHORTCUTS = [
+    { keys: 'Ctrl + -', action: 'Split vertically' },
+    { keys: 'Ctrl + =', action: 'Split horizontally' },
+    { keys: 'Ctrl + Q', action: 'Close tile' },
+    { keys: 'Ctrl + O', action: 'Cycle around tiles' },
+    { keys: 'Ctrl + R', action: 'Refresh tile' },
   ]
 
   const handleIframeLoad = useCallback(() => {
@@ -141,24 +158,57 @@ const Tile: React.FC<TileProps> = ({ node }) => {
             />
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 mb-2 opacity-10"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              role="img"
-              aria-label="Empty tile"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <div className="text-[13px] font-medium opacity-10">Empty Tile</div>
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-5 p-6">
+            {/* Load View Button */}
+            <SelectionMenu
+              items={loadViewItems}
+              onSelect={handleLoadView}
+              align="center"
+              trigger={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 px-4 py-2 text-sm font-medium"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    role="img"
+                    aria-label="Load view"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  Load View
+                </Button>
+              }
+              title="Available Views"
+            />
+
+            {/* Keyboard Shortcut Instructions */}
+            <div className="space-y-1.5 max-w-[260px]">
+              <div className="text-[11px] font-semibold text-muted-foreground/40 uppercase tracking-wider text-center mb-2">
+                Tile Shortcuts
+              </div>
+              {SHORTCUTS.map((shortcut) => (
+                <div
+                  key={shortcut.keys}
+                  className="flex items-center justify-between gap-4 text-xs"
+                >
+                  <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 text-[10px] font-mono text-muted-foreground/70 whitespace-nowrap">
+                    {shortcut.keys}
+                  </kbd>
+                  <span className="text-muted-foreground/50 text-[11px]">
+                    {shortcut.action}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

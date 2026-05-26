@@ -1,6 +1,6 @@
 import type React from 'react'
 
-export type VibeType = 'chat' | 'file' | 'code' | 'surprise'
+export type VibeType = 'chat' | 'file' | 'code' | 'empty'
 
 export interface SelectionItem {
   id: string
