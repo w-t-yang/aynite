@@ -21,6 +21,7 @@ import {
   getAIConfigPath,
   getAppearanceConfigPath,
   getAyniteDir,
+  getAynitePath,
   getAynitePromptPath,
   getIgnoreConfigPath,
   getKeybindingsConfigPath,
@@ -117,7 +118,7 @@ export async function initAppFolders() {
       'Aynite Playbook',
       {
         ...PLAYBOOK_WORKSPACE_CONFIG,
-        folders: [playbookPath],
+        folders: [playbookPath, getAynitePath('rss'), getAynitePath('spotify')],
         activeFile: getWelcomeMdPath(),
       },
     ],
@@ -126,7 +127,7 @@ export async function initAppFolders() {
       {
         ...TRADER_WORKSPACE_CONFIG,
         folders: [playbookPath],
-        activeFile: getWelcomeMdPath(),
+        activeFile: joinPaths(playbookPath, 'trading', 'README.md'),
       },
     ],
     [
@@ -134,7 +135,7 @@ export async function initAppFolders() {
       {
         ...WRITER_WORKSPACE_CONFIG,
         folders: [playbookPath],
-        activeFile: getWelcomeMdPath(),
+        activeFile: joinPaths(playbookPath, 'writing', 'README.md'),
       },
     ],
   ]
@@ -149,6 +150,12 @@ export async function initAppFolders() {
     if (existing) {
       for (const layout of existing.layouts || []) {
         setExampleTileData(layout.layout, playbookPath)
+      }
+      // Also update activeFile for default workspaces so changes take effect on existing installs
+      if (name === 'Market Lens') {
+        existing.activeFile = joinPaths(playbookPath, 'trading', 'README.md')
+      } else if (name === 'The Quill') {
+        existing.activeFile = joinPaths(playbookPath, 'writing', 'README.md')
       }
       await writeJson(wsPath, existing)
     } else {

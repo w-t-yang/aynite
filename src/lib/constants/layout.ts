@@ -19,25 +19,69 @@ export const PLAYBOOK_LAYOUTS: LayoutConfig[] = [
     },
   },
   {
+    id: 'pb-chat-vibe',
+    name: 'Chat Vibe',
+    layout: {
+      id: 'split-pb-chat-vibe',
+      type: 'split',
+      direction: 'horizontal',
+      size: 100,
+      children: [
+        {
+          id: 'tile-pb-cv-workspace',
+          type: 'leaf',
+          name: 'workspace-view',
+          size: 35,
+        },
+        {
+          id: 'tile-pb-cv-aibrowser',
+          type: 'leaf',
+          name: 'ai-browser',
+          size: 65,
+        },
+      ],
+    },
+  },
+  {
+    id: 'pb-rss',
+    name: 'RSS',
+    layout: {
+      id: 'tile-pb-rss',
+      type: 'leaf',
+      name: 'rss',
+      size: 100,
+    },
+  },
+  {
+    id: 'pb-spotify',
+    name: 'Spotify',
+    layout: {
+      id: 'tile-pb-spotify',
+      type: 'leaf',
+      name: 'spotify',
+      size: 100,
+    },
+  },
+  {
     id: 'pb-whiteboard',
     name: 'Whiteboard',
     layout: {
       id: 'split-pb-whiteboard',
       type: 'split',
-      direction: 'vertical',
+      direction: 'horizontal',
       size: 100,
       children: [
         {
           id: 'tile-pb-canvas',
           type: 'leaf',
           name: 'dataview-canvas',
-          size: 60,
+          size: 50,
         },
         {
           id: 'tile-pb-mindmap',
           type: 'leaf',
           name: 'dataview-mindmap',
-          size: 40,
+          size: 50,
         },
       ],
     },
