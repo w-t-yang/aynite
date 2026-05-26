@@ -61,6 +61,18 @@ export function AIProviderCard({
             placeholder="e.g. gpt-4o or deepseek-r1"
           />
 
+          <SelectionMenu
+            label="Reasoning Effort"
+            activeId={provider.reasoningEffort || 'off'}
+            onSelect={(v) => onUpdate(provider.id, 'reasoningEffort', v)}
+            items={[
+              { id: 'off', label: 'Off (Fastest)' },
+              { id: 'low', label: 'Low' },
+              { id: 'medium', label: 'Medium' },
+              { id: 'high', label: 'High (Deep Thinking)' },
+            ]}
+          />
+
           {provider.provider !== 'ollama' && (
             <div className="col-span-2">
               <Input

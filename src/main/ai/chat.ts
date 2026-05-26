@@ -19,6 +19,51 @@ import type { AIProvider } from './factory'
 import { getAIModel } from './factory'
 import { createTools } from './tools'
 
+/**
+ * Maps the unified reasoningEffort setting to each provider's native providerOptions.
+ * This lets users control reasoning/thinking behavior from a single dropdown,
+ * regardless of which AI provider they use.
+ */
+function getProviderReasoningOptions(
+  config: AIProvider,
+): Record<string, any> | undefined {
+  const effort = config.reasoningEffort
+  if (!effort || effort === 'off') {
+    return {
+      openai: { reasoning_effort: null },
+      anthropic: { thinking: { type: 'disabled' } },
+      deepseek: { thinking: { type: 'disabled' } },
+      google: { thinkingConfig: {} },
+    }
+  }
+
+  switch (effort) {
+    case 'low':
+      return {
+        openai: { reasoning_effort: 'low' },
+        anthropic: { thinking: { type: 'enabled', budgetTokens: 1024 } },
+        deepseek: { thinking: { type: 'enabled' } },
+        google: { thinkingConfig: { thinkingLevel: 'low' } },
+      }
+    case 'medium':
+      return {
+        openai: { reasoning_effort: 'medium' },
+        anthropic: { thinking: { type: 'enabled', budgetTokens: 4096 } },
+        deepseek: { thinking: { type: 'enabled' } },
+        google: { thinkingConfig: { thinkingLevel: 'medium' } },
+      }
+    case 'high':
+      return {
+        openai: { reasoning_effort: 'high' },
+        anthropic: { thinking: { type: 'enabled', budgetTokens: 16384 } },
+        deepseek: { thinking: { type: 'enabled' } },
+        google: { thinkingConfig: { thinkingLevel: 'high' } },
+      }
+    default:
+      return undefined
+  }
+}
+
 export async function initAiFolders() {
   // Global sessions dir is no longer used; workspace-scoped init happens in initWorkspaceFolders
 }
@@ -231,6 +276,7 @@ export async function aiChat(params: {
           messages: modelMessages,
           tools: enabledTools,
           stopWhen: stepCountIs(100),
+          providerOptions: getProviderReasoningOptions(config) as any,
         })
 
         let fullResponseText = ''

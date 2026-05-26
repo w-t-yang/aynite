@@ -12,6 +12,13 @@ export interface AIProvider {
   model: string
   compatibility?: 'openai' | 'anthropic' | 'google'
   contextWindow?: number
+  /** Controls the model's reasoning/thinking behavior.
+   *  - 'off': No reasoning (fastest, recommended for simple tasks)
+   *  - 'low': Minimal reasoning
+   *  - 'medium': Moderate reasoning (default-like)
+   *  - 'high': Maximum reasoning (deep thinking, slower)
+   *  Maps to each provider's native API (reasoning_effort, thinking, etc.) */
+  reasoningEffort?: 'off' | 'low' | 'medium' | 'high'
 }
 
 export interface Agent {
