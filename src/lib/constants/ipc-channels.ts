@@ -113,6 +113,7 @@ export const RssChannels = {
   MARK_READ: 'aynite:rss-mark-read',
   MARK_ALL_READ: 'aynite:rss-mark-all-read',
   DELETE_SOURCE_CONTENT: 'aynite:rss-delete-source-content',
+  SUMMARIZE: 'aynite:rss-summarize',
 } as const
 
 export const SpotifyChannels = {

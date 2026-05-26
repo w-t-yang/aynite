@@ -1,17 +1,22 @@
 import { randomUUID } from 'node:crypto'
+import { generateText } from 'ai'
 import {
   ensureDir,
   exists,
+  getAIConfigPath,
   getRssBookmarksPath,
   getRssConfigPath,
   getRssContentPath,
   getRssContentsDir,
   getRssDir,
+  getRssSummariesDir,
+  getRssSummaryPath,
   readdir,
   readJson,
   unlink,
   writeJson,
 } from '../../lib/path'
+import type { AIProvider } from '../../lib/types/ai'
 import type {
   RssBookmarks,
   RssConfig,
@@ -19,6 +24,7 @@ import type {
   RssItem,
   RssSource,
 } from '../../lib/types/rss'
+import { getAIModel } from '../ai/factory'
 
 const MAX_ITEMS_PER_SOURCE = 500
 
@@ -95,6 +101,34 @@ function getDefaultConfig(): RssConfig {
         id: randomUUID(),
         url: 'https://blog.rust-lang.org/feed.xml',
         title: 'Rust Blog',
+        groupId: techGroup.id,
+        fetchIntervalMs: 1_800_000,
+      },
+      {
+        id: randomUUID(),
+        url: 'http://labs.spotify.com/feed/',
+        title: 'Spotify Engineering',
+        groupId: techGroup.id,
+        fetchIntervalMs: 1_800_000,
+      },
+      {
+        id: randomUUID(),
+        url: 'https://blog.pragmaticengineer.com/rss/',
+        title: 'The Pragmatic Engineer',
+        groupId: techGroup.id,
+        fetchIntervalMs: 1_800_000,
+      },
+      {
+        id: randomUUID(),
+        url: 'https://openai.com/news/engineering/rss.xml',
+        title: 'OpenAI Engineering News',
+        groupId: techGroup.id,
+        fetchIntervalMs: 1_800_000,
+      },
+      {
+        id: randomUUID(),
+        url: 'https://uxplanet.org/feed',
+        title: 'UX Planet',
         groupId: techGroup.id,
         fetchIntervalMs: 1_800_000,
       },
@@ -428,6 +462,124 @@ export async function getAllContents(
 
 export async function deleteContent(sourceId: string): Promise<void> {
   await deleteAllSourceFiles(sourceId)
+}
+
+// ─── Summarization ─────────────────────────────────────────────────────
+
+/**
+ * Fetch article URL content with realistic browser headers.
+ * Some sites block minimal User-Agent headers, so we send a full set
+ * of standard browser request headers.
+ */
+export async function fetchArticleText(url: string): Promise<string> {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      Accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-GPC': '1',
+      DNT: '1',
+    },
+  })
+  if (!response.ok)
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+  const html = await response.text()
+  return html
+    .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '')
+    .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '')
+    .replace(/<nav\b[^>]*>([\s\S]*?)<\/nav>/gi, '')
+    .replace(/<footer\b[^>]*>([\s\S]*?)<\/footer>/gi, '')
+    .replace(/<header\b[^>]*>([\s\S]*?)<\/header>/gi, '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 15000)
+}
+
+export async function summarizeArticle(
+  itemId: string,
+  url: string,
+  existingContent?: string,
+  existingSnippet?: string,
+): Promise<string> {
+  // 1. Check cache
+  const summaryPath = getRssSummaryPath(itemId)
+  await ensureDir(getRssSummariesDir())
+
+  if (await exists(summaryPath)) {
+    const cached = await readJson<{ summary: string }>(summaryPath)
+    return cached.summary
+  }
+
+  // 2. Get article text — try URL fetch first, fall back to RSS content
+  let articleText = ''
+  try {
+    articleText = await fetchArticleText(url)
+  } catch {
+    // If URL fetch fails, use existing RSS content or snippet
+    if (existingContent) {
+      articleText = existingContent
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 15000)
+    } else if (existingSnippet) {
+      articleText = existingSnippet.trim().slice(0, 15000)
+    }
+  }
+
+  if (!articleText) throw new Error('No content available for summarization')
+
+  // 3. Get active AI provider config
+  const aiConfig = await readJson<{
+    activeId: string
+    providers: AIProvider[]
+  }>(getAIConfigPath(), { activeId: '', providers: [] })
+  const activeProvider = aiConfig.providers.find(
+    (p: AIProvider) => p.id === aiConfig.activeId,
+  )
+  if (!activeProvider) throw new Error('No active AI provider configured')
+
+  // 4. Generate summary via AI (reasoning disabled — unnecessary for summarization)
+  const model = getAIModel(activeProvider)
+  const { text: summary } = await generateText({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You are a precise article summarizer. Read the article and provide a concise summary in 3-4 paragraphs. Focus on the key points, main arguments, and conclusions. Use clear, plain language. Do not include promotional content or opinions — just factual summary.',
+      },
+      {
+        role: 'user',
+        content: `Please summarize this article:\n\n${articleText}`,
+      },
+    ],
+    providerOptions: {
+      anthropic: { thinking: { type: 'disabled' } },
+      deepseek: { thinking: { type: 'disabled' } },
+      google: { thinkingConfig: { thinkingLevel: 'minimal' } },
+      openai: { reasoning_effort: null },
+    },
+  })
+
+  // 5. Cache and return
+  await writeJson(summaryPath, {
+    summary,
+    url,
+    generatedAt: new Date().toISOString(),
+  })
+  return summary
 }
 
 // ─── Read Status ───────────────────────────────────────────────────────

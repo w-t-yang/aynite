@@ -71,6 +71,26 @@ export function setupRssIpc() {
       return true
     },
   )
+
+  ipcMain.handle(
+    RssChannels.SUMMARIZE,
+    async (
+      _event,
+      {
+        itemId,
+        url,
+        content,
+        contentSnippet,
+      }: {
+        itemId: string
+        url: string
+        content?: string
+        contentSnippet?: string
+      },
+    ) => {
+      return await logic.summarizeArticle(itemId, url, content, contentSnippet)
+    },
+  )
 }
 
 export {
@@ -89,6 +109,7 @@ export {
   markAllRead,
   markRead,
   saveConfig,
+  summarizeArticle,
   toggleBookmark,
   updateGroup,
   updateSource,

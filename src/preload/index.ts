@@ -166,6 +166,18 @@ const aynite = {
     ipcRenderer.invoke(RssChannels.MARK_ALL_READ, sourceId),
   rssDeleteSourceContent: (sourceId: string) =>
     ipcRenderer.invoke(RssChannels.DELETE_SOURCE_CONTENT, sourceId),
+  rssSummarizeArticle: (
+    itemId: string,
+    url: string,
+    content?: string,
+    contentSnippet?: string,
+  ) =>
+    ipcRenderer.invoke(RssChannels.SUMMARIZE, {
+      itemId,
+      url,
+      content,
+      contentSnippet,
+    }),
 
   // ── Spotify operations ────────────────────────────────────────────────
   spotifyInitAuth: (clientId: string, useProtocol?: boolean) =>

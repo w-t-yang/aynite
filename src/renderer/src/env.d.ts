@@ -175,6 +175,12 @@ interface AyniteWindow {
   rssMarkRead: (sourceId: string, itemId: string) => Promise<boolean>
   rssMarkAllRead: (sourceId: string) => Promise<boolean>
   rssDeleteSourceContent: (sourceId: string) => Promise<boolean>
+  rssSummarizeArticle: (
+    itemId: string,
+    url: string,
+    content?: string,
+    contentSnippet?: string,
+  ) => Promise<string>
 
   // Spotify
   spotifyInitAuth: (

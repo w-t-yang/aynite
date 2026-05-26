@@ -158,6 +158,14 @@ export function getRssBookmarksPath() {
   return getAynitePath('rss', 'bookmarks.json')
 }
 
+export function getRssSummariesDir() {
+  return getAynitePath('rss', 'summaries')
+}
+
+export function getRssSummaryPath(itemId: string) {
+  return getAynitePath('rss', 'summaries', `${itemId}.json`)
+}
+
 export function getSpotifyDir() {
   return getAynitePath('spotify')
 }
