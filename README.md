@@ -205,8 +205,6 @@ Aynite is in active development (beta). The app ships regularly, has a growing s
 
 Everyone is welcome to contribute! There's just one small request: **write your code and make contributions with Aynite**. I believe contributors should be the people who love using Aynite the most — for everything.
 
-**If you'd like to contribute skills, commands, dataviews, or fileviews**, head over to the [aynite-batteries](https://github.com/w-t-yang/aynite-batteries) repo — that's the dedicated place for community extensions. For core app changes (main process, renderer, architecture), this repo is the right place.
-
 > ⚡ **Aynite Contribution Ratio** — Up to this point (2026-05-27), **27.9%** of the project's commit history has already been authored by Aynite + DeepSeek-V4-Flash, and this ratio keeps climbing.
 >
 > ```
@@ -218,6 +216,9 @@ Everyone is welcome to contribute! There's just one small request: **write your 
 > ```
 >
 > Check the latest ratio anytime with `npm run count:aynite`.
+
+
+**If you'd like to contribute skills, commands, dataviews, or fileviews**, head over to the [aynite-batteries](https://github.com/w-t-yang/aynite-batteries) repo — that's the dedicated place for community extensions. For core app changes (main process, renderer, architecture), this repo is the right place.
 
 ## Contributors
 
