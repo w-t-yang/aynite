@@ -1,387 +1,39 @@
+/**
+ * App Context — Composition Layer
+ *
+ * Composes all domain contexts into a single provider and exposes
+ * a combined useApp() hook that preserves the original interface.
+ *
+ * The cross-cutting IPC event listener (iframe relaying) lives here
+ * since it touches all domains and sends postMessage to all iframes.
+ */
 import type React from 'react'
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import { useEffect, useRef } from 'react'
 import { AppEvents } from '../../lib/constants/app'
-import { ayniteConfig } from '../../lib/constants/renderer/config'
-import type {
-  LayoutNode,
-  LeafNode,
-  Theme,
-  WorkspaceConfig,
-} from '../../lib/constants/types'
-import type { UpdateStatus } from '../../lib/types/app'
-import { applyThemeColors } from '../shared/lib/utils'
-import {
-  executeLayoutOperation,
-  getAllLeafIds,
-  updateLayoutInConfig,
-  updateNodeInLayout,
-} from './utils/tile'
+import { LayoutProvider, useLayout } from './contexts/LayoutContext'
+import { ThemeProvider, useTheme } from './contexts/ThemeContext'
+import { UIProvider, useUI } from './contexts/UIContext'
+import { UpdateProvider, useUpdate } from './contexts/UpdateContext'
+import { useWindowState, WindowProvider } from './contexts/WindowContext'
+import { useWorkspace, WorkspaceProvider } from './contexts/WorkspaceContext'
 
-// --- Context Type ---
+// ─── Cross-cutting IPC Listener ─────────────────────────────────────────
+// Relays all app events to iframes via postMessage.
+// Must run inside all providers since it's a single global listener.
 
-interface AppContextType {
-  workspaceConfig: WorkspaceConfig | null
-  workspaces: string[]
-  activeTileId: string | null
-  isResizing: boolean
-  availableViews: { id: string; name: string }[]
+function useIpcRelay() {
+  const { refreshThemes } = useTheme()
+  const { loadData } = useWorkspace()
 
-  setActiveTileId: (id: string | null) => void
-
-  loadData: () => void
-  switchWorkspace: (id: string) => void
-  addWorkspace: (name: string) => void
-  deleteWorkspace: (name: string) => Promise<void>
-  openNewWindow: () => void
-  switchLayout: (id: string) => void
-  addLayout: (name: string, layout: LayoutNode) => void
-  removeLayout: (id: string) => void
-  updateLayout: (newLayout: LayoutNode) => void
-  updateTileView: (nodeId: string, updates: Partial<LeafNode>) => void
-  executeAppOperation: (operation: string, payload?: unknown) => void
-
-  handleResizeStart: () => void
-  handleResizeEnd: () => void
-
-  themes: Theme[]
-  activeTheme: Theme | null
-  setTheme: (themeId: string) => Promise<void>
-
-  // Update State
-  updateStatus: UpdateStatus
-  updateInfo: any
-  updateProgress: number
-  updateError: string | null
-  setUpdateStatus: (status: UpdateStatus) => void
-
-  showTileControls: boolean
-  setShowTileControls: (show: boolean) => void
-
-  showFileSwitcher: boolean
-  setShowFileSwitcher: (show: boolean) => void
-
-  activeFile: string | null
-
-  showSettings: boolean
-  settingsTab: string | null
-  setShowSettings: (show: boolean, tab?: string) => void
-
-  // Notifications
-  activeNotification: {
-    type: 'error' | 'warning' | 'info'
-    title: string
-    message: string
-  } | null
-  dismissNotification: () => void
-
-  // Window State
-  isMaximized: boolean
-  isFullscreen: boolean
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined)
-
-// --- Provider ---
-
-export const AppProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
-  // 1. State definitions
-  const [workspaceConfig, setWorkspaceConfig] =
-    useState<WorkspaceConfig | null>(null)
-  const [workspaces, setWorkspaces] = useState<string[]>([])
-  const [activeTileId, setActiveTileId] = useState<string | null>(null)
-  const [isResizing, setIsResizing] = useState(false)
-  const [availableViews, setAvailableViews] = useState<
-    { id: string; name: string }[]
-  >([])
-
-  const [themes, setThemes] = useState<Theme[]>([])
-  const [activeTheme, setActiveTheme] = useState<Theme | null>(null)
-
-  // Update State
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
-  const [updateInfo, setUpdateInfo] = useState<any>(null)
-  const [updateProgress, setUpdateProgress] = useState<number>(0)
-  const [updateError, setUpdateError] = useState<string | null>(null)
-
-  const [showTileControls, setShowTileControls] = useState(false)
-  const [showFileSwitcher, setShowFileSwitcher] = useState(false)
-  const [activeFile, setActiveFile] = useState<string | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<string | null>(null)
-
-  const [activeNotification, setActiveNotification] = useState<{
-    type: 'error' | 'warning' | 'info'
-    title: string
-    message: string
-  } | null>(null)
-
-  const [isMaximized, setIsMaximized] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-
-  const dismissNotification = useCallback(() => setActiveNotification(null), [])
-
-  const activeTileIdRef = useRef(activeTileId)
-
-  // Sync ref for access in async callbacks
+  const handlersRef = useRef({ refreshThemes, loadData })
   useEffect(() => {
-    activeTileIdRef.current = activeTileId
-  }, [activeTileId])
-
-  // 2. Theme Management (Reactive)
-
-  // Side Effect: "Paint" the app whenever the activeTheme state changes
-  useEffect(() => {
-    if (activeTheme) {
-      applyThemeColors(activeTheme)
-    }
-  }, [activeTheme])
-
-  const refreshThemes = useCallback(async () => {
-    const loadedThemes = await ayniteConfig.getThemes()
-    setThemes(loadedThemes)
-
-    const themeId = await ayniteConfig.getActiveThemeId()
-    const theme = await ayniteConfig.getTheme(themeId)
-
-    if (theme) {
-      setActiveTheme(theme)
-    }
-  }, [])
-
-  // 3. Core Data Sync
-  const loadData = useCallback(() => {
-    if (!window.aynite) {
-      console.error('CRITICAL: Aynite Electron API not found.')
-      return
-    }
-    Promise.all([
-      ayniteConfig.getWorkspaces(),
-      ayniteConfig.getActiveWorkspace(),
-    ]).then(([workspaceList, activeId]) => {
-      const activeWorkspace = workspaceList.find((w) => w.id === activeId)
-      if (activeWorkspace) {
-        setWorkspaceConfig(activeWorkspace)
-        const activeLayout = activeWorkspace.layouts.find(
-          (l) => l.id === activeWorkspace.activeLayoutId,
-        )
-        if (activeLayout) {
-          const leafIds = getAllLeafIds(activeLayout.layout)
-          if (leafIds.length > 0) {
-            setActiveTileId((prev) => prev || leafIds[0])
-          }
-        }
-      }
-      setWorkspaces(workspaceList.map((w) => w.id))
-    })
-
-    ayniteConfig.getActiveFile().then(setActiveFile)
-
-    if (window.aynite.getAvailableViews) {
-      window.aynite.getAvailableViews().then(setAvailableViews)
-    }
-    refreshThemes()
-  }, [refreshThemes])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  const setTheme = useCallback(
-    async (themeId: string) => {
-      await window.aynite.setConfig('activeTheme', themeId)
-      await refreshThemes()
-    },
-    [refreshThemes],
-  )
-
-  // 4. Workspace Management
-  const switchWorkspace = useCallback(
-    (id: string) => {
-      ayniteConfig.setActiveWorkspace(id).then(() => {
-        loadData()
-      })
-    },
-    [loadData],
-  )
-
-  const addWorkspace = useCallback(
-    (name: string) => {
-      ayniteConfig.createWorkspace(name).then(() => {
-        loadData()
-      })
-    },
-    [loadData],
-  )
-
-  const deleteWorkspace = useCallback(
-    async (name: string) => {
-      if (!window.aynite?.deleteWorkspace) return
-      await window.aynite.deleteWorkspace(name)
-      await loadData()
-    },
-    [loadData],
-  )
-
-  const openNewWindow = useCallback(() => {
-    window.aynite?.openNewWindow?.()
-  }, [])
-
-  // 5. Layout & Tile Management
-  const switchLayout = useCallback((id: string) => {
-    setWorkspaceConfig((prev) => {
-      if (!prev) return null
-      return { ...prev, activeLayoutId: id }
-    })
-  }, [])
-
-  const addLayout = useCallback((name: string, layout: LayoutNode) => {
-    setWorkspaceConfig((prev) => {
-      if (!prev) return null
-      if (prev.layouts.length >= 9) return prev
-      const newLayoutId = Math.random().toString(36).slice(2, 10)
-      const newLayout = { id: newLayoutId, name, layout }
-      return {
-        ...prev,
-        layouts: [...prev.layouts, newLayout],
-        activeLayoutId: newLayoutId,
-      }
-    })
-  }, [])
-
-  const removeLayout = useCallback((id: string) => {
-    setWorkspaceConfig((prev) => {
-      if (!prev) return null
-      if (prev.layouts.length <= 1) return prev
-      const newLayouts = prev.layouts.filter((l) => l.id !== id)
-      let newActiveId = prev.activeLayoutId
-      if (prev.activeLayoutId === id) {
-        newActiveId = newLayouts[0].id
-      }
-      return {
-        ...prev,
-        layouts: newLayouts,
-        activeLayoutId: newActiveId,
-      }
-    })
-  }, [])
-
-  const updateLayout = useCallback((newLayout: LayoutNode) => {
-    setWorkspaceConfig((prev) => {
-      if (!prev) return null
-      return updateLayoutInConfig(prev, newLayout)
-    })
-  }, [])
-
-  const updateTileView = useCallback(
-    (nodeId: string, updates: Partial<LeafNode>) => {
-      setWorkspaceConfig((prev) => {
-        if (!prev) return null
-        const activeLayout = prev.layouts.find(
-          (l) => l.id === prev.activeLayoutId,
-        )
-        if (!activeLayout) return prev
-        const newLayout = updateNodeInLayout(
-          activeLayout.layout,
-          nodeId,
-          updates,
-        )
-        return updateLayoutInConfig(prev, newLayout)
-      })
-    },
-    [],
-  )
-
-  const executeAppOperation = useCallback(
-    (operation: string, payload?: unknown) => {
-      // 1. Handle Global/Non-Layout Operations
-      switch (operation) {
-        case 'REFRESH_TILE': {
-          const activeTile = document.querySelector('.tile.border-primary')
-          if (activeTile) {
-            const iframe = activeTile.querySelector(
-              'iframe',
-            ) as HTMLIFrameElement | null
-            if (iframe?.contentWindow) {
-              try {
-                iframe.contentWindow.location.reload()
-              } catch {
-                iframe.contentWindow.postMessage(
-                  { type: 'aynite:refresh-tile' },
-                  '*',
-                )
-              }
-            }
-          }
-          return
-        }
-        case 'TOGGLE_LEFT_PANEL':
-          // We could add state for panels here later
-          console.log('[App] Toggle Left Panel')
-          return
-        case 'SWITCH_FILE':
-          setShowFileSwitcher((prev) => !prev)
-          return
-        case 'SHOW_NOTIFICATION':
-          setActiveNotification(payload as any)
-          setTimeout(() => setActiveNotification(null), 5000)
-          return
-        case 'SETTINGS':
-          if (payload && (payload as any).tab) {
-            setSettingsTab((payload as any).tab)
-            setShowSettings(true)
-          } else {
-            setShowSettings((prev) => {
-              const next = !prev
-              if (!next) setSettingsTab(null)
-              return next
-            })
-          }
-          return
-        // Add other global cases as needed...
-      }
-
-      // 2. Handle Layout/Tile Operations
-      if (!workspaceConfig) return
-      const activeLayout = workspaceConfig.layouts.find(
-        (l) => l.id === workspaceConfig.activeLayoutId,
-      )
-      if (!activeLayout) return
-
-      const { node: newLayoutNode, newActiveId } = executeLayoutOperation(
-        activeLayout.layout,
-        activeTileIdRef.current,
-        operation,
-      )
-
-      if (newActiveId) setActiveTileId(newActiveId)
-
-      if (newLayoutNode !== activeLayout.layout) {
-        setWorkspaceConfig(updateLayoutInConfig(workspaceConfig, newLayoutNode))
-      }
-    },
-    [workspaceConfig],
-  )
-
-  // 6. IPC Event & Operation Handling
-  const handlersRef = useRef({ refreshThemes, loadData, executeAppOperation })
-  useEffect(() => {
-    handlersRef.current = { refreshThemes, loadData, executeAppOperation }
-  }, [refreshThemes, loadData, executeAppOperation])
+    handlersRef.current = { refreshThemes, loadData }
+  }, [refreshThemes, loadData])
 
   useEffect(() => {
     if (!window.aynite) return
 
-    const unbindEvent = window.aynite.onAppEvent(
+    const unbind = window.aynite.onAppEvent(
       (event: { type: string; data: any }) => {
         // 1. Relay to all iframes
         for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
@@ -393,9 +45,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           )
         }
 
-        // 2. Core Reactions to System Events (using latest handlers from ref)
+        // 2. Core Reactions
         const { refreshThemes: rt, loadData: ld } = handlersRef.current
-
         switch (event.type) {
           case AppEvents.CONFIG_ERROR:
             console.error('[App] Config Error:', event.data)
@@ -404,207 +55,111 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
             rt()
             break
           case AppEvents.WORKSPACE_CHANGED:
-            ld()
-            break
           case AppEvents.WORKSPACE_UPDATED:
             ld()
-            break
-          case AppEvents.ACTIVE_FILE_CHANGED:
-            if (event.data)
-              setActiveFile((event.data as any).path || (event.data as string))
-            break
-          case AppEvents.TILE_ACTIVATED:
-            if (event.data) setActiveTileId(event.data as string)
-            break
-
-          // --- Release/Update Events ---
-          case AppEvents.UPDATE_CHECKING:
-            setUpdateStatus('checking')
-            break
-          case AppEvents.UPDATE_AVAILABLE:
-            setUpdateStatus('available')
-            setUpdateInfo(event.data)
-            break
-          case AppEvents.UPDATE_NOT_AVAILABLE:
-            setUpdateStatus('idle')
-            break
-          case AppEvents.UPDATE_ERROR:
-            setUpdateStatus('error')
-            setUpdateError(event.data)
-            break
-          case AppEvents.UPDATE_PROGRESS:
-            setUpdateStatus('downloading')
-            setUpdateProgress(event.data.percent)
-            break
-          case AppEvents.UPDATE_DOWNLOADED:
-            setUpdateStatus('downloaded')
-            setUpdateInfo(event.data)
-            break
-          case AppEvents.WINDOW_MAXIMIZED_CHANGED:
-            setIsMaximized((event.data as any)?.isMaximized ?? false)
-            break
-          case AppEvents.FULLSCREEN_CHANGED:
-            setIsFullscreen((event.data as any)?.isFullscreen ?? false)
             break
         }
       },
     )
 
-    const unbindOp = window.aynite.onAppOperation(
-      (op: string, data?: unknown) => {
-        handlersRef.current.executeAppOperation(op, data)
-      },
-    )
-
-    return () => {
-      unbindEvent()
-      unbindOp()
-    }
+    return unbind
   }, [])
+}
 
-  // Listen for messages from iframes (views)
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const msg = event.data
-      if (msg?.type === 'aynite:operation' && msg.operation) {
-        executeAppOperation(msg.operation, msg.data)
-      }
-    }
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [executeAppOperation])
+// ─── Composed Provider ──────────────────────────────────────────────────
 
-  // Persistence
-  useEffect(() => {
-    if (workspaceConfig && !isResizing) {
-      ayniteConfig.saveWorkspace(workspaceConfig)
-    }
-  }, [workspaceConfig, isResizing])
-
-  // 7. UI Helpers
-  const handleResizeStart = useCallback(() => {
-    setIsResizing(true)
-    document.body.classList.add('is-resizing')
-  }, [])
-
-  const handleResizeEnd = useCallback(() => {
-    setIsResizing(false)
-    document.body.classList.remove('is-resizing')
-    setWorkspaceConfig((latest) => {
-      if (latest) ayniteConfig.saveWorkspace(latest)
-      return latest
-    })
-  }, [])
-
-  // 8. Debugging
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      ;(window as any).__aynite_context = {
-        workspaceConfig,
-        workspaces,
-        activeTileId,
-        isResizing,
-        setActiveTileId,
-        loadData,
-        switchWorkspace,
-        addWorkspace,
-        deleteWorkspace,
-        openNewWindow,
-        switchLayout,
-        updateLayout,
-        updateTileView,
-        executeAppOperation,
-        handleResizeStart,
-        handleResizeEnd,
-        themes,
-        activeTheme,
-        setTheme,
-        updateStatus,
-        updateInfo,
-        updateProgress,
-      }
-    }
-  }, [
-    workspaceConfig,
-    workspaces,
-    activeTileId,
-    isResizing,
-    loadData,
-    switchWorkspace,
-    addWorkspace,
-    switchLayout,
-    updateLayout,
-    updateTileView,
-    executeAppOperation,
-    handleResizeStart,
-    handleResizeEnd,
-    themes,
-    setTheme,
-    activeTheme,
-    updateStatus,
-    updateInfo,
-    updateProgress,
-    openNewWindow,
-    deleteWorkspace,
-  ])
+const ComposedProviders: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { setActiveTileId } = useLayout()
+  const { executeAppOperation: layoutExecOp } = useLayout()
+  useIpcRelay()
 
   return (
-    <AppContext.Provider
-      value={{
-        workspaceConfig,
-        workspaces,
-        activeTileId,
-        isResizing,
-        setActiveTileId,
-        loadData,
-        switchWorkspace,
-        addWorkspace,
-        deleteWorkspace,
-        openNewWindow,
-        switchLayout,
-        addLayout,
-        removeLayout,
-        updateLayout,
-        updateTileView,
-        executeAppOperation,
-        handleResizeStart,
-        handleResizeEnd,
-        availableViews,
-        themes,
-        activeTheme,
-        setTheme,
-        updateStatus,
-        updateInfo,
-        updateProgress,
-        updateError,
-        setUpdateStatus,
-        showTileControls,
-        setShowTileControls,
-        showFileSwitcher,
-        setShowFileSwitcher,
-        activeFile,
-        showSettings,
-        settingsTab,
-        setShowSettings: (show: boolean, tab?: string) => {
-          setShowSettings(show)
-          if (tab) setSettingsTab(tab)
-          else if (!show) setSettingsTab(null)
-        },
-        activeNotification,
-        dismissNotification,
-        isMaximized,
-        isFullscreen,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+    <WorkspaceProvider setActiveTileId={setActiveTileId}>
+      <UIProvider layoutExecuteAppOperation={layoutExecOp}>
+        {children}
+      </UIProvider>
+    </WorkspaceProvider>
   )
 }
 
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  return (
+    <ThemeProvider>
+      <UpdateProvider>
+        <WindowProvider>
+          <LayoutProvider>
+            <ComposedProviders>{children}</ComposedProviders>
+          </LayoutProvider>
+        </WindowProvider>
+      </UpdateProvider>
+    </ThemeProvider>
+  )
+}
+
+// ─── Combined Hook ──────────────────────────────────────────────────────
+
 export const useApp = () => {
-  const context = useContext(AppContext)
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider')
+  const workspace = useWorkspace()
+  const theme = useTheme()
+  const layout = useLayout()
+  const update = useUpdate()
+  const windowState = useWindowState()
+  const ui = useUI()
+
+  return {
+    // Workspace
+    workspaceConfig: workspace.workspaceConfig,
+    workspaces: workspace.workspaces,
+    availableViews: workspace.availableViews,
+    loadData: workspace.loadData,
+    switchWorkspace: workspace.switchWorkspace,
+    addWorkspace: workspace.addWorkspace,
+    deleteWorkspace: workspace.deleteWorkspace,
+    openNewWindow: workspace.openNewWindow,
+
+    // Theme
+    themes: theme.themes,
+    activeTheme: theme.activeTheme,
+    setTheme: theme.setTheme,
+
+    // Layout
+    activeTileId: layout.activeTileId,
+    isResizing: layout.isResizing,
+    setActiveTileId: layout.setActiveTileId,
+    switchLayout: layout.switchLayout,
+    addLayout: layout.addLayout,
+    removeLayout: layout.removeLayout,
+    updateLayout: layout.updateLayout,
+    updateTileView: layout.updateTileView,
+    handleResizeStart: layout.handleResizeStart,
+    handleResizeEnd: layout.handleResizeEnd,
+
+    // Update
+    updateStatus: update.updateStatus,
+    updateInfo: update.updateInfo,
+    updateProgress: update.updateProgress,
+    updateError: update.updateError,
+    setUpdateStatus: update.setUpdateStatus,
+
+    // Window
+    isMaximized: windowState.isMaximized,
+    isFullscreen: windowState.isFullscreen,
+
+    // UI
+    showTileControls: ui.showTileControls,
+    setShowTileControls: ui.setShowTileControls,
+    showFileSwitcher: ui.showFileSwitcher,
+    setShowFileSwitcher: ui.setShowFileSwitcher,
+    activeFile: ui.activeFile,
+    showSettings: ui.showSettings,
+    settingsTab: ui.settingsTab,
+    setShowSettings: ui.setShowSettings,
+    activeNotification: ui.activeNotification,
+    dismissNotification: ui.dismissNotification,
+    executeAppOperation: ui.executeAppOperation,
   }
-  return context
 }
