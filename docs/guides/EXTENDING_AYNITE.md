@@ -48,8 +48,6 @@ The AI will:
 
 > 🚧 **Coming soon:** `/create-dataview` — a skill that guides you through creating custom dataviews, defining their JSON schemas, and registering them as views.
 
-| `/create-slides` | Create slide decks from your data — markdown, images, and more |
-
 ---
 
 ## Commands (`> command-name`)
@@ -108,6 +106,10 @@ Then it delegates to the appropriate creator.
 In the meantime, existing dataviews in `src/renderer/views/dataview-*/` serve as reference implementations.
 
 ---
+
+## More from the Community
+
+More skills, commands, dataviews, and fileviews are available in the [aynite-batteries](https://github.com/w-t-yang/aynite-batteries) repository. This is the dedicated place for community-contributed extensions. If you'd like to contribute a skill, command, dataview, or fileview, consider contributing to that repo instead.
 
 ## Tips
 

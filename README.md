@@ -124,6 +124,8 @@ Most apps bundle three things together: your data, their processing, and their i
 
 > 💡 **See how it works:** RSS, Spotify, and the 8 data views + 6 file views are all built into Aynite to show you what's possible. They're not "integrations" you need to install — they're templates for how YOU can build and share your own views, file renderers, and third-party connections. Every built-in view is also a reference implementation. [Learn how →](docs/guides/EXTENDING_AYNITE.md)
 
+> 🧰 **More extensions:** Additional skills, commands, dataviews, and fileviews are available in the [aynite-batteries](https://github.com/w-t-yang/aynite-batteries) repo — the dedicated place for community-contributed extensions.
+
 ---
 
 ## Quick Start
@@ -202,6 +204,8 @@ Aynite is in active development (beta). The app ships regularly, has a growing s
 ## Contributing
 
 Everyone is welcome to contribute! There's just one small request: **write your code and make contributions with Aynite**. I believe contributors should be the people who love using Aynite the most — for everything.
+
+**If you'd like to contribute skills, commands, dataviews, or fileviews**, head over to the [aynite-batteries](https://github.com/w-t-yang/aynite-batteries) repo — that's the dedicated place for community extensions. For core app changes (main process, renderer, architecture), this repo is the right place.
 
 > ⚡ **Aynite Contribution Ratio** — Up to this point (2026-05-27), **27.9%** of the project's commit history has already been authored by Aynite + DeepSeek-V4-Flash, and this ratio keeps climbing.
 >
