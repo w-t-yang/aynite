@@ -213,36 +213,14 @@ Everyone is welcome to contribute! There's just one small request: **write your 
 >
 > Check the latest ratio anytime with `npm run count:aynite`.
 
-[![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
+## Contributors
 
-Thanks goes to these wonderful people:
+<!-- contributors:start -->
 
-<!-- ALL-CONTRIBUTORS-LIST:START -->
-<!-- prettier-ignore-start -->
-<!-- markdownlint-disable -->
-<table>
-  <tbody>
-    <tr>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/w-t-yang">
-          <img src="https://avatars.githubusercontent.com/u/2253954?v=4" width="64" height="64" style="border-radius:50%" alt="w-t-yang"/>
-          <br />
-          <sub><b>w-t-yang</b></sub>
-        </a>
-      </td>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/apps/dependabot">
-          <img src="https://avatars.githubusercontent.com/in/29110?v=4" width="64" height="64" style="border-radius:50%" alt="dependabot"/>
-          <br />
-          <sub><b>dependabot[bot]</b></sub>
-        </a>
-      </td>
-    </tr>
-  </tbody>
-</table>
-<!-- markdownlint-restore -->
-<!-- prettier-ignore-end -->
-<!-- ALL-CONTRIBUTORS-LIST:END -->
+<a href="https://github.com/w-t-yang"><img src="https://avatars.githubusercontent.com/u/2253954?v=4&s=64" width="40" height="40" style="border-radius:50%" alt="w-t-yang" title="w-t-yang"></a>
+<a href="https://github.com/apps/dependabot"><img src="https://avatars.githubusercontent.com/in/29110?v=4&s=64" width="40" height="40" style="border-radius:50%" alt="dependabot[bot]" title="dependabot[bot]"></a>
+
+<!-- contributors:end -->
 
 ---
 
