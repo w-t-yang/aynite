@@ -88,6 +88,7 @@ export const SystemChannels = {
 
 export const UpdateChannels = {
   CHECK: 'aynite:update-check',
+  DOWNLOAD: 'aynite:update-download',
   INSTALL: 'aynite:update-install',
 } as const
 export const GitChannels = {

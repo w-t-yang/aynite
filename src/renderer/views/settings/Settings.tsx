@@ -428,12 +428,8 @@ export function Settings() {
               <AboutTab
                 state={{
                   appVersion,
-                  updateStatus: 'idle',
-                  updateInfo: null,
                 }}
                 actions={{
-                  onCheckUpdates: window.aynite.checkForUpdates,
-                  onInstallUpdate: () => {},
                   onOpenExternal: (url) => window.aynite.openExternal(url),
                 }}
               />

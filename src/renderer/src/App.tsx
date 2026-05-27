@@ -8,6 +8,7 @@ import { AppProvider, useApp } from './AppContext'
 import TileNode from './layout/TileNode'
 import TitleBar from './layout/TitleBar'
 import { NotificationProvider } from './NotificationProvider'
+import { UpdateBanner } from './UpdateBanner'
 
 const AppContent: React.FC = () => {
   const {
@@ -75,6 +76,7 @@ const AppContent: React.FC = () => {
       </div>
       {showFileSwitcher && <FileSwitcher />}
       {showSettings && <SettingsModal />}
+      <UpdateBanner />
     </div>
   )
 }

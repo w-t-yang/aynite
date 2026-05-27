@@ -48,6 +48,7 @@ export const AppEvents = {
   UPDATE_CHECKING: 'update-checking',
   UPDATE_AVAILABLE: 'update-available',
   UPDATE_NOT_AVAILABLE: 'update-not-available',
+  UPDATE_DOWNLOADING: 'update-downloading',
   UPDATE_ERROR: 'update-error',
   UPDATE_PROGRESS: 'update-download-progress',
   UPDATE_DOWNLOADED: 'update-downloaded',

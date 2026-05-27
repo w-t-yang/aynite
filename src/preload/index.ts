@@ -123,6 +123,8 @@ const aynite = {
   getSystemFonts: () => ipcRenderer.invoke(SystemChannels.FONT_LIST),
   getAvailableViews: () => ipcRenderer.invoke(SystemChannels.VIEW_LIST),
   checkForUpdates: () => ipcRenderer.invoke(UpdateChannels.CHECK),
+  downloadUpdate: () => ipcRenderer.invoke(UpdateChannels.DOWNLOAD),
+  installUpdate: () => ipcRenderer.invoke(UpdateChannels.INSTALL),
   selectFolder: () => ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FOLDER),
   selectFile: (options?: any) =>
     ipcRenderer.invoke(SystemChannels.DIALOG_SELECT_FILE, options),

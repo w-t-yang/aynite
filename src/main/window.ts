@@ -7,7 +7,6 @@ import {
   type OpenDialogOptions,
   type SaveDialogOptions,
 } from 'electron'
-import { autoUpdater, type UpdateInfo } from 'electron-updater'
 import { AppEvents } from '../lib/constants/app'
 import {
   AiEventChannels,
@@ -94,7 +93,6 @@ export function createMainWindow(dirname: string): void {
   })
 
   // Initialize listeners here to comply with "no listeners outside window.ts" rule
-  setupUpdaterListeners()
   setupAiListeners()
 }
 
@@ -296,36 +294,6 @@ export function onBeforeInputEvent(
   callback: (event: Electron.Event, input: Input) => void,
 ) {
   getMainWindow().webContents.on('before-input-event', callback)
-}
-
-/**
- * Setup auto-updater listeners.
- * Moved here to centralize all event-driven side effects.
- */
-function setupUpdaterListeners() {
-  autoUpdater.on('checking-for-update', () => {
-    broadcastAppEvent(AppEvents.UPDATE_CHECKING, null)
-  })
-
-  autoUpdater.on('update-available', (info: UpdateInfo) => {
-    broadcastAppEvent(AppEvents.UPDATE_AVAILABLE, info)
-  })
-
-  autoUpdater.on('update-not-available', () => {
-    broadcastAppEvent(AppEvents.UPDATE_NOT_AVAILABLE, null)
-  })
-
-  autoUpdater.on('error', (err) => {
-    broadcastAppEvent(AppEvents.UPDATE_ERROR, err.message)
-  })
-
-  autoUpdater.on('download-progress', (progressObj) => {
-    broadcastAppEvent(AppEvents.UPDATE_PROGRESS, progressObj)
-  })
-
-  autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
-    broadcastAppEvent(AppEvents.UPDATE_DOWNLOADED, info)
-  })
 }
 
 // ─── IPC Sender Resolution ────────────────────────────────────────────────
