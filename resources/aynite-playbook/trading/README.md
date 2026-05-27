@@ -32,20 +32,20 @@ That's it. Two commands. Five minutes. No waiting for a feature request.
 
 You can create commands just like these in two ways:
 
-### Via `/spell-creator` (Recommended for Beginners)
+### Via `/create-spell` (Recommended for Beginners)
 
-Type `/spell-creator` in the chat. The AI will interview you about what you want to build, help you decide whether it should be a **command** (deterministic script with `>`) or a **skill** (AI-guided workflow with `/`), then delegate to the right creator.
+Type `/create-spell` in the chat. The AI will interview you about what you want to build, help you decide whether it should be a **command** (deterministic script with `>`) or a **skill** (AI-guided workflow with `/`), then delegate to the right creator.
 
 ```
-/spell-creator I want a command that converts CSV files to JSON
+/create-spell I want a command that converts CSV files to JSON
 ```
 
-### Via `/command-creator` (Direct)
+### Via `/create-command` (Direct)
 
 If you already know you want a command, go straight to:
 
 ```
-/command-creator help me create a command that...
+/create-command help me create a command that...
 ```
 
 The creator will walk you through defining parameters, writing `run.sh`, and documenting with `COMMAND.md`.

@@ -84,7 +84,7 @@ This is where the fun starts. You're going to use your very first **skill** to c
 1. Press **`Ctrl+I`** to open the chat panel.
 2. Type something like:
    ```
-   /theme-creator make me a cozy autumn sunset theme
+   /create-theme make me a cozy autumn sunset theme
    ```
    (You can say anything — "cyberpunk neon," "forest green," "ocean depths," whatever vibe you want.)
 3. The AI agent will generate a complete theme file and save it to your themes folder.
@@ -93,7 +93,7 @@ This is where the fun starts. You're going to use your very first **skill** to c
 
 Boom. You just created something. Feels good, right?
 
-> 🎨 The `theme-creator` skill generates themes with all 32 color properties — backgrounds, text, borders, accent colors, semantic colors for errors and warnings, scrollbar styling, even font choices. Every pixel of Aynite responds to these variables, so your theme touches everything.
+> 🎨 The `create-theme` skill generates themes with all 32 color properties — backgrounds, text, borders, accent colors, semantic colors for errors and warnings, scrollbar styling, even font choices. Every pixel of Aynite responds to these variables, so your theme touches everything.
 
 ---
 
@@ -117,7 +117,7 @@ You'll see the output directly in the chat. Commands can be anything: shell scri
 
 This is where Aynite truly becomes *yours*. You can extend it infinitely with two built-in skills:
 
-### Create a Skill with `/skill-creator`
+### Create a Skill with `/create-skill`
 
 **Skills** teach the AI agent how to do something new. They're written in plain Markdown and can include bundled scripts, reference docs, and assets.
 
@@ -126,12 +126,12 @@ Think: "I want the AI to know how to write commit messages in my company's forma
 Just type:
 
 ```
-/skill-creator help me create a skill that...
+/create-skill help me create a skill that...
 ```
 
-The `skill-creator` will walk you through it — defining the skill's purpose, writing the instructions, testing it, and packaging it up.
+The `create-skill` skill will walk you through it — defining the skill's purpose, writing the instructions, testing it, and packaging it up.
 
-### Create a Command with `/command-creator`
+### Create a Command with `/create-command`
 
 **Commands** are executable scripts. They have a `COMMAND.md` for documentation and a `run.sh` entry point (which can call Python, Node, whatever).
 
@@ -140,7 +140,7 @@ Think: "I want a one-click command that deploys my project to production," or "I
 Just type:
 
 ```
-/command-creator help me create a command that...
+/create-command help me create a command that...
 ```
 
 > 🌟 **The real power of Aynite is this:** you don't need to wait for anyone. If you can describe it, you can build it. Skills and commands are your bridge from *"I wish Aynite could..."* to *"Aynite can."*

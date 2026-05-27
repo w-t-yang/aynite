@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Review #2 — Aynite (June 2026)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap');
+body { font-family: 'Inter', sans-serif; }
+.badge-strong { background: #059669; color: white; }
+.badge-worthy { background: #d97706; color: white; }
+.badge-speculative { background: #6b7280; color: white; }
+.status-fixed { background: #d1fae5; color: #065f46; }
+.card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; background: white; }
+.card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
+.diagram-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.diagram-box { background: #f9fafb; border-radius: 8px; padding: 1rem; border: 1px solid #e5e7eb; }
+.diagram-box h4 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 0.5rem; }
+.file-list { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; background: #f3f4f6; padding: 0.75rem; border-radius: 6px; line-height: 1.6; }
+.file-list span.code { color: #6366f1; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<div class="max-w-5xl mx-auto px-6 py-12">
+<div class="mb-10">
+  <h1 class="text-3xl font-bold tracking-tight">Aynite Architecture Review #2</h1>
+  <p class="text-gray-500 mt-2 text-sm">Follow-up review &middot; Previous issues status + 6 new deepening candidates &middot; June 2026</p>
+</div>
+
+<!-- PREVIOUS STATUS -->
+<div class="mb-12 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+  <h2 class="text-lg font-semibold mb-4">Previous Review Recap — All 6 Candidates Fixed</h2>
+  <div class="space-y-2">
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800">#1 Config Router</span>
+        <span class="text-[10px] ml-2 px-2 py-0.5 rounded status-fixed">Fixed</span>
+        <p class="text-sm text-green-700 mt-0.5">300-line god switch replaced with handler-registry pattern. 6 per-domain handler modules.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800">#2 path.ts</span>
+        <span class="text-[10px] ml-2 px-2 py-0.5 rounded status-fixed">Fixed</span>
+        <p class="text-sm text-green-700 mt-0.5">560 lines split into resolve.ts + operations.ts + barrel index.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800">#3 GitService</span>
+        <span class="text-[10px] ml-2 px-2 py-0.5 rounded status-fixed">Fixed</span>
+        <p class="text-sm text-green-700 mt-0.5">585 lines split into 5 modules + thin coordinator.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800">#4 AppContext</span>
+        <span class="text-[10px] ml-2 px-2 py-0.5 rounded status-fixed">Fixed</span>
+        <p class="text-sm text-green-700 mt-0.5">610 lines into 6 focused contexts + 140-line composition layer.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800">#5 AI Tools</span>
+        <span class="text-[10px] ml-2 px-2 py-0.5 rounded status-fixed">Fixed</span>
+        <p class="text-sm text-green-700 mt-0.5">512 lines into 4 extracted modules + thin orchestrator.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800">#6 FileBrowserPage</span>
+        <span class="text-[10px] ml-2 px-2 py-0.5 rounded status-fixed">Fixed</span>
+        <p class="text-sm text-green-700 mt-0.5">726 lines into 4 custom hooks + FileSearchBar component.</p>
+      </div>
+    </div>
+  </div>
+  <div class="mt-4 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+    <strong>Overall:</strong> From 4 test files / 37 passing to 16 test files / 235 passing. All 6 refactorings completed with zero regressions.
+  </div>
+</div>
+
+<!-- CANDIDATE 1 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">1. The Spells Module Is a God Module (Misnamed)</h2>
+    <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full">Strong</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/main/spells/index.ts</span> — IPC wiring + 7 re-exports<br>
+      <span class="code">src/main/spells/spell-installer.ts</span> — YAML parsing, file walking, config persistence<br>
+      <span class="code">src/main/spells/skills.ts</span> + <span class="code">commands.ts</span> — listing &amp; restoring<br>
+      <span class="code">src/main/spells/common.ts</span> — resource path, file finder, error broadcasting
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">The <code>spells/</code> directory has a confused identity. Its name refers to a discontinued concept ("spells") that doesn't appear elsewhere. Yet it owns: skill management, command management, bundled resource path resolution (used by config init, playbook restoration, and every module needing <code>getBundledResourcesPath()</code>), YAML front-matter parsing, recursive file finding, and error broadcasting.</p>
+    <p class="text-sm mt-2"><strong>Deletion test:</strong> Delete <code>spells/</code> — complexity reappears in <code>config/logic.ts</code>, <code>main/index.ts</code>, and every module that needs bundled resource paths. The module earns its keep but is named after a dead concept with mixed boundaries.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Rename and split: <strong>skills/</strong> (skill CRUD), <strong>commands/</strong> (command CRUD + run IPC), <strong>resources/</strong> (<code>getBundledResourcesPath</code>, <code>findFilesRecursively</code>, <code>notifyError</code>), <strong>yaml-parser.ts</strong> (pure front-matter parsing).</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — Misnamed god module</h4>
+      <div class="mermaid">
+flowchart TD
+    subgraph SPELLS["src/main/spells/"]
+        SK["skills.ts"]
+        CM["commands.ts"]
+        SI["spell-installer.ts (YAML + config + restore)"]
+        CO["common.ts (resource path + file walker + errors)"]
+    end
+    SPELLS --> CONFIG["config/logic.ts"]
+    SPELLS --> MAIN["main/index.ts"]
+    style SPELLS fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Domain-aligned</h4>
+      <div class="mermaid">
+flowchart TD
+    subgraph NEW["src/main/skills-and-commands/"]
+        SK2["skills/"]
+        CM2["commands/"]
+        RES["resources/ (getBundledResourcesPath + findFilesRecursively)"]
+        YP["yaml-parser.ts (front-matter)"]
+    end
+    style NEW fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 2 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">2. RSS &amp; Spotify Hooks Are God Hooks</h2>
+    <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full">Strong</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/renderer/views/rss/hooks/useRSS.ts</span> — 350 lines, 18 return values<br>
+      <span class="code">src/renderer/views/spotify/hooks/useSpotify.ts</span> — 370 lines, 25 return values<br>
+      Both: data loading, caching, auto-fetch, config mutations, playback/browsing controls
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm"><strong>useRSS.ts (350 lines):</strong> Data loading + stale detection + auto-fetch, config CRUD (5 operations), content CRUD (3 operations), filtered queries with multi-source aggregation, panel width persistence.</p>
+    <p class="text-sm mt-1"><strong>useSpotify.ts (370 lines):</strong> Data loading + stale detection + auto-fetch, authentication (connect/logout), playback controls (7 operations), playlist track loading (cache-first-then-API), 10s polling interval, section/screen state.</p>
+    <p class="text-sm mt-2"><strong>The interface is shallow:</strong> Each hook returns 18-25 values. Callers can't distinguish state from mutations from computed queries. Testability is low.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm"><strong>useRSS</strong> into 4 hooks: useRSSData, useRSSFeedMutations, useRSSContentMutations, useRSSSelection.<br>
+    <strong>useSpotify</strong> into 5 hooks: useSpotifyAuth, useSpotifyData, useSpotifyPlayback, useSpotifyPlaylistTracks, useSpotifyNavigation.</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — God hooks</h4>
+      <div class="mermaid">
+flowchart TB
+    UR["useRSS.ts (350 lines)"] --> LOAD["loadAll + auto-fetch"]
+    UR --> CFG["Config CRUD (4 ops)"]
+    UR --> CON["Content CRUD (3 ops)"]
+    UR --> QRY["Computed queries (3 getters)"]
+    UR --> UI["Panel resize"]
+    style UR fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Composed hooks</h4>
+      <div class="mermaid">
+flowchart TB
+    SUBG["RSSApp.tsx"] --> RD["useRSSData()"]
+    SUBG --> FM["useRSSFeedMutations()"]
+    SUBG --> CM["useRSSContentMutations()"]
+    SUBG --> SL["useRSSSelection()"]
+    style RD fill:#d1fae5,stroke:#059669
+    style FM fill:#d1fae5,stroke:#059669
+    style CM fill:#d1fae5,stroke:#059669
+    style SL fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 3 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">3. RSSApp: God Component with Duplicated Resize Logic</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/renderer/views/rss/RSSApp.tsx</span> — 330 lines<br>
+      2x copy-paste resize handlers, 4 modal booleans, 8 callback wrappers
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm"><code>RSSApp.tsx (330 lines)</code> contains: <strong>2x duplicated resize handlers</strong> (~50 lines each, same mousedown/mousemove/mouseup pattern), <strong>4 boolean modal states</strong> (could be a single state machine), <strong>8 callback wrappers</strong> (thin functions calling hook methods), and <strong>conditional rendering logic</strong> for singleFeed vs multi-source vs bookmarks.</p>
+    <p class="text-sm mt-1"><strong>Duplication also across views:</strong> The mousedown/mousemove/mouseup resize pattern exists in both RSSApp and SpotifyApp independently, and TileSplitter uses a different mechanism. A shared <code>useResizablePanel()</code> hook would eliminate ~80 lines from RSS alone.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract <strong><code>useResizablePanel(initialWidth, min, max, onSave)</code></strong> hook. Convert 4 modal booleans to a single <strong>ModalStateManager</strong> pattern. Inline thin callback wrappers in JSX.</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — 330 lines</h4>
+      <div class="mermaid">
+flowchart TB
+    RA["RSSApp.tsx (330 lines)"] --> RZ["2x resize handlers (copy-paste)"]
+    RA --> MD["4 modals + 4 booleans"]
+    RA --> VW["View mode + 8 callbacks"]
+    RA --> LY["Conditional rendering"]
+    style RA fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — ~170 lines</h4>
+      <div class="mermaid">
+flowchart TB
+    RA2["RSSApp.tsx (~170 lines)"] --> RH["useResizablePanel() (x2)"]
+    RA2 --> MS["ModalStateManager"]
+    RA2 --> WI["Inline wiring only"]
+    style RA2 fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 4 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">4. Session Operations Scattered Across 4 Files</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/main/ai/chat.ts</span> — save/load/delete/list sessions<br>
+      <span class="code">src/main/ai/index.ts</span> — IPC wiring<br>
+      <span class="code">src/main/config/handlers/workspace-state-handlers.ts</span> — delete via config key<br>
+      <span class="code">src/renderer/views/workspace-view/WorkspaceView.tsx</span> — session UI + delete logic
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">Session lifecycle logic is scattered across 4 locations. The date-directory scanning logic is <strong>triplicated within chat.ts itself</strong> — <code>loadSession</code>, <code>listSessions</code>, and <code>deleteSession</code> all walk date directories independently with slightly different filtering. The delete endpoint reaches <code>chat.ts</code> through two different paths (IPC handler in <code>ai/index.ts</code> and config key in <code>workspace-state-handlers.ts</code>).</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Create <strong><code>src/main/ai/session-service.ts</code></strong> — a singleton owning all session operations: save, load, list, delete, create. Centralizes date-directory scanning into one method with a filter parameter. The config router and IPC handlers both delegate to it.</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — Scattered</h4>
+      <div class="mermaid">
+flowchart LR
+    WS["WorkspaceView.tsx"] -- "listSessions()" --> AI["ai/index.ts"]
+    WS -- "setConfig('session-delete')" --> RT["handler-registry"]
+    RT --> CH["chat.ts"]
+    AI --> CH
+    CH --> SC["date-directory scan (x3)"]
+    style CH fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — SessionService</h4>
+      <div class="mermaid">
+flowchart LR
+    WS2["WorkspaceView.tsx"] --> BR["bridge"]
+    BR --> SS["SessionService"]
+    RT2["handler-registry"] --> SS
+    AI2["ai/index.ts"] --> SS
+    SS --> SC2["single date-scan method"]
+    style SS fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 5 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">5. The Preload Bridge Is a Flat God Object</h2>
+    <span class="badge-speculative text-xs font-bold px-3 py-1 rounded-full">Speculative</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/preload/index.ts</span> — 250 lines, 1 object, 60+ methods<br>
+      All domains flat: config, file, workspace, AI, git, system, theme, spells, RSS, Spotify
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm"><code>aynite.checkIsTextFile</code> sits next to <code>aynite.getGitStatus</code> next to <code>aynite.rssToggleBookmark</code>. No domain isolation. Naming is inconsistent (some prefixed like <code>rssGetConfig</code>, some not like <code>getGitStatus</code>). IPC channels are visible to all renderer code. Every new feature adds more flat methods. <code>env.d.ts</code> must declare the entire flat interface.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Namespace by domain: <code>aynite.config.get()</code>, <code>aynite.file.read()</code>, <code>aynite.ai.chat()</code>, <code>aynite.git.status()</code>, etc. This is a mechanical rename — IPC channels stay the same, the compiler catches all breaks. Each domain can be a separate module imported by the preload.</p>
+    <div class="text-xs bg-gray-100 p-3 rounded-lg mt-2 font-mono">
+window.aynite = {<br>
+&nbsp;&nbsp;config: { get, set },<br>
+&nbsp;&nbsp;file: { list, read, write, save, info, watch },<br>
+&nbsp;&nbsp;workspace: { list, create, delete, switch, folders },<br>
+&nbsp;&nbsp;ai: { chat, prompt, session: { save, load, list, delete } },<br>
+&nbsp;&nbsp;git: { status, refresh, commit, diff, hunk },<br>
+&nbsp;&nbsp;rss: { config, fetch, content, bookmark },<br>
+&nbsp;&nbsp;spotify: { auth, playback, playlists },<br>
+&nbsp;&nbsp;system: { external, fonts, views, dialog },<br>
+&nbsp;&nbsp;events: { on, off, emit },<br>
+}
+    </div>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — Flat bridge</h4>
+      <div class="mermaid">
+flowchart TD
+    PB["preload/index.ts (60+ methods)"] --> CF["aynite.getConfig()"]
+    PB --> FL["aynite.readFile()"]
+    PB --> AI["aynite.aiChat()"]
+    PB --> RS["aynite.rssToggleBookmark()"]
+    PB --> EV["aynite.onAppEvent()"]
+    style PB fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Namespaced</h4>
+      <div class="mermaid">
+flowchart TD
+    PB2["preload/index.ts (composition)"] --> CF2["aynite.config.get()"]
+    PB2 --> FL2["aynite.file.read()"]
+    PB2 --> AI2["aynite.ai.chat()"]
+    PB2 --> RS2["aynite.rss.toggleBookmark()"]
+    PB2 --> EV2["aynite.events.on()"]
+    style PB2 fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 6 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">6. Shared Data Lifecycle Pattern Duplicated in RSS &amp; Spotify</h2>
+    <span class="badge-speculative text-xs font-bold px-3 py-1 rounded-full">Speculative</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">useRSS.ts</span> — STALE_MS (24h), autoFetchDone ref, loadAll → stale check → fetchAll<br>
+      <span class="code">useSpotify.ts</span> — STALE_MS (24h), autoFetchDone ref, loadAll → stale check → fetchAll<br>
+      Identical pattern, independent implementations
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">Both hooks follow the identical data lifecycle: 1) load cached data on mount, 2) check staleness (both use 24h), 3) if stale, auto-fetch fresh data, 4) update state. Both use an <code>autoFetchDone</code> ref to prevent duplicate fetches. Both use <code>STALE_MS</code> constants. The pattern is written independently in both modules — a missed abstraction opportunity.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract <strong><code>useStaleData(loadCached, fetchFresh, staleMs, autoFetch)</code></strong> hook to <code>src/renderer/shared/hooks/useStaleData.ts</code>. Takes <code>loadCached()</code> and <code>fetchFresh()</code> callbacks, returns <code>{ data, loading, error, refresh }</code>. Reduces both hooks by ~40 lines each and eliminates the duplicated <code>autoFetchDone</code> ref + stale-check logic.</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Duplicated lifecycle</h4>
+      <div class="mermaid">
+flowchart LR
+    subgraph RSS
+        R1["loadAll"]
+        R2["STALE_MS check"]
+        R3["autoFetchDone ref"]
+        R4["fetchAll"]
+    end
+    subgraph SPOTIFY
+        S1["loadAll"]
+        S2["STALE_MS check"]
+        S3["autoFetchDone ref"]
+        S4["fetchAll"]
+    end
+    style RSS fill:#fef3c7,stroke:#d97706
+    style SPOTIFY fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>Shared abstraction</h4>
+      <div class="mermaid">
+flowchart LR
+    SD["useStaleData(loadCached, fetchFresh, staleMs)"] --> R1a["useRSSData()"]
+    SD --> S1a["useSpotifyData()"]
+    style SD fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOP RECOMMENDATION -->
+<div class="mt-12 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+  <h2 class="text-xl font-bold text-emerald-800 mb-3">Top Recommendation</h2>
+  <p class="text-emerald-700"><strong>Start with Candidate #2: Split the RSS and Spotify god hooks.</strong></p>
+  <ul class="text-emerald-700 text-sm mt-2 list-disc list-inside space-y-1">
+    <li><strong>Highest ROI</strong> — Both hooks are 350+ lines with 18-25 return values. Splitting each into 4-5 focused hooks follows the proven FileBrowserPage pattern.</li>
+    <li><strong>Enables #3 and #6 naturally</strong> — Once RSS data is separated from RSS mutations, extracting <code>useResizablePanel</code> (for RSSApp) and <code>useStaleData</code> (shared lifecycle) becomes trivial follow-ups.</li>
+    <li><strong>Zero risk pattern</strong> — Same mechanical extraction already done for FileBrowserPage. The component trees (RSSApp, SpotifyApp) stay the same; only the hook wiring changes.</li>
+    <li><strong>Immediate testability win</strong> — Extracted data hooks can be tested independently with mocked IPC.</li>
+  </ul>
+  <p class="text-emerald-700 text-sm mt-3">After that, Candidate #1 (rename/split spells directory) is a quick win — it resolves the naming confusion and separates skills from commands from infrastructure utilities.</p>
+</div>
+</div>
+</body>
+</html>

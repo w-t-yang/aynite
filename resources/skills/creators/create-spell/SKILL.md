@@ -74,9 +74,9 @@ Ask the user where to save the spell. Use the defaults from the [Output Location
 
 Now hand off to the appropriate creator:
 
-- **If it's a command**: Load and follow `/command-creator` to create the `COMMAND.md` and `run.sh`. The command-creator skill contains the full specification for command structure, parameter definitions, and the `run.sh` entry point.
+- **If it's a command**: Load and follow `/create-command` to create the `COMMAND.md` and `run.sh`. The create-command skill contains the full specification for command structure, parameter definitions, and the `run.sh` entry point.
 
-- **If it's a skill**: Load and follow `/skill-creator` to create the `SKILL.md`. The skill-creator skill contains the full specification for skill anatomy, progressive disclosure, writing style, and the eval/iteration loop.
+- **If it's a skill**: Load and follow `/create-skill` to create the `SKILL.md`. The create-skill skill contains the full specification for skill anatomy, progressive disclosure, writing style, and the eval/iteration loop.
 
 Stay involved through the creation process — the user invoked spell-creator, so you're their guide from start to finish. Don't just hand off and disappear.
 
@@ -96,20 +96,20 @@ Make it feel magical. The user just taught Aynite a new trick. Celebrate that.
 
 ## Quick Reference: Skill vs Command Creators
 
-### command-creator (for `>` spells)
+### create-command (for `>` spells)
 
 - Creates a folder with `COMMAND.md` + `run.sh` + optional `scripts/`
 - `COMMAND.md` has YAML frontmatter defining parameters
 - `run.sh` is the entry point — make it executable with `chmod +x`
 - Commands are invoked with `> command-name` in the chat
 
-### skill-creator (for `/` spells)
+### create-skill (for `/` spells)
 
 - Creates a folder with `SKILL.md` as the entry point
 - `SKILL.md` has YAML frontmatter (name + description required)
 - Can include `scripts/`, `references/`, `assets/` as bundled resources
 - Skills are invoked with `/skill-name` in the chat
-- The skill-creator supports evals, benchmarking, and iterative improvement
+- The create-skill skill supports evals, benchmarking, and iterative improvement
 
 ---
 
@@ -125,7 +125,7 @@ Make it feel magical. The user just taught Aynite a new trick. Celebrate that.
 
 **Verdict: Command**
 
-You'd confirm with the user, then delegate to `/command-creator` to build a `deploy` command with a `run.sh` that runs the Netlify CLI.
+You'd confirm with the user, then delegate to `/create-command` to build a `deploy` command with a `run.sh` that runs the Netlify CLI.
 
 **Cast it with:** `> deploy`
 
@@ -141,6 +141,6 @@ You'd confirm with the user, then delegate to `/command-creator` to build a `dep
 
 **Verdict: Skill**
 
-You'd confirm with the user, then delegate to `/skill-creator` to build a `standup-writer` skill.
+You'd confirm with the user, then delegate to `/create-skill` to build a `standup-writer` skill.
 
 **Cast it with:** `/standup-writer generate today's standup from my commits`
