@@ -46,6 +46,15 @@
       height: 100%;
     }
 
+    /* Compact typography defaults for 16:9 slides */
+    .reveal h1 { font-size: 1.8em; }
+    .reveal h2 { font-size: 1.4em; margin-bottom: 0.4em; }
+    .reveal h3 { font-size: 1.0em; }
+    .reveal p { font-size: 0.7em; line-height: 1.5; }
+    .reveal li { font-size: 0.7em; line-height: 1.6; }
+    .reveal table { font-size: 0.6em; }
+    .reveal pre code { font-size: 0.6em; max-height: 400px; }
+
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
     :root {
@@ -265,9 +274,40 @@
       font-size: 2.5em;
       margin: 1rem 0;
     }
+
+    /* ── Fullscreen Button ── */
+    #fullscreen-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: background 0.2s, color 0.2s, opacity 0.3s;
+      opacity: 0.3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #fullscreen-btn:hover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      opacity: 1;
+    }
+    #fullscreen-btn .icon { font-size: 16px; }
   </style>
 </head>
 <body>
+  <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Presentation mode (fullscreen)">
+    <span class="icon">⛶</span> <span id="fs-label">Present</span>
+  </button>
   <div id="slides-wrapper">
     <div id="slides-frame">
       <div class="reveal">
@@ -887,9 +927,28 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/markdown/markdown.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/highlight/highlight.js"></script>
   <script>
+    function toggleFullscreen() {
+      const el = document.getElementById('slides-wrapper');
+      const label = document.getElementById('fs-label');
+      if (!document.fullscreenElement) {
+        el.requestFullscreen().catch(() => {});
+        label.textContent = 'Exit';
+      } else {
+        document.exitFullscreen().catch(() => {});
+        label.textContent = 'Present';
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const label = document.getElementById('fs-label');
+      if (label) label.textContent = document.fullscreenElement ? 'Exit' : 'Present';
+    });
+
     Reveal.initialize({
       hash: true,
       center: true,
+      width: 1920,
+      height: 1080,
       transition: 'slide',
       plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
     });

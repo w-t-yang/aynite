@@ -154,7 +154,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
               }}
               title={name}
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              allow="clipboard-read; clipboard-write"
+              allow="clipboard-read; clipboard-write; fullscreen"
             />
           </>
         ) : (

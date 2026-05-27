@@ -56,6 +56,11 @@ export function FileViewHtml({ file, content }: FileViewHtmlProps) {
 })();
 </script>`
 
+  // ── Fullscreen ──────────────────────────────────────────────────────────
+  // The reveal.js fullscreen button calls document.documentElement.requestFullscreen().
+  // All iframes in the chain (tile + srcdoc) now have allow="fullscreen", so
+  // the browser's native Fullscreen API works natively.
+
   const inject = `
     ${historyPolyfill}
     <base href="aynite-resource://${dirPath}/">
@@ -86,6 +91,7 @@ export function FileViewHtml({ file, content }: FileViewHtmlProps) {
         srcDoc={finalContent}
         className="flex-1 w-full border-none"
         title="HTML Preview"
+        allow="fullscreen"
       />
     </div>
   )
