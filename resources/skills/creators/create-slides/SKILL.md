@@ -58,6 +58,8 @@ The template contains the full HTML structure with `<!-- SLIDES_PLACEHOLDER -->`
 
 Use the latest reveal.js version from CDN. Always check the actual latest version at the time of generation — do not hardcode a version number.
 
+**IMPORTANT — 16:9 Frame**: The reveal.js deck must be wrapped in a centered 16:9 aspect-ratio frame. This ensures the presentation looks right in any viewport — there's a full-viewport wrapper that centers the frame, and the frame itself maintains a 16:9 ratio. This is especially important when viewing in Aynite's HTML file view.
+
 ```html
 <!doctype html>
 <html lang="en">
@@ -70,13 +72,54 @@ Use the latest reveal.js version from CDN. Always check the actual latest versio
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/__VERSION__/theme/__THEME__.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/__VERSION__/plugin/highlight/monokai.min.css">
   <style>
-    /* Custom styles go here */
+    /* ── 16:9 Frame Wrapper ── */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #slides-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+
+    #slides-frame {
+      position: relative;
+      width: min(100vw, 177.78vh); /* 16:9 — 100vw vs 100vh * 16/9 */
+      height: min(100vh, 56.25vw); /* 16:9 — 100vh vs 100vw * 9/16 */
+      overflow: hidden;
+    }
+
+    #slides-frame .reveal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Your custom styles go here ── */
   </style>
 </head>
 <body>
-  <div class="reveal">
-    <div class="slides">
+  <div id="slides-wrapper">
+    <div id="slides-frame">
+      <div class="reveal">
+        <div class="slides">
 <!-- SLIDES_PLACEHOLDER -->
+        </div>
+      </div>
     </div>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/__VERSION__/reveal.js"></script>
