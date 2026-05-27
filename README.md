@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**An AI-native workspace. An operating system for your AI agent.**
+**Your AI desktop that connects everything.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0--beta.15-blue)](https://github.com/w-t-yang/aynite/releases)
@@ -15,15 +15,36 @@
 
 ## Philosophy
 
-Aynite believes **storage, processing, and rendering should be independent layers.**
+Most apps bundle three things together: your data, their processing, and their interface. **Aynite unbundles them.**
 
-**Storage** — Your data belongs where you choose. Aynite can look into any folder you point it at — it doesn't dictate where your data lives.
+```
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│    STORAGE        PROCESSING        RENDERING    │
+│                                                  │
+│   ┌────────┐    ┌──────────┐    ┌────────────┐   │
+│   │ Your   │    │   AI     │    │  Charts    │   │
+│   │ Files  │ ──▶│ Agents   │ ──▶│  Graphs    │   │
+│   │        │    │ Scripts  │    │  Mindmaps  │   │
+│   │ RSS    │    │Commands  │    │  Diagrams  │   │
+│   │Spotify │    │ Any tool │    │  Canvases  │   │
+│   └────────┘    └──────────┘    └────────────┘   │
+│        │              │                │         │
+│        └──────────────┴────────────────┘         │
+│                       ▲                          │
+│                       │                          │
+│            Aynite connects them all              │
+│                                                  │
+└──────────────────────────────────────────────────┘
+```
 
-**Processing** — What you do with data should be tool-agnostic. Analyze with AI, summarize with agents, transform with scripts — whichever tool fits the task.
+**Three layers. Fully decoupled. You own every layer.**
 
-**Rendering** — How you see data should be reusable and composable. Aynite's built-in views are a starting point, not a ceiling. Build a view once, share it, let others use it with their own data.
+- **Your data stays yours.** Local files, your folders, your choice. Aynite looks into whatever folder you point it at — it doesn't lock your data in.
+- **Process it your way.** AI agents, Python scripts, shell commands, whatever tool fits the task. The AI era makes this trivially easy.
+- **Render it in any view.** Built-in charts, graphs, mindmaps, diagrams, canvases, RSS reader, Spotify player. Plus 6 file viewers (PDF, image, audio, video, HTML, markdown). More are on the way and you can build your own at anytime — a view is just a component that reads a file and renders it.
 
-When these layers are decoupled, each can scale independently. The AI era makes scaling trivially easy — processing that once required custom software can now be done with a prompt. Aynite is the hub that connects these layers.
+**Switch tools without switching data. Switch views without switching storage. Aynite is the hub that connects them all.**
 
 → **[Read the full philosophy →](docs/PHILOSOPHY.md)**
 
@@ -33,16 +54,18 @@ When these layers are decoupled, each can scale independently. The AI era makes 
 
 | Area | What You Can Do |
 |------|----------------|
-| 🤖 **AI Chat** | Multi-provider chat (OpenAI, Anthropic, Google, DeepSeek, Ollama, and more), tool execution, command streaming, session history |
-| 📂 **File Browser** | Tabs, syntax highlighting, search with match navigation, git diff integration, markdown preview |
-| 🎨 **Data Visualization** | 8 built-in views — charts, stock candlestick, graphs, flow diagrams, Mermaid diagrams, mind maps, infinite canvas, color themes |
-| 🔧 **Extensible** | Create your own skills (`/create-skill`), commands (`> command-name`), themes (`/create-theme`), and even views |
+| 🤖 **AI Chat** | Multi-provider chat (OpenAI, Anthropic, Google, DeepSeek, Ollama), tool execution, command streaming, session history |
+| 📂 **File Browser** | Tabs, syntax highlighting, search with match navigation, git diff integration |
+| 🎨 **Data Views** | 8 built-in visualizations — charts, stock candlestick, graphs, flow diagrams, Mermaid diagrams, mind maps, infinite canvas, color themes |
+| 🖼️ **File Views** | 6 built-in file renderers — PDF, image, audio, video, HTML, markdown. Bring your own fileview for any file type |
+| 🔧 **Extensible** | Create your own skills (`/create-skill`), commands (`> command-name`), themes (`/create-theme`), and views |
 | 🔄 **Git Integration** | File status, side-by-side diff, hunk staging/discard, AI-powered commit message generation |
-| 📡 **RSS Reader** | Feed management, groups, bookmarks, article summarization with AI |
-| 🎵 **Spotify** | Browse, search, playback control, playlist management |
+| 📡 **RSS** | Built-in RSS reader with groups, bookmarks, and AI article summarization |
+| 🎵 **Spotify** | Built-in Spotify player — browse, search, control playback |
 | 🪟 **Tiled Layout** | Split tiles vertically/horizontally, multiple workspaces, multi-window support |
-| ⌨️ **Keyboard-First** | Keyboard shortcuts for everything — file switching, chat, navigation |
 | 🎭 **Themes** | Fully customizable with 32 CSS variables, create your own with `/create-theme` |
+
+> 💡 **See how it works:** RSS, Spotify, and the 8 data views + 6 file views are all built into Aynite to show you what's possible. They're not "integrations" you need to install — they're templates for how YOU can build and share your own views, file renderers, and third-party connections. Every built-in view is also a reference implementation. [Learn how →](docs/guides/EXTENDING_AYNITE.md)
 
 ---
 
@@ -63,10 +86,14 @@ Open **Settings → AI**, add your API key, and pick a model. Aynite supports al
 Open the AI chat and type:
 
 ```
-/create-theme make me a cozy autumn sunset theme
+/create-theme make a pinky cute theme, light mode
 ```
 
-The AI will generate a custom theme. Press **`Ctrl+R`** to refresh the tile, then go find it in **Settings → Appearance**.
+The AI will generate a custom theme. Go find it in **Settings → Appearance**.
+
+Here is mine, how does yours look like?
+
+![Pinky theme screenshot](docs/images/pinky-theme.png)
 
 ### 4. Explore More
 

@@ -1,28 +1,53 @@
 # The Decoupled Data Stack
 
-Aynite sees the digital world in three parts — all around data: **storage, processing, and rendering.** These three layers have traditionally been bundled together into monolithic applications, each one holding its own data, processing it in its own way, and rendering it through its own interface. Switch tools? You lose access. Want to use a better processor? The data is locked in.
+**Most apps bundle three things together: your data, their processing, and their interface. Aynite unbundles them.**
 
-Aynite believes these layers should be **decoupled** — because decoupling gives you the freedom to scale each layer on its own terms.
+```
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│    STORAGE        PROCESSING        RENDERING    │
+│                                                  │
+│   ┌────────┐    ┌──────────┐    ┌────────────┐   │
+│   │ Your   │    │   AI     │    │  Charts    │   │
+│   │ Files  │ ──▶│ Agents   │ ──▶│  Graphs    │   │
+│   │        │    │ Scripts  │    │  Mindmaps  │   │
+│   │ RSS    │    │Commands  │    │  Diagrams  │   │
+│   │Spotify │    │ Any tool │    │  Canvases  │   │
+│   └────────┘    └──────────┘    └────────────┘   │
+│        │              │                │         │
+│        └──────────────┴────────────────┘         │
+│                       ▲                          │
+│                       │                          │
+│            Aynite connects them all              │
+│                                                  │
+└──────────────────────────────────────────────────┘
+```
+
+**Three layers. Fully decoupled. You own every layer.**
+
+This isn't an academic idea — it's a practical one. The AI era makes it trivially easy to process data in ways that once required custom software. But if your data is locked inside a monolithic app, you can't take advantage of that. Decoupling is what makes the AI era truly useful.
 
 ---
 
-## Storage
+## Storage — Your Data, Your Choice
 
-**Your data belongs where you choose.**
+**Aynite can look into any folder you point it at. It doesn't dictate where your data lives.**
 
-A local folder. A network drive. A cloud API. A database. The location is yours to decide — Aynite can look into any folder you point it at. It doesn't dictate where your data lives.
+A local folder. A network drive. A cloud API. A database. The location is yours to decide.
 
 This means:
-- RSS articles are cached locally under `~/.aynite/rss/` — you own the content, not the feed provider
-- Spotify playlists and saved tracks are synced to `~/.aynite/spotify/` — your music library is yours
-- AI chat sessions are saved as plain JSON files — portable, inspectable, never locked in
-- Workspace configs, themes, keybindings — all plain files on disk
+- **RSS articles** are cached locally under `~/.aynite/rss/` — you own the content, not the feed provider
+- **Spotify playlists** and saved tracks are synced to `~/.aynite/spotify/` — your music library is yours
+- **AI chat sessions** are saved as plain JSON files — portable, inspectable, never locked in
+- **Workspace configs**, themes, keybindings — all plain files on disk
 
 Store them wherever makes sense for you. Aynite follows.
 
+> **The key insight:** When your data is in a standard format in a location you control, you can use ANY tool to process it. You're not dependent on what the app vendor provides.
+
 ---
 
-## Processing
+## Processing — Any Tool Fits
 
 **What you do with data should be tool-agnostic.**
 
@@ -35,9 +60,11 @@ Aynite gives you:
 
 But you're not limited to what's built in. Write your own scripts. Use your own models. Wire up your own pipeline. Aynite is the hub, not the gatekeeper.
 
+> **The key insight:** In the AI era, processing power is abundant and cheap. The bottleneck isn't what you can process — it's whether you can GET to your data. Decoupled storage solves that.
+
 ---
 
-## Rendering
+## Rendering — Build Once, Share Forever
 
 **How you see data should be reusable and composable.**
 
@@ -49,21 +76,23 @@ Aynite's built-in views are a starting point, not a ceiling:
 
 The [`transform-to-dataview`](../resources/skills/transformers/transform-to-dataview/SKILL.md) skill is the bridge: it takes raw data from any source and transforms it into the format expected by any dataview. Storage and rendering are fully decoupled — the same chart view can render data from a CSV, a database export, or an API response.
 
-Build a view once, share it, let others use it with their own data. The rendering layer is where Aynite's community can contribute most.
+**Build a view once, share it, let others use it with their own data.** The rendering layer is where Aynite's community can contribute most.
 
 ---
 
 ## Why This Matters Now
 
-The AI era makes scaling trivially easy.
+The AI era makes scaling trivially easy. Processing that once required custom software — data transformation, analysis, summarization, pattern detection — can now be done with a prompt.
 
-Processing that once required custom software — data transformation, analysis, summarization, pattern detection — can now be done with a prompt. When storage, processing, and rendering are decoupled, each layer can scale independently:
+When storage, processing, and rendering are decoupled, each layer can scale independently:
 
 - **Query more data** without changing your processing pipeline
 - **Use smarter models** without migrating your data
 - **Render in richer views** without rebuilding your storage
 
-But if these layers are bundled together, you can't take advantage of this. You're stuck with whatever processing your monolithic app provides, rendering in whatever views it ships. Decoupling is what makes the AI era truly useful — and Aynite is designed for it from the ground up.
+But if these layers are bundled together, you can't take advantage of this. You're stuck with whatever processing your monolithic app provides, rendering in whatever views it ships.
+
+**Switch tools without switching data. Switch views without switching storage.**
 
 ---
 
