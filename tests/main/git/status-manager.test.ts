@@ -48,7 +48,11 @@ describe('createStatusManager', () => {
     it('runs git status and caches result', async () => {
       // Make the promisified exec resolve immediately
       mockExecAsync.mockImplementation(
-        (_cmd: string, _opts: any, cb?: Function) => {
+        (
+          _cmd: string,
+          _opts: any,
+          cb: (...args: unknown[]) => undefined | undefined,
+        ) => {
           if (cb) cb(null, { stdout: ' M src/file.ts\n', stderr: '' })
           return { stdout: '', stderr: '' }
         },
@@ -73,7 +77,11 @@ describe('createStatusManager', () => {
 
     it('broadcasts event when status changes', async () => {
       mockExecAsync.mockImplementation(
-        (_cmd: string, _opts: any, cb?: Function) => {
+        (
+          _cmd: string,
+          _opts: any,
+          cb: (...args: unknown[]) => undefined | undefined,
+        ) => {
           if (cb) cb(null, { stdout: ' M src/file.ts\n', stderr: '' })
           return { stdout: '', stderr: '' }
         },
@@ -94,7 +102,11 @@ describe('createStatusManager', () => {
     it('debounces rapid successive calls', async () => {
       vi.useFakeTimers()
       mockExecAsync.mockImplementation(
-        (_cmd: string, _opts: any, cb?: Function) => {
+        (
+          _cmd: string,
+          _opts: any,
+          cb: (...args: unknown[]) => undefined | undefined,
+        ) => {
           if (cb) cb(null, { stdout: ' M f.ts\n', stderr: '' })
           return { stdout: '', stderr: '' }
         },
@@ -114,7 +126,11 @@ describe('createStatusManager', () => {
 
     it('does not broadcast if status unchanged', async () => {
       mockExecAsync.mockImplementation(
-        (_cmd: string, _opts: any, cb?: Function) => {
+        (
+          _cmd: string,
+          _opts: any,
+          cb: (...args: unknown[]) => undefined | undefined,
+        ) => {
           if (cb) cb(null, { stdout: ' M f.ts\n', stderr: '' })
           return { stdout: '', stderr: '' }
         },
@@ -138,7 +154,11 @@ describe('createStatusManager', () => {
 
     it('returns cached status after refresh', async () => {
       mockExecAsync.mockImplementation(
-        (_cmd: string, _opts: any, cb?: Function) => {
+        (
+          _cmd: string,
+          _opts: any,
+          cb: (...args: unknown[]) => undefined | undefined,
+        ) => {
           if (cb) cb(null, { stdout: ' M f.ts\n', stderr: '' })
           return { stdout: '', stderr: '' }
         },
@@ -155,7 +175,11 @@ describe('createStatusManager', () => {
   describe('handleFsChange', () => {
     it('triggers refresh when path is inside a git repo', async () => {
       mockExecAsync.mockImplementation(
-        (_cmd: string, _opts: any, cb?: Function) => {
+        (
+          _cmd: string,
+          _opts: any,
+          cb: (...args: unknown[]) => undefined | undefined,
+        ) => {
           if (cb) cb(null, { stdout: '', stderr: '' })
           return { stdout: '', stderr: '' }
         },
@@ -179,7 +203,11 @@ describe('createStatusManager', () => {
   describe('clearCache', () => {
     it('clears cached statuses', async () => {
       mockExecAsync.mockImplementation(
-        (_cmd: string, _opts: any, cb?: Function) => {
+        (
+          _cmd: string,
+          _opts: any,
+          cb: (...args: unknown[]) => undefined | undefined,
+        ) => {
           if (cb) cb(null, { stdout: ' M f.ts\n', stderr: '' })
           return { stdout: '', stderr: '' }
         },

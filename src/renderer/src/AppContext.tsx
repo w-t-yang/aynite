@@ -6,6 +6,14 @@
  *
  * The cross-cutting IPC event listener (iframe relaying) lives here
  * since it touches all domains and sends postMessage to all iframes.
+ *
+ * Provider nesting order:
+ *   Theme > Update > Window > Workspace > Layout > UI > IPC Relay
+ *
+ * LayoutProvider reads workspace state from WorkspaceContext internally,
+ * so WorkspaceProvider must be above it.
+ * UIProvider needs executeAppOperation from LayoutContext.
+ * IPC Relay needs useTheme() and useWorkspace().
  */
 import type React from 'react'
 import { useEffect, useRef } from 'react'
@@ -19,7 +27,6 @@ import { useWorkspace, WorkspaceProvider } from './contexts/WorkspaceContext'
 
 // ─── Cross-cutting IPC Listener ─────────────────────────────────────────
 // Relays all app events to iframes via postMessage.
-// Must run inside all providers since it's a single global listener.
 
 function useIpcRelay() {
   const { refreshThemes } = useTheme()
@@ -35,7 +42,6 @@ function useIpcRelay() {
 
     const unbind = window.aynite.onAppEvent(
       (event: { type: string; data: any }) => {
-        // 1. Relay to all iframes
         for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
           'iframe',
         )) {
@@ -45,7 +51,6 @@ function useIpcRelay() {
           )
         }
 
-        // 2. Core Reactions
         const { refreshThemes: rt, loadData: ld } = handlersRef.current
         switch (event.type) {
           case AppEvents.CONFIG_ERROR:
@@ -66,22 +71,35 @@ function useIpcRelay() {
   }, [])
 }
 
-// ─── Composed Provider ──────────────────────────────────────────────────
+// ─── Inner Providers ────────────────────────────────────────────────────
+// Nested inside LayoutProvider, provides UI context and IPC relay.
 
-const ComposedProviders: React.FC<{ children: React.ReactNode }> = ({
+const InnerProviders: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { setActiveTileId } = useLayout()
   const { executeAppOperation: layoutExecOp } = useLayout()
-  useIpcRelay()
 
   return (
-    <WorkspaceProvider setActiveTileId={setActiveTileId}>
-      <UIProvider layoutExecuteAppOperation={layoutExecOp}>
-        {children}
-      </UIProvider>
-    </WorkspaceProvider>
+    <UIProvider layoutExecuteAppOperation={layoutExecOp}>
+      <IpcRelayWrapper />
+      {children}
+    </UIProvider>
   )
+}
+
+function IpcRelayWrapper() {
+  useIpcRelay()
+  // Trigger initial theme load on app startup
+  const { refreshThemes } = useTheme()
+  const { registerRefreshThemes } = useWorkspace()
+  useEffect(() => {
+    refreshThemes()
+  }, [refreshThemes])
+  // Register refreshThemes with WorkspaceContext so loadData can trigger it
+  useEffect(() => {
+    registerRefreshThemes(refreshThemes)
+  }, [registerRefreshThemes, refreshThemes])
+  return null
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -91,9 +109,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     <ThemeProvider>
       <UpdateProvider>
         <WindowProvider>
-          <LayoutProvider>
-            <ComposedProviders>{children}</ComposedProviders>
-          </LayoutProvider>
+          <WorkspaceProvider>
+            <LayoutProvider>
+              <InnerProviders>{children}</InnerProviders>
+            </LayoutProvider>
+          </WorkspaceProvider>
         </WindowProvider>
       </UpdateProvider>
     </ThemeProvider>

@@ -55,11 +55,13 @@ describe('createGitWatcher', () => {
 
     it('calls refresh callback when HEAD file changes', async () => {
       mockExists.mockResolvedValue(true)
-      let headCallback: Function = () => {}
-      mockFsWatch.mockImplementation((path: string, cb: Function) => {
-        if (path.endsWith('/HEAD')) headCallback = cb
-        return { close: vi.fn() }
-      })
+      let headCallback: (...args: unknown[]) => void = () => {}
+      mockFsWatch.mockImplementation(
+        (path: string, cb: (...args: unknown[]) => void) => {
+          if (path.endsWith('/HEAD')) headCallback = cb
+          return { close: vi.fn() }
+        },
+      )
 
       await gitWatcher.setupWatcher('/repo')
       headCallback()

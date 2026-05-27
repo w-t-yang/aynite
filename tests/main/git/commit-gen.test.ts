@@ -57,7 +57,11 @@ describe('generateCommitMessage', () => {
     mockExec.mockImplementation(
       (() => {
         // Return a function that mimics promisify behavior
-        const execFn: any = (_cmd: string, _opts: any, callback?: Function) => {
+        const execFn: any = (
+          _cmd: string,
+          _opts: any,
+          callback?: (...args: unknown[]) => void,
+        ) => {
           if (callback) {
             callback(new Error('Command failed'))
           }

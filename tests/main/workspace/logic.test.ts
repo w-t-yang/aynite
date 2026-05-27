@@ -19,6 +19,7 @@ vi.mock('../../../src/lib/path', () => ({
 import {
   addWorkspaceFolder,
   createWorkspace,
+  deleteWorkspace,
   getWorkspaceFolders,
   getWorkspaceState,
   getWorkspacesList,
@@ -250,6 +251,55 @@ describe('workspace/logic', () => {
         folders: ['/project'],
         files: ['file1.ts', 'file2.ts'],
       })
+    })
+  })
+
+  describe('createWorkspace', () => {
+    it('sets active to the new workspace', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'default',
+        list: ['default'],
+      })
+      mockWriteJson.mockResolvedValue(undefined)
+
+      const result = await createWorkspace('new-ws')
+      expect(result.active).toBe('new-ws')
+      expect(result.list).toContain('new-ws')
+    })
+  })
+
+  describe('deleteWorkspace', () => {
+    it('removes workspace from list', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'ws2',
+        list: ['ws1', 'ws2', 'ws3'],
+      })
+      mockWriteJson.mockResolvedValue(undefined)
+
+      const result = await deleteWorkspace('ws1')
+      expect(result.list).toEqual(['ws2', 'ws3'])
+    })
+
+    it('switches active to first remaining workspace when deleting active', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'ws1',
+        list: ['ws1', 'ws2'],
+      })
+      mockWriteJson.mockResolvedValue(undefined)
+
+      const result = await deleteWorkspace('ws1')
+      expect(result.active).toBe('ws2')
+    })
+
+    it('throws when trying to delete the last workspace', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'only',
+        list: ['only'],
+      })
+
+      await expect(deleteWorkspace('only')).rejects.toThrow(
+        'Cannot delete the last workspace',
+      )
     })
   })
 })

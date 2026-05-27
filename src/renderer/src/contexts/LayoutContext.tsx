@@ -9,16 +9,13 @@ import {
 } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
 import { ayniteConfig } from '../../../lib/constants/renderer/config'
-import type {
-  LayoutNode,
-  LeafNode,
-  WorkspaceConfig,
-} from '../../../lib/constants/types'
+import type { LayoutNode, LeafNode } from '../../../lib/constants/types'
 import {
   executeLayoutOperation,
   updateLayoutInConfig,
   updateNodeInLayout,
 } from '../utils/tile'
+import { useWorkspace } from './WorkspaceContext'
 
 interface LayoutContextType {
   activeTileId: string | null
@@ -36,15 +33,12 @@ interface LayoutContextType {
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined)
 
-export const LayoutProvider: React.FC<{
-  children: ReactNode
-  workspaceConfig: WorkspaceConfig | null
-  setWorkspaceConfig: (
-    updater:
-      | WorkspaceConfig
-      | ((prev: WorkspaceConfig | null) => WorkspaceConfig | null),
-  ) => void
-}> = ({ children, workspaceConfig, setWorkspaceConfig }) => {
+export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  // Read workspace state from WorkspaceContext (must be nested inside WorkspaceProvider)
+  const { workspaceConfig, setWorkspaceConfig } = useWorkspace()
+
   const [activeTileId, setActiveTileId] = useState<string | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const activeTileIdRef = useRef(activeTileId)
@@ -189,6 +183,12 @@ export const LayoutProvider: React.FC<{
       return latest
     })
   }, [setWorkspaceConfig])
+
+  // Register setActiveTileId with WorkspaceProvider so loadData can set it
+  const { registerSetActiveTileId } = useWorkspace()
+  useEffect(() => {
+    registerSetActiveTileId(setActiveTileId)
+  }, [registerSetActiveTileId])
 
   // IPC: tile activation
   useEffect(() => {

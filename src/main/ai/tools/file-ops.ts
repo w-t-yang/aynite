@@ -18,7 +18,7 @@ import {
   secureWriteText,
 } from '../../../lib/path'
 
-export function createFileOps(domains: string[]) {
+export function createFileOps(domains: string[], workspaceFolders: string[]) {
   return {
     read_file: {
       description: TOOL_METADATA.read_file.description,
@@ -100,7 +100,13 @@ export function createFileOps(domains: string[]) {
         if (dirPath) {
           return await secureGetFileTree(dirPath, domains, depth)
         }
-        return ERROR_MESSAGES.WORKSPACE_EMPTY
+        let fullOutput = ''
+        for (const folder of workspaceFolders) {
+          fullOutput += `Workspace Folder: ${folder}\n`
+          fullOutput += await secureGetFileTree(folder, domains, depth)
+          fullOutput += '\n'
+        }
+        return fullOutput || ERROR_MESSAGES.WORKSPACE_EMPTY
       },
     },
   }

@@ -44,7 +44,7 @@ export function createTools(context: ToolContext) {
   const workspaceName = getWorkspaceName(context)
 
   return {
-    ...createFileOps(domains),
+    ...createFileOps(domains, workspaceFolders),
     ...createRunCommand(workspaceFolders, context),
     ...createTaskManager(workspaceName, domains),
     ...createMemoryManager(workspaceName, domains),

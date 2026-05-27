@@ -35,7 +35,9 @@ export function setupWorkspaceIpc(): void {
   })
 
   ipcMain.handle(WorkspaceChannels.CREATE, async (_event, name: string) => {
-    return await createWorkspace(name)
+    const result = await createWorkspace(name)
+    broadcastAppEvent(AppEvents.WORKSPACE_CHANGED, { created: name })
+    return result
   })
 
   ipcMain.handle(WorkspaceChannels.DELETE, async (_event, name: string) => {
