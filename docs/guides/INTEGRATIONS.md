@@ -88,6 +88,4 @@ You can integrate any service that has an API or SDK by creating a **command** o
 
 See the [Extending Aynite guide](EXTENDING_AYNITE.md) for details.
 
-### The `aynite-resource://` Protocol
 
-Aynite registers a custom protocol (`aynite-resource://`) for serving local files to iframe-based views. This is used internally by dataviews and fileviews to load data and media files, and supports HTTP Range requests for media streaming.

@@ -1,6 +1,8 @@
 # Git Integration
 
-Aynite has deep git integration built into the file tree and file browser. You can track changes, view diffs, stage hunks, and generate commit messages — all without leaving the editor.
+> 🚧 **Early stage.** Aynite's git integration currently covers the basics — review changes and commit. More advanced features (branch management, rebase, merge conflict resolution, stashing, etc.) will come in future releases.
+
+Aynite has basic git integration built into the file tree and file browser. You can track changes, view diffs, stage hunks, and generate commit messages — all without leaving the editor.
 
 ---
 

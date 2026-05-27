@@ -43,11 +43,12 @@ The AI will:
 | `/create-command` | Create a new command |
 | `/create-skill` | Create or improve a skill |
 | `/create-spell` | Decide between command or skill, then delegate |
+| `/create-slides` | Create slide decks from your data — markdown, images, and more |
 | `/transform-to-dataview` | Transform data into visualizations |
 
 > 🚧 **Coming soon:** `/create-dataview` — a skill that guides you through creating custom dataviews, defining their JSON schemas, and registering them as views.
 
-> 🚧 **Coming soon:** `/create-slides` — a skill for creating slide decks from your data.
+| `/create-slides` | Create slide decks from your data — markdown, images, and more |
 
 ---
 
@@ -74,21 +75,9 @@ Use the `/create-command` skill:
 
 The AI will walk you through defining parameters, writing `run.sh`, and documenting with `COMMAND.md`.
 
-### Example Commands
-
-Aynite ships with example commands:
-- `hello-command` — Simple demonstration
-- `stock-fetch` — Fetch stock data from Yahoo Finance
-- `stock-view` — Generate interactive HTML charts
-
 ### Using Commands
 
-Run any command from the AI chat with the `>` prefix:
-
-```
-> stock-fetch --symbol AAPL
-> stock-view --file AAPL.json
-```
+Run any command from the AI chat with the `>` prefix.
 
 ---
 

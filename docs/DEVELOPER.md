@@ -10,18 +10,18 @@ Aynite uses Electron's **3-process model**:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   Main Process                       │
+│                   Main Process                      │
 │  Files, Git, Config, AI Model calls, Themes,        │
-│  RSS, Spotify, Window management, Updater            │
+│  RSS, Spotify, Window management, Updater           │
 ├─────────────────────────────────────────────────────┤
-│                   Preload Bridge                     │
-│         Thin IPC layer — no business logic            │
+│                   Preload Bridge                    │
+│         Thin IPC layer — no business logic          │
 ├─────────────────────────────────────────────────────┤
-│            Renderer (iframes per view)                │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐      │
-│  │ Chat │ │ Files│ │ RSS  │ │Chart │ │ ...  │      │
-│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘      │
-│         postMessage communication                     │
+│            Renderer (iframes per view)              │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐       │
+│  │ Chat │ │ Files│ │ RSS  │ │Chart │ │ ...  │       │
+│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘       │
+│         postMessage communication                   │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -87,6 +87,11 @@ git clone https://github.com/w-t-yang/aynite.git
 cd aynite
 npm install
 ```
+
+> ⚠️ **Electron runtime not installed?** In some cases `npm install` may skip or fail to download the Electron binary. If you get errors about missing Electron modules, run the following to install the runtime manually:
+> ```bash
+> node ./node_modules/electron/install.js
+> ```
 
 ### Running in Development Mode
 

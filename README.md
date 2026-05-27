@@ -138,6 +138,8 @@ Most apps bundle three things together: your data, their processing, and their i
 
 Open **Settings → AI**, add your API key, and pick a model. Aynite supports all major providers through the Vercel AI SDK.
 
+> 🙋 **A note from the developer:** As a part-time individual developer, I've personally only tested Gemini, DeepSeek, and Ollama — I don't have subscriptions to every AI provider. If you run into any issues connecting to a provider, I'd greatly appreciate you [reporting it](https://github.com/w-t-yang/aynite/issues). Apologies in advance if some providers don't work out of the box!
+
 ### 3. Try Your First Chat
 
 Open the AI chat and type:

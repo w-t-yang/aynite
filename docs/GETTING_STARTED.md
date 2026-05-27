@@ -16,19 +16,6 @@ Welcome! This guide will take you from zero to your first AI-powered workflow in
 
 ## First Steps
 
-### The Key Shortcuts
-
-| Shortcut | What It Does |
-|----------|--------------|
-| **`Ctrl+Tab`** | Fuzzy-find and switch files |
-| **`Ctrl+R`** | Refresh the active tile |
-| **`Ctrl+B`** | Toggle the left panel |
-| **`Ctrl+I`** | Toggle the right panel |
-
-> 💡 On macOS, use `Cmd` instead of `Ctrl` throughout.
-
----
-
 ### Step 1: Set Up Your AI Provider
 
 Before the AI agent can help you, it needs a model to work with.
@@ -36,14 +23,11 @@ Before the AI agent can help you, it needs a model to work with.
 1. Open **Settings** (gear icon in the sidebar)
 2. Go to the **AI** tab
 3. Click **Add Provider** and select your provider:
-   - **OpenAI** — GPT-4o, o1, o3-mini
-   - **Anthropic** — Claude 3.5 Sonnet, Claude Opus
-   - **Google** — Gemini 2.0 Flash, Gemini Pro
-   - **DeepSeek** — DeepSeek Reasoning
-   - **Ollama** — Run models locally (fully offline)
-   - OpenRouter, Groq, Mistral, Azure, Bedrock, and more
+   - **OpenAI**, **Anthropic**, **Google**, **DeepSeek**, **Ollama**, OpenRouter, Groq, Mistral, Azure, Bedrock, and more
 4. Enter your API key and pick a model
 5. That's it — you're ready to chat
+
+> 🙋 **A note from the developer:** As a part-time individual developer, I've personally only tested Gemini, DeepSeek, and Ollama — I don't have subscriptions to every AI provider. If you run into any issues connecting to a provider, I'd greatly appreciate you [reporting it](https://github.com/w-t-yang/aynite/issues). Apologies in advance if some providers don't work out of the box!
 
 > 💡 **Prefer local?** Install [Ollama](https://ollama.ai), pull a model like `llama3.1`, and point Aynite to `http://localhost:11434`. No API key, no cloud — everything stays on your machine.
 
@@ -68,21 +52,37 @@ The agent will:
 2. Generate a complete theme file with all 32 color properties
 3. Save it to your themes folder
 
-Press **`Ctrl+R`** to refresh the tile, then go to **Settings → Appearance** and select your brand new theme.
+Then go to **Settings → Appearance** and select your brand new theme.
 
 ---
 
-### Step 3: Run Your First Command
+### Step 3: Create Your First Dataview
 
-**Commands** are deterministic scripts that run on your system. They're prefixed with `>` in the chat.
+One of the most powerful features in Aynite is turning raw data into interactive visualizations — charts, graphs, mind maps, and more.
 
-Try this:
+**Aynite is different from other AI tools:** skills aren't automatically loaded into the agent's tool list. You have to explicitly tell the AI which skill to use by typing `/` in the chat and selecting the skill from the dropdown. This keeps the agent focused and avoids unnecessary tool clutter.
+
+Try this in the AI chat — start by typing `/` and select the **transform-to-dataview** skill, then type your request:
 
 ```
-> echo "Hello from Aynite!"
+/transform-to-dataview
+
+I have a few tasks to track:
+- Design the landing page
+- Build the API
+- Write tests
+- Deploy to production
+
+Can you turn this into a mind map so I can visualize the workflow?
 ```
 
-You'll see the output directly in the chat. Commands can be anything — shell scripts, Python programs, Node scripts, curl calls to any API.
+The AI agent will:
+1. Use the **transform-to-dataview** skill you explicitly selected
+2. Help you pick the right visualization type (mind map, flow chart, graph, etc.)
+3. Transform your data into a ready-to-use JSON file
+4. Save it right next to your source file
+
+You can also use it with files and folders — just mention a file path or paste your data and the agent will guide you through the process.
 
 ---
 

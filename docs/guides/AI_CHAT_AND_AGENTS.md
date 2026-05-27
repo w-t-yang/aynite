@@ -1,21 +1,14 @@
 # AI Chat & Agents
 
-The AI chat is the heart of Aynite. Open the AI Chat view in any tile — it's your interface to AI-powered workflows, tool access, and automation. Press **`Ctrl+I`** to toggle the right panel where the chat usually lives.
+The AI chat is the heart of Aynite. Open the AI Chat view in any tile — it's your interface to AI-powered workflows, tool access, and automation.
 
 ---
 
 ## Providers
 
-Aynite supports a wide range of AI providers through the Vercel AI SDK:
+Aynite supports all major AI providers through the Vercel AI SDK — OpenAI, Anthropic, Google, DeepSeek, Ollama, OpenRouter, Groq, Mistral, Azure OpenAI, AWS Bedrock, and more. Pick your preferred provider and use whichever model you like.
 
-| Provider | Models |
-|----------|--------|
-| **OpenAI** | GPT-4o, o1, o3-mini, GPT-4 Turbo |
-| **Anthropic** | Claude 3.5 Sonnet, Claude Opus, Claude Haiku |
-| **Google** | Gemini 2.0 Flash, Gemini Pro, Gemini 1.5 |
-| **DeepSeek** | DeepSeek V3, DeepSeek Reasoning |
-| **Ollama** | Any local model (Llama, Mistral, Qwen, etc.) |
-| **Others** | OpenRouter, Groq, Mistral, Azure OpenAI, AWS Bedrock |
+> 🙋 **A note from the developer:** As a part-time individual developer, I've personally only tested Gemini, DeepSeek, and Ollama — I don't have subscriptions to every AI provider. If you run into any issues connecting to a provider, I'd greatly appreciate you [reporting it](https://github.com/w-t-yang/aynite/issues). Apologies in advance if some providers don't work out of the box!
 
 ### Configuration
 

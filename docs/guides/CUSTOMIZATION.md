@@ -8,30 +8,22 @@ Aynite is designed to feel like yours. Every visual element — backgrounds, tex
 
 ### Built-in Themes
 
-Aynite ships with 6 built-in themes:
-
-- **Aynite Deep** — Dark, purple-accented (default)
-- **Light** — Clean, light interface
-- **Dark** — Standard dark mode
-- **Solarized Light** — Warm, eye-friendly
-- **Solarized Dark** — Low-contrast dark
-- **Night Owl** — High-contrast dark with vibrant colors
-
-Switch themes in **Settings → Appearance**.
+Aynite ships with a few built-in themes — switch between them in **Settings → Appearance** to see what's available.
 
 ### Creating Your Own Theme
 
 Use the `/create-theme` skill in the AI chat to generate a custom theme from a description:
 
 ```
-/create-theme make me a cozy autumn sunset theme
+/create-theme make me a cozy autumn sunset theme, dark mode
 ```
+
+Make sure to mention whether you want a **light mode** or **dark mode** theme so the colors are generated correctly.
 
 The AI will:
 1. Generate a complete theme with all 32 color properties
 2. Save it to `~/.aynite/themes/<name>.json`
-3. Press **`Ctrl+R`** to refresh the tile
-4. Find it in **Settings → Appearance**
+3. Then go to **Settings → Appearance** and select your new theme
 
 Try any description — "cyberpunk neon," "forest green," "ocean depths," "vintage paper." The skill handles backgrounds, text colors, borders, accent colors, semantic colors (errors, warnings, success), scrollbar styling, and font choices.
 
@@ -50,6 +42,8 @@ Each theme defines 32 CSS variables that control every visual aspect of the inte
 ---
 
 ## Keybindings
+
+> 🚧 **Active development.** The keybinding system is currently under active refactoring. More keybindings and customization options will be added in future releases.
 
 ### Viewing Keybindings
 
