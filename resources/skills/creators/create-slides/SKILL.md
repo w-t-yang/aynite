@@ -241,21 +241,52 @@ Use the latest reveal.js version from CDN. Always check the actual latest versio
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/__VERSION__/plugin/markdown/markdown.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/__VERSION__/plugin/highlight/highlight.js"></script>
   <script>
+    // ── Cross-frame fullscreen ──────────────────────────────────────────────
+    // When slides are opened inside Aynite's HTML viewer, they're rendered in
+    // a nested iframe chain (tile → file-browser → srcdoc).  The browser's
+    // Fullscreen API requires the user gesture to reach the top-level window.
+    // We walk up the frame hierarchy and fullscreen the top document element,
+    // which is the actual Electron window's <html> tag.
+
+    function getTopWindow() {
+      var w = window;
+      while (w.frameElement) w = w.parent;
+      return w;
+    }
+
+    // Polyfill requestFullscreen so reveal.js's built-in fullscreen button
+    // and any other library calls also go to the top-level window.
+    (function() {
+      var _origFS = Element.prototype.requestFullscreen;
+      Element.prototype.requestFullscreen = function() {
+        var top = getTopWindow();
+        try {
+          return top.document.documentElement.requestFullscreen();
+        } catch(e) {
+          console.debug('[slides] top-level fullscreen failed, falling back', e);
+          return _origFS.apply(this, arguments);
+        }
+      };
+    })();
+
+    // Custom "Present" button handler
     function toggleFullscreen() {
-      const el = document.getElementById('slides-wrapper');
-      const label = document.getElementById('fs-label');
-      if (!document.fullscreenElement) {
-        el.requestFullscreen().catch(() => {});
-        label.textContent = 'Exit';
+      var top = getTopWindow();
+      var label = document.getElementById('fs-label');
+      if (!top.document.fullscreenElement) {
+        top.document.documentElement.requestFullscreen().catch(function(){});
+        if (label) label.textContent = 'Exit';
       } else {
-        document.exitFullscreen().catch(() => {});
-        label.textContent = 'Present';
+        top.document.exitFullscreen().catch(function(){});
+        if (label) label.textContent = 'Present';
       }
     }
 
-    document.addEventListener('fullscreenchange', () => {
-      const label = document.getElementById('fs-label');
-      if (label) label.textContent = document.fullscreenElement ? 'Exit' : 'Present';
+    // Sync button label with fullscreen state
+    document.addEventListener('fullscreenchange', function() {
+      var top = getTopWindow();
+      var label = document.getElementById('fs-label');
+      if (label) label.textContent = top.document.fullscreenElement ? 'Exit' : 'Present';
     });
 
     Reveal.initialize({
@@ -625,3 +656,4 @@ Only `index.html` is the final deliverable. The rest are intermediate build arti
 1. Tell the user the full path to the saved `index.html`.
 2. Suggest they open the HTML file in Aynite's file browser — they can navigate to it and click to view the slides directly. Aynite's HTML file view renders reveal.js presentations perfectly.
 3. Optionally mention they can also double-click the file to open it in a regular browser if they prefer.
+4. **Fullscreen in Aynite**: The generated slides have a "Present" button in the top-right corner. Clicking it will enter fullscreen mode for the presentation. Exiting fullscreen returns to the Aynite file browser view. The presentation's built-in fullscreen button (reveal.js's overlay controls) will also work — both route through the top-level window.
