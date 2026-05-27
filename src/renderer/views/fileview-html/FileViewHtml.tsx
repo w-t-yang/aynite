@@ -28,7 +28,36 @@ export function FileViewHtml({ file, content }: FileViewHtmlProps) {
     .map((v) => `${v}: ${rootStyle.getPropertyValue(v)};`)
     .join('')
 
+  // ── Safe-history polyfill ────────────────────────────────────────────────
+  // srcdoc iframes have origin 'aynite://file-browser' and URL 'about:srcdoc'.
+  // The <base> tag points to aynite-resource://, so any JS that calls
+  // history.replaceState/pushState with a URL derived from <base> will throw
+  // a SecurityError (cross-origin navigation). We silently catch these errors
+  // because navigation features (e.g. reveal.js hash syncing) are irrelevant
+  // inside an iframe — they would only matter if the iframe was the top-level
+  // browsing context.
+  const historyPolyfill = `
+<script>
+(function(){
+  var _pushState = history.pushState.bind(history);
+  var _replaceState = history.replaceState.bind(history);
+  function safeWrap(fn, label) {
+    return function() {
+      try { return fn.apply(this, arguments); }
+      catch(e) {
+        if (e.name === 'SecurityError') {
+          console.debug('[' + label + '] suppressed SecurityError (srcdoc iframe)');
+        } else { throw e; }
+      }
+    };
+  }
+  history.pushState = safeWrap(_pushState, 'pushState');
+  history.replaceState = safeWrap(_replaceState, 'replaceState');
+})();
+</script>`
+
   const inject = `
+    ${historyPolyfill}
     <base href="aynite-resource://${dirPath}/">
     <style>
       :root { ${themeVars} }

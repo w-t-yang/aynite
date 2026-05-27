@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aynite — User Guide</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reset.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/theme/moon.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/highlight/monokai.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+    :root {
+      --r-main-font: 'Inter', sans-serif;
+      --r-heading-font: 'Inter', sans-serif;
+      --r-heading-font-weight: 700;
+      --r-heading-text-transform: none;
+    }
+
+    .reveal {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .reveal h1 { font-size: 2.8em; font-weight: 700; letter-spacing: -0.02em; }
+    .reveal h2 { font-size: 1.8em; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.5em; }
+    .reveal h3 { font-size: 1.2em; font-weight: 600; }
+    .reveal p { font-size: 0.9em; line-height: 1.6; }
+
+    .slide-title {
+      text-align: center;
+      padding-top: 2em;
+    }
+
+    .slide-title h1 {
+      margin-bottom: 0.2em;
+    }
+
+    .slide-title .subtitle {
+      font-size: 1.2em;
+      opacity: 0.7;
+      font-weight: 300;
+    }
+
+    .section-header h2 {
+      font-size: 2.4em;
+      text-align: center;
+      margin-top: 1.5em;
+    }
+
+    .section-header .section-icon {
+      font-size: 3em;
+      display: block;
+      text-align: center;
+      margin-bottom: 0.3em;
+    }
+
+    .two-col {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .two-col > div {
+      flex: 1;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .feature-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 1.2rem;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .feature-card h4 {
+      margin: 0 0 0.3em 0;
+      font-size: 1em;
+      font-weight: 600;
+    }
+
+    .feature-card p {
+      margin: 0;
+      font-size: 0.75em;
+      opacity: 0.7;
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 0.15em 0.6em;
+      font-size: 0.7em;
+      font-weight: 600;
+      margin-right: 0.3em;
+    }
+
+    .badge-m { color: #fbbf24; }
+    .badge-a { color: #4ade80; }
+    .badge-u { color: #60a5fa; }
+    .badge-d { color: #f87171; }
+    .badge-r { color: #c084fc; }
+
+    table {
+      font-size: 0.75em;
+    }
+
+    table th {
+      font-weight: 600;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .key-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .key-list li {
+      margin: 0.5em 0;
+      font-size: 0.85em;
+    }
+
+    .key-list kbd {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      border-radius: 4px;
+      padding: 0.15em 0.5em;
+      font-family: 'Inter', monospace;
+      font-size: 0.85em;
+      border: 1px solid rgba(255,255,255,0.2);
+      min-width: 1.5em;
+      text-align: center;
+    }
+
+    .dataview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+    }
+
+    .dataview-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .dataview-item .emoji {
+      font-size: 1.4em;
+      margin-right: 0.3em;
+    }
+
+    .dataview-item .name {
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .dataview-item .desc {
+      font-size: 0.7em;
+      opacity: 0.6;
+      margin-top: 0.2em;
+    }
+
+    .big-number {
+      font-size: 3em;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1;
+      margin-bottom: 0.1em;
+    }
+
+    .big-number-label {
+      text-align: center;
+      font-size: 0.8em;
+      opacity: 0.6;
+    }
+
+    .quote-block {
+      font-size: 1.2em;
+      font-style: italic;
+      text-align: center;
+      padding: 1em 2em;
+    }
+
+    .workflow-steps {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .step {
+      text-align: center;
+      flex: 1;
+    }
+
+    .step-num {
+      display: block;
+      font-size: 1.5em;
+      font-weight: 700;
+      opacity: 0.3;
+    }
+
+    .step-label {
+      font-size: 0.75em;
+      opacity: 0.8;
+    }
+
+    .step-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 1.5em;
+      opacity: 0.3;
+    }
+
+    .icon-row {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      font-size: 2.5em;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+<section data-background-gradient="linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)" data-transition="zoom">
+  <div class="slide-title">
+    <h1>Aynite</h1>
+    <p class="subtitle">Your AI-Native Desktop Workspace</p>
+    <div style="margin-top: 1.5em; opacity: 0.5; font-size: 0.8em;">
+      <p>User Guide</p>
+    </div>
+  </div>
+  <aside class="notes">
+    Welcome to Aynite — an AI-native workspace where your data, tools, and AI agents work together seamlessly.
+  </aside>
+</section>
+
+<section data-transition="convex" data-background="#1a1a2e">
+  <div class="section-header">
+    <span class="section-icon">📁</span>
+    <h2>Working with Files</h2>
+  </div>
+  <div class="two-col" style="margin-top: 1.5rem;">
+    <div>
+      <h3>File Browser</h3>
+      <p>Your main workspace for viewing, editing, and managing files — split into a file tree and content area.</p>
+      <ul style="font-size: 0.8em; line-height: 2;">
+        <li class="fragment"><strong>Click</strong> any file to open in a tab</li>
+        <li class="fragment"><strong>Ctrl+Tab</strong> — Fuzzy-find files instantly</li>
+        <li class="fragment">Multiple tabs with drag-to-reorder</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Three Viewing Modes</h3>
+      <div class="feature-card fragment" style="margin-bottom: 0.5rem;">
+        <h4>🎨 FileView Mode</h4>
+        <p>Specialized renderers for Markdown, PDF, images, audio, video, HTML</p>
+      </div>
+      <div class="feature-card fragment" style="margin-bottom: 0.5rem;">
+        <h4>👁️ View Mode</h4>
+        <p>Read-only text with syntax highlighting</p>
+      </div>
+      <div class="feature-card fragment">
+        <h4>✏️ Edit Mode</h4>
+        <p>Writable editor with syntax highlighting</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-transition="fade">
+  <div class="slide-title">
+    <h2>File Types &amp; Viewers</h2>
+  </div>
+  <div class="feature-grid" style="margin-top: 1rem;">
+    <div class="feature-card fragment">
+      <h4>📝 Markdown</h4>
+      <p>Rendered with headings, code blocks, images, and local link resolution</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>📄 PDF</h4>
+      <p>Full PDF rendering with zoom, fit-to-height, and scroll</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>🖼️ Images</h4>
+      <p>PNG, JPG, GIF, SVG with zoom controls and file info</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>🎵 Audio</h4>
+      <p>MP3, WAV, FLAC with player controls and streaming</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>🎬 Video</h4>
+      <p>MP4, WebM, MOV with zoom and streaming support</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>🌐 HTML</h4>
+      <p>Rendered webpage in an iframe with 3-mode toggle</p>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top: 1.5rem; font-size: 0.75em; opacity: 0.6;">
+    Switch modes using the bottom toolbar — FileView → View → Edit
+  </p>
+</section>
+
+<section data-transition="convex" data-background-gradient="linear-gradient(135deg, #0f3460, #1a1a2e)">
+  <h2>Editing &amp; Search</h2>
+  <div class="two-col" style="margin-top: 1rem;">
+    <div class="fragment">
+      <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.2rem; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 0.3em 0;">✏️ Editing</h3>
+        <ul style="font-size: 0.8em; line-height: 2.2; list-style: none; padding: 0;">
+          <li><kbd>Ctrl+S</kbd> — Save file</li>
+          <li>🟡 Dirty indicator on tab</li>
+          <li>Syntax highlighting by language</li>
+          <li>Only for text-based files</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fragment">
+      <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.2rem; border: 1px solid rgba(255,255,255,0.08);">
+        <h3 style="margin: 0 0 0.3em 0;">🔍 Search</h3>
+        <ul style="font-size: 0.8em; line-height: 2.2; list-style: none; padding: 0;">
+          <li><kbd>Ctrl+F</kbd> — Open search bar</li>
+          <li><kbd>Ctrl+N</kbd> — Next match</li>
+          <li><kbd>Ctrl+P</kbd> — Previous match</li>
+          <li>Highlights &amp; match counter</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top: 1.2rem; font-size: 0.8em;">
+    Search highlights are embedded into syntax highlighting — matches stay colored correctly
+  </p>
+</section>
+
+<section data-transition="zoom" data-background="linear-gradient(135deg, #2d1b69, #1a1a2e)">
+  <div class="section-header">
+    <span class="section-icon">🤖</span>
+    <h2>AI Chat &amp; Agents</h2>
+    <p style="opacity: 0.6; font-size: 1em; margin-top: 0.5em;">The heart of Aynite</p>
+  </div>
+  <p class="fragment" style="margin-top: 1.5rem; font-size: 0.85em;">
+    Open the AI Chat view in any tile — your interface to AI-powered workflows,<br>
+    tool access, and automation. Press <kbd>Ctrl+I</kbd> to toggle the right panel.
+  </p>
+</section>
+
+<section data-transition="slide">
+  <h2>AI Providers</h2>
+  <p style="font-size: 0.75em; opacity: 0.6; margin-bottom: 0.5rem;">Supporting 6+ providers through the Vercel AI SDK</p>
+  <table>
+    <thead>
+      <tr><th>Provider</th><th>Models</th><th>Reasoning</th></tr>
+    </thead>
+    <tbody>
+      <tr class="fragment"><td><strong>OpenAI</strong></td><td>GPT-4o, o1, o3-mini</td><td>✅ Low / Medium / High</td></tr>
+      <tr class="fragment"><td><strong>Anthropic</strong></td><td>Claude 3.5 Sonnet, Opus, Haiku</td><td>✅ Thinking budget</td></tr>
+      <tr class="fragment"><td><strong>Google</strong></td><td>Gemini 2.0 Flash, Gemini Pro</td><td>✅ Thinking levels</td></tr>
+      <tr class="fragment"><td><strong>DeepSeek</strong></td><td>DeepSeek V3, DeepSeek Reasoning</td><td>✅ On / Off</td></tr>
+      <tr class="fragment"><td><strong>Ollama</strong></td><td>Any local model</td><td>⚠️ Varies by model</td></tr>
+      <tr class="fragment"><td><strong>Others</strong></td><td>OpenRouter, Groq, Mistral, Azure, Bedrock</td><td>⚠️ Provider-dependent</td></tr>
+    </tbody>
+  </table>
+  <div class="fragment feature-card" style="margin-top: 1rem; text-align: center;">
+    <p style="margin: 0; font-size: 0.75em;">
+      Configure in <strong>Settings → AI</strong> — add API keys, choose models, set reasoning effort
+    </p>
+  </div>
+</section>
+
+<section data-transition="convex">
+  <h2>Sessions &amp; Tool Calls</h2>
+  <div class="two-col" style="margin-top: 1rem;">
+    <div class="fragment">
+      <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.2rem; border: 1px solid rgba(255,255,255,0.08); height: 100%;">
+        <h3 style="margin: 0 0 0.5em 0;">💬 Sessions</h3>
+        <ul style="font-size: 0.75em; line-height: 2;">
+          <li>Persistent conversations</li>
+          <li>Auto-saved with 1s debounce</li>
+          <li>Browse history from sidebar</li>
+          <li>Per-workspace isolation</li>
+          <li>Create new with <kbd>Ctrl+Tab</kbd></li>
+        </ul>
+      </div>
+    </div>
+    <div class="fragment">
+      <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.2rem; border: 1px solid rgba(255,255,255,0.08); height: 100%;">
+        <h3 style="margin: 0 0 0.5em 0;">🛠️ Tool Calls</h3>
+        <p style="font-size: 0.7em; margin-bottom: 0.5em;">16 built-in tools:</p>
+        <ul style="font-size: 0.65em; line-height: 2; column-count: 2;">
+          <li><code>read_file</code></li>
+          <li><code>write_file</code></li>
+          <li><code>edit_file</code></li>
+          <li><code>run_command</code></li>
+          <li><code>grep_search</code></li>
+          <li><code>list_files</code></li>
+          <li><code>glob_search</code></li>
+          <li><code>get_file_tree</code></li>
+          <li><code>read_url</code></li>
+          <li><code>create_task</code></li>
+          <li><code>propose_plan</code></li>
+          <li><code>initialize_memory</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top: 0.8rem; font-size: 0.7em; opacity: 0.6;">
+    Each tool call shows <strong>arguments</strong> and <strong>output</strong> in collapsible blocks — with real-time streaming for commands
+  </p>
+</section>
+
+<section data-transition="slide" data-background="#2d1b69">
+  <h2>Skills &amp; Agents</h2>
+  <div class="two-col" style="margin-top: 1rem;">
+    <div class="fragment">
+      <h3>🧠 Skills (<code>/skill</code>)</h3>
+      <p style="font-size: 0.75em; opacity: 0.8;">AI-guided workflows activated with <code>/</code></p>
+      <table style="font-size: 0.65em;">
+        <thead><tr><th>Skill</th><th>What It Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/create-theme</code></td><td>Generate custom color themes</td></tr>
+          <tr><td><code>/create-command</code></td><td>Create deterministic scripts</td></tr>
+          <tr><td><code>/create-skill</code></td><td>Create or improve skills</td></tr>
+          <tr><td><code>/create-spell</code></td><td>Decide command vs skill</td></tr>
+          <tr><td><code>/transform-to-dataview</code></td><td>Transform data to visuals</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="fragment">
+      <h3>👤 Agents (Spells)</h3>
+      <p style="font-size: 0.75em; opacity: 0.8;">Named AI configurations</p>
+      <table style="font-size: 0.65em;">
+        <thead><tr><th>Agent</th><th>Personality</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Aynite</strong></td><td>General purpose (default)</td></tr>
+          <tr><td><strong>Alpha</strong></td><td>Fast, concise</td></tr>
+          <tr><td><strong>Ghost</strong></td><td>Minimal, code-focused</td></tr>
+          <tr><td><strong>Prism</strong></td><td>Analytical, detailed</td></tr>
+          <tr><td><strong>Sonic</strong></td><td>Speed-optimized</td></tr>
+          <tr><td><strong>Void</strong></td><td>Minimal for simple tasks</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top: 0.8rem; font-size: 0.7em;">
+    Configure agents in <strong>Settings → Agents</strong> — each with its own system prompt and model
+  </p>
+</section>
+
+<section data-transition="convex" data-background-gradient="linear-gradient(135deg, #1a1a2e, #16213e)">
+  <div class="section-header">
+    <span class="section-icon">🔄</span>
+    <h2>Git Integration</h2>
+  </div>
+  <div class="two-col" style="margin-top: 1.5rem;">
+    <div class="fragment">
+      <h3>File Status Badges</h3>
+      <ul class="key-list" style="font-size: 0.9em;">
+        <li><span class="badge badge-m">M</span> Modified — amber</li>
+        <li><span class="badge badge-a">A</span> Added — green</li>
+        <li><span class="badge badge-u">U</span> Untracked — blue</li>
+        <li><span class="badge badge-d">D</span> Deleted — red</li>
+        <li><span class="badge badge-r">R</span> Renamed — purple</li>
+      </ul>
+    </div>
+    <div class="fragment">
+      <h3>Diff View</h3>
+      <ul style="font-size: 0.75em; line-height: 2;">
+        <li>Side-by-side syntax-highlighted diff</li>
+        <li>Hunk-based staging &amp; discard</li>
+        <li>Toggle <strong>Changes Only</strong> mode</li>
+        <li>Add/delete line counts per file</li>
+      </ul>
+    </div>
+  </div>
+  <div class="fragment workflow-steps" style="margin-top: 1.5rem;">
+    <div class="step"><span class="step-num">1</span><span class="step-label">Edit files</span></div>
+    <div class="step-arrow">→</div>
+    <div class="step"><span class="step-num">2</span><span class="step-label">Stage hunks</span></div>
+    <div class="step-arrow">→</div>
+    <div class="step"><span class="step-num">3</span><span class="step-label">Review diff</span></div>
+    <div class="step-arrow">→</div>
+    <div class="step"><span class="step-num">4</span><span class="step-label">Commit</span></div>
+  </div>
+</section>
+
+<section data-transition="fade">
+  <h2>AI-Powered Committing</h2>
+  <div class="fragment" style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.2rem; border: 1px solid rgba(255,255,255,0.08); margin-top: 1rem;">
+    <div style="display: flex; gap: 2rem; align-items: center;">
+      <div style="flex: 1; text-align: center;">
+        <span style="font-size: 3em;">🤖</span>
+        <p style="font-size: 0.8em; font-weight: 600;">AI analyzes staged changes</p>
+        <p style="font-size: 0.65em; opacity: 0.6;">Uses your active provider (reasoning off)</p>
+      </div>
+      <div style="font-size: 2em; opacity: 0.3;">→</div>
+      <div style="flex: 1; text-align: center;">
+        <span style="font-size: 3em;">💬</span>
+        <p style="font-size: 0.8em; font-weight: 600;">Generates commit message</p>
+        <p style="font-size: 0.65em; opacity: 0.6;">Review &amp; edit before committing</p>
+      </div>
+      <div style="font-size: 2em; opacity: 0.3;">→</div>
+      <div style="flex: 1; text-align: center;">
+        <span style="font-size: 3em;">✅</span>
+        <p style="font-size: 0.8em; font-weight: 600;">Commit executed</p>
+        <p style="font-size: 0.65em; opacity: 0.6;">Diff view auto-clears</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="fragment" style="margin-top: 1.5rem;">
+    <h3>Auto-Refresh</h3>
+    <div class="feature-grid" style="margin-top: 0.5rem;">
+      <div class="feature-card">
+        <h4>📂 File operations</h4>
+        <p>Save, create, rename, delete → git status refreshes</p>
+      </div>
+      <div class="feature-card">
+        <h4>👀 External changes</h4>
+        <p>Watches <code>.git/HEAD</code> &amp; <code>.git/index</code> for external tool changes</p>
+      </div>
+      <div class="feature-card">
+        <h4>🔄 Manual refresh</h4>
+        <p>Refresh button in Git Diff panel header</p>
+      </div>
+      <div class="feature-card">
+        <h4>🧩 Per-workspace</h4>
+        <p>Each workspace has independent git state</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-transition="zoom" data-background-gradient="linear-gradient(135deg, #1a1a2e, #2d1b69, #0f3460)">
+  <div class="section-header">
+    <span class="section-icon">📊</span>
+    <h2>Data Visualization</h2>
+    <p style="opacity: 0.6; font-size: 1em; margin-top: 0.5em;">8 built-in DataViews</p>
+  </div>
+  <div class="dataview-grid" style="margin-top: 1.5rem;">
+    <div class="dataview-item fragment"><span class="emoji">📊</span><span class="name">Chart</span><div class="desc">Bar, line, area, pie, radar</div></div>
+    <div class="dataview-item fragment"><span class="emoji">📈</span><span class="name">Stock</span><div class="desc">Candlestick charts</div></div>
+    <div class="dataview-item fragment"><span class="emoji">🕸️</span><span class="name">Graph</span><div class="desc">Force-directed networks</div></div>
+    <div class="dataview-item fragment"><span class="emoji">🔀</span><span class="name">Flow</span><div class="desc">Node-based flow editor</div></div>
+    <div class="dataview-item fragment"><span class="emoji">📐</span><span class="name">Diagram</span><div class="desc">Mermaid diagrams</div></div>
+    <div class="dataview-item fragment"><span class="emoji">🌳</span><span class="name">MindMap</span><div class="desc">Collapsible tree mind maps</div></div>
+    <div class="dataview-item fragment"><span class="emoji">✏️</span><span class="name">Canvas</span><div class="desc">Excalidraw whiteboard</div></div>
+    <div class="dataview-item fragment"><span class="emoji">🎨</span><span class="name">Theme</span><div class="desc">Color theme editor</div></div>
+  </div>
+  <p class="fragment" style="margin-top: 1rem; font-size: 0.7em; opacity: 0.6;">
+    Each loads a JSON file and renders it as an interactive visualization
+  </p>
+</section>
+
+<section data-transition="slide">
+  <h2>DataViews — Schemas &amp; Usage</h2>
+  <table style="font-size: 0.6em;">
+    <thead>
+      <tr><th>View</th><th>Renders</th><th>JSON Schema</th></tr>
+    </thead>
+    <tbody>
+      <tr class="fragment">
+        <td>📊 Chart</td><td>Bar, line, area, pie, radar</td><td><code>{keys: string[], data: object[]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>📈 Stock</td><td>Candlestick charts</td><td><code>{symbol, data: [{open,high,low,close,volume}]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🕸️ Graph</td><td>Network graphs</td><td><code>{nodes: [{id,label}], links: [{source,target}]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🔀 Flow</td><td>Node-based flow editor</td><td><code>{nodes: [{position,data}], edges: [{source,target}]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>📐 Diagram</td><td>Mermaid diagrams</td><td><code>{definition: string}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🌳 MindMap</td><td>Tree mind maps</td><td><code>{root: {id,label,children?}}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>✏️ Canvas</td><td>Excalidraw whiteboard</td><td><code>{elements: object[], appState: object}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🎨 Theme</td><td>Color theme editor</td><td><code>{id: string, colors: {string: string}}</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="fragment" style="margin-top: 0.8rem; font-size: 0.65em; opacity: 0.6;">
+    Open any <code>.json</code> file — schema auto-detection switches to the matching dataview renderer
+  </p>
+</section>
+
+<section data-transition="convex" data-background="#16213e">
+  <h2>Transform-to-Dataview</h2>
+  <p style="font-size: 0.8em; opacity: 0.7;">Turn raw data into interactive visualizations</p>
+
+  <div class="fragment workflow-steps" style="margin-top: 1.5rem;">
+    <div class="step"><span class="step-num">1</span><span class="step-label">Raw Data</span></div>
+    <div class="step-arrow">→</div>
+    <div class="step"><span class="step-num">2</span><span class="step-label">Choose Dataview</span></div>
+    <div class="step-arrow">→</div>
+    <div class="step"><span class="step-num">3</span><span class="step-label">Map &amp; Transform</span></div>
+    <div class="step-arrow">→</div>
+    <div class="step"><span class="step-num">4</span><span class="step-label">Validate</span></div>
+    <div class="step-arrow">→</div>
+    <div class="step"><span class="step-num">5</span><span class="step-label">Visualize 🎉</span></div>
+  </div>
+
+  <div class="two-col" style="margin-top: 1.5rem;">
+    <div class="fragment">
+      <div class="feature-card" style="margin-bottom: 0.5rem; text-align: center;">
+        <h4>Source Formats</h4>
+        <p style="font-size: 0.7em;">CSV, JSON, text, markdown,<br>logs, clipboard, folders</p>
+      </div>
+    </div>
+    <div class="fragment">
+      <div class="feature-card" style="text-align: center;">
+        <h4>Built-in Validation</h4>
+        <p style="font-size: 0.7em;">JSON Schema validation +<br>semantic checks per dataview</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="fragment" style="margin-top: 1rem; text-align: center;">
+    <p style="font-size: 0.7em;">
+      Use <code>/transform-to-dataview</code> in AI chat to start
+    </p>
+  </div>
+</section>
+
+<section data-transition="zoom" data-background="linear-gradient(135deg, #1a1a2e, #0f3460)">
+  <div class="section-header">
+    <span class="section-icon">🎨</span>
+    <h2>Customization</h2>
+    <p style="opacity: 0.6; font-size: 1em; margin-top: 0.5em;">Themes · Keybindings · Layout</p>
+  </div>
+</section>
+
+<section data-transition="slide">
+  <h2>Themes</h2>
+  <div class="two-col" style="margin-top: 1rem;">
+    <div>
+      <h3>6 Built-in Themes</h3>
+      <ul style="font-size: 0.7em; line-height: 2.2;">
+        <li class="fragment">🌙 <strong>Aynite Deep</strong> — Dark, purple-accented (default)</li>
+        <li class="fragment">☀️ <strong>Light</strong> — Clean, light interface</li>
+        <li class="fragment">🌑 <strong>Dark</strong> — Standard dark mode</li>
+        <li class="fragment">🟡 <strong>Solarized Light</strong> — Warm, eye-friendly</li>
+        <li class="fragment">🔵 <strong>Solarized Dark</strong> — Low-contrast dark</li>
+        <li class="fragment">🦉 <strong>Night Owl</strong> — High-contrast, vibrant</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="fragment">Create Your Own</h3>
+      <div class="fragment feature-card" style="margin-top: 0.5rem;">
+        <p style="font-size: 0.8em;"><code>/create-theme make me a cozy autumn sunset theme</code></p>
+        <p style="font-size: 0.65em; opacity: 0.7; margin-top: 0.5rem;">The AI generates a complete theme with all 32 CSS color properties — backgrounds, text, borders, accents, scrollbars, fonts</p>
+      </div>
+      <div class="fragment feature-card" style="margin-top: 0.5rem;">
+        <p style="font-size: 0.75em;">Saved to <code>~/.aynite/themes/&lt;name&gt;.json</code></p>
+        <p style="font-size: 0.65em; opacity: 0.7;">Press <kbd>Ctrl+R</kbd> to refresh the tile</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-transition="convex" data-background="#1a1a2e">
+  <h2>Keybindings &amp; Layout</h2>
+  <div class="two-col" style="margin-top: 0.5rem;">
+    <div>
+      <h3>⌨️ Keybindings</h3>
+      <ul class="key-list" style="font-size: 0.7em;">
+        <li><kbd>Ctrl+R</kbd> Refresh tile</li>
+        <li><kbd>Ctrl+Tab</kbd> Fuzzy-find files</li>
+        <li><kbd>Ctrl+B</kbd> Toggle left panel</li>
+        <li><kbd>Ctrl+I</kbd> Toggle right panel</li>
+        <li><kbd>Ctrl+L</kbd> Focus chat</li>
+        <li><kbd>Ctrl+S</kbd> Save file (edit mode)</li>
+        <li><kbd>Ctrl+F</kbd> Search in file</li>
+      </ul>
+    </div>
+    <div>
+      <h3>🧩 Tile Layout</h3>
+      <ul class="key-list" style="font-size: 0.7em;">
+        <li><kbd>Ctrl+-</kbd> Split vertically</li>
+        <li><kbd>Ctrl+=</kbd> Split horizontally</li>
+        <li><kbd>Ctrl+Q</kbd> Close tile</li>
+        <li><kbd>Ctrl+O</kbd> Cycle tiles</li>
+        <li><kbd>Ctrl+Shift+←→↑↓</kbd> Resize tiles</li>
+      </ul>
+      <p style="font-size: 0.65em; opacity: 0.6; margin-top: 0.5rem;">
+        Customize in <strong>Settings → Keybindings</strong>
+      </p>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top: 1rem; font-size: 0.7em;">
+    <strong>Pro tip:</strong> Load any view in an empty tile — or start with pre-built layouts
+  </p>
+</section>
+
+<section data-transition="slide" data-background-gradient="linear-gradient(135deg, #16213e, #0f3460)">
+  <h2>Extending Aynite</h2>
+  <div class="two-col" style="margin-top: 0.5rem;">
+    <div class="fragment">
+      <div class="feature-card" style="margin-bottom: 0.5rem;">
+        <h4>🧠 Skills (<code>/skill</code>)</h4>
+        <p>AI-guided workflows with SKILL.md + bundled scripts</p>
+        <p style="font-size: 0.6em; opacity: 0.6; margin-top: 0.3em;">Use <code>/create-skill</code> to build your own</p>
+      </div>
+      <div class="feature-card" style="margin-bottom: 0.5rem;">
+        <h4>⚡ Commands (<code>&gt; command</code>)</h4>
+        <p>Deterministic shell scripts — COMMAND.md + run.sh</p>
+        <p style="font-size: 0.6em; opacity: 0.6; margin-top: 0.3em;">Use <code>/create-command</code> to build your own</p>
+      </div>
+    </div>
+    <div class="fragment">
+      <div class="feature-card" style="margin-bottom: 0.5rem;">
+        <h4>✨ Spells (<code>/spell</code> or <code>&gt; spell</code>)</h4>
+        <p>Unified concept — /create-spell decides command vs skill</p>
+      </div>
+      <div class="feature-card">
+        <h4>🚧 Coming Soon</h4>
+        <p style="font-size: 0.7em;"><code>/create-dataview</code> — Custom dataviews</p>
+        <p style="font-size: 0.7em;"><code>/create-slides</code> — Slide decks</p>
+      </div>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top: 0.8rem; font-size: 0.7em; opacity: 0.6;">
+    Skills and commands are just directories — share by copying folders
+  </p>
+</section>
+
+<section data-transition="convex" data-background="#16213e">
+  <h2>Integrations</h2>
+  <div class="two-col" style="margin-top: 1rem;">
+    <div class="fragment">
+      <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.08); text-align: center;">
+        <span style="font-size: 3em;">📡</span>
+        <h3>RSS Reader</h3>
+        <ul style="font-size: 0.7em; line-height: 2; text-align: left; margin-top: 0.5rem;">
+          <li>Subscribe to feeds, organize into groups</li>
+          <li>📅 Today view, bookmarks</li>
+          <li>🤖 AI-powered article summarization</li>
+          <li>All data cached locally in <code>~/.aynite/rss/</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="fragment">
+      <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.08); text-align: center;">
+        <span style="font-size: 3em;">🎵</span>
+        <h3>Spotify</h3>
+        <ul style="font-size: 0.7em; line-height: 2; text-align: left; margin-top: 0.5rem;">
+          <li>Browse playlists, saved tracks, top artists</li>
+          <li>Search for artists, albums, tracks</li>
+          <li>Control playback on active device</li>
+          <li>Data cached in <code>~/.aynite/spotify/</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top: 1rem; font-size: 0.65em; opacity: 0.6;">
+    You own the cached content — not the service provider
+  </p>
+</section>
+
+<section data-transition="convex">
+  <h2>Workspaces &amp; Layout</h2>
+  <p style="font-size: 0.75em; opacity: 0.7;">Organize your work with named collections of folders, AI sessions, and layouts</p>
+
+  <div class="feature-grid" style="margin-top: 1rem;">
+    <div class="feature-card fragment">
+      <h4>🏠 Aynite Playbook</h4>
+      <p>Guides, examples, demo data — your sandbox</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>💻 Dev</h4>
+      <p>Main development workspace</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>📈 Market Lens</h4>
+      <p>Trading commands, stock data, financial analysis</p>
+    </div>
+    <div class="feature-card fragment">
+      <h4>✍️ The Quill</h4>
+      <p>Writing, notes, content creation</p>
+    </div>
+  </div>
+
+  <div class="fragment" style="margin-top: 1.2rem;">
+    <h3>Multi-Window Support</h3>
+    <p style="font-size: 0.7em; opacity: 0.7;">
+      Each window can have its own workspace — Dev in one, Market Lens in another
+    </p>
+  </div>
+
+  <div class="fragment" style="margin-top: 1rem;">
+    <h3>Pre-built Layouts</h3>
+    <table style="font-size: 0.6em;">
+      <thead><tr><th>Layout</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Welcome</td><td>Tree view / File browser / AI Chat</td></tr>
+        <tr><td>Chat Vibe</td><td>Workspace view (35%) / AI browser (65%)</td></tr>
+        <tr><td>RSS / Spotify</td><td>Single-tile reader or player</td></tr>
+        <tr><td>Whiteboard</td><td>Canvas (50%) / MindMap (50%)</td></tr>
+        <tr><td>Empty Layout</td><td>Start from scratch</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section data-transition="zoom" data-background-gradient="linear-gradient(135deg, #2d1b69, #1a1a2e, #0f3460)">
+  <div class="slide-title">
+    <h1>Let's Go Build 🚀</h1>
+    <p class="subtitle" style="margin-top: 0.5em;">Your AI-native workspace awaits</p>
+    <div style="margin-top: 2em; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+      <span class="fragment" style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4em 0.8em; font-size: 0.8em;">📁 <code>Ctrl+Tab</code></span>
+      <span class="fragment" style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4em 0.8em; font-size: 0.8em;">🤖 <code>/create-theme</code></span>
+      <span class="fragment" style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4em 0.8em; font-size: 0.8em;">📊 <code>/transform-to-dataview</code></span>
+      <span class="fragment" style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4em 0.8em; font-size: 0.8em;">🔄 <kbd>Ctrl+R</kbd></span>
+    </div>
+    <div class="fragment" style="margin-top: 3em; opacity: 0.4; font-size: 0.7em;">
+      <p>aynite.app · docs/guides/ for more</p>
+    </div>
+  </div>
+  <aside class="notes">
+    Thanks for watching! Aynite is designed to be extended and customized. Check the guides for deep dives into each feature.
+  </aside>
+</section>
+
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/notes/notes.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/markdown/markdown.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/highlight/highlight.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      center: true,
+      transition: 'slide',
+      plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+    });
+  </script>
+</body>
+</html>

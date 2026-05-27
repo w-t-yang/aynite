@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aynite — User Guide</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reset.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/theme/moon.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/highlight/monokai.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+    :root {
+      --r-main-font: 'Inter', sans-serif;
+      --r-heading-font: 'Inter', sans-serif;
+      --r-heading-font-weight: 700;
+      --r-heading-text-transform: none;
+    }
+
+    .reveal {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .reveal h1 { font-size: 2.8em; font-weight: 700; letter-spacing: -0.02em; }
+    .reveal h2 { font-size: 1.8em; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.5em; }
+    .reveal h3 { font-size: 1.2em; font-weight: 600; }
+    .reveal p { font-size: 0.9em; line-height: 1.6; }
+
+    .slide-title {
+      text-align: center;
+      padding-top: 2em;
+    }
+
+    .slide-title h1 {
+      margin-bottom: 0.2em;
+    }
+
+    .slide-title .subtitle {
+      font-size: 1.2em;
+      opacity: 0.7;
+      font-weight: 300;
+    }
+
+    .section-header h2 {
+      font-size: 2.4em;
+      text-align: center;
+      margin-top: 1.5em;
+    }
+
+    .section-header .section-icon {
+      font-size: 3em;
+      display: block;
+      text-align: center;
+      margin-bottom: 0.3em;
+    }
+
+    .two-col {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .two-col > div {
+      flex: 1;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .feature-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 1.2rem;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .feature-card h4 {
+      margin: 0 0 0.3em 0;
+      font-size: 1em;
+      font-weight: 600;
+    }
+
+    .feature-card p {
+      margin: 0;
+      font-size: 0.75em;
+      opacity: 0.7;
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 0.15em 0.6em;
+      font-size: 0.7em;
+      font-weight: 600;
+      margin-right: 0.3em;
+    }
+
+    .badge-m { color: #fbbf24; }
+    .badge-a { color: #4ade80; }
+    .badge-u { color: #60a5fa; }
+    .badge-d { color: #f87171; }
+    .badge-r { color: #c084fc; }
+
+    table {
+      font-size: 0.75em;
+    }
+
+    table th {
+      font-weight: 600;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .key-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .key-list li {
+      margin: 0.5em 0;
+      font-size: 0.85em;
+    }
+
+    .key-list kbd {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      border-radius: 4px;
+      padding: 0.15em 0.5em;
+      font-family: 'Inter', monospace;
+      font-size: 0.85em;
+      border: 1px solid rgba(255,255,255,0.2);
+      min-width: 1.5em;
+      text-align: center;
+    }
+
+    .dataview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+    }
+
+    .dataview-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .dataview-item .emoji {
+      font-size: 1.4em;
+      margin-right: 0.3em;
+    }
+
+    .dataview-item .name {
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .dataview-item .desc {
+      font-size: 0.7em;
+      opacity: 0.6;
+      margin-top: 0.2em;
+    }
+
+    .big-number {
+      font-size: 3em;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1;
+      margin-bottom: 0.1em;
+    }
+
+    .big-number-label {
+      text-align: center;
+      font-size: 0.8em;
+      opacity: 0.6;
+    }
+
+    .quote-block {
+      font-size: 1.2em;
+      font-style: italic;
+      text-align: center;
+      padding: 1em 2em;
+    }
+
+    .workflow-steps {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .step {
+      text-align: center;
+      flex: 1;
+    }
+
+    .step-num {
+      display: block;
+      font-size: 1.5em;
+      font-weight: 700;
+      opacity: 0.3;
+    }
+
+    .step-label {
+      font-size: 0.75em;
+      opacity: 0.8;
+    }
+
+    .step-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 1.5em;
+      opacity: 0.3;
+    }
+
+    .icon-row {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      font-size: 2.5em;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+<!-- SLIDES_PLACEHOLDER -->
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/notes/notes.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/markdown/markdown.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/highlight/highlight.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      center: true,
+      transition: 'slide',
+      plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+    });
+  </script>
+</body>
+</html>

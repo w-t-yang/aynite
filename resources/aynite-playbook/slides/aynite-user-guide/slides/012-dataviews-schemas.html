@@ -1,0 +1,37 @@
+<section data-transition="slide">
+  <h2>DataViews — Schemas &amp; Usage</h2>
+  <table style="font-size: 0.6em;">
+    <thead>
+      <tr><th>View</th><th>Renders</th><th>JSON Schema</th></tr>
+    </thead>
+    <tbody>
+      <tr class="fragment">
+        <td>📊 Chart</td><td>Bar, line, area, pie, radar</td><td><code>{keys: string[], data: object[]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>📈 Stock</td><td>Candlestick charts</td><td><code>{symbol, data: [{open,high,low,close,volume}]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🕸️ Graph</td><td>Network graphs</td><td><code>{nodes: [{id,label}], links: [{source,target}]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🔀 Flow</td><td>Node-based flow editor</td><td><code>{nodes: [{position,data}], edges: [{source,target}]}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>📐 Diagram</td><td>Mermaid diagrams</td><td><code>{definition: string}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🌳 MindMap</td><td>Tree mind maps</td><td><code>{root: {id,label,children?}}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>✏️ Canvas</td><td>Excalidraw whiteboard</td><td><code>{elements: object[], appState: object}</code></td>
+      </tr>
+      <tr class="fragment">
+        <td>🎨 Theme</td><td>Color theme editor</td><td><code>{id: string, colors: {string: string}}</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="fragment" style="margin-top: 0.8rem; font-size: 0.65em; opacity: 0.6;">
+    Open any <code>.json</code> file — schema auto-detection switches to the matching dataview renderer
+  </p>
+</section>
