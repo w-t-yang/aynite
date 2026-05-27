@@ -197,6 +197,55 @@ Aynite is in active development (beta). The app ships regularly, has a growing s
 
 ---
 
+## Contributing
+
+Everyone is welcome to contribute! There's just one small request: **write your code and make contributions with Aynite**. I believe contributors should be the people who love using Aynite the most — for everything.
+
+> ⚡ **Aynite Contribution Ratio** — Up to this point (2026-05-27), **27.9%** of the project's commit history has already been authored by Aynite + DeepSeek-V4-Flash, and this ratio keeps climbing.
+>
+> ```
+> Aynite + DeepSeek-V4-Flash     114 commits  (27.9%)
+> Claude Code + DeepSeek-V4-Flash  71 commits  (17.4%)
+> Antigravity + Gemini            224 commits  (54.8%)
+> ─────────────────────────────────────────
+> Total                           409 commits
+> ```
+>
+> Check the latest ratio anytime with `npm run count:aynite`.
+
+[![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
+
+Thanks goes to these wonderful people:
+
+<!-- ALL-CONTRIBUTORS-LIST:START -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/w-t-yang">
+          <img src="https://avatars.githubusercontent.com/u/2253954?v=4" width="64" height="64" style="border-radius:50%" alt="w-t-yang"/>
+          <br />
+          <sub><b>w-t-yang</b></sub>
+        </a>
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/apps/dependabot">
+          <img src="https://avatars.githubusercontent.com/in/29110?v=4" width="64" height="64" style="border-radius:50%" alt="dependabot"/>
+          <br />
+          <sub><b>dependabot[bot]</b></sub>
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+---
+
 ## License
 
 [MIT](LICENSE) © Wentao Yang
