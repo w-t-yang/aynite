@@ -2,6 +2,7 @@ import { Check, Clipboard, Info } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useState } from 'react'
 import Markdown from 'react-markdown'
+import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
 import { Button } from '../../shared/basic/Button'
 import type { FileInfo } from '../../shared/lib/file-handlers'
@@ -142,6 +143,7 @@ export const FileViewMarkdown: React.FC<{
         >
           <Markdown
             remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw]}
             components={{
               code({ node, className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || '')

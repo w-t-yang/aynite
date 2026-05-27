@@ -13,6 +13,63 @@
 
 ---
 
+## Showcase
+
+<div align="center">
+
+### AI Chat · Git Diff · Data Visualization · File Browser · RSS · Spotify
+
+All in one desktop app. Your AI agent, your files, your tools.
+
+</div>
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/images/ai-chat.png" alt="AI Chat with tool calls and command output streaming" width="100%">
+      <br>
+      <sub>🤖 AI Chat — multi-provider, tool execution, real-time command streaming</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/images/data-views.png" alt="Data visualization views: charts, graphs, mindmaps" width="100%">
+      <br>
+      <sub>🎨 Data Views — 8 visualization types from any JSON data</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/images/git-diff.png" alt="Side-by-side git diff view with hunk staging" width="100%">
+      <br>
+      <sub>🔄 Git Integration — side-by-side diff, hunk staging, AI commit messages</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/images/file-browser.png" alt="File browser with tabs, search, and syntax highlighting" width="100%">
+      <br>
+      <sub>📂 File Browser — tabs, syntax highlighting, search, 6 built-in file viewers</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/images/rss-reader.png" alt="RSS reader with feed management and AI summarization" width="100%">
+      <br>
+      <sub>📡 RSS Reader — feed management, groups, AI article summarization</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/images/spotify.png" alt="Spotify player with playlist browsing" width="100%">
+      <br>
+      <sub>🎵 Spotify — browse, search, control playback without leaving the app</sub>
+    </td>
+  </tr>
+</table>
+
+<div align="center">
+
+**And more:** mind maps 🧠, flow diagrams 🔀, interactive graphs 🕸️, Mermaid diagrams 📐, Excalidraw canvas ✏️, stock charts 📈, theme studio 🎨, AI browser, workspace manager, and a fully customizable tiled layout.
+
+</div>
+
+---
+
 ## Philosophy
 
 Most apps bundle three things together: your data, their processing, and their interface. **Aynite unbundles them.**
