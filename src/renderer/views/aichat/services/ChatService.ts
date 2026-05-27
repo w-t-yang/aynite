@@ -473,19 +473,36 @@ export async function sendMessage(
               ),
             })
             break
-          case 'error':
+          case 'error': {
+            const errMsg = String(event.error)
+            const isProviderError =
+              errMsg.includes('fetch failed') ||
+              errMsg.includes('401') ||
+              errMsg.includes('invalid_api_key') ||
+              errMsg.includes('API key') ||
+              errMsg.includes('timeout') ||
+              errMsg.includes('aborted') ||
+              errMsg.includes('ECONNREFUSED') ||
+              errMsg.includes('ENOTFOUND')
             updateState(session, {
               error: {
-                message: String(event.error),
-                redacted: String(event.error).includes('fetch failed')
-                  ? 'Connection failed. Please check if your AI provider service is running.'
-                  : String(event.error).includes('401') ||
-                      String(event.error).includes('invalid_api_key')
-                    ? 'Authentication failed. Please check your API key.'
-                    : 'An error occurred while communicating with the AI provider.',
+                message: errMsg,
+                redacted: isProviderError
+                  ? errMsg.includes('fetch failed') ||
+                    errMsg.includes('ECONNREFUSED') ||
+                    errMsg.includes('ENOTFOUND')
+                    ? 'Connection failed. Please check if your AI provider service is running.'
+                    : errMsg.includes('401') ||
+                        errMsg.includes('invalid_api_key') ||
+                        errMsg.includes('API key')
+                      ? 'Authentication failed. Please check your API key.'
+                      : 'A system error occurred. Please check your configuration and try again.'
+                  : errMsg,
+                type: isProviderError ? 'provider' : 'tool',
               },
             })
             break
+          }
           case 'finish':
             updateState(session, { currentStep: null })
             break
@@ -502,11 +519,30 @@ export async function sendMessage(
     updateState(session, { messages: resultHistory })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
+    const isProviderError =
+      msg.includes('fetch failed') ||
+      msg.includes('401') ||
+      msg.includes('invalid_api_key') ||
+      msg.includes('API key') ||
+      msg.includes('timeout') ||
+      msg.includes('aborted') ||
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('ENOTFOUND')
     updateState(session, {
       error: {
         message: msg,
-        redacted:
-          'A system error occurred. Please check your configuration and try again.',
+        redacted: isProviderError
+          ? msg.includes('fetch failed') ||
+            msg.includes('ECONNREFUSED') ||
+            msg.includes('ENOTFOUND')
+            ? 'Connection failed. Please check if your AI provider service is running.'
+            : msg.includes('401') ||
+                msg.includes('invalid_api_key') ||
+                msg.includes('API key')
+              ? 'Authentication failed. Please check your API key.'
+              : 'A system error occurred. Please check your configuration and try again.'
+          : msg,
+        type: isProviderError ? 'provider' : 'system',
       },
     })
   } finally {

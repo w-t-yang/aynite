@@ -1,36 +1,155 @@
-# TODOs
+# Roadmap
 
-## chat view
+Prioritized by importance. Done items are at the bottom.
 
-1. [] stream writing file, editing file for large files.
-2. [] improve the block display, e.g. grep function name, line break, etc.
+---
 
-## dataview
+## Release & Polish
 
-1. [] improve dataviews in the future
-2. [] html view and markdown view (or maybe more views) should be moved to dataview
+- [ ] Release and auto-update
+- [ ] Docs — README, project wiki, showcase
+- [ ] Welcome workspace with settings and theme demo
+- [ ] Language / i18n support
+- [ ] Track usage
+- [ ] Collect feedback
 
-## agent
+## Promotion
 
-1. [] make sure read, write, edit file only on text files, not others
-2. [] when updating memory, update the session metadata with title and description
-3. [] support uploading files
-4. [] make sure session/task/plan/memory are binded to workspace from chat view/tools. there are issues when having multiple windows with different workspaces or sessions
+- [ ] Investigate success stories
+- [ ] Plan promotion
+- [ ] Build community
 
-## file browser
+## Agent
 
-1. [x] basic key bindings - save, search
+- [ ] Advanced agent features
+- [ ] RAG (Retrieval-Augmented Generation)
+- [ ] Tools section — include skills and tasks in tool management
+- [ ] Make sure read/write/edit file only works on text files, not binaries
+- [ ] When updating memory, update session metadata with title and description
+- [ ] Support uploading files
+- [ ] Ensure session/task/plan/memory are bound to workspace from chat view/tools (fix multi-window issues with different workspaces/sessions)
 
-## workspace view
+## Chat View
 
-1. [] rename session (maybe rename session when updating memory)
+- [ ] Stream writing/editing for large files
+- [ ] Improve block display — e.g. grep function name, line break handling
 
-## switcher
+## Editor
 
-1. [] search text from workspace
-2. [] index images/audios/videos, and support search
+- [ ] Markdown and HTML link support
+- [ ] More advanced editing features
 
-## before first release
+## Files
 
-1. [] docs/wiki
-2. [] default workspaces, including demonstrating rss, spotify
+- [ ] File sync
+- [ ] More file type support
+
+## Dataview
+
+- [ ] Improve dataviews in the future
+- [ ] HTML view and markdown view (and maybe more views) should be moved to dataview
+
+## File Browser
+
+- [ ] More file types
+
+## Workspace View
+
+- [ ] Rename session (maybe rename when updating memory)
+
+## Switcher
+
+- [ ] Search text from workspace files
+- [ ] Index images/audios/videos and support search
+
+## Spells / Extensions
+
+- [ ] Spell registry, discovery
+
+## Aynite Spells — Files
+
+- [ ] Notes, knowledge base, memory
+- [ ] PDF to markdown — using MS open source project as command
+- [ ] Video support
+- [ ] Image support
+- [ ] Slides — Node.js, slides to video
+- [ ] Spreadsheets, tables
+
+## Integration
+
+- [ ] Instagram
+- [ ] Email
+- [ ] Slack, Discord
+- [ ] Google Drive
+- [ ] Figma
+- [ ] NotebookLM
+
+## Config
+
+- [ ] AI Backend — other API key connections (beyond the tested providers)
+- [ ] Key binding — advanced customization
+
+## Logs
+
+- [ ] Dev log — remove current key trigger logs and ollama call request logs from console, put them into the dev log
+
+## Git
+
+- [ ] Other git functions (beyond basic review and commit)
+
+---
+
+## ✅ Done
+
+### Config — AI Backend
+- [x] Ollama connection
+- [x] Gemini connection
+- [x] DeepSeek connection
+- [x] Claude
+- [x] OpenAI
+
+### Config — Key Binding
+- [x] Basics
+
+### Agent
+- [x] Calling tools
+- [x] Tag files and folders
+- [x] Artifact files — tasks, plans, temporary scripts, etc.
+- [x] How to access files — system prompt, memory, artifacts
+- [x] Memory
+- [x] Plan
+
+### Git
+- [x] Tree view
+- [x] File state
+- [x] View diff
+
+### Editor
+- [x] Syntax highlighting
+- [x] Markdown smart editing (e.g. auto indent)
+
+### Spells
+- [x] System prompts
+- [x] Commands — add default commands (stock-fetch)
+- [x] Skills — add default skills (create-skill, create-command)
+- [x] Config to maintain a list of folders for skills and commands
+
+### File Browser
+- [x] Basic key bindings — save, search
+
+### Logs
+- [x] Conversation history
+
+### Aynite Spells — Files
+- [x] Mindmap
+
+### Aynite Spells — Data
+- [x] Stock chart
+
+### Integration
+- [x] RSS
+- [x] Spotify
+
+### Before First Release
+- [x] Docs / wiki (initial version)
+- [x] Default workspaces — including demonstrating RSS, Spotify

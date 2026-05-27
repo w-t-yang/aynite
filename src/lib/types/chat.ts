@@ -7,11 +7,13 @@ export interface SessionMetadata {
   updatedAt: string
 }
 
+export type ErrorType = 'provider' | 'tool' | 'system'
+
 export interface SessionState {
   sessionId: string | null
   messages: UIMessage[]
   loading: boolean
-  error: { message: string; redacted: string } | null
+  error: { message: string; redacted: string; type: ErrorType } | null
   currentStep: TextStreamPart<any> | null
   pendingApproval: { command: string; cwd: string } | null
 }

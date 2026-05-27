@@ -10,6 +10,8 @@ export const ERROR_MESSAGES = {
   COMMAND_EXEC_ERROR: (msg: string, stdout: string, stderr: string) =>
     `Execution Error:\n${msg}\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`,
   NO_MATCHES_FOUND: 'No matches found.',
+  GREP_RESULT_TOO_LARGE: (limit: number) =>
+    `Error: Search returned more than ${limit} results. Please narrow your search pattern or specify a more specific folder path.`,
   URL_FETCH_ERROR: (status: string) => `Error fetching URL: ${status}`,
   URL_GENERIC_ERROR: (msg: string) => `Error: ${msg}`,
   WORKSPACE_EMPTY: '(empty workspace)',

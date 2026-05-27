@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   exists,
   readJson,
@@ -124,6 +127,43 @@ describe('secureGrepSearch', () => {
   it('returns access denied for outside-domain path', async () => {
     const result = await secureGrepSearch('/forbidden', 'pattern', domains)
     expect(result).toContain('Access denied')
+  })
+})
+
+describe('grepSearch ignores build directories (integration)', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aynite-grep-test-'))
+    // Create a valid source file with a unique pattern
+    await fs.mkdir(path.join(tmpDir, 'src'), { recursive: true })
+    await fs.writeFile(
+      path.join(tmpDir, 'src', 'code.ts'),
+      `const SECRET_VALUE = 42;\n`,
+    )
+    // Create dist/ and out/ with the same pattern — should be ignored
+    await fs.mkdir(path.join(tmpDir, 'dist'), { recursive: true })
+    await fs.writeFile(
+      path.join(tmpDir, 'dist', 'bundle.js'),
+      `const SECRET_VALUE = 42;\n`,
+    )
+    await fs.mkdir(path.join(tmpDir, 'out'), { recursive: true })
+    await fs.writeFile(
+      path.join(tmpDir, 'out', 'output.js'),
+      `const SECRET_VALUE = 42;\n`,
+    )
+  })
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('finds matches in src but not in dist or out', async () => {
+    const result = await secureGrepSearch(tmpDir, 'SECRET_VALUE', [tmpDir])
+    // Should only find the match in src/code.ts, not dist/ or out/
+    expect(result).toContain('src/code.ts')
+    expect(result).not.toContain('dist/bundle.js')
+    expect(result).not.toContain('out/output.js')
   })
 })
 

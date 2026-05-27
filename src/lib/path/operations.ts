@@ -218,6 +218,8 @@ export async function secureGetFileTree(
   return tree || ERROR_MESSAGES.DIR_EMPTY
 }
 
+const GREP_RESULT_LIMIT = 10_000
+
 export async function secureGrepSearch(
   folderPath: string,
   pattern: string,
@@ -227,7 +229,10 @@ export async function secureGrepSearch(
     return ERROR_MESSAGES.ACCESS_DENIED(folderPath)
   }
   const results = await grepSearch(folderPath, pattern)
-  return results.slice(0, 50).join('\n') || ERROR_MESSAGES.NO_MATCHES_FOUND
+  if (results.length > GREP_RESULT_LIMIT) {
+    return ERROR_MESSAGES.GREP_RESULT_TOO_LARGE(GREP_RESULT_LIMIT)
+  }
+  return results.join('\n') || ERROR_MESSAGES.NO_MATCHES_FOUND
 }
 
 export async function secureGlobSearch(
@@ -245,7 +250,7 @@ export async function secureGlobSearch(
       cwd: expandHome(searchCwd),
       onlyFiles: true,
       absolute: true,
-      ignore: ['**/node_modules/**', '**/.git/**'],
+      ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/out/**'],
     })
     return files.join('\n') || ERROR_MESSAGES.NO_MATCHES_FOUND
   } catch (e: unknown) {
@@ -267,7 +272,7 @@ async function getFileTree(
   try {
     const files = await readdir(expanded)
     for (const file of files) {
-      if (file.name === 'node_modules' || file.name === '.git') continue
+      if (IGNORED_DIRS.has(file.name)) continue
       const indent = '  '.repeat(currentDepth)
       output += `${indent}${file.isDirectory() ? '📁' : '📄'} ${file.name}\n`
       if (file.isDirectory()) {
@@ -282,6 +287,8 @@ async function getFileTree(
   return output
 }
 
+const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'out'])
+
 async function grepSearch(
   folderPath: string,
   pattern: string,
@@ -295,7 +302,7 @@ async function grepSearch(
     for (const file of files) {
       const res = path.resolve(dir, file.name)
       if (file.isDirectory()) {
-        if (file.name === 'node_modules' || file.name === '.git') continue
+        if (IGNORED_DIRS.has(file.name)) continue
         await walk(res)
       } else {
         const ext = path.extname(file.name).toLowerCase()

@@ -9,6 +9,7 @@ import {
 import { forwardRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
+import { cn } from '../../../shared/lib/utils'
 import { useAppOperation } from '../../ViewContext'
 import { type ChatInputHandle, InputEditor } from './InputEditor'
 
@@ -21,8 +22,10 @@ interface InputAreaProps {
   getAllFiles: () => Promise<any>
   getAvailableSkills: () => Promise<any>
   getAvailableCommands: () => Promise<any>
-  error: { message: string; redacted: string } | null
-  setError: (err: { message: string; redacted: string } | null) => void
+  error: { message: string; redacted: string; type?: string } | null
+  setError: (
+    err: { message: string; redacted: string; type?: string } | null,
+  ) => void
   artifactStatus: {
     memory: { exists: boolean; path: string }
     task: { exists: boolean; path: string }
@@ -114,10 +117,26 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
 
             {tokenCount > 0 && (
               <div
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/[0.02] border border-border/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 cursor-help transition-all hover:bg-foreground/[0.04] hover:text-muted-foreground/60"
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider cursor-help transition-all',
+                  tokenCount >= 800_000
+                    ? 'bg-destructive/10 border-destructive/20 text-destructive/80 hover:bg-destructive/15'
+                    : tokenCount >= 500_000
+                      ? 'bg-warning/10 border-warning/20 text-warning/80 hover:bg-warning/15'
+                      : 'bg-foreground/[0.02] border-border/5 text-muted-foreground/40 hover:bg-foreground/[0.04] hover:text-muted-foreground/60',
+                )}
                 title={`Estimated context tokens used in this session: ${tokenCount.toLocaleString()}`}
               >
-                <div className="w-1 h-1 rounded-full bg-primary/30 animate-pulse" />
+                <div
+                  className={cn(
+                    'w-1 h-1 rounded-full animate-pulse',
+                    tokenCount >= 800_000
+                      ? 'bg-destructive/60'
+                      : tokenCount >= 500_000
+                        ? 'bg-warning/60'
+                        : 'bg-primary/30',
+                  )}
+                />
                 {formatNumber(tokenCount)} tokens
               </div>
             )}
@@ -128,18 +147,24 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
               <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
               <div className="flex-1 space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-destructive/80">
-                  AI Stream Error
+                  {error.type === 'tool'
+                    ? 'Tool Execution Error'
+                    : error.type === 'system'
+                      ? 'System Error'
+                      : 'AI Stream Error'}
                 </p>
                 <p className="text-xs text-foreground/90 leading-relaxed font-medium">
                   {error.redacted}
                 </p>
-                <Button
-                  variant="ghost"
-                  onClick={() => executeOperation('SETTINGS', { tab: 'ai' })}
-                  className="text-[11px] font-bold text-primary hover:text-primary/80 transition-colors mt-1 p-0 h-auto inline-flex"
-                >
-                  Update AI Provider Settings →
-                </Button>
+                {(!error.type || error.type === 'provider') && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => executeOperation('SETTINGS', { tab: 'ai' })}
+                    className="text-[11px] font-bold text-primary hover:text-primary/80 transition-colors mt-1 p-0 h-auto inline-flex"
+                  >
+                    Update AI Provider Settings →
+                  </Button>
+                )}
               </div>
               <Button
                 variant="ghost"
