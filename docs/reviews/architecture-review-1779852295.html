@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Review — Aynite</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap');
+body { font-family: 'Inter', sans-serif; }
+.badge-strong { background: #059669; color: white; }
+.badge-worthy { background: #d97706; color: white; }
+.badge-speculative { background: #6b7280; color: white; }
+.card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; background: white; }
+.card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
+.diagram-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.diagram-box { background: #f9fafb; border-radius: 8px; padding: 1rem; border: 1px solid #e5e7eb; }
+.diagram-box h4 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 0.5rem; }
+.file-list { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; background: #f3f4f6; padding: 0.75rem; border-radius: 6px; line-height: 1.6; }
+.file-list span { color: #6366f1; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<div class="max-w-5xl mx-auto px-6 py-12">
+
+<div class="mb-10">
+  <h1 class="text-3xl font-bold tracking-tight">Aynite Architecture Review</h1>
+  <p class="text-gray-500 mt-2 text-sm">Generated from codebase exploration &middot; 6 deepening candidates</p>
+</div>
+
+<!-- CANDIDATE 1 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">1. The Config Router Is a God Module</h2>
+    <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full">Strong</span>
+  </div>
+
+  <div class="mb-4">
+    <div class="file-list">
+      <span>src/main/config/router.ts</span> — 340 lines, 45+ cases in two switch statements<br>
+      <span>src/main/config/index.ts</span> — thin pass-through, 50 lines<br>
+      <span>src/main/config/logic.ts</span> — 250 lines (init + load + save)
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm"><code>routeGetConfig</code> and <code>routeSetConfig</code> are god functions. Every new feature that needs config goes into one of these switch statements. The router knows about <strong>AI sessions, themes, workspace state, git, agents, prompts, skills, commands, tools, view configs, matching views, keybindings</strong> — it's a centrifugal force pulling logic from 8+ domains into one file.</p>
+    <p class="text-sm mt-2"><strong>Deletion test:</strong> if you delete <code>router.ts</code>, complexity doesn't concentrate — it scatters across every IPC handler that currently depends on it. The router is <strong>shallow</strong>: its interface (a key string + payload) is nearly as complex as its implementation (45+ cases branching to every subsystem).</p>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Register per-module config handlers via a <strong>plugin-like registry pattern</strong>. Each domain module (AI, workspace, theme, etc.) registers its own <code>getHandler(key, payload, winId)</code> and <code>setHandler(key, payload, winId)</code> at startup. The router becomes a dispatcher that delegates to registered handlers by key prefix — <code>'ai-'</code>, <code>'session-'</code>, <code>'theme-'</code>, etc.</p>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Benefits</h3>
+    <ul class="text-sm list-disc list-inside space-y-1">
+      <li><strong>Locality</strong>: AI config routing lives in <code>src/main/ai/</code> — change, bugs, knowledge all concentrated.</li>
+      <li><strong>Leverage</strong>: The router's interface shrinks from "knows about every domain" to "dispatches by prefix."</li>
+      <li><strong>Testability</strong>: Module-level handlers can be unit-tested independently.</li>
+      <li><strong>AI-navigability</strong>: An AI agent looking for "where does activeSessionId get set?" lands in <code>src/main/ai/</code> directly.</li>
+    </ul>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — God Router</h4>
+      <div class="mermaid">
+flowchart TD
+    RT["router.ts (340 lines)"]
+    RT --> AI["AI sessions"]
+    RT --> TH["Themes"]
+    RT --> WS["Workspaces"]
+    RT --> AG["Agents"]
+    RT --> SK["Skills"]
+    RT --> CM["Commands"]
+    RT --> TL["Tools"]
+    RT --> KB["Keybindings"]
+    RT --> VC["View Configs"]
+    RT --> MV["Matching Views"]
+    style RT fill:#fee2e2,stroke:#dc2626
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Handler Registry</h4>
+      <div class="mermaid">
+flowchart TD
+    subgraph RT2["router.ts (thin dispatcher)"]
+        REG["HandlerRegistry<br/>.register('session-', aiHandler)<br/>.register('theme-', themeHandler)"]
+    end
+    REG --> AI2["AI module<br/>(registers handlers)"]
+    REG --> TH2["Theme module<br/>(registers handlers)"]
+    REG --> WS2["Workspace module<br/>(registers handlers)"]
+    style RT2 fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 2 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">2. One File for All Paths (path.ts) Is a Bottleneck</h2>
+    <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full">Strong</span>
+  </div>
+
+  <div class="mb-4">
+    <div class="file-list">
+      <span>src/lib/path.ts</span> — <strong>560 lines</strong>, 40+ exported functions<br>
+      <span>Imported by ~20+ files across main, preload, and renderer</span>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">Three completely different responsibilities fused into one file:</p>
+    <ol class="text-sm list-decimal list-inside mt-1 space-y-1">
+      <li><strong>Path resolution</strong> (40+ getter functions like <code>getAIConfigPath()</code>, <code>getWorkspaceDataPath()</code>)</li>
+      <li><strong>Filesystem I/O</strong> (<code>readJson</code>, <code>writeJson</code>, <code>copy</code>, <code>rename</code>, <code>remove</code>, <code>ensureDir</code>)</li>
+      <li><strong>Security wrappers</strong> (<code>secureReadText</code>, <code>secureEditFile</code>, <code>secureGlobSearch</code>)</li>
+    </ol>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Split into three seam-aligned modules:<br>
+    <code>src/lib/path/resolve.ts</code> — all <code>get*Path()</code> functions (pure, synchronous)<br>
+    <code>src/lib/path/fs.ts</code> — filesystem I/O wrappers<br>
+    <code>src/lib/path/secure.ts</code> — domain-validated operations<br>
+    <code>src/lib/path/index.ts</code> — barrel re-export for backward compat during migration</p>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before (560 lines, 3 concerns)</h4>
+      <div class="mermaid">
+flowchart LR
+    PT["src/lib/path.ts"] --> R["Path Resolution<br/>(40 getters)"]
+    PT --> IO["Filesystem I/O<br/>(readJson, copy, ...)"]
+    PT --> SEC["Security<br/>(secureReadText, ...)"]
+    PT --> IMP["Imported by 20+ files<br/>all get the kitchen sink"]
+    style PT fill:#fee2e2,stroke:#dc2626
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After (3 small modules + barrel)</h4>
+      <div class="mermaid">
+flowchart LR
+    subgraph LIB["src/lib/path/"]
+        IDX["index.ts (barrel)"]
+        RES["resolve.ts"]
+        FS["fs.ts"]
+        SEC2["secure.ts"]
+    end
+    RES --> FS
+    FS --> SEC2
+    IDX --> RES
+    IDX --> FS
+    IDX --> SEC2
+    style LIB fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 3 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">3. GitService: Monolithic Class with IPC Mixed In</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+
+  <div class="mb-4">
+    <div class="file-list">
+      <span>src/main/git/index.ts</span> — <strong>540 lines</strong>, single GitService class<br>
+      Responsibilities: IPC, status parsing, commit gen, hunk patch, path cache, .git watchers
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">Four distinct concerns in one class:</p>
+    <ol class="text-sm list-decimal list-inside mt-1 space-y-1">
+      <li><strong>IPC registration</strong> — 8+ <code>ipcMain.handle</code> calls in <code>setupIpc()</code></li>
+      <li><strong>Git operations</strong> — status parsing, porcelain parsing, hunk patching, AI commit generation</li>
+      <li><strong>.git metadata watching</strong> — <code>setupGitWatcher</code>/<code>teardownGitWatcher</code></li>
+      <li><strong>Cache management</strong> — statusCache, rootCache, debounceTimers</li>
+    </ol>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract two seams:<br>
+    <strong>GitCommandRunner</strong> — pure git operations (status, diff, commit, parsing). Takes cwd, returns data.<br>
+    <strong>GitWatcherManager</strong> — manages fsWatch on .git/HEAD and .git/index. Fires callbacks on change.<br>
+    <strong>CommitGenerator</strong> — AI commit message generation (currently ~100 lines buried in IPC)<br>
+    <strong>GitCoordinator</strong> — thin class wiring IPC handlers to the above modules.</p>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — Monolithic GitService</h4>
+      <div class="mermaid">
+flowchart TD
+    GS["GitService (540 lines)"] --> IPC["IPC handlers (8+)"]
+    GS --> PARSE["Porcelain parsing"]
+    GS --> HUNK["Hunk patching"]
+    GS --> AI["Commit gen (AI)"]
+    GS --> CACHE["Status + root caching"]
+    GS --> WATCH[".git watchers"]
+    GS --> DEBOUNCE["Debounce timers"]
+    style GS fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Extracted seams</h4>
+      <div class="mermaid">
+flowchart TD
+    GC["GitCoordinator (thin IPC wiring)"] --> CR["GitCommandRunner<br/>(git ops + parsing)"]
+    GC --> CG["CommitGenerator<br/>(AI messages)"]
+    GC --> WM["GitWatcherManager<br/>(fsWatch on .git/*)"]
+    GC --> SC["GitStatusCache<br/>(standalone)"]
+    style GC fill:#d1fae5,stroke:#059669
+    style CR fill:#e0e7ff,stroke:#6366f1
+    style CG fill:#e0e7ff,stroke:#6366f1
+    style WM fill:#e0e7ff,stroke:#6366f1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 4 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">4. AppContext.tsx: The Renderer's God Component</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+
+  <div class="mb-4">
+    <div class="file-list">
+      <span>src/renderer/src/AppContext.tsx</span> — <strong>~400 lines</strong><br>
+      25+ state variables, workspace CRUD, layout CRUD, theme, IPC events, updates, tiles, resize, notifications
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm"><code>AppContext</code> is a God component managing state for <strong>workspaces, layouts, tiles, themes, updates, notifications, file switching, window state, settings, debug</strong>. 30+ methods through context. Every consumer re-renders on <em>any</em> change. The IPC event handler is a single <code>useEffect</code> with a 15-case switch. The <code>handlersRef</code> pattern is a workaround for the monolithic architecture.</p>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Compose small contexts:<br>
+    <strong>WorkspaceContext</strong> — workspace CRUD, layout switching<br>
+    <strong>ThemeContext</strong> — theme list, active theme, color application<br>
+    <strong>UpdateContext</strong> — update status, progress, errors<br>
+    <strong>WindowContext</strong> — maximized, fullscreen, resize<br>
+    <strong>NotificationContext</strong> — active notification<br>
+    <strong>TileContext</strong> — active tile, tile controls</p>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — God Context</h4>
+      <div class="mermaid">
+flowchart TD
+    AC["AppContext.tsx (400 lines, 30+ values)"] --> TB["TitleBar"]
+    AC --> TN["TileNode"]
+    AC --> ST["Settings"]
+    AC --> UP["UpdateBar"]
+    AC --> NW["NewWindow"]
+    note["All children re-render on any change"]
+    style AC fill:#fee2e2,stroke:#dc2626
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Composed Contexts</h4>
+      <div class="mermaid">
+flowchart TD
+    WC["WorkspaceCtx"] --> TN2["TileNode"]
+    TC["ThemeCtx"] --> TB2["TitleBar"]
+    UC["UpdateCtx"] --> UP2["UpdateBar"]
+    WIC["WindowCtx"] --> TB2
+    WC --> ST2["Settings"]
+    TC --> ST2
+    style WC fill:#d1fae5,stroke:#059669
+    style TC fill:#d1fae5,stroke:#059669
+    style UC fill:#d1fae5,stroke:#059669
+    style WIC fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 5 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">5. AI Tools Module Has Proliferated Into Many Concerns</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+
+  <div class="mb-4">
+    <div class="file-list">
+      <span>src/main/ai/tools.ts</span> — 1 file, 14 tool definitions:<br>
+      Shell execution, task management, memory persistence, file tree walking, workspace config reading
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">Each tool in <code>createTools()</code> has grown organically. <code>run_command</code> has 60+ lines of shell spawning with full environment setup. <code>initialize_memory</code> does its own file tree walking. <code>update_task</code> has custom progress counting. Each tool's <strong>interface is shallow</strong> — a tiny schema hides a large implementation.</p>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract into separate files:<br>
+    <code>tools/run-command.ts</code> — shell execution, approval<br>
+    <code>tools/task-manager.ts</code> — create/update/get tasks<br>
+    <code>tools/memory-manager.ts</code> — initialize/read/update memory<br>
+    <code>tools/file-operations.ts</code> — read/write/edit/list files<br>
+    <code>tools.ts</code> stays as a thin registry importing and wiring tool implementations.</p>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before</h4>
+      <div class="mermaid">
+flowchart TD
+    TOOLS["tools.ts (300+ lines)"] --> RC["run_command<br/>(spawn, approval, env)"]
+    TOOLS --> WF["write_file"]
+    TOOLS --> RF["read_file"]
+    TOOLS --> EF["edit_file"]
+    TOOLS --> CT["create_task"]
+    TOOLS --> UT["update_task<br/>(progress counting)"]
+    TOOLS --> GT["get_tasks"]
+    TOOLS --> IM["initialize_memory<br/>(file tree walk)"]
+    TOOLS --> RM["read_memory"]
+    TOOLS --> UM["update_memory"]
+    TOOLS --> GFT["get_file_tree<br/>(multi-folder)"]
+    style TOOLS fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After</h4>
+      <div class="mermaid">
+flowchart TD
+    REG["tools.ts (thin registry)"] --> RC2["tools/run-command.ts"]
+    REG --> TM2["tools/task-manager.ts"]
+    REG --> MM2["tools/memory-manager.ts"]
+    REG --> FO2["tools/file-operations.ts"]
+    REG --> GW2["tools/get-workspace-info.ts"]
+    style REG fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 6 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">6. FileBrowserPage Has Too Many Responsibilities</h2>
+    <span class="badge-speculative text-xs font-bold px-3 py-1 rounded-full">Speculative</span>
+  </div>
+
+  <div class="mb-4">
+    <div class="file-list">
+      <span>src/renderer/views/file-browser/FileBrowserPage.tsx</span> — ~400 lines<br>
+      Responsibilities: tab management, file content loading, search, mode selection (fileview/diff/edit/view), git diff, keyboard shortcuts, fs-change debouncing, dataview matching
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">FileBrowserPage manages <strong>six distinct concerns</strong> in one component:<br>
+    1. Tab bar state (open/close/select files)<br>
+    2. File content loading + refresh (fs-change events, debouncing)<br>
+    3. Fileview matching + mode selection (userModeRef pattern)<br>
+    4. Git diff state management (hasDiff, diffHeadContent, diffRefreshKey)<br>
+    5. Search bar (query, activeMatchIndex, highlight navigation)<br>
+    6. Dataview matching for JSON files<br><br>
+    The <code>userModeRef</code> pattern (a ref tracking whether the user manually selected a mode, to prevent the async mode-selection effect from overriding their choice) is a <strong>symptom of shallow architecture</strong> — the effect and the UI controls are fighting each other because they share the same state without a clear protocol.</p>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract into custom hooks and sub-components:<br>
+    <code>useFileTabs()</code> — tab management (open, close, closeAll, history tracking)<br>
+    <code>useFileContent(path)</code> — file loading, fs-change refresh, debounce<br>
+    <code>useFileModes(path)</code> — fileview matching, diff detection, view preview matching, the mode-selection protocol<br>
+    <code>useSearchBar()</code> — query, match index, navigation<br>
+    <code>FileSearchBar.tsx</code> — the search UI (currently inline in FileBrowserPage)</p>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before</h4>
+      <div class="mermaid">
+flowchart TD
+    FBP["FileBrowserPage.tsx (400 lines)"] --> TABS["Tab state"]
+    FBP --> LOAD["File loading + refresh"]
+    FBP --> MODES["Mode selection (userModeRef)"]
+    FBP --> DIFF["Git diff state"]
+    FBP --> SEARCH["Search bar"]
+    FBP --> DVIEW["Dataview matching"]
+    style FBP fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After</h4>
+      <div class="mermaid">
+flowchart TD
+    FBP2["FileBrowserPage.tsx<br/>(composition)"] --> UT["useFileTabs()"]
+    FBP2 --> UC["useFileContent(path)"]
+    FBP2 --> UM["useFileModes(path)"]
+    FBP2 --> USB["useSearchBar()"]
+    FBP2 --> SB["FileSearchBar.tsx"]
+    style FBP2 fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOP RECOMMENDATION -->
+<div class="mt-12 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+  <h2 class="text-xl font-bold text-emerald-800 mb-3">Top Recommendation</h2>
+  <p class="text-emerald-700"><strong>Start with Candidate #1: the Config Router.</strong></p>
+  <ul class="text-emerald-700 text-sm mt-2 list-disc list-inside space-y-1">
+    <li><strong>Highest impact on AI-navigability</strong> — the router is the first place any developer (or AI) looks for "how does config work?" and it's a wall of 45+ switch cases.</li>
+    <li><strong>Lowest risk</strong> — a handler registry is a mechanical refactor. Each handler can be extracted one at a time. The old dispatch function can be kept as a fallback during migration.</li>
+    <li><strong>Enables Candidates #3 and #5</strong> — once the registry pattern is in place, the Git module and AI Tools module can register their own config handlers, reducing their coupling to the central config module.</li>
+    <li><strong>Immediate payoff</strong> — the next config key you add goes in the feature module, not router.ts. The router stops growing.</li>
+  </ul>
+  <p class="text-emerald-700 text-sm mt-3">After that, Candidate #2 (path.ts split) is a quick win with high leverage — it's purely mechanical and touches nearly every file via improved imports.</p>
+</div>
+
+</div>
+</body>
+</html>
