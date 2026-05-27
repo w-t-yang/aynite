@@ -12,36 +12,15 @@ import {
   getRelativePath,
   joinPaths,
 } from '../../lib/path'
-import type { DiffStats, GitStatusType } from '../../lib/types/files'
 import { DISABLED_REASONING_OPTIONS, getAIModel } from '../ai'
 import { loadConfig } from '../config'
 import { execInUserShell } from '../system'
 import { broadcastAppEvent } from '../window'
 import { getWorkspaceFolders } from '../workspace'
+import type { GitStatusMap, HunkData } from './porcelain'
+import { buildHunkPatch, parseNumstat, parsePorcelain } from './porcelain'
 
 const execAsync = promisify(exec)
-
-interface HunkData {
-  filePath: string
-  oldStart: number
-  oldLines: string[]
-  newStart: number
-  newLines: string[]
-}
-
-function buildHunkPatch(relative: string, hunk: HunkData): string {
-  const oldCount = hunk.oldLines.length
-  const newCount = hunk.newLines.length
-  const parts: string[] = [
-    `--- a/${relative}`,
-    `+++ b/${relative}`,
-    `@@ -${hunk.oldStart},${oldCount} +${hunk.newStart},${newCount} @@`,
-  ]
-  for (const l of hunk.oldLines) parts.push(`-${l}`)
-  for (const l of hunk.newLines) parts.push(`+${l}`)
-  parts.push('')
-  return parts.join('\n')
-}
 
 function spawnGitPatch(
   args: string[],
@@ -61,10 +40,6 @@ function spawnGitPatch(
     proc.on('error', reject)
     proc.stdin.end(patch)
   })
-}
-
-interface GitStatusMap {
-  [path: string]: GitStatusType
 }
 
 class GitService {
@@ -188,32 +163,14 @@ class GitService {
 
     ipcMain.handle(GitChannels.DIFF_STATS, async (_event, root: string) => {
       try {
-        const parseNumstat = (stdout: string): Record<string, DiffStats> => {
-          const result: Record<string, DiffStats> = {}
-          for (const line of stdout.split('\n')) {
-            if (!line.trim()) continue
-            const parts = line.split('\t')
-            if (parts.length < 3) continue
-            const addStr = parts[0]
-            const delStr = parts[1]
-            let filePath = parts.slice(2).join('\t')
-            if (filePath.startsWith('"') && filePath.endsWith('"')) {
-              filePath = filePath.slice(1, -1)
-            }
-            const absPath = joinPaths(root, filePath)
-            result[absPath] = {
-              additions: addStr === '-' ? 0 : parseInt(addStr, 10) || 0,
-              deletions: delStr === '-' ? 0 : parseInt(delStr, 10) || 0,
-            }
-          }
-          return result
-        }
-
         const [{ stdout: unstaged }, { stdout: staged }] = await Promise.all([
           execAsync('git diff --numstat', { cwd: root }),
           execAsync('git diff --cached --numstat', { cwd: root }),
         ])
-        return { ...parseNumstat(unstaged), ...parseNumstat(staged) }
+        return {
+          ...parseNumstat(unstaged, root),
+          ...parseNumstat(staged, root),
+        }
       } catch {
         return {}
       }
@@ -510,68 +467,10 @@ ${diffContent.slice(0, 1200)}`
     }
   }
 
+  // Delegates to extracted porcelain.ts — kept for backward compat with
+  // the private method references in this class.
   private parsePorcelain(stdout: string, root: string): GitStatusMap {
-    const statusMap: GitStatusMap = {}
-    const lines = stdout.split('\n')
-
-    for (const line of lines) {
-      if (!line || line.length < 3) continue
-      const code = line.slice(0, 2)
-      let filePath = line.slice(3)
-
-      // Handle renames: "R  old -> new"
-      if (code.startsWith('R')) {
-        filePath = filePath.split(' -> ').pop() || filePath
-      }
-
-      // Remove quotes if present
-      if (filePath.startsWith('"') && filePath.endsWith('"')) {
-        filePath = filePath.slice(1, -1)
-      }
-
-      // Normalize trailing slashes
-      if (filePath.endsWith('/') || filePath.endsWith('\\')) {
-        filePath = filePath.slice(0, -1)
-      }
-
-      const status = this.mapCodeToStatus(code)
-      const absPath = joinPaths(root, filePath)
-      statusMap[absPath] = status
-
-      // Propagate to parents
-      if (status !== 'ignored' && status !== 'none') {
-        let parent = getDirname(absPath)
-        while (
-          parent &&
-          parent.length >= root.length &&
-          parent.startsWith(root)
-        ) {
-          if (!statusMap[parent] || statusMap[parent] === 'none') {
-            statusMap[parent] = 'modified'
-          }
-          const nextParent = getDirname(parent)
-          if (nextParent === parent) break
-          parent = nextParent
-        }
-      }
-    }
-
-    return statusMap
-  }
-
-  private mapCodeToStatus(code: string): GitStatusType {
-    const X = code[0]
-    const Y = code[1]
-
-    if (X === '?' && Y === '?') return 'untracked'
-    if (X === '!' && Y === '!') return 'ignored'
-    if (X === 'A') return 'added'
-    if (X === 'M' || Y === 'M') return 'modified'
-    if (X === 'D' || Y === 'D') return 'deleted'
-    if (X === 'R') return 'renamed'
-    if (X === 'C') return 'renamed'
-
-    return 'none'
+    return parsePorcelain(stdout, root)
   }
 
   async handleFsChange(path: string) {

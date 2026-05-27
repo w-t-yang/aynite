@@ -166,7 +166,7 @@ describe('workspace/logic', () => {
       mockWriteJson.mockResolvedValue(undefined)
 
       const result = await addWorkspaceFolder('/new/folder')
-      expect(result).toBe(true)
+      expect(result).toMatchObject({ success: true, added: '/new/folder' })
     })
 
     it('does not duplicate existing folders', async () => {
@@ -184,7 +184,7 @@ describe('workspace/logic', () => {
       mockWriteJson.mockResolvedValue(undefined)
 
       const result = await addWorkspaceFolder('/existing')
-      expect(result).toBe(true)
+      expect(result).toMatchObject({ success: true, reason: 'already_exists' })
       // Should not add duplicate — writeJson should not be called
       expect(mockWriteJson).not.toHaveBeenCalled()
     })

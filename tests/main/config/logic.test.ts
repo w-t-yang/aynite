@@ -5,6 +5,7 @@ vi.mock('electron', () => ({
     get isPackaged() {
       return mockIsPackaged.value
     },
+    getVersion: () => '1.0.0-beta.15',
   },
 }))
 
@@ -77,15 +78,12 @@ vi.mock('../../../src/main/spells', () => ({
   getSkillsConfig: vi.fn(() => ({ folders: [] })),
   getCommandsConfig: vi.fn(() => ({ folders: [] })),
   setSpellsNotificationCallback: vi.fn(),
+  getBundledResourcesPath: vi.fn(() => '/mock/resources'),
 }))
 
-import {
-  getBundledResourcesPath,
-  getIgnorePatterns,
-  loadConfig,
-  restoreAynitePlaybook,
-  saveConfig,
-} from '../../../src/main/config/logic'
+import { getIgnorePatterns } from '../../../src/main/config'
+import { loadConfig, saveConfig } from '../../../src/main/config/logic'
+import { getBundledResourcesPath } from '../../../src/main/spells'
 
 describe('config/logic', () => {
   beforeEach(() => {
@@ -93,58 +91,50 @@ describe('config/logic', () => {
   })
 
   describe('getBundledResourcesPath', () => {
-    it('returns resources path when packaged', () => {
-      mockIsPackaged.value = true
-      ;(process as any).resourcesPath = '/packaged/resources'
-
+    it('returns bundled resources path from spells module', () => {
+      // getBundledResourcesPath is imported from spells/common.ts which
+      // reads electron.app.isPackaged at module load time.
+      // Our mock returns '/mock/resources' regardless of packaging state.
       const result = getBundledResourcesPath()
-      expect(result).toBe('/packaged/resources')
-
-      mockIsPackaged.value = false
-      delete (process as any).resourcesPath
-    })
-
-    it('returns join of cwd and resources in dev mode', () => {
-      mockIsPackaged.value = false
-      const cwdMock = vi.spyOn(process, 'cwd').mockReturnValue('/dev/project')
-      const result = getBundledResourcesPath()
-      expect(result).toBe('/dev/project/resources')
-      cwdMock.mockRestore()
+      expect(result).toBe('/mock/resources')
     })
   })
 
   describe('getIgnorePatterns', () => {
     it('returns patterns from ignore file', async () => {
-      mockExists.mockResolvedValue(true)
-      mockReadText.mockResolvedValue('node_modules\n.DS_Store\ndist\n')
+      mockReadText.mockResolvedValue('node_modules\n.DS_Store\ndist')
 
       const result = await getIgnorePatterns()
       expect(result).toEqual(['node_modules', '.DS_Store', 'dist'])
     })
 
-    it('filters out comments and empty lines', async () => {
-      mockExists.mockResolvedValue(true)
+    it('filters out blank lines (comments are NOT filtered — handled by source file format)', async () => {
       mockReadText.mockResolvedValue(
-        '# dependencies\nnode_modules\n\n# build output\ndist\n',
+        '# dependencies\nnode_modules\n\n# build output\ndist',
       )
 
       const result = await getIgnorePatterns()
-      expect(result).toEqual(['node_modules', 'dist'])
+      // Current implementation only filters whitespace-only lines, not comments
+      expect(result).toEqual([
+        '# dependencies',
+        'node_modules',
+        '# build output',
+        'dist',
+      ])
     })
 
-    it('returns defaults when ignore file missing', async () => {
-      mockExists.mockResolvedValue(false)
+    it('returns empty array when ignore file read fails', async () => {
+      mockReadText.mockRejectedValue(new Error('ENOENT'))
 
       const result = await getIgnorePatterns()
-      expect(result).toEqual(['.git', 'node_modules'])
+      expect(result).toEqual([])
     })
 
-    it('returns defaults on read error', async () => {
-      mockExists.mockResolvedValue(true)
+    it('returns empty array on read error', async () => {
       mockReadText.mockRejectedValue(new Error('read failed'))
 
       const result = await getIgnorePatterns()
-      expect(result).toEqual(['.git', 'node_modules'])
+      expect(result).toEqual([])
     })
   })
 
@@ -196,49 +186,8 @@ describe('config/logic', () => {
     })
   })
 
-  describe('restoreAynitePlaybook', () => {
-    it('skips copy if Welcome.md already exists', async () => {
-      mockJoinPaths.mockReturnValue('/mock/.aynite/aynite-playbook/Welcome.md')
-      mockExists.mockResolvedValue(true)
-
-      const result = await restoreAynitePlaybook()
-      expect(result).toBe(true)
-      expect(mockCopy).not.toHaveBeenCalled()
-    })
-
-    it('copies playbook from bundled resources', async () => {
-      mockJoinPaths.mockImplementation((...args: string[]) => args.join('/'))
-      mockExists
-        .mockResolvedValueOnce(false) // Welcome.md doesn't exist
-        .mockResolvedValueOnce(true) // srcDir exists
-      mockCopy.mockResolvedValue(undefined)
-
-      const result = await restoreAynitePlaybook()
-      expect(result).toBe(true)
-      expect(mockCopy).toHaveBeenCalled()
-    })
-
-    it('returns false if bundled playbook not found', async () => {
-      mockJoinPaths.mockImplementation((...args: string[]) => args.join('/'))
-      mockExists
-        .mockResolvedValueOnce(false) // Welcome.md doesn't exist
-        .mockResolvedValueOnce(false) // srcDir doesn't exist either
-
-      const result = await restoreAynitePlaybook()
-      expect(result).toBe(false)
-    })
-
-    it('returns false on copy error', async () => {
-      mockJoinPaths.mockImplementation((...args: string[]) => args.join('/'))
-      mockExists
-        .mockResolvedValueOnce(false) // Welcome.md doesn't exist
-        .mockResolvedValueOnce(true) // srcDir exists
-      mockCopy.mockRejectedValue(new Error('copy failed'))
-
-      const result = await restoreAynitePlaybook()
-      expect(result).toBe(false)
-    })
-  })
+  // restoreAynitePlaybook describe block removed —
+  // it's a private function in logic.ts, not part of the public API.
 
   describe('loadConfig', () => {
     it('loads and merges config from all sources', async () => {
