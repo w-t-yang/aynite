@@ -126,7 +126,7 @@ When creating themes, follow these principles:
 7. **Tell the user what you created** — After saving, clearly tell the user:
    - The name of the theme and where it was saved
    - How to switch to it: go to **Settings → Appearance** and select it from the dropdown
-   - **Important**: They should press **`Ctrl+Shift+R`** to reload the app so Aynite discovers the new theme. Until they reload, it won't appear in the theme list.
+   - **Important**: They should press **`Ctrl+R`** to refresh the tile so Aynite discovers the new theme. Until they reload, it won't appear in the theme list.
 
 ## Example
 

@@ -434,7 +434,7 @@ When the skill is finalized and saved to the output folder, you MUST tell the us
 
 1. **What was created** — The name of the skill and where it was saved (full path).
 2. **How to invoke it** — Type `/` followed by the skill name in the chat (e.g., `/my-skill`). The skill will be available for the AI agent to use whenever its description matches the user's request.
-3. **Reload the app** — Tell the user to press **`Ctrl+Shift+R`** to reload Aynite. Until they reload, the new skill won't be discovered and won't be available for triggering.
+3. **Refresh the tile** — Tell the user to press **`Ctrl+R`** to refresh the tile. Until they reload, the new skill won't be discovered and won't be available for triggering.
 
 ---
 
@@ -500,7 +500,7 @@ Repeating one more time the core loop here for emphasis:
   - Run quantitative evals
 - Repeat until you and the user are satisfied
 - Package the final skill and return it to the user.
-- **After finalizing**: Tell the user the skill name, how to invoke it with `/skill-name`, and remind them to press `Ctrl+Shift+R` to reload Aynite so the new skill is discovered.
+- **After finalizing**: Tell the user the skill name, how to invoke it with `/skill-name`, and remind them to press `Ctrl+R` to refresh the tile so the new skill is discovered.
 
 Please add steps to your TodoList, if you have such a thing, to make sure you don't forget. If you're in Cowork, please specifically put "Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases" in your TodoList to make sure it happens.
 

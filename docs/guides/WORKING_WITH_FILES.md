@@ -14,7 +14,7 @@ The file browser is your main workspace for viewing, editing, and managing files
 
 | Action | How |
 |--------|-----|
-| Close a tab | Click the ✕ on the tab or press `Ctrl+W` |
+| Close a tab | Click the ✕ on the tab |
 | Close all tabs | Right-click a tab → Close All |
 | Reorder tabs | Drag a tab left or right |
 | Switch tabs | Click a tab, or use `Ctrl+Tab` / `Ctrl+Shift+Tab` |
@@ -58,7 +58,7 @@ Opens the file in a writable text editor with syntax highlighting. Only availabl
 ## Editing Files
 
 1. Open a text file
-2. Click **Edit** (or press `Ctrl+E`)
+2. Click the **Edit** button at the bottom to enter edit mode
 3. Make your changes
 4. Press **`Ctrl+S`** to save
 5. A dirty indicator (dot) appears on the tab when there are unsaved changes
@@ -67,12 +67,11 @@ Opens the file in a writable text editor with syntax highlighting. Only availabl
 
 ## Searching Within a File
 
-1. **`Ctrl+F`** — Open the search bar (only in edit or view mode)
+1. Press **`Ctrl+F`** to open the search bar (only in edit or view mode)
 2. Type your query — matches are highlighted in yellow
-3. **`Ctrl+N`** — Jump to the next match
-4. **`Ctrl+P`** — Jump to the previous match
-5. The search bar shows match count (e.g., "3 of 12 matches")
-6. Click the **✕** or press **`Escape`** to close the search bar
+3. Press **`Ctrl+N`** to jump to the next match, **`Ctrl+P`** for the previous match
+4. The search bar shows match count (e.g., "3 of 12 matches")
+5. Click the **✕** or press **`Escape`** to close the search bar
 
 ---
 

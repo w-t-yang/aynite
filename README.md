@@ -60,18 +60,18 @@ Open **Settings → AI**, add your API key, and pick a model. Aynite supports al
 
 ### 3. Try Your First Chat
 
-Press **`Ctrl+I`** to open the chat panel and type:
+Open the AI chat and type:
 
 ```
 /create-theme make me a cozy autumn sunset theme
 ```
 
-The AI will generate a custom theme. Press **`Ctrl+Shift+R`** to reload, then find it in **Settings → Appearance**.
+The AI will generate a custom theme. Press **`Ctrl+R`** to refresh the tile, then go find it in **Settings → Appearance**.
 
 ### 4. Explore More
 
 - **`Ctrl+Tab`** — Fuzzy-find and switch files
-- **`Ctrl+Shift+R`** — Reload the app (for new skills, themes, or config)
+- **`Ctrl+R`** — Refresh the active tile (for new skills, themes, or config)
 - **`>` command** — Run a deterministic command (try `> echo "Hello from Aynite!"`)
 
 → **[Full getting started guide →](docs/GETTING_STARTED.md)**

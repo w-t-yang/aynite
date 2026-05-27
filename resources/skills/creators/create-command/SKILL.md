@@ -68,4 +68,4 @@ The `run.sh` script is the primary execution point. It should:
 5. **Tell the user what you created** — After creation, clearly tell the user:
    - The name of the command and where it was saved
    - How to invoke it: type `> <command-name>` in the chat (e.g., `> my-command`)
-   - **Important**: They should press **`Ctrl+Shift+R`** to reload the app so Aynite discovers the new command. Until they reload, the command won't appear in the command palette or be invocable.
+   - **Important**: They should press **`Ctrl+R`** to refresh the tile so Aynite discovers the new command. Until they reload, the command won't appear in the command palette or be invocable.

@@ -73,7 +73,7 @@ To make these commands available in your editor:
    ```
    <aynite-playbook>/showcase/trading/commands
    ```
-4. Press **`Ctrl+Shift+R`** to reload Aynite
+4. Press **`Ctrl+R`** to refresh the tile
 5. Try it: type `> stock-fetch --symbol TSLA` in the chat
 
 Now the commands will appear in your command palette and can be invoked from anywhere.

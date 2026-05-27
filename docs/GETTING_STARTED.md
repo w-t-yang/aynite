@@ -16,13 +16,14 @@ Welcome! This guide will take you from zero to your first AI-powered workflow in
 
 ## First Steps
 
-### The Three Shortcuts to Burn Into Muscle Memory
+### The Key Shortcuts
 
 | Shortcut | What It Does |
 |----------|--------------|
-| **`Ctrl+I`** | Open the AI chat panel — the magic key |
 | **`Ctrl+Tab`** | Fuzzy-find and switch files |
-| **`Ctrl+Shift+R`** | Reload the app (after adding skills, themes, or config changes) |
+| **`Ctrl+R`** | Refresh the active tile |
+| **`Ctrl+B`** | Toggle the left panel |
+| **`Ctrl+I`** | Toggle the right panel |
 
 > 💡 On macOS, use `Cmd` instead of `Ctrl` throughout.
 
@@ -32,7 +33,7 @@ Welcome! This guide will take you from zero to your first AI-powered workflow in
 
 Before the AI agent can help you, it needs a model to work with.
 
-1. Open **Settings** (gear icon in the sidebar or press `Ctrl+,`)
+1. Open **Settings** (gear icon in the sidebar)
 2. Go to the **AI** tab
 3. Click **Add Provider** and select your provider:
    - **OpenAI** — GPT-4o, o1, o3-mini
@@ -50,7 +51,7 @@ Before the AI agent can help you, it needs a model to work with.
 
 ### Step 2: Try Your First Chat
 
-Press **`Ctrl+I`** to open the chat panel. Try typing:
+Open the AI chat (click the chat view or add it to a tile) and type:
 
 ```
 Hello! What can you do?
@@ -67,7 +68,7 @@ The agent will:
 2. Generate a complete theme file with all 32 color properties
 3. Save it to your themes folder
 
-Press **`Ctrl+Shift+R`** to reload the app, then go to **Settings → Appearance** and select your brand new theme.
+Press **`Ctrl+R`** to refresh the tile, then go to **Settings → Appearance** and select your brand new theme.
 
 ---
 
@@ -90,7 +91,7 @@ You'll see the output directly in the chat. Commands can be anything — shell s
 The **File Browser** is your main workspace view. It works like a file tree on the left with file content on the right.
 
 1. Click any file in the tree view to open it in a tab
-2. Press **`Ctrl+E`** to toggle edit mode
+2. Click the **Edit** button at the bottom of the file to toggle edit mode
 3. Make your changes and press **`Ctrl+S`** to save
 4. Press **`Ctrl+F`** to search within the file
 5. Use **`Ctrl+N`** and **`Ctrl+P`** to jump between matches

@@ -1,6 +1,6 @@
 # AI Chat & Agents
 
-The AI chat is the heart of Aynite. Press **`Ctrl+I`** to open it from anywhere — it's your interface to AI-powered workflows, tool access, and automation.
+The AI chat is the heart of Aynite. Open the AI Chat view in any tile — it's your interface to AI-powered workflows, tool access, and automation. Press **`Ctrl+I`** to toggle the right panel where the chat usually lives.
 
 ---
 
@@ -113,7 +113,7 @@ By default, command execution runs automatically. In **Settings → AI**, you ca
 | `/create-spell` | Determine whether you need a command or a skill, then delegate to the right creator |
 | `/transform-to-dataview` | Transform raw data into a format compatible with Aynite's dataviews |
 
-> 💡 **Tip:** Skills must be discovered by the app. After adding a new skill, press **`Ctrl+Shift+R`** to reload.
+> 💡 **Tip:** Skills must be discovered by the app. After adding a new skill, press **`Ctrl+R`** to refresh the tile.
 
 ### How Skills Work
 

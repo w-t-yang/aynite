@@ -45,7 +45,7 @@ The `/transform-to-dataview` skill turns raw data from any source into a JSON fi
 
 Say you have a CSV file with employee data and you want to visualize it as a graph of who reports to whom:
 
-1. Open the AI chat (**`Ctrl+I`**)
+1. Open the AI chat in any tile
 2. Type: `/transform-to-dataview I have this CSV of employees with manager IDs, I want to see it as a graph`
 3. The AI will:
    - Show you available dataviews (run `discover_dataviews.py`)

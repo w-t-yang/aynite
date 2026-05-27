@@ -30,7 +30,7 @@ Use the `/create-theme` skill in the AI chat to generate a custom theme from a d
 The AI will:
 1. Generate a complete theme with all 32 color properties
 2. Save it to `~/.aynite/themes/<name>.json`
-3. You press **`Ctrl+Shift+R`** to reload
+3. Press **`Ctrl+R`** to refresh the tile
 4. Find it in **Settings → Appearance**
 
 Try any description — "cyberpunk neon," "forest green," "ocean depths," "vintage paper." The skill handles backgrounds, text colors, borders, accent colors, semantic colors (errors, warnings, success), scrollbar styling, and font choices.
@@ -73,7 +73,7 @@ Keybindings are stored in `~/.aynite/config/keybindings.json`.
 
 ## General Settings
 
-Open **Settings** (gear icon in the sidebar or `Ctrl+,`) to configure:
+Open **Settings** (gear icon in the sidebar) to configure:
 
 | Tab | What You Can Configure |
 |-----|----------------------|
@@ -88,7 +88,7 @@ Open **Settings** (gear icon in the sidebar or `Ctrl+,`) to configure:
 
 ### Settings Folder
 
-You can add custom command and skill folders in their respective settings tabs. Press **`Ctrl+Shift+R`** to reload after adding new folders.
+You can add custom command and skill folders in their respective settings tabs. Press **`Ctrl+R`** to refresh the tile after adding new folders.
 
 ---
 

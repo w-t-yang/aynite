@@ -49,9 +49,9 @@ You can do almost anything in Aynite from the keyboard. Here are the three short
 
 | Shortcut | What It Does |
 | :--- | :--- |
-| **`Ctrl+Shift+R`** | **Reload the app.** Made a change to a theme, a skill, or a config file? This is your refresh button. Quick, reliable, and you'll use it a lot. |
+| **`Ctrl+R`** | **Refresh the active tile.** Made a change to a theme, a skill, or a config file? This is your refresh button. Quick, reliable, and you'll use it a lot. |
 | **`Ctrl+Tab`** | **Find and switch files.** Fuzzy-search your entire workspace and jump instantly. Think of it as "Open Anything." No mouse required. |
-| **`Ctrl+I`** | **Start a chat with your AI agent.** The magic key. Opens the chat panel so you can ask the AI to explain code, refactor a file, generate a skill — whatever you need. One keystroke, infinite possibilities. |
+| **`Ctrl+L`** | **Focus the AI chat.** The magic key. Instantly jump to the chat so you can ask the AI to explain code, refactor a file, generate a skill — whatever you need. One keystroke, infinite possibilities. |
 
 ---
 
@@ -81,14 +81,14 @@ Before the AI agent can help you, you need to tell it which model to use. Aynite
 
 This is where the fun starts. You're going to use your very first **skill** to create a custom theme, right now.
 
-1. Press **`Ctrl+I`** to open the chat panel.
+1. Open the AI chat in any tile.
 2. Type something like:
    ```
    /create-theme make me a cozy autumn sunset theme
    ```
    (You can say anything — "cyberpunk neon," "forest green," "ocean depths," whatever vibe you want.)
 3. The AI agent will generate a complete theme file and save it to your themes folder.
-4. Press **`Ctrl+Shift+R`** to reload the app.
+4. Press **`Ctrl+R`** to refresh the tile.
 5. Go to **Settings → Appearance** and select your brand new theme from the dropdown.
 
 Boom. You just created something. Feels good, right?

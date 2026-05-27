@@ -32,7 +32,7 @@ Aynite ships with 4 default workspaces:
 
 ### Per-Window Workspaces
 
-With multi-window support (Ctrl+N for new window), each window can have its own active workspace. This lets you keep your Dev workspace open in one window and your Market Lens workspace in another.
+With multi-window support, each window can have its own active workspace. This lets you keep your Dev workspace open in one window and your Market Lens workspace in another.
 
 ---
 

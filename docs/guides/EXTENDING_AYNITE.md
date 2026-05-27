@@ -122,6 +122,6 @@ In the meantime, existing dataviews in `src/renderer/views/dataview-*/` serve as
 
 ## Tips
 
-- **Reload after adding** — Press **`Ctrl+Shift+R`** after installing new skills, commands, or themes
+- **Refresh after adding** — Press **`Ctrl+R`** to refresh the tile after installing new skills, commands, or themes
 - **Share by copying folders** — Skills and commands are just directories — zip them up and share
 - **Folder management** — Add external skill/command folders in **Settings → Skills** or **Settings → Commands**

@@ -88,7 +88,7 @@ After the spell is created, clearly tell the user:
 2. **How to cast it**:
    - For a **command**: type `> spell-name` in the chat (e.g., `> deploy --env production`)
    - For a **skill**: type `/spell-name` followed by your request (e.g., `/pr-writer generate a PR description from my last 3 commits`)
-3. **Reload the app** — Press **`Ctrl+Shift+R`** so Aynite discovers the new spell. It won't be available until you do.
+3. **Refresh the tile** — Press **`Ctrl+R`** to refresh the tile so Aynite discovers the new spell. It won't be available until you do.
 
 Make it feel magical. The user just taught Aynite a new trick. Celebrate that.
 
