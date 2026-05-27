@@ -5,6 +5,7 @@ import {
   getAbsolutePath,
   getAIConfigPath,
   getAyniteDir,
+  getAynitePath,
   getAynitePromptPath,
   getBasename,
   getDirname,
@@ -12,11 +13,20 @@ import {
   getKeybindingsConfigPath,
   getMainConfigPath,
   getPathSep,
+  getPlaybookPath,
+  getPreloadPath,
+  getRendererHtmlPath,
   getWorkspaceDataPath,
   getWorkspacesConfigPath,
+  getWorkspaceTaskPath,
   isPathWithinDomain,
   joinPaths,
 } from '../../src/lib/path'
+
+// Note: These tests imported from the old path.ts barrel.
+// The barrel now re-exports from src/lib/path/resolve.ts and
+// src/lib/path/operations.ts. These tests verify the barrel
+// contract is maintained.
 
 describe('expandHome', () => {
   it('replaces tilde with home directory', () => {
@@ -54,6 +64,14 @@ describe('getAyniteDir', () => {
   })
 })
 
+describe('getAynitePath', () => {
+  it('joins parts under .aynite directory', () => {
+    const result = getAynitePath('subdir', 'file.json')
+    expect(result).toContain('.aynite')
+    expect(result).toContain('subdir/file.json')
+  })
+})
+
 describe('path getters', () => {
   it('getAIConfigPath returns path ending with ai.json', () => {
     const p = getAIConfigPath()
@@ -85,6 +103,33 @@ describe('path getters', () => {
     const p = getAynitePromptPath('about-me.md')
     expect(p.endsWith('about-me.md')).toBe(true)
     expect(p).toContain(AYNITE_SUBDIRS.PROMPTS)
+  })
+
+  it('getPlaybookPath returns path ending with aynite-playbook', () => {
+    const p = getPlaybookPath()
+    expect(p.endsWith('aynite-playbook')).toBe(true)
+  })
+
+  it('getWorkspaceTaskPath returns path under artifacts directory', () => {
+    const p = getWorkspaceTaskPath('Dev')
+    expect(p).toContain('Dev')
+    expect(p).toContain('artifacts')
+    expect(p.endsWith('task.md')).toBe(true)
+  })
+
+  it('getWorkspaceTaskPath accepts custom filename', () => {
+    const p = getWorkspaceTaskPath('Dev', 'plan.md')
+    expect(p.endsWith('plan.md')).toBe(true)
+  })
+
+  it('getPreloadPath resolves relative to baseDir', () => {
+    const p = getPreloadPath('/app/out/main')
+    expect(p).toBe('/app/out/preload/index.js')
+  })
+
+  it('getRendererHtmlPath resolves relative to baseDir', () => {
+    const p = getRendererHtmlPath('/app/out/main')
+    expect(p).toBe('/app/out/renderer/index.html')
   })
 })
 
@@ -141,13 +186,16 @@ describe('isPathWithinDomain', () => {
 
   it('handles tilde expansion in paths', () => {
     const homeDomains = ['~/projects']
-    // Should resolve ~ before checking
     const result = isPathWithinDomain('~/projects/my-app', homeDomains)
     expect(result).toBe(true)
   })
 
   it('returns false for empty domain list', () => {
     expect(isPathWithinDomain('/test/path', [])).toBe(false)
+  })
+
+  it('returns true for exact domain match', () => {
+    expect(isPathWithinDomain('/home/user/projects', domains)).toBe(true)
   })
 })
 
