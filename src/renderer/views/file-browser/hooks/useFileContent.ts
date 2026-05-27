@@ -123,5 +123,5 @@ export function useFileContent(activePath: string | null) {
     isText,
     isDirty,
     handleSave,
-  }
+  } as const
 }

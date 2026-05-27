@@ -11,6 +11,7 @@ export interface GlobalAPI {
   focusContent: () => void
   closeFileSwitcher: () => void
   isFileSwitcherOpen: () => boolean
+  toggleFileSwitcher: () => void
 }
 
 export interface FileSwitcherAPI {

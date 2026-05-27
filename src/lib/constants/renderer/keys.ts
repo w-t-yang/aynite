@@ -144,6 +144,15 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
     return
   }
 
+  // File Switcher: Ctrl+Tab — needs special handling because the browser
+  // normally intercepts Ctrl+Tab for tab switching. Registering via
+  // global keydown with capture:true is sufficient in Electron.
+  if (checkMatch(e, kb.app[AppOperation.SWITCH_FILE])) {
+    e.preventDefault()
+    globalApi.toggleFileSwitcher()
+    return
+  }
+
   if (checkMatch(e, kb.app[AppOperation.REFRESH_TILE])) {
     e.preventDefault()
     const activeTile = document.querySelector('.tile.border-primary')

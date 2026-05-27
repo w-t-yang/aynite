@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useEffect } from 'react'
+import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import { FileSwitcher } from '../shared/featured/FileSwitcher'
 import { SettingsModal } from '../shared/featured/SettingsModal'
 import { KeyManager } from '../shared/lib/key-handlers'
@@ -47,8 +48,11 @@ const AppContent: React.FC = () => {
       focusContent: () => {},
       closeFileSwitcher: () => setShowFileSwitcher(false),
       isFileSwitcherOpen: () => showFileSwitcher,
+      toggleFileSwitcher: () => setShowFileSwitcher((prev: boolean) => !prev),
     }
-    KeyManager.init({ keybindings: { app: {}, view: {} } }, api)
+    // Load keybindings from defaults; in the future this can be
+    // fetched from config and deep-merged over the defaults.
+    KeyManager.init({ keybindings: structuredClone(DEFAULT_KEYBINDINGS) }, api)
     return () => KeyManager.cleanup()
   }, [showFileSwitcher, setShowFileSwitcher])
 

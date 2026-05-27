@@ -71,6 +71,25 @@ function useIpcRelay() {
   }, [])
 }
 
+// ─── App Operations Listener ───────────────────────────────────────────
+// Listens for operations sent from the main process (e.g. keyboard shortcuts
+// matched via before-input-event in src/main/keybindings/index.ts) and
+// delegates them to the app operation handler.
+
+function useAppOperations() {
+  const { executeAppOperation } = useUI()
+
+  useEffect(() => {
+    if (!window.aynite) return
+    const unbind = window.aynite.onAppOperation(
+      (operation: string, data?: unknown) => {
+        executeAppOperation(operation, data)
+      },
+    )
+    return unbind
+  }, [executeAppOperation])
+}
+
 // ─── Inner Providers ────────────────────────────────────────────────────
 // Nested inside LayoutProvider, provides UI context and IPC relay.
 
@@ -82,9 +101,15 @@ const InnerProviders: React.FC<{ children: React.ReactNode }> = ({
   return (
     <UIProvider layoutExecuteAppOperation={layoutExecOp}>
       <IpcRelayWrapper />
+      <AppOperationsListener />
       {children}
     </UIProvider>
   )
+}
+
+function AppOperationsListener() {
+  useAppOperations()
+  return null
 }
 
 function IpcRelayWrapper() {

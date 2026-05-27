@@ -1,6 +1,6 @@
 import { Check, Clipboard, Info } from 'lucide-react'
 import type React from 'react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '../../shared/basic/Button'
@@ -55,6 +55,38 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, value }) => {
   )
 }
 
+/**
+ * Resolve a relative or absolute path against the markdown file's directory.
+ * Returns the absolute path.
+ */
+function resolveLocalPath(href: string, filePath: string): string {
+  // If it's already an absolute path (starts with / on Unix or has drive letter on Windows)
+  if (href.startsWith('/')) return href
+  if (/^[A-Za-z]:\\/.test(href)) return href
+
+  // Resolve relative to markdown file's directory
+  const dir = filePath.split(/[/\\]/).slice(0, -1).join('/')
+  // Normalize: handle . and ..
+  const segments = href.split('/')
+  const result = dir.split('/')
+  for (const seg of segments) {
+    if (seg === '.' || seg === '') continue
+    if (seg === '..') {
+      result.pop()
+    } else {
+      result.push(seg)
+    }
+  }
+  return result.join('/')
+}
+
+/**
+ * Check if a URL/href is a local file path (not http, https, mailto, tel, #)
+ */
+function isLocalPath(href: string): boolean {
+  return !/^(https?:\/\/|mailto:|tel:|#|\/\/)/i.test(href)
+}
+
 export const FileViewMarkdown: React.FC<{
   file: FileInfo
   content?: string
@@ -64,6 +96,16 @@ export const FileViewMarkdown: React.FC<{
 
   // Detect if there's frontmatter to strip it from the rendered markdown if needed
   const fmMatch = markdown.match(/^---\r?\n([\s\S]+?)\r?\n---/)
+
+  const handleLocalLink = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      if (!isLocalPath(href)) return // let external links open normally
+      e.preventDefault()
+      const resolvedPath = resolveLocalPath(href, file.path)
+      window.aynite.setConfig('activeFile', resolvedPath)
+    },
+    [file.path],
+  )
 
   return (
     <div
@@ -119,11 +161,62 @@ export const FileViewMarkdown: React.FC<{
                 )
               },
               a({ node, children, ...props }) {
+                const href = props.href || ''
+                // Intercept local file links — open in file browser
+                if (isLocalPath(href)) {
+                  return (
+                    <a
+                      {...props}
+                      href={href}
+                      onClick={(e) => handleLocalLink(e, href)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleLocalLink(e as any, href)
+                        }
+                      }}
+                      className={props.className}
+                    >
+                      {children}
+                    </a>
+                  )
+                }
+                // External http/https links open in system browser
                 return (
-                  <a {...props} target="_blank" rel="noopener noreferrer">
+                  <a
+                    {...props}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={href}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      window.aynite.openExternal(href)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        window.aynite.openExternal(href)
+                      }
+                    }}
+                  >
                     {children}
                   </a>
                 )
+              },
+              img({ node, ...props }) {
+                const src = props.src || ''
+                // Resolve local image paths
+                if (isLocalPath(src)) {
+                  const resolvedSrc = resolveLocalPath(src, file.path)
+                  return (
+                    <img
+                      {...props}
+                      src={`aynite-resource://${resolvedSrc}`}
+                      alt={props.alt || ''}
+                    />
+                  )
+                }
+                /* biome-ignore lint/a11y/useAltText: alt text comes from markdown content via props.alt */
+                return <img {...props} />
               },
             }}
           >

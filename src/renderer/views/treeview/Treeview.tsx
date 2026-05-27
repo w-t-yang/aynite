@@ -277,8 +277,11 @@ export function Treeview() {
   )
   useAppEvent('fs-change', handleFsChange)
 
+  const treeDataRef = useRef(treeData)
+  treeDataRef.current = treeData
+
   const handleToggle = async (id: string) => {
-    const node = findNodeData(treeData, id)
+    const node = findNodeData(treeDataRef.current, id)
     if (node && !node.isLoaded && node.isDirectory) {
       try {
         const children = await fetchFiles(id)

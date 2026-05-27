@@ -98,8 +98,6 @@ Here is mine, how does yours look like?
 ### 4. Explore More
 
 - **`Ctrl+Tab`** — Fuzzy-find and switch files
-- **`Ctrl+R`** — Refresh the active tile (for new skills, themes, or config)
-- **`>` command** — Run a deterministic command (try `> echo "Hello from Aynite!"`)
 
 → **[Full getting started guide →](docs/GETTING_STARTED.md)**
 

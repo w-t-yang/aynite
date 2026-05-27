@@ -23,6 +23,7 @@ export function FileBrowserPage() {
   const {
     content,
     setContent,
+    originalContent,
     fileInfo,
     loading,
     error,
@@ -67,21 +68,22 @@ export function FileBrowserPage() {
   useEffect(() => {
     if (!activePath) return
     setDirtyPaths((prev) => {
+      const currentlyDirty = content !== originalContent
       if (
-        (content !== fileInfo && prev.has(activePath)) ||
-        (content === fileInfo && !prev.has(activePath))
+        (currentlyDirty && prev.has(activePath)) ||
+        (!currentlyDirty && !prev.has(activePath))
       ) {
         return prev
       }
       const next = new Set(prev)
-      if (content !== fileInfo) {
+      if (currentlyDirty) {
         next.add(activePath)
       } else {
         next.delete(activePath)
       }
       return next
     })
-  }, [content, fileInfo, activePath, setDirtyPaths])
+  }, [content, originalContent, activePath, setDirtyPaths])
 
   // ── Keyboard Shortcuts ───────────────────────────────────────────────
   useEffect(() => {
