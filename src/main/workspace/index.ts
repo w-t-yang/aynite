@@ -34,14 +34,20 @@ export function setupWorkspaceIpc(): void {
     return await getWorkspacesList()
   })
 
-  ipcMain.handle(WorkspaceChannels.CREATE, async (_event, name: string) => {
+  ipcMain.handle(WorkspaceChannels.CREATE, async (event, name: string) => {
+    const winId = getWinIdFromSender(event.sender)
     const result = await createWorkspace(name)
+    // Update this window's workspace so it switches to the newly created one
+    setWindowWorkspace(winId, name)
     broadcastAppEvent(AppEvents.WORKSPACE_CHANGED, { created: name })
     return result
   })
 
-  ipcMain.handle(WorkspaceChannels.DELETE, async (_event, name: string) => {
+  ipcMain.handle(WorkspaceChannels.DELETE, async (event, name: string) => {
+    const winId = getWinIdFromSender(event.sender)
     const result = await deleteWorkspace(name)
+    // Switch this window to the first remaining workspace
+    setWindowWorkspace(winId, result.list[0])
     broadcastAppEvent(AppEvents.WORKSPACE_CHANGED, { deleted: name })
     return result
   })
