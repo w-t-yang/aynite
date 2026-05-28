@@ -58,6 +58,11 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
+  "overrides": {
+    "madge": {
+      "typescript": "$typescript"
+    }
+  },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
       "biome check --write --unsafe"
