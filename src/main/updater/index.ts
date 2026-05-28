@@ -141,28 +141,10 @@ function simulateDevDownload() {
 
 export function setupUpdater() {
   ipcMain.handle(UpdateChannels.CHECK, async () => {
-    if (isDev) {
-      console.log(
-        '[Updater] Dev mode — checking GitHub releases instead of autoUpdater',
-      )
-      await checkGithubForUpdates()
-      return null
-    }
-    try {
-      // Use checkForUpdates (not checkForUpdatesAndNotify) because
-      // autoDownload is disabled — we just want to know if one is available.
-      // The 'update-available' or 'update-not-available' events will fire.
-      const result = await autoUpdater.checkForUpdates()
-      return result
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      console.error('[Updater] Check failed:', err)
-      const friendlyMessage = message.includes('latest-mac.yml')
-        ? 'No update release artifacts found. The latest release may not have been built for your platform.'
-        : message
-      broadcastAppEvent(AppEvents.UPDATE_ERROR, friendlyMessage)
-      return null
-    }
+    // Use plain fetch() to GitHub API — avoids electron-updater's partitioned
+    // session which triggers unnecessary macOS keychain prompts on every check.
+    await checkGithubForUpdates()
+    return null
   })
 
   ipcMain.handle(UpdateChannels.DOWNLOAD, async () => {
@@ -199,7 +181,7 @@ export function setupUpdater() {
     autoUpdater.quitAndInstall()
   })
 
-  // Production — autoUpdater event listeners
+  // Production — autoUpdater event listeners (for when user manually checks)
   if (!isDev) {
     autoUpdater.on('checking-for-update', () => {
       broadcastAppEvent(AppEvents.UPDATE_CHECKING, null)
@@ -235,21 +217,11 @@ export function setupUpdater() {
         version: info.version,
       })
     })
-
-    // Hourly check for updates (but don't auto-download)
-    setInterval(
-      () => {
-        autoUpdater.checkForUpdates()
-      },
-      60 * 60 * 1000,
-    )
-
-    // Initial check on startup (but don't auto-download)
-    autoUpdater.checkForUpdates()
-  } else {
-    // Dev mode: check GitHub on startup after a short delay
-    setTimeout(() => {
-      checkGithubForUpdates()
-    }, 5000)
   }
+
+  // Startup check using plain fetch() — avoids electron-updater's partitioned
+  // session which triggers macOS keychain prompt on every HTTPS request.
+  setTimeout(() => {
+    checkGithubForUpdates()
+  }, 5000)
 }
