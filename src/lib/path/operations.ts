@@ -131,16 +131,31 @@ async function secureFileOp(
   }
 }
 
+const MAX_READ_SIZE = 100_000 // characters — prevents AI context window overflow
+
 export async function secureReadText(
   filePath: string,
   domainFolders: string[],
 ): Promise<string> {
-  return secureFileOp(
-    filePath,
-    domainFolders,
-    () => readText(filePath),
-    ERROR_MESSAGES.FILE_READ_ERROR,
-  )
+  if (!isPathWithinDomain(filePath, domainFolders)) {
+    return ERROR_MESSAGES.ACCESS_DENIED(filePath)
+  }
+  try {
+    const isText = await checkIsTextFile(filePath)
+    if (!isText) {
+      return ERROR_MESSAGES.FILE_NOT_TEXT(filePath)
+    }
+
+    const fileStat = await stat(filePath)
+    if (fileStat.size > MAX_READ_SIZE) {
+      return ERROR_MESSAGES.FILE_TOO_LARGE(filePath, fileStat.size)
+    }
+
+    return await readText(filePath)
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    return ERROR_MESSAGES.FILE_READ_ERROR(message)
+  }
 }
 
 export async function secureWriteText(

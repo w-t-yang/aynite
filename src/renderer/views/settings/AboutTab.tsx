@@ -1,4 +1,4 @@
-import { Bot, Bug, CloudDownload, Github, RefreshCw } from 'lucide-react'
+import { Bot, Bug, CloudDownload, GitBranch, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
 import { FLEX_CENTER_GAP_2 } from '../../../lib/constants/renderer/styles'
@@ -373,7 +373,7 @@ export function AboutTab({ state, actions }: AboutTabProps) {
                 }
                 className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
               >
-                <Github size={18} className="text-foreground" />
+                <GitBranch size={18} className="text-foreground" />
                 <div className="text-left">
                   <div className="font-bold">GitHub Project</div>
                   <div className="text-[10px] text-muted-foreground font-normal">

@@ -2,6 +2,10 @@ export const ERROR_MESSAGES = {
   ACCESS_DENIED: (path: string) =>
     `Error: Access denied. Path "${path}" is not within the allowed domain.`,
   FILE_READ_ERROR: (msg: string) => `Error reading file: ${msg}`,
+  FILE_NOT_TEXT: (path: string) =>
+    `Error: "${path}" is not a text file. Reading binary files would corrupt the AI context. Use other approaches (like grep_search or glob_search) instead.`,
+  FILE_TOO_LARGE: (path: string, size: number) =>
+    `Error: File "${path}" is ${size.toLocaleString()} characters. Reading large files will overflow the AI context window. Consider using grep_search, glob_search, or other approaches instead of loading the full content.`,
   FILE_WRITE_SUCCESS: (path: string) => `Successfully wrote to ${path}`,
   FILE_WRITE_ERROR: (msg: string) => `Error writing file: ${msg}`,
   DIR_LIST_ERROR: (msg: string) => `Error listing files: ${msg}`,
