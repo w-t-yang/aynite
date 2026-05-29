@@ -6,6 +6,7 @@ import {
   ipcMain,
   type OpenDialogOptions,
   type SaveDialogOptions,
+  session,
 } from 'electron'
 import { AppEvents } from '../lib/constants/app'
 import {
@@ -37,6 +38,28 @@ let isProcessingApproval = false
  * This is the ONLY place where BrowserWindow should be instantiated.
  */
 export function createMainWindow(dirname: string): void {
+  // Suppress permission prompts for common browser APIs. These are
+  // Chromium-level permissions that on macOS can surface as system dialogs.
+  session.defaultSession.setPermissionRequestHandler(
+    (_webContents, permission, callback) => {
+      const granted = [
+        'clipboard-read',
+        'clipboard-sanitized-write',
+        'display-capture',
+        'fullscreen',
+        'localStorage',
+        'indexedDB',
+        'media',
+        'notifications',
+        'pointerLock',
+        'storage-access',
+        'top-level-storage-access',
+        'window-management',
+      ].includes(permission)
+      callback(granted)
+    },
+  )
+
   appDirname = dirname
   mainWindow = new BrowserWindow({
     width: 1200,

@@ -247,7 +247,11 @@ export async function secureGrepSearch(
   if (results.length > GREP_RESULT_LIMIT) {
     return ERROR_MESSAGES.GREP_RESULT_TOO_LARGE(GREP_RESULT_LIMIT)
   }
-  return results.join('\n') || ERROR_MESSAGES.NO_MATCHES_FOUND
+  const joined = results.join('\n')
+  if (joined.length > MAX_READ_SIZE) {
+    return ERROR_MESSAGES.GREP_RESULT_TOO_LARGE_SIZE(joined.length)
+  }
+  return joined || ERROR_MESSAGES.NO_MATCHES_FOUND
 }
 
 export async function secureGlobSearch(

@@ -16,6 +16,8 @@ export const ERROR_MESSAGES = {
   NO_MATCHES_FOUND: 'No matches found.',
   GREP_RESULT_TOO_LARGE: (limit: number) =>
     `Error: Search returned more than ${limit} results. Please narrow your search pattern or specify a more specific folder path.`,
+  GREP_RESULT_TOO_LARGE_SIZE: (size: number) =>
+    `Error: Search results exceeded ${(size / 1000).toLocaleString()}k characters. The individual matching lines are too long — they would overflow the AI context window. Please narrow your search pattern or specify a more specific folder path.`,
   URL_FETCH_ERROR: (status: string) => `Error fetching URL: ${status}`,
   URL_GENERIC_ERROR: (msg: string) => `Error: ${msg}`,
   WORKSPACE_EMPTY: '(empty workspace)',
