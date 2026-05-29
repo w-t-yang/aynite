@@ -20,6 +20,14 @@ import { setupWorkspaceIpc } from './workspace/index'
  * App Lifecycle & Initialization
  */
 
+// In dev mode, Chromium's networking stack triggers macOS keychain prompts
+// ("aynite-app Safe Storage") when loading the Vite dev server over HTTP.
+// Use an in-memory mock keychain to avoid system keychain access for SSL
+// storage/caching during local development.
+if (!app.isPackaged) {
+  app.commandLine.appendSwitch('use-mock-keychain')
+}
+
 // Linux Specific Optimizations
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('enable-wayland-ime')
