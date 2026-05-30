@@ -71,7 +71,7 @@
     "tests/**/*.{ts,tsx}": [
       "biome check --write --unsafe"
     ],
-    "src/**/*.{json,md,css}": [
+    "src/**/*.{json,css}": [
       "biome check --write"
     ]
   },

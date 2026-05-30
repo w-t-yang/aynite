@@ -58,8 +58,8 @@ function collectFiles(dir: string, exts: string[] = ['.ts', '.tsx']): string[] {
   const visited = new Set<string>()
 
   while (queue.length > 0) {
-    const current = queue.pop()!
-    if (visited.has(current)) continue
+    const current = queue.pop()
+    if (!current || visited.has(current)) continue
     visited.add(current)
     if (!fs.existsSync(current)) continue
 
@@ -89,9 +89,7 @@ function readLines(filePath: string): string[] | null {
 // ─── Rule 1: No `window.aynite` outside bridge/ ────────────────────────
 
 function checkRule1(violations: Violation[]) {
-  const allowedFiles = new Set([
-    path.resolve(ENV_DTS),
-  ])
+  const allowedFiles = new Set([path.resolve(ENV_DTS)])
 
   for (const filePath of collectFiles(RENDERER_DIR)) {
     const abs = path.resolve(filePath)
@@ -123,7 +121,10 @@ function checkRule2(violations: Violation[]) {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      if (/from\s+['"].*\/bridge['"]/.test(line) || /from\s+['"].*\/bridge\/[^'"]+['"]/.test(line)) {
+      if (
+        /from\s+['"].*\/bridge['"]/.test(line) ||
+        /from\s+['"].*\/bridge\/[^'"]+['"]/.test(line)
+      ) {
         violations.push({
           file: path.relative(ROOT_DIR, filePath),
           line: i + 1,
@@ -155,8 +156,10 @@ function checkRule3(violations: Violation[]) {
 
       // Check for imports of useAppEvent or useAppEventSubscriber from ViewContext
       // Pattern: import { ... useAppEvent ... } from '../ViewContext'
-      if (/import\s*\{[^}]*\buseAppEvent\b/.test(line) &&
-          /from\s+['"].*\/ViewContext['"]/.test(line)) {
+      if (
+        /import\s*\{[^}]*\buseAppEvent\b/.test(line) &&
+        /from\s+['"].*\/ViewContext['"]/.test(line)
+      ) {
         violations.push({
           file: path.relative(ROOT_DIR, filePath),
           line: i + 1,
@@ -164,8 +167,10 @@ function checkRule3(violations: Violation[]) {
           rule: 'RULE-3',
         })
       }
-      if (/import\s*\{[^}]*\buseAppEventSubscriber\b/.test(line) &&
-          /from\s+['"].*\/ViewContext['"]/.test(line)) {
+      if (
+        /import\s*\{[^}]*\buseAppEventSubscriber\b/.test(line) &&
+        /from\s+['"].*\/ViewContext['"]/.test(line)
+      ) {
         violations.push({
           file: path.relative(ROOT_DIR, filePath),
           line: i + 1,
@@ -190,8 +195,10 @@ function checkRule4(violations: Violation[]) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       // Check both bridge.events.onAppEvent and window.aynite.onAppEvent
-      if (/bridge\s*\.\s*events\s*\.\s*onAppEvent\s*\(/.test(line) ||
-          /window\s*\.\s*aynite\s*\.\s*onAppEvent\s*\(/.test(line)) {
+      if (
+        /bridge\s*\.\s*events\s*\.\s*onAppEvent\s*\(/.test(line) ||
+        /window\s*\.\s*aynite\s*\.\s*onAppEvent\s*\(/.test(line)
+      ) {
         violations.push({
           file: path.relative(ROOT_DIR, filePath),
           line: i + 1,
@@ -247,7 +254,6 @@ function checkRule4(violations: Violation[]) {
 // that views use to subscribe to relayed postMessage events)
 
 function checkRule5(violations: Violation[]) {
-  const viewContextBase = path.basename(VIEW_CONTEXT)
   const allowedFiles = new Set([
     path.basename(VIEW_CONTEXT),
     'useViewEvents.ts',
@@ -345,12 +351,16 @@ const ruleNames: Record<string, string> = {
   'RULE-6': 'Raw window.aynite.onAppEvent',
 }
 
-const ruleFixes: Record<string, string> = {
+const _ruleFixes: Record<string, string> = {
   'RULE-1': 'Import from bridge instead: import { ... } from "../bridge"',
-  'RULE-2': 'Use useApp() instead: import { useApp } from "../../src/AppContext"',
-  'RULE-3': 'Import from ./useViewEvents instead: import { useViewEvent } from "../useViewEvents"',
-  'RULE-4': 'Move event handling to AppContext.tsx, have it route to this context',
-  'RULE-5': 'Use useViewEvent or useViewEventSubscriber from ./useViewEvents instead',
+  'RULE-2':
+    'Use useApp() instead: import { useApp } from "../../src/AppContext"',
+  'RULE-3':
+    'Import from ./useViewEvents instead: import { useViewEvent } from "../useViewEvents"',
+  'RULE-4':
+    'Move event handling to AppContext.tsx, have it route to this context',
+  'RULE-5':
+    'Use useViewEvent or useViewEventSubscriber from ./useViewEvents instead',
   'RULE-6': 'Use bridge.events.onAppEvent instead of window.aynite.onAppEvent',
 }
 
@@ -440,7 +450,9 @@ console.log('=================================================\n')
 for (let i = 1; i <= 6; i++) {
   const ruleId = `RULE-${i}`
   const count = byRule[ruleId] || 0
-  console.log(`  ${count === 0 ? '✓' : '✗'} ${ruleId}: ${count} violations — ${ruleNames[ruleId]}`)
+  console.log(
+    `  ${count === 0 ? '✓' : '✗'} ${ruleId}: ${count} violations — ${ruleNames[ruleId]}`,
+  )
 }
 console.log(`\n  TOTAL: ${violations.length} violation(s)\n`)
 
