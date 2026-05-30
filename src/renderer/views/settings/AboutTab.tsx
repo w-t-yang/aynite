@@ -7,7 +7,7 @@ import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
-import { useAppEvent } from '../../ViewContext'
+import { useViewEvent } from '../useViewEvents'
 
 interface AboutTabProps {
   state: {
@@ -29,36 +29,35 @@ export function AboutTab({ state, actions }: AboutTabProps) {
   const [showUpdateModal, setShowUpdateModal] = useState(false)
 
   // Listen for relayed update events — update the status text without auto-opening modal
-  // Uses deprecated useAppEvent — will be replaced when ViewContext is the central router
-  useAppEvent('update-checking', () => {
+  useViewEvent('update-checking', () => {
     setUpdateStatus('checking')
     setUpdateInfo(null)
     setUpdateError(null)
     setDownloadProgress(0)
   })
-  useAppEvent('update-available', (data) => {
+  useViewEvent('update-available', (data) => {
     setUpdateStatus('available')
     setUpdateInfo(data)
   })
-  useAppEvent('update-not-available', () => {
+  useViewEvent('update-not-available', () => {
     setUpdateStatus('idle')
     setUpdateInfo(null)
     setDownloadProgress(0)
   })
-  useAppEvent('update-downloading', () => {
+  useViewEvent('update-downloading', () => {
     setUpdateStatus('downloading')
     setDownloadProgress(0)
   })
-  useAppEvent('update-download-progress', (data) => {
+  useViewEvent('update-download-progress', (data) => {
     setUpdateStatus('downloading')
     setDownloadProgress(data?.percent ?? 0)
   })
-  useAppEvent('update-downloaded', (data) => {
+  useViewEvent('update-downloaded', (data) => {
     setUpdateStatus('downloaded')
     setDownloadProgress(100)
     setUpdateInfo(data)
   })
-  useAppEvent('update-error', (data) => {
+  useViewEvent('update-error', (data) => {
     setUpdateStatus('error')
     setUpdateError(data)
     setDownloadProgress(0)

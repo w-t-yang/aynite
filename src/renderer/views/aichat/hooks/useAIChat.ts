@@ -15,12 +15,12 @@ import { config, configMutations } from '../../../bridge/config'
 import { utils } from '../../../bridge/utils'
 import { workspace } from '../../../bridge/workspace'
 import type { SettingsState } from '../../../shared/lib/types'
-import { useAppEventSubscriber } from '../../../views/ViewContext'
+import { useViewEventSubscriber } from '../../useViewEvents'
 import type { ChatInputHandle } from '../components/InputEditor'
 import * as ChatService from '../services/ChatService'
 
 export function useAIChat() {
-  const subscribeToAppEvents = useAppEventSubscriber()
+  const subscribeToAppEvents = useViewEventSubscriber()
 
   // ── UI-level state (not agent-loop related) ──
   const [settings, setSettings] = useState<SettingsState>(

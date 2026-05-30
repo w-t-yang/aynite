@@ -1,7 +1,7 @@
 import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { DiffStats } from '../../../lib/types/files'
-import { useAppEvent } from '../../views/ViewContext'
+import { useViewEvent } from '../../views/useViewEvents'
 import { Button } from '../basic/Button'
 import { Modal } from '../basic/Modal'
 import { cn } from '../lib/utils'
@@ -221,7 +221,7 @@ export function GitDiffView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadGitStatus, folders.includes, folders],
   )
-  useAppEvent('git-status-changed', handleGitStatusChanged)
+  useViewEvent('git-status-changed', handleGitStatusChanged)
 
   // ─── Commit Flow ──────────────────────────────────────────────────────────
 

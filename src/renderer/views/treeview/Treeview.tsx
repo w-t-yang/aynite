@@ -21,7 +21,7 @@ import { GitDiffView } from '../../shared/featured/GitDiffView'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
 import { cn } from '../../shared/lib/utils'
-import { useAppEvent } from '../ViewContext'
+import { useViewEvent } from '../useViewEvents'
 import {
   ConfirmModal,
   type FileNode,
@@ -227,7 +227,7 @@ export function Treeview() {
   }, [activeFilePath, treeData.length, treeData])
 
   // Listen for active-file-changed broadcast from main
-  useAppEvent('active-file-changed', (data: { path: string }) => {
+  useViewEvent('active-file-changed', (data: { path: string }) => {
     if (data?.path) {
       setActiveFilePath(data.path)
     } else {
@@ -279,7 +279,7 @@ export function Treeview() {
     },
     [fetchStatus],
   )
-  useAppEvent('fs-change', handleFsChange)
+  useViewEvent('fs-change', handleFsChange)
 
   const treeDataRef = useRef(treeData)
   treeDataRef.current = treeData

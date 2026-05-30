@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { GitStatusType } from '../../../../lib/types/files'
-import { useAppEvent } from '../../ViewContext'
+import { useViewEvent } from '../../useViewEvents'
 
 interface GitStatusMap {
   [path: string]: GitStatusType
@@ -49,7 +49,7 @@ export function useGitStatus() {
   )
 
   // Stable reference that never changes, so the event listener never re-registers
-  useAppEvent('git-status-changed', handleGitStatusChangedRef.current)
+  useViewEvent('git-status-changed', handleGitStatusChangedRef.current)
 
   return { gitStatuses, gitRoots, fetchStatus }
 }

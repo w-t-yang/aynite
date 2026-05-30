@@ -1,7 +1,7 @@
 import { Loader2, RefreshCw, Rss } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { systemMutations } from '../../bridge/system'
-import { useAppEvent } from '../ViewContext'
+import { useViewEvent } from '../useViewEvents'
 import { AddGroupModal } from './components/AddGroupModal'
 import { AddSourceModal } from './components/AddSourceModal'
 import { ArticleDetail } from './components/ArticleDetail'
@@ -43,7 +43,7 @@ export function RSSApp() {
   articleListWidthRef.current = articleListWidth
 
   // Reload data on theme changes
-  useAppEvent(
+  useViewEvent(
     'theme-changed',
     useCallback(() => {}, []),
   )

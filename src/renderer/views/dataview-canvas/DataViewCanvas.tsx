@@ -13,7 +13,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@excalidraw/excalidraw/index.css'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
 import { validateJsonSchema } from '../../shared/lib/schema-validator'
-import { useAppEvent, useView } from '../ViewContext'
+import { useViewEvent } from '../useViewEvents'
+import { useView } from '../ViewContext'
 
 function getThemeBg(): string {
   return (
@@ -81,7 +82,7 @@ export function DataViewCanvas() {
     if (bg) api.updateScene({ appState: { viewBackgroundColor: bg } })
   }, [])
 
-  useAppEvent('theme-changed', updateCanvasBg)
+  useViewEvent('theme-changed', updateCanvasBg)
 
   useEffect(() => {
     if (themes.length > 0) updateCanvasBg()

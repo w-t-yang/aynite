@@ -5,7 +5,7 @@
  * Survives React component mounts/unmounts — state persists across view switches.
  *
  * React components subscribe to session changes and delegate actions here.
- * The service uses the `subscribe` bridge from ViewContext (useAppEventSubscriber)
+ * The service uses `useViewEventSubscriber` from `../../useViewEvents`
  * to listen to main process events, avoiding direct window.message usage.
  *
  * For streaming: maintains a map of requestId → handler so the single permanent

@@ -27,7 +27,8 @@ import {
   YAxis,
 } from 'recharts'
 import { iconBtn, ViewHeader } from '../../shared/basic/ViewHeader'
-import { useAppEvent, useAppOperation, useView } from '../ViewContext'
+import { useViewEvent } from '../useViewEvents'
+import { useAppOperation, useView } from '../ViewContext'
 import { aggregateData, enrichDataWithIndicators } from './indicators'
 import { type DataViewStock, DEFAULT_INDICATORS, TimeInterval } from './types'
 
@@ -285,7 +286,7 @@ export function DataViewStockView() {
   }, [loadInitialFile, loadPlaybookFile])
 
   // Listen for data updates
-  useAppEvent('chart-data', (payload: any) => {
+  useViewEvent('chart-data', (payload: any) => {
     setError(null)
     if (payload.data) {
       const mappedData = payload.data.map((item: any) => ({

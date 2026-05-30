@@ -18,7 +18,7 @@ import type { FileInfo } from '../../../../lib/types/files'
 import { config } from '../../../bridge/config'
 import { file as bridgeFile } from '../../../bridge/file'
 import { git } from '../../../bridge/git'
-import { useAppEvent } from '../../ViewContext'
+import { useViewEvent } from '../../useViewEvents'
 
 const FILEVIEW_NAMES = Object.keys(fileviewComponents)
 
@@ -182,7 +182,7 @@ export function useFileModes(
       setDiffRefreshKey((prev) => prev + 1)
     }
   }, [])
-  useAppEvent('git-status-changed', handleGitStatusChanged)
+  useViewEvent('git-status-changed', handleGitStatusChanged)
 
   // ── Mode selection callbacks (set userModeRef to prevent override) ─
   const handleSelectFileview = useCallback((view: string | null) => {

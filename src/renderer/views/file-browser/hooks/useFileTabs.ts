@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { config, configMutations } from '../../../bridge/config'
-import { useAppEvent } from '../../ViewContext'
+import { useViewEvent } from '../../useViewEvents'
 
 interface Tab {
   name: string
@@ -119,7 +119,7 @@ export function useFileTabs() {
   }, [tabs])
 
   // Listen for active-file-changed broadcast from main
-  useAppEvent('active-file-changed', (data: { path: string }) => {
+  useViewEvent('active-file-changed', (data: { path: string }) => {
     if (isBroadcastingRef.current) return
     if (data?.path) {
       openFile(data.path)

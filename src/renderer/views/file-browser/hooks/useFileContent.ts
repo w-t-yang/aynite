@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileInfo } from '../../../../lib/types/files'
 import { file as bridgeFile, fileMutations } from '../../../bridge/file'
-import { useAppEvent } from '../../ViewContext'
+import { useViewEvent } from '../../useViewEvents'
 
 export function useFileContent(activePath: string | null) {
   const [content, setContent] = useState<string | null>(null)
@@ -72,7 +72,7 @@ export function useFileContent(activePath: string | null) {
   const fsChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reload active file if it changes on disk
-  useAppEvent('fs-change', (data: { event: string; path: string }) => {
+  useViewEvent('fs-change', (data: { event: string; path: string }) => {
     if (!activePath) return
     const normalizedChanged = data.path.replace(/\\/g, '/')
     const normalizedActive = activePath.replace(/\\/g, '/')

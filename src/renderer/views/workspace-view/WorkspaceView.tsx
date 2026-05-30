@@ -9,7 +9,7 @@ import { Modal } from '../../shared/basic/Modal'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { GitDiffView } from '../../shared/featured/GitDiffView'
 import { cn } from '../../shared/lib/utils'
-import { useAppEvent } from '../ViewContext'
+import { useViewEvent } from '../useViewEvents'
 
 interface Session {
   id: string
@@ -86,21 +86,21 @@ export function WorkspaceView() {
   }, [loadData, loadArtifacts])
 
   // Listen for session changes from other views (like AIChat creating a new one)
-  useAppEvent('active-session-changed', (data: { id: string }) => {
+  useViewEvent('active-session-changed', (data: { id: string }) => {
     setActiveSessionId(data.id)
   })
 
   // Listen for config changes
-  useAppEvent('config-changed', () => {
+  useViewEvent('config-changed', () => {
     loadData()
     loadArtifacts()
   })
 
-  useAppEvent('session-deleted', () => {
+  useViewEvent('session-deleted', () => {
     loadData()
   })
 
-  useAppEvent('session-saved', () => {
+  useViewEvent('session-saved', () => {
     loadData()
     loadArtifacts()
   })

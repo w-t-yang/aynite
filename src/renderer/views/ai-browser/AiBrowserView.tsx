@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { config } from '../../bridge/config'
 import { AIChat } from '../aichat/AIChat'
 import { FileBrowserPage } from '../file-browser/FileBrowserPage'
-import { useAppEvent } from '../ViewContext'
+import { useViewEvent } from '../useViewEvents'
 
 type ViewMode = 'aichat' | 'file-browser'
 
@@ -10,12 +10,12 @@ export function AiBrowserView() {
   const [mode, setMode] = useState<ViewMode>('aichat')
 
   // Listen for session changes → switch to aichat view
-  useAppEvent('active-session-changed', () => {
+  useViewEvent('active-session-changed', () => {
     setMode('aichat')
   }, [])
 
   // Listen for active file changes → switch to file-browser view
-  useAppEvent(
+  useViewEvent(
     'active-file-changed',
     (data: { path: string }) => {
       if (data?.path) {

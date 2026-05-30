@@ -45,45 +45,14 @@ export const useAppOperation = () => {
 }
 
 /**
- * @deprecated Views should not listen to events directly.
- * Will be removed once all views are migrated to consume state from ViewContext.
- * Use useAppEvent for now during migration — it listens to relayed postMessage events.
+ * @deprecated Import from './useViewEvents' instead.
+ * Re-exported for backward compatibility.
+ * Use `import { useViewEvent } from '../useViewEvents'` instead.
  */
-export const useAppEvent = (
-  type: string,
-  callback: (data: any) => void,
-  deps: any[] = [],
-) => {
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data
-      if (message?.type === `aynite:${type}`) {
-        callback(message.data)
-      }
-    }
-
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, ...deps, callback])
-}
-
-/**
- * @deprecated Views should not listen to events directly.
- * Will be removed once all views are migrated to consume state from ViewContext.
- */
-export const useAppEventSubscriber = () => {
-  return useCallback((callback: (event: any) => void) => {
-    const handler = (e: MessageEvent) => {
-      const msg = e.data
-      if (msg?.type?.startsWith('aynite:')) {
-        callback({ type: msg.type.replace('aynite:', ''), data: msg.data })
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [])
-}
+export {
+  useViewEvent as useAppEvent,
+  useViewEventSubscriber as useAppEventSubscriber,
+} from './useViewEvents'
 
 // ─── View Provider ─────────────────────────────────────────────────────────
 
