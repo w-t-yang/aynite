@@ -6,6 +6,7 @@
  * events from the main process.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { config, configMutations } from '../../../bridge/config'
 import { useAppEvent } from '../../ViewContext'
 
 interface Tab {
@@ -38,7 +39,7 @@ export function useFileTabs() {
     (path: string) => {
       if (activePath === path) return
       isBroadcastingRef.current = true
-      window.aynite.setConfig('activeFile', path).finally(() => {
+      configMutations.set('activeFile', path).then(() => {
         isBroadcastingRef.current = false
       })
       setActivePath(path)
@@ -63,7 +64,7 @@ export function useFileTabs() {
             handleTabSelect(nextActive)
           } else {
             setActivePath(null)
-            window.aynite.setConfig('activeFile', null)
+            configMutations.set('activeFile', null)
           }
         }
         return newTabs
@@ -76,13 +77,13 @@ export function useFileTabs() {
     setTabs([])
     setActivePath(null)
     setHistory([])
-    window.aynite.setConfig('activeFile', null)
+    configMutations.set('activeFile', null)
   }, [])
 
   // Initial load of active file and opened files
   useEffect(() => {
     const init = async () => {
-      const paths = await window.aynite.getConfig('openedFiles')
+      const paths = await config.get('openedFiles')
       if (paths && Array.isArray(paths) && paths.length > 0) {
         const initialTabs = paths.map((p: string) => ({
           name: p.split(/[/\\]/).pop() || p,
@@ -92,7 +93,7 @@ export function useFileTabs() {
         setHistory(paths)
       }
 
-      const active = await window.aynite.getConfig('activeFile')
+      const active = await config.get('activeFile')
       if (active) {
         setActivePath(active)
         setTabs((prev) => {
@@ -111,7 +112,7 @@ export function useFileTabs() {
   // Persist tabs to main
   useEffect(() => {
     if (!isInitializedRef.current) return
-    window.aynite.setConfig(
+    configMutations.set(
       'openedFiles',
       tabs.map((t) => t.path),
     )

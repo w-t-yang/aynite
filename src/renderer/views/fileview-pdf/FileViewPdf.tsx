@@ -11,6 +11,7 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileInfo } from '../../../lib/types/files'
+import { file as bridgeFile } from '../../bridge/file'
 import { Button } from '../../shared/basic/Button'
 
 // Register the pdfjs worker — Vite recognizes new URL with import.meta.url
@@ -52,7 +53,7 @@ export function FileViewPdf({ file }: FileViewPdfProps) {
       setCurrentPage(1)
 
       try {
-        const data = await window.aynite.readFileBinary(file.path)
+        const data = await bridgeFile.readBinary(file.path)
         const pdf = await getDocument({ data }).promise
         if (cancelled) return
         setPdfDoc(pdf)

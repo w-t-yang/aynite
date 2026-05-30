@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileInfo } from '../../../../lib/types/files'
+import { file as bridgeFile, fileMutations } from '../../../bridge/file'
 import { useAppEvent } from '../../ViewContext'
 
 export function useFileContent(activePath: string | null) {
@@ -35,9 +36,9 @@ export function useFileContent(activePath: string | null) {
       setLoading(true)
       setError(null)
       try {
-        const textStatus = await window.aynite.checkIsTextFile(activePath)
+        const textStatus = await bridgeFile.checkIsText(activePath)
         setIsText(textStatus)
-        const info = await window.aynite.getFileInfo(activePath)
+        const info = await bridgeFile.info(activePath)
         setFileInfo({
           ...info,
           createdAt: new Date(info.createdAt),
@@ -45,7 +46,7 @@ export function useFileContent(activePath: string | null) {
         })
 
         if (textStatus) {
-          const text = await window.aynite.readFile(activePath)
+          const text = await bridgeFile.read(activePath)
           setContent(text)
           setOriginalContent(text)
         } else {
@@ -64,7 +65,7 @@ export function useFileContent(activePath: string | null) {
 
   // Watch only the currently open file for external changes
   useEffect(() => {
-    window.aynite.watchFile(activePath)
+    fileMutations.watch(activePath)
   }, [activePath])
 
   // Debounce timer for fs-change events
@@ -83,14 +84,14 @@ export function useFileContent(activePath: string | null) {
       fsChangeTimerRef.current = setTimeout(async () => {
         fsChangeTimerRef.current = null
         try {
-          const textStatus = await window.aynite.checkIsTextFile(activePath)
+          const textStatus = await bridgeFile.checkIsText(activePath)
           setIsText(textStatus)
           if (textStatus) {
-            const text = await window.aynite.readFile(activePath)
+            const text = await bridgeFile.read(activePath)
             setContent(text)
             setOriginalContent(text)
           }
-          const info = await window.aynite.getFileInfo(activePath)
+          const info = await bridgeFile.info(activePath)
           setFileInfo({
             ...info,
             createdAt: new Date(info.createdAt),
@@ -106,7 +107,7 @@ export function useFileContent(activePath: string | null) {
   const handleSave = useCallback(async () => {
     if (!activePath || content === null) return
     try {
-      await window.aynite.writeFile(activePath, content)
+      await fileMutations.write(activePath, content)
       setOriginalContent(content)
     } catch (e) {
       console.error('Failed to save file:', e)

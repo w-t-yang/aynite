@@ -1,5 +1,9 @@
 import { FileCode, Folder, MessageSquare, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { ai as aiBridge } from '../../bridge/ai'
+import { config, configMutations } from '../../bridge/config'
+import { file as bridgeFile } from '../../bridge/file'
+import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
@@ -32,10 +36,10 @@ export function WorkspaceView() {
   const loadData = useCallback(async () => {
     try {
       const [wsName, folderList, sessionList, activeId] = await Promise.all([
-        window.aynite.getConfig('activeWorkspace'),
-        window.aynite.getWorkspaceFolders(),
-        window.aynite.listSessions(),
-        window.aynite.getConfig('activeSessionId'),
+        config.get('activeWorkspace'),
+        workspace.folders(),
+        aiBridge.listSessions(),
+        config.get('activeSessionId'),
       ])
       setWorkspaceName(wsName || '')
       setFolders(folderList || [])
@@ -48,14 +52,14 @@ export function WorkspaceView() {
 
   const loadArtifacts = useCallback(async () => {
     try {
-      const status = await window.aynite.getArtifactsStatus()
+      const status = await aiBridge.getArtifactsStatus()
       if (!status?.memory?.path) {
         setArtifacts([])
         return
       }
       // Derive the artifacts directory path from memory.md path
       const artifactsDir = status.memory.path.replace(/\/[^/]+$/, '')
-      const files = await window.aynite.listFolder(artifactsDir)
+      const files = await bridgeFile.list(artifactsDir)
       setArtifacts(
         files
           .filter((f: any) => !f.isDirectory)
@@ -69,7 +73,7 @@ export function WorkspaceView() {
 
   const handleAddFolder = useCallback(async () => {
     try {
-      await window.aynite.addWorkspaceFolder()
+      await workspaceMutations.addFolder()
       loadData()
     } catch (e: any) {
       console.error('[WorkspaceView] Failed to add folder:', e)
@@ -103,7 +107,7 @@ export function WorkspaceView() {
 
   const handleSelectSession = async (id: string) => {
     try {
-      await window.aynite.setConfig('activeSessionId', id)
+      await configMutations.set('activeSessionId', id)
       setActiveSessionId(id)
     } catch (e) {
       console.error('[WorkspaceView] Failed to set active session:', e)
@@ -118,7 +122,7 @@ export function WorkspaceView() {
   const confirmDelete = async () => {
     if (!sessionToDelete) return
     try {
-      await window.aynite.setConfig('session-delete', sessionToDelete.id)
+      await configMutations.set('session-delete', sessionToDelete.id)
       setSessionToDelete(null)
       // loadData will be called by the event listener
     } catch (e) {
@@ -157,9 +161,7 @@ export function WorkspaceView() {
             ) : (
               <GitDiffView
                 folders={folders}
-                onSelectFile={(path) =>
-                  window.aynite.setConfig('activeFile', path)
-                }
+                onSelectFile={(path) => configMutations.set('activeFile', path)}
               />
             )}
           </div>
@@ -181,9 +183,7 @@ export function WorkspaceView() {
                 <Button
                   key={file.path}
                   variant="ghost"
-                  onClick={() =>
-                    window.aynite.setConfig('activeFile', file.path)
-                  }
+                  onClick={() => configMutations.set('activeFile', file.path)}
                   className="w-full group flex items-center gap-3 px-3 py-2 rounded-lg border border-transparent text-sm text-foreground/80 overflow-hidden transition-all hover:bg-accent/10 hover:border-border/50 text-left h-auto"
                   title={file.path}
                 >
@@ -211,10 +211,7 @@ export function WorkspaceView() {
             <button
               type="button"
               onClick={() =>
-                window.aynite.setConfig(
-                  'activeSessionId',
-                  Date.now().toString(),
-                )
+                configMutations.set('activeSessionId', Date.now().toString())
               }
               className="p-1 rounded hover:bg-accent text-muted-foreground/50 hover:text-foreground transition-colors"
               title="New Session"

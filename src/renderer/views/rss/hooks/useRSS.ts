@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { rss, rssMutations } from '../../../bridge/rss'
 import type {
   RssBookmarks,
   RssConfig,
@@ -6,8 +7,6 @@ import type {
   RssItem,
   RssSource,
 } from '../types'
-
-const aw = () => window.aynite
 
 const STALE_MS = 24 * 60 * 60 * 1000 // 24 hours
 
@@ -42,9 +41,9 @@ export function useRSS() {
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
       const [config, contents, bookmarks] = await Promise.all([
-        aw().rssGetConfig(),
-        aw().rssGetAllContents(),
-        aw().rssGetBookmarks(),
+        rss.getConfig(),
+        rss.getAllContents(),
+        rss.getBookmarks(),
       ])
       setState((s) => ({
         ...s,
@@ -74,14 +73,14 @@ export function useRSS() {
           setState((s) => ({ ...s, fetching: true }))
           for (const src of stale) {
             try {
-              await aw().rssFetchFeed(src.id)
+              await rss.fetchFeed(src.id)
             } catch {
               /* individual fetch failure is non-fatal */
             }
           }
           const [freshConfig, freshContents] = await Promise.all([
-            aw().rssGetConfig(),
-            aw().rssGetAllContents(),
+            rss.getConfig(),
+            rss.getAllContents(),
           ])
           setState((s) => ({
             ...s,
@@ -110,7 +109,7 @@ export function useRSS() {
       const config = state.config
       if (config) {
         config.panelWidths = { sidebar, articleList }
-        await aw().rssSaveConfig(config)
+        await rssMutations.saveConfig(config)
       }
     },
     [state.config],
@@ -226,7 +225,7 @@ export function useRSS() {
   const fetchAll = useCallback(async () => {
     setState((s) => ({ ...s, fetching: true }))
     try {
-      await aw().rssFetchAll()
+      await rss.fetchAll()
       await loadAll()
     } catch (e: any) {
       setState((s) => ({ ...s, error: e?.message, fetching: false }))
@@ -236,10 +235,10 @@ export function useRSS() {
   const fetchSource = useCallback(async (sourceId: string) => {
     setState((s) => ({ ...s, fetching: true }))
     try {
-      await aw().rssFetchFeed(sourceId)
+      await rss.fetchFeed(sourceId)
       const [config, contents] = await Promise.all([
-        aw().rssGetConfig(),
-        aw().rssGetAllContents(),
+        rss.getConfig(),
+        rss.getAllContents(),
       ])
       setState((s) => ({ ...s, config, contents, fetching: false }))
     } catch (e: any) {
@@ -278,7 +277,7 @@ export function useRSS() {
                 },
               }
             })
-            await aw().rssMarkRead(source.id, itemId)
+            await rssMutations.markRead(source.id, itemId)
             return
           }
         }
@@ -301,7 +300,7 @@ export function useRSS() {
           },
         }
       })
-      await aw().rssMarkRead(actualSourceId, itemId)
+      await rssMutations.markRead(actualSourceId, itemId)
     },
     [state],
   )
@@ -329,7 +328,7 @@ export function useRSS() {
           return { ...s, contents: newContents }
         })
         for (const source of config.sources) {
-          await aw().rssMarkAllRead(source.id)
+          await rssMutations.markAllRead(source.id)
         }
         return
       }
@@ -348,19 +347,19 @@ export function useRSS() {
           },
         }
       })
-      await aw().rssMarkAllRead(sourceId)
+      await rssMutations.markAllRead(sourceId)
     },
     [state.config],
   )
 
   const toggleBookmark = useCallback(async (item: RssItem) => {
-    await aw().rssToggleBookmark(item.id, {
+    await rss.toggleBookmark(item.id, {
       sourceId: item.feedTitle || item.link,
       sourceTitle: item.feedTitle || '',
       title: item.title,
       link: item.link,
     })
-    const bookmarks = await aw().rssGetBookmarks()
+    const bookmarks = await rss.getBookmarks()
     setState((s) => ({
       ...s,
       bookmarks,
@@ -393,8 +392,8 @@ export function useRSS() {
         sortOrder: existing.groups.length,
       }
       existing.groups.push(newGroup)
-      await aw().rssSaveConfig(existing)
-      const fresh = await aw().rssGetConfig()
+      await rssMutations.saveConfig(existing)
+      const fresh = await rss.getConfig()
       setState((s) => ({ ...s, config: fresh }))
     },
     [state.config],
@@ -411,13 +410,13 @@ export function useRSS() {
         groups: config.groups.filter((g) => g.id !== groupId),
         sources: config.sources.filter((s: RssSource) => s.groupId !== groupId),
       }
-      await aw().rssSaveConfig(updated)
+      await rssMutations.saveConfig(updated)
       for (const source of removed) {
-        await aw().rssDeleteSourceContent(source.id)
+        await rssMutations.deleteSourceContent(source.id)
       }
       const [fresh, contents] = await Promise.all([
-        aw().rssGetConfig(),
-        aw().rssGetAllContents(),
+        rss.getConfig(),
+        rss.getAllContents(),
       ])
       setState((s) => ({
         ...s,
@@ -441,11 +440,11 @@ export function useRSS() {
         fetchIntervalMs: 1_800_000,
       }
       config.sources.push(source)
-      await aw().rssSaveConfig(config)
-      await aw().rssFetchFeed(source.id)
+      await rssMutations.saveConfig(config)
+      await rss.fetchFeed(source.id)
       const [fresh, contents] = await Promise.all([
-        aw().rssGetConfig(),
-        aw().rssGetAllContents(),
+        rss.getConfig(),
+        rss.getAllContents(),
       ])
       setState((s) => ({
         ...s,
@@ -465,8 +464,8 @@ export function useRSS() {
       const idx = config.sources.findIndex((s: RssSource) => s.id === sourceId)
       if (idx === -1) return
       config.sources[idx] = { ...config.sources[idx], ...updates }
-      await aw().rssSaveConfig(config)
-      const fresh = await aw().rssGetConfig()
+      await rssMutations.saveConfig(config)
+      const fresh = await rss.getConfig()
       setState((s) => ({ ...s, config: fresh }))
     },
     [state.config],
@@ -479,11 +478,11 @@ export function useRSS() {
       config.sources = config.sources.filter(
         (s: RssSource) => s.id !== sourceId,
       )
-      await aw().rssSaveConfig(config)
-      await aw().rssDeleteSourceContent(sourceId)
+      await rssMutations.saveConfig(config)
+      await rssMutations.deleteSourceContent(sourceId)
       const [fresh, contents] = await Promise.all([
-        aw().rssGetConfig(),
-        aw().rssGetAllContents(),
+        rss.getConfig(),
+        rss.getAllContents(),
       ])
       setState((s) => ({
         ...s,

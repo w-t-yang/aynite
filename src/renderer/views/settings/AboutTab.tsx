@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
 import { FLEX_CENTER_GAP_2 } from '../../../lib/constants/renderer/styles'
 import type { UpdateStatus } from '../../../lib/types/app'
+import { updateMutations } from '../../bridge/update'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
@@ -81,17 +82,17 @@ export function AboutTab({ state, actions }: AboutTabProps) {
     setUpdateInfo(null)
     setUpdateError(null)
     setDownloadProgress(0)
-    await window.aynite.checkForUpdates()
+    await updateMutations.check()
   }, [])
 
   const handleDownloadUpdate = useCallback(async () => {
     setUpdateStatus('downloading')
     setDownloadProgress(0)
-    await window.aynite.downloadUpdate()
+    await updateMutations.download()
   }, [])
 
   const handleInstallUpdate = useCallback(async () => {
-    await window.aynite.installUpdate()
+    await updateMutations.install()
   }, [])
 
   const handleCloseModal = useCallback(() => {

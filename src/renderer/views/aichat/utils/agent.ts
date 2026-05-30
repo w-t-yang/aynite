@@ -63,8 +63,8 @@ export async function runAgentLoop(
   }
 
   return new Promise((fulfill, reject) => {
-    window.aynite
-      .aiChat({
+    aiMutations
+      .chat({
         messages: [...messages, ...loopMessages],
         config: {
           id: 'temp',

@@ -12,6 +12,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { DEFAULT_AI_CONFIG, DEFAULT_AI_TOOLS } from '../../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../../lib/constants/keybindings'
 import type { Theme } from '../../../lib/constants/types'
+import { ai as aiBridge, aiMutations } from '../../bridge/ai'
+import { config, configMutations } from '../../bridge/config'
+import { spells, spellsMutations } from '../../bridge/spells'
+import { system as bridgeSystem, systemMutations } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { TabButton } from '../../shared/basic/TabButton'
@@ -78,15 +82,15 @@ export function Settings() {
       resCmdsItems,
       resTools,
     ] = await Promise.all([
-      window.aynite.getConfig('ai'),
-      window.aynite.getConfig('agents'),
-      window.aynite.getConfig('prompts'),
-      window.aynite.getConfig('keybindings'),
-      window.aynite.getConfig('skills'),
-      window.aynite.getAvailableSkills(),
-      window.aynite.getConfig('commands'),
-      window.aynite.getAvailableCommands(),
-      window.aynite.getConfig('tools'),
+      config.get('ai'),
+      config.get('agents'),
+      config.get('prompts'),
+      config.get('keybindings'),
+      config.get('skills'),
+      spells.getAvailableSkills(),
+      config.get('commands'),
+      spells.getAvailableCommands(),
+      config.get('tools'),
     ])
 
     if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.providers })
@@ -95,7 +99,7 @@ export function Settings() {
       setAgents({ activeId: resAgents.activeId, list: resAgents.list })
 
       // Load merged prompt for active agent
-      const merged = await window.aynite.getMergedSystemPrompt(
+      const merged = await aiBridge.getMergedSystemPrompt(
         normalizedGlobalPrompts,
         resAgents.list.find((a: any) => a.id === resAgents.activeId)
           ?.promptFiles || [],
@@ -120,7 +124,7 @@ export function Settings() {
     }
 
     // Initialize themes state
-    const systemFonts = await window.aynite.getSystemFonts()
+    const systemFonts = await bridgeSystem.getSystemFonts()
     setThemes({
       list: contextThemes,
       activeId: activeThemeId,
@@ -129,7 +133,7 @@ export function Settings() {
   }, [contextThemes, activeThemeId])
 
   const loadVersion = useCallback(async () => {
-    const version = await window.aynite.getConfig('version')
+    const version = await config.get('version')
     setAppVersion(version)
   }, [])
 
@@ -174,37 +178,37 @@ export function Settings() {
 
   const handleSetKeybindings = async (kb: SettingsState['keybindings']) => {
     setKeybindings(kb)
-    await window.aynite.setConfig('keybindings', { list: kb })
+    await configMutations.set('keybindings', { list: kb } as any)
   }
 
   const handleSetAI = async (newAI: SettingsState['ai']) => {
     setAI(newAI)
-    await window.aynite.setConfig('ai', {
+    await configMutations.set('ai', {
       activeId: newAI.activeId,
       providers: newAI.providers,
-    })
+    } as any)
   }
 
   const handleSetSkills = async (newSkills: any) => {
     setSkills(newSkills)
-    await window.aynite.setConfig('skills', newSkills)
+    await configMutations.set('skills', newSkills)
   }
 
   const handleSetCommands = async (newCommands: any) => {
     setCommands(newCommands)
-    await window.aynite.setConfig('commands', newCommands)
+    await configMutations.set('commands', newCommands)
   }
 
   const handleSetTools = async (newTools: SettingsState['aiTools']) => {
     setAiTools(newTools)
-    await window.aynite.setConfig('tools', {
+    await configMutations.set('tools', {
       active: newTools,
       list: availableTools,
-    })
+    } as any)
   }
 
   const handlePickSkillFolder = async () => {
-    const folder = await window.aynite.pickSkillFolder()
+    const folder = await spellsMutations.pickSkillFolder()
     if (folder) {
       const newFolders = Array.from(
         new Set([...(skills?.folders || []), folder]),
@@ -215,7 +219,7 @@ export function Settings() {
   }
 
   const handlePickCommandFolder = async () => {
-    const folder = await window.aynite.pickCommandFolder()
+    const folder = await spellsMutations.pickCommandFolder()
     if (folder) {
       const newFolders = Array.from(
         new Set([...(commands?.folders || []), folder]),
@@ -226,7 +230,7 @@ export function Settings() {
   }
 
   const handlePickPromptFile = async () => {
-    const file = await window.aynite.selectFile({
+    const file = await bridgeSystem.selectFile({
       title: 'Select Prompt File',
       filters: [{ name: 'Markdown', extensions: ['md'] }],
     })
@@ -359,16 +363,16 @@ export function Settings() {
                   setAgentsTab: async (payload) => {
                     if (payload.agents) {
                       setAgents(payload.agents)
-                      await window.aynite.setConfig('agents', {
+                      await configMutations.set('agents', {
                         activeId: payload.agents.activeId,
                         list: payload.agents.list,
-                      })
+                      } as any)
                     }
                     if (payload.prompts) {
                       setPrompts(payload.prompts)
-                      await window.aynite.setConfig('prompts', {
+                      await configMutations.set('prompts', {
                         files: payload.prompts.files,
-                      })
+                      } as any)
                     }
                     await loadSettings()
                   },
@@ -430,7 +434,7 @@ export function Settings() {
                   appVersion,
                 }}
                 actions={{
-                  onOpenExternal: (url) => window.aynite.openExternal(url),
+                  onOpenExternal: (url) => systemMutations.openExternal(url),
                 }}
               />
             )}
@@ -458,36 +462,36 @@ export function Settings() {
                   await loadSettings()
                 }
                 if (activeTab === 'keybindings') {
-                  await window.aynite.setConfig('keybindings', {
+                  await configMutations.set('keybindings', {
                     list: DEFAULT_KEYBINDINGS,
-                  })
+                  } as any)
                   await loadSettings()
                 }
 
                 if (activeTab === 'ai') {
-                  await window.aynite.setConfig('ai', {
+                  await configMutations.set('ai', {
                     activeId: DEFAULT_AI_CONFIG.activeId,
                     list: DEFAULT_AI_CONFIG.providers,
-                  })
+                  } as any)
                   await loadSettings()
                 }
                 if (activeTab === 'agents') {
-                  await window.aynite.restorePrompts()
+                  await aiMutations.restorePrompts()
                   await loadSettings()
                 }
                 if (activeTab === 'skills') {
-                  await window.aynite.restoreSkills()
+                  await spellsMutations.restoreSkills()
                   await loadSettings()
                 }
                 if (activeTab === 'commands') {
-                  await window.aynite.restoreCommands()
+                  await spellsMutations.restoreCommands()
                   await loadSettings()
                 }
                 if (activeTab === 'tools') {
-                  await window.aynite.setConfig('tools', {
+                  await configMutations.set('tools', {
                     active: DEFAULT_AI_TOOLS,
                     list: availableTools,
-                  })
+                  } as any)
                   await loadSettings()
                 }
                 setShowRestoreModal(false)

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { config } from '../../bridge/config'
 import { AIChat } from '../aichat/AIChat'
 import { FileBrowserPage } from '../file-browser/FileBrowserPage'
 import { useAppEvent } from '../ViewContext'
@@ -29,8 +30,8 @@ export function AiBrowserView() {
   const checkInitialMode = useCallback(async () => {
     try {
       const [activeSessionId, activeFile] = await Promise.all([
-        window.aynite.getConfig('activeSessionId'),
-        window.aynite.getConfig('activeFile'),
+        config.get('activeSessionId'),
+        config.get('activeFile'),
       ])
       if (activeSessionId) {
         setMode('aichat')

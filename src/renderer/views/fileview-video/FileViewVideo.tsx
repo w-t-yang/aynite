@@ -6,6 +6,7 @@ import {
   ZoomOut,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { file as bridgeFile } from '../../bridge/file'
 import { Button } from '../../shared/basic/Button'
 import { type FileInfo, formatFileSize } from '../../shared/lib/file-handlers'
 
@@ -53,7 +54,7 @@ export function FileViewVideo({ file }: FileViewVideoProps) {
 
     const load = async () => {
       try {
-        const data = await window.aynite.readFileBinary(file.path)
+        const data = await bridgeFile.readBinary(file.path)
         if (cancelled) return
         const blob = new Blob([data], { type: mimeType(file.extension) })
         const url = URL.createObjectURL(blob)

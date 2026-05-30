@@ -15,6 +15,9 @@ import type {
   MatchingView,
 } from '../../../../lib/types/file-browser'
 import type { FileInfo } from '../../../../lib/types/files'
+import { config } from '../../../bridge/config'
+import { file as bridgeFile } from '../../../bridge/file'
+import { git } from '../../../bridge/git'
 import { useAppEvent } from '../../ViewContext'
 
 const FILEVIEW_NAMES = Object.keys(fileviewComponents)
@@ -88,12 +91,12 @@ export function useFileModes(
       const matches: Array<{ view: string; config: FileviewConfig }> = []
       for (const viewName of FILEVIEW_NAMES) {
         try {
-          const config = (await window.aynite.getConfig('view-config', {
+          const viewCfg = (await config.getWithPayload('view-config', {
             view: viewName,
           })) as FileviewConfig | null
-          if (!config?.file_extensions) continue
-          if (config.file_extensions.includes(ext)) {
-            matches.push({ view: viewName, config })
+          if (!viewCfg?.file_extensions) continue
+          if (viewCfg.file_extensions.includes(ext)) {
+            matches.push({ view: viewName, config: viewCfg })
           }
         } catch {
           // skip unavailable fileviews
@@ -103,11 +106,11 @@ export function useFileModes(
       // 2. Check git diff status
       let diffResult: { head: string; current: string } | null = null
       try {
-        const statusMap = await (window as any).aynite.getGitStatus(activePath)
+        const statusMap = await git.getStatus(activePath)
         if (!cancelled && statusMap?.[activePath]) {
           const [base, current] = await Promise.all([
-            (window as any).aynite.getGitIndexContent(activePath),
-            (window as any).aynite.readFile(activePath),
+            git.getIndexContent(activePath),
+            bridgeFile.read(activePath),
           ])
           if (base) diffResult = { head: base, current: current || '' }
         }
@@ -154,7 +157,7 @@ export function useFileModes(
     let cancelled = false
     ;(async () => {
       try {
-        const views = await (window as any).aynite.getConfig('matching-views', {
+        const views = await config.getWithPayload('matching-views', {
           filePath: activePath,
         })
         if (!cancelled && Array.isArray(views) && views.length > 0) {

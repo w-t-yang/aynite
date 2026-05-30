@@ -14,7 +14,7 @@ interface ViewPreviewProps {
  *   - `file` param — absolute path to the file to render (URI encoded)
  *   - `preview=1` — signals the view to hide its header/toolbar
  *
- * The view reads the file via window.aynite.readFile() IPC bridge,
+ * The view reads the file via IPC bridge,
  * and the `aynite://` protocol resolves to ~/.aynite/views/[view]/.
  */
 export function ViewPreview({ viewName, filePath }: ViewPreviewProps) {

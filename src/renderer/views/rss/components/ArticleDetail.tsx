@@ -1,5 +1,6 @@
 import { Bookmark, BookmarkCheck, ExternalLink, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { rss } from '../../../bridge/rss'
 import { Button } from '../../../shared/basic/Button'
 import { cn } from '../../../shared/lib/utils'
 import type { RssItem } from '../types'
@@ -56,7 +57,7 @@ export function ArticleDetail({
     setIsSummarizing(true)
     setSummaryError(null)
     try {
-      const text = await window.aynite.rssSummarizeArticle(
+      const text = await rss.summarizeArticle(
         item.id,
         item.link,
         item.content,

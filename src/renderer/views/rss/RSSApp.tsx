@@ -1,5 +1,6 @@
 import { Loader2, RefreshCw, Rss } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { systemMutations } from '../../bridge/system'
 import { useAppEvent } from '../ViewContext'
 import { AddGroupModal } from './components/AddGroupModal'
 import { AddSourceModal } from './components/AddSourceModal'
@@ -90,7 +91,7 @@ export function RSSApp() {
   }, [rss])
 
   const handleOpenExternal = useCallback((url: string) => {
-    window.aynite.openExternal(url)
+    systemMutations.openExternal(url)
   }, [])
 
   const handleToggleBookmark = useCallback(() => {

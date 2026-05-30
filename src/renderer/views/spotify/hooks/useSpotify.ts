@@ -9,9 +9,9 @@ import type {
   SpotifyStore,
   SpotifyTopArtists,
 } from '../../../../lib/types/spotify'
+import { spotify, spotifyMutations } from '../../../bridge/spotify'
 import type { Section } from '../SpotifyApp'
 
-const aw = () => window.aynite
 const STALE_MS = 24 * 60 * 60 * 1000
 
 interface SpotifyState {
@@ -69,7 +69,7 @@ export function useSpotify() {
   const fetchAll = useCallback(async () => {
     setState((s) => ({ ...s, fetching: true, error: null }))
     try {
-      const result = await aw().spotifyFetchAll()
+      const result = await spotify.fetchAll()
       if (!result.success) {
         throw new Error(result.error)
       }
@@ -99,9 +99,9 @@ export function useSpotify() {
   const loadAll = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
-      const auth = await aw().spotifyCheckAuth()
-      const proto = await aw().spotifyCheckProtocol()
-      const clientId = await aw().spotifyGetClientId()
+      const auth = await spotify.checkAuth()
+      const proto = await spotify.checkProtocol()
+      const clientId = await spotify.getClientId()
       if (!auth) {
         setState((s) => ({
           ...s,
@@ -113,7 +113,7 @@ export function useSpotify() {
         return
       }
 
-      const store: SpotifyStore | null = await aw().spotifyLoadAll()
+      const store: SpotifyStore | null = await spotify.loadAll()
       if (store) {
         setState((s) => ({
           ...s,
@@ -163,7 +163,7 @@ export function useSpotify() {
   // Refresh playback state periodically when authenticated
   const refreshPlayback = useCallback(async () => {
     try {
-      const state = await aw().spotifyGetPlaybackState()
+      const state = await spotify.getPlaybackState()
       setState((s) => ({ ...s, playbackState: state }))
     } catch {
       // Silently fail - playback might not be available
@@ -192,13 +192,13 @@ export function useSpotify() {
     async (clientId: string, useProtocol?: boolean) => {
       setState((s) => ({ ...s, fetching: true, error: null }))
       try {
-        const result = await aw().spotifyInitAuth(clientId, useProtocol)
+        const result = await spotifyMutations.initAuth(clientId, useProtocol)
         if (!result.success) {
           throw new Error(result.error || 'Authorization failed')
         }
         setState((s) => ({ ...s, isAuthenticated: true, fetching: false }))
         // Fetch data immediately after successful auth
-        const res = await aw().spotifyFetchAll()
+        const res = await spotify.fetchAll()
         if (res.success) {
           const data = res.data as SpotifyStore
           setState((s) => ({
@@ -226,7 +226,7 @@ export function useSpotify() {
   )
 
   const logout = useCallback(async () => {
-    await aw().spotifyLogout()
+    await spotifyMutations.logout()
     setState((s) => ({
       ...s,
       profile: null,
@@ -262,8 +262,8 @@ export function useSpotify() {
     }))
     if (playlistId) {
       // First load cached tracks from disk
-      aw()
-        .spotifyLoadPlaylistTracks(playlistId)
+      spotify
+        .loadPlaylistTracks(playlistId)
         .then((res) => {
           if (res.success && res.data?.length > 0) {
             setState((s) => ({
@@ -276,8 +276,8 @@ export function useSpotify() {
         .catch(() => {})
 
       // Then fetch fresh tracks from API
-      aw()
-        .spotifyGetPlaylistTracks(playlistId)
+      spotify
+        .getPlaylistTracks(playlistId)
         .then((res) => {
           if (res.success) {
             setState((s) => ({
@@ -304,28 +304,28 @@ export function useSpotify() {
 
   // Playback controls
   const play = useCallback(async () => {
-    await aw().spotifyPlay()
+    await spotifyMutations.play()
     refreshPlayback()
   }, [refreshPlayback])
 
   const pause = useCallback(async () => {
-    await aw().spotifyPause()
+    await spotifyMutations.pause()
     refreshPlayback()
   }, [refreshPlayback])
 
   const next = useCallback(async () => {
-    await aw().spotifyNext()
+    await spotifyMutations.next()
     setTimeout(refreshPlayback, 500)
   }, [refreshPlayback])
 
   const previous = useCallback(async () => {
-    await aw().spotifyPrevious()
+    await spotifyMutations.previous()
     setTimeout(refreshPlayback, 500)
   }, [refreshPlayback])
 
   const playContext = useCallback(async (uri: string) => {
     try {
-      await aw().spotifyPlayContext(uri)
+      await spotifyMutations.playContext(uri)
     } catch {
       // Playback might not be available
     }
@@ -333,7 +333,7 @@ export function useSpotify() {
 
   const playTrack = useCallback(async (uri: string) => {
     try {
-      await aw().spotifyPlayTrack(uri)
+      await spotifyMutations.playTrack(uri)
     } catch {
       // Playback might not be available
     }
@@ -342,7 +342,7 @@ export function useSpotify() {
   const playTrackInContext = useCallback(
     async (trackUri: string, contextUri: string) => {
       try {
-        await aw().spotifyPlayTrackInContext(trackUri, contextUri)
+        await spotifyMutations.playTrackInContext(trackUri, contextUri)
       } catch {
         // Playback might not be available
       }
@@ -353,7 +353,7 @@ export function useSpotify() {
   const playTracks = useCallback(
     async (trackUris: string[], startUri?: string) => {
       try {
-        await aw().spotifyPlayTracks(trackUris, startUri)
+        await spotifyMutations.playTracks(trackUris, startUri)
       } catch {
         // Playback might not be available
       }

@@ -1,5 +1,10 @@
 import { Bot, Plus } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { configMutations } from '../../bridge/config'
+import { events } from '../../bridge/events'
+import { fileMutations } from '../../bridge/file'
+import { spells } from '../../bridge/spells'
+import { workspace } from '../../bridge/workspace'
 import { Header, InputArea, List, SessionsModal } from './components'
 import { useAIChat } from './hooks/useAIChat'
 import { getMessageText } from './utils/message'
@@ -107,13 +112,10 @@ export function AIChat() {
     }
   }, [messages, clearChat, copyToClipboard, loadSessions, inputRef])
 
-  const getAllFiles = useCallback(() => window.aynite.workspaceAllFiles(), [])
-  const getAvailableSkills = useCallback(
-    () => window.aynite.getAvailableSkills(),
-    [],
-  )
+  const getAllFiles = useCallback(() => workspace.allFiles(), [])
+  const getAvailableSkills = useCallback(() => spells.getAvailableSkills(), [])
   const getAvailableCommands = useCallback(
-    () => window.aynite.getAvailableCommands(),
+    () => spells.getAvailableCommands(),
     [],
   )
 
@@ -121,7 +123,7 @@ export function AIChat() {
     settings.ai?.providers && settings.ai.providers.length > 0
 
   const openAISettings = () => {
-    window.aynite.executeAppOperation('SETTINGS', { tab: 'ai' })
+    events.execute('SETTINGS', { tab: 'ai' })
   }
 
   return (
@@ -160,7 +162,7 @@ export function AIChat() {
             pendingApproval={pendingApproval}
             onApprove={handleApprove}
             onReject={handleReject}
-            onOpenFile={(path) => window.aynite.openFile(path)}
+            onOpenFile={(path) => fileMutations.open(path)}
             onCopy={copyToClipboard}
             onRevert={revertToMessage}
           />
@@ -206,7 +208,7 @@ export function AIChat() {
       {showHistory && (
         <SessionsModal
           sessions={sessions}
-          onSelect={(id) => window.aynite.setConfig('activeSessionId', id)}
+          onSelect={(id) => configMutations.set('activeSessionId', id)}
           onClose={() => setShowHistory(false)}
         />
       )}

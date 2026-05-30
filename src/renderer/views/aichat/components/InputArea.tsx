@@ -7,6 +7,7 @@ import {
   X,
 } from 'lucide-react'
 import { forwardRef } from 'react'
+import { configMutations } from '../../../bridge/config'
 import { Button } from '../../../shared/basic/Button'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
 import { cn } from '../../../shared/lib/utils'
@@ -82,7 +83,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
 
     const onSelectArtifact = (path: string) => {
       if (path?.includes('/')) {
-        window.aynite.setConfig('activeFile', path)
+        configMutations.set('activeFile', path)
       }
     }
 

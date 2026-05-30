@@ -1,3 +1,4 @@
+import { file as bridgeFile } from '../../bridge/file'
 import type { FileNode } from './components'
 
 export const findNodeData = (
@@ -35,7 +36,7 @@ export const updateNodeChildren = (
 
 export const fetchFiles = async (dirPath: string): Promise<FileNode[]> => {
   try {
-    const res = await window.aynite.listFolder(dirPath)
+    const res = await bridgeFile.list(dirPath)
     return res.map((f: any) => ({
       id: f.path,
       name: f.name,

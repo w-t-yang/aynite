@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react'
 import Markdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
+import { configMutations } from '../../bridge/config'
+import { systemMutations } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import type { FileInfo } from '../../shared/lib/file-handlers'
 import { highlightCode } from '../../shared/lib/syntax'
@@ -103,7 +105,7 @@ export const FileViewMarkdown: React.FC<{
       if (!isLocalPath(href)) return // let external links open normally
       e.preventDefault()
       const resolvedPath = resolveLocalPath(href, file.path)
-      window.aynite.setConfig('activeFile', resolvedPath)
+      configMutations.set('activeFile', resolvedPath)
     },
     [file.path],
   )
@@ -191,12 +193,12 @@ export const FileViewMarkdown: React.FC<{
                     href={href}
                     onClick={(e) => {
                       e.preventDefault()
-                      window.aynite.openExternal(href)
+                      systemMutations.openExternal(href)
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        window.aynite.openExternal(href)
+                        systemMutations.openExternal(href)
                       }
                     }}
                   >

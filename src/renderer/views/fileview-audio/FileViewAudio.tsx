@@ -1,5 +1,6 @@
 import { Music } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { file as bridgeFile } from '../../bridge/file'
 import { type FileInfo, formatFileSize } from '../../shared/lib/file-handlers'
 
 interface FileViewAudioProps {
@@ -30,7 +31,7 @@ export function FileViewAudio({ file }: FileViewAudioProps) {
 
     const load = async () => {
       try {
-        const data = await window.aynite.readFileBinary(file.path)
+        const data = await bridgeFile.readBinary(file.path)
         if (cancelled) return
         const blob = new Blob([data], { type: mimeType(file.extension) })
         const url = URL.createObjectURL(blob)

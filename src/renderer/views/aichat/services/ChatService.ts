@@ -16,6 +16,9 @@ import type { UIMessage } from 'ai'
 import { AppEvents } from '../../../../lib/constants/app'
 import type { AgentLoopConfig } from '../../../../lib/types/ai'
 import type { SessionState } from '../../../../lib/types/chat'
+import { ai as aiBridge, aiMutations } from '../../../bridge/ai'
+import { config } from '../../../bridge/config'
+import { workspace } from '../../../bridge/workspace'
 import { runAgentLoop } from '../utils/agent'
 import { executeCommandOnly } from '../utils/commands'
 import {
@@ -85,8 +88,8 @@ function scheduleSave(session: InternalSession) {
       // data with an empty array.
       if (session.state.messages.length === 0) return
 
-      const aiConfig = await window.aynite.getConfig('ai')
-      const agentsConfig = await window.aynite.getConfig('agents')
+      const aiConfig = await config.get('ai')
+      const agentsConfig = await config.get('agents')
 
       // Guard again after async IPC — clearChat() may have run during the await
       if (session.state.messages.length === 0) return
@@ -103,7 +106,7 @@ function scheduleSave(session: InternalSession) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      await window.aynite.saveSession(sid, session.state.messages, metadata)
+      await aiMutations.saveSession(sid, session.state.messages, metadata)
       session.lastSavedSnapshot = snapshot
     } catch {
       // silent
@@ -227,7 +230,7 @@ export function subscribe(
  * Load a session from disk into the service state.
  */
 export async function loadSessionById(sessionId: string) {
-  const res = await window.aynite.loadSession(sessionId)
+  const res = await aiBridge.loadSession(sessionId)
   if (!res) return
 
   const session = getOrCreateSession(sessionId)
@@ -251,7 +254,7 @@ export async function loadSessionById(sessionId: string) {
  */
 export async function createNewSession(): Promise<string> {
   const newId = Date.now().toString()
-  await window.aynite.saveSession(newId, [])
+  await aiMutations.saveSession(newId, [])
   return newId
 }
 
@@ -277,13 +280,13 @@ export async function sendMessage(
     activeFilePath,
     workspaceName,
   ] = await Promise.all([
-    window.aynite.getConfig('ai'),
-    window.aynite.getConfig('agents'),
-    window.aynite.getConfig('tools'),
-    window.aynite.getConfig('prompts'),
-    window.aynite.getWorkspaceFolders(),
-    _activeFile || window.aynite.getConfig('activeFile'),
-    window.aynite.getConfig('activeWorkspace'),
+    config.get('ai'),
+    config.get('agents'),
+    config.get('tools'),
+    config.get('prompts'),
+    workspace.folders(),
+    _activeFile || config.get('activeFile'),
+    config.get('activeWorkspace'),
   ])
 
   const workspaceFolders: string[] = folders || []
@@ -337,7 +340,7 @@ export async function sendMessage(
     for (const match of commandMatches) {
       const [_full, name, path] = match
       try {
-        const res = await window.aynite.runDirectCommand({
+        const res = await aiMutations.runDirectCommand({
           commandPath: path,
           params: [],
           currentFile: activeFilePath || '',
@@ -373,7 +376,7 @@ export async function sendMessage(
   const initialMessages = [...session.state.messages]
   if (initialMessages.length === 0) {
     const globalPromptFiles = promptsConfig?.files || []
-    const systemPrompt = await window.aynite.getMergedSystemPrompt(
+    const systemPrompt = await aiBridge.getMergedSystemPrompt(
       globalPromptFiles,
       activeAgent?.promptFiles || [],
     )
@@ -580,7 +583,7 @@ export function clearChat(sessionId: string) {
 export function handleApprove(sessionId: string) {
   const session = sessions.get(sessionId)
   if (session?.approvalId) {
-    window.aynite.respondToAiApproval(session.approvalId, true)
+    aiMutations.respondToAiApproval(session.approvalId, true)
     session.approvalId = null
   }
   if (session) {
@@ -594,7 +597,7 @@ export function handleApprove(sessionId: string) {
 export function handleReject(sessionId: string) {
   const session = sessions.get(sessionId)
   if (session?.approvalId) {
-    window.aynite.respondToAiApproval(session.approvalId, false)
+    aiMutations.respondToAiApproval(session.approvalId, false)
     session.approvalId = null
   }
   if (session) {

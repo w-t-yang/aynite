@@ -10,6 +10,10 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MoveHandler, Tree, type TreeApi } from 'react-arborist'
+import { config, configMutations } from '../../bridge/config'
+import { fileMutations } from '../../bridge/file'
+import { utils } from '../../bridge/utils'
+import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
 import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
@@ -37,7 +41,7 @@ export function Treeview() {
     isDirectory: boolean
     path: string
   }) => {
-    window.aynite.setConfig('activeFile', file.path)
+    configMutations.set('activeFile', file.path)
   }
   const _onOpenSettings = () => {}
   const _onClose = () => {}
@@ -184,13 +188,13 @@ export function Treeview() {
 
   const loadWorkspaceData = useCallback(async () => {
     try {
-      const wsConfig = await window.aynite.getWorkspacesList()
+      const wsConfig = await workspace.list()
       if (wsConfig) {
         setWorkspaces(wsConfig.list)
         setActiveWorkspace(wsConfig.active)
       }
 
-      const folders = await window.aynite.getWorkspaceFolders()
+      const folders = await workspace.folders()
       if (folders && Array.isArray(folders)) {
         const rootNodes = folders.map((f: string) => ({
           id: f,
@@ -233,7 +237,7 @@ export function Treeview() {
 
   // Initial load of active file
   useEffect(() => {
-    window.aynite.getConfig('activeFile').then((path: string) => {
+    config.get('activeFile').then((path: string | null) => {
       if (path) {
         setActiveFilePath(path)
       }
@@ -299,7 +303,7 @@ export function Treeview() {
       setShowNewWorkspaceModal(true)
       return
     }
-    await window.aynite.switchWorkspace(ws)
+    await workspaceMutations.switch(ws)
     await loadWorkspaceData()
     onWorkspaceChange?.()
   }
@@ -311,7 +315,7 @@ export function Treeview() {
       ;(window as any).showToast('Workspace already exists', 'error')
       return
     }
-    await window.aynite.createWorkspace(name)
+    await workspaceMutations.create(name)
     await loadWorkspaceData()
     onWorkspaceChange?.()
     setShowNewWorkspaceModal(false)
@@ -320,7 +324,7 @@ export function Treeview() {
 
   const handleAddFolder = async () => {
     try {
-      const res = await window.aynite.addWorkspaceFolder()
+      const res = await workspaceMutations.addFolder()
       if (res) {
         await loadWorkspaceData()
       }
@@ -356,7 +360,7 @@ export function Treeview() {
       }
       const newOrder = rootFilesPaths.filter((id) => !dragIds.includes(id))
       newOrder.splice(index, 0, ...dragIds)
-      await window.aynite.reorderWorkspaceFolders(newOrder)
+      await workspaceMutations.reorderFolders(newOrder)
       await loadWorkspaceData()
     } else {
       const hasRoot = dragIds.some((id) => rootFilesPaths.includes(id))
@@ -374,9 +378,9 @@ export function Treeview() {
       for (const id of dragIds) {
         const name = id.split(/[/\\]/).pop()
         if (!name) continue
-        const newPath = await window.aynite.joinPath(parentId, name)
+        const newPath = utils.joinPath(parentId, name)
         if (id !== newPath) {
-          await window.aynite.renameFile(id, newPath)
+          await fileMutations.rename(id, newPath)
           window.dispatchEvent(
             new CustomEvent('file-renamed', {
               detail: { oldPath: id, newPath },
@@ -429,7 +433,7 @@ export function Treeview() {
       return
     }
 
-    const dirname = await window.aynite.dirname(file.id)
+    const dirnameVal = utils.dirname(file.id)
     const isCreateOrPaste =
       action === 'new-file' || action === 'new-folder' || action === 'paste'
     const shouldReloadHere = file.isDirectory && isCreateOrPaste
@@ -443,15 +447,15 @@ export function Treeview() {
           for (const src of clipboard.paths) {
             const name = src.split(/[/\\]/).pop()
             if (!name) continue
-            const dest = await window.aynite.joinPath(parentDirForPaste, name)
-            await window.aynite.copyFile(src, dest)
+            const dest = utils.joinPath(parentDirForPaste, name)
+            await fileMutations.copy(src, dest)
           }
         } else if (
           (action === 'new-file' || action === 'new-folder') &&
           payloadVal
         ) {
-          const newPath = await window.aynite.joinPath(file.id, payloadVal)
-          await window.aynite.createFile(newPath, action === 'new-folder')
+          const newPath = utils.joinPath(file.id, payloadVal)
+          await fileMutations.create(newPath, action === 'new-folder')
           if (action === 'new-file' && onSelectFile) {
             onSelectFile({
               name: payloadVal,
@@ -464,20 +468,20 @@ export function Treeview() {
           payloadVal &&
           payloadVal !== file.name
         ) {
-          const newPath = await window.aynite.joinPath(dirname, payloadVal)
-          await window.aynite.renameFile(file.id, newPath)
+          const newPath = utils.joinPath(dirnameVal, payloadVal)
+          await fileMutations.rename(file.id, newPath)
           window.dispatchEvent(
             new CustomEvent('file-renamed', {
               detail: { oldPath: file.id, newPath },
             }),
           )
         } else if (action === 'delete') {
-          await window.aynite.deleteFile(file.id)
+          await fileMutations.delete(file.id)
           window.dispatchEvent(
             new CustomEvent('file-deleted', { detail: file.id }),
           )
         } else if (action === 'remove-from-workspace') {
-          await window.aynite.removeWorkspaceFolder(file.id)
+          await workspaceMutations.removeFolder(file.id)
         }
 
         window.dispatchEvent(

@@ -10,6 +10,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppEvents } from '../../../../lib/constants/app'
 import { DEFAULT_SETTINGS } from '../../../../lib/constants/settings'
 import type { SessionState } from '../../../../lib/types/chat'
+import { ai as aiBridge } from '../../../bridge/ai'
+import { config, configMutations } from '../../../bridge/config'
+import { utils } from '../../../bridge/utils'
+import { workspace } from '../../../bridge/workspace'
 import type { SettingsState } from '../../../shared/lib/types'
 import { useAppEventSubscriber } from '../../../views/ViewContext'
 import type { ChatInputHandle } from '../components/InputEditor'
@@ -61,7 +65,7 @@ export function useAIChat() {
   // ── Load initial session on mount ──
   useEffect(() => {
     const loadInitial = async () => {
-      const id = await window.aynite.getConfig('activeSessionId')
+      const id = await config.get('activeSessionId')
       if (id) {
         setActiveSessionId(id)
         await ChatService.loadSessionById(id)
@@ -74,10 +78,10 @@ export function useAIChat() {
   const loadSettings = useCallback(async () => {
     try {
       const [resAI, resAgents, resTools, resPrompts] = await Promise.all([
-        window.aynite.getConfig('ai'),
-        window.aynite.getConfig('agents'),
-        window.aynite.getConfig('tools'),
-        window.aynite.getConfig('prompts'),
+        config.get('ai'),
+        config.get('agents'),
+        config.get('tools'),
+        config.get('prompts'),
       ])
       setSettings((prev) => ({
         ...prev,
@@ -90,12 +94,12 @@ export function useAIChat() {
   }, [])
 
   const loadWorkspaceFolders = useCallback(async () => {
-    const folders = await window.aynite.getWorkspaceFolders()
+    const folders = await workspace.folders()
     if (folders) setWorkspaceFolders(folders)
   }, [])
 
   const loadArtifactStatus = useCallback(async () => {
-    const status = await window.aynite.getArtifactsStatus()
+    const status = await aiBridge.getArtifactsStatus()
     setArtifactStatus(status)
   }, [])
 
@@ -146,7 +150,7 @@ export function useAIChat() {
 
       // Step 3: Persist this session ID for the next app start (fire-and-forget).
       // In multi-tile, this would save to the tile's data instead of global config.
-      window.aynite.setConfig('activeSessionId', sid).catch(() => {})
+      configMutations.set('activeSessionId', sid).catch(() => {})
 
       setActiveSessionId(sid)
       await ChatService.sendMessage(sid, text, activeTabPath)
@@ -184,23 +188,23 @@ export function useAIChat() {
   // ── Other actions (stay in React) ──
 
   const loadSessions = useCallback(async () => {
-    const res = await window.aynite.listSessions()
+    const res = await aiBridge.listSessions()
     return res || []
   }, [])
 
   const copyToClipboard = useCallback((text: string) => {
-    window.aynite
+    utils
       .writeClipboard(text)
       .catch((err) => console.error('[useAIChat] Failed to copy', err))
   }, [])
 
   const switchAgent = useCallback(async (agentId: string) => {
-    await window.aynite.setConfig('agents', { activeId: agentId })
+    await configMutations.set('agents', { activeId: agentId } as any)
   }, [])
 
   const switchProvider = useCallback(
     async (providerId: string) => {
-      await window.aynite.setConfig('ai', { activeId: providerId })
+      await configMutations.set('ai', { activeId: providerId } as any)
       loadArtifactStatus()
     },
     [loadArtifactStatus],

@@ -1,6 +1,8 @@
 import { Copy, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Theme } from '../../../lib/constants/types'
+import { configMutations } from '../../bridge/config'
+import { themeMutations } from '../../bridge/theme'
 import { Button } from '../../shared/basic/Button'
 import { Input } from '../../shared/basic/Input'
 import { Modal } from '../../shared/basic/Modal'
@@ -81,10 +83,10 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
     setLocalThemes(newThemes)
     persist(newThemes, localActiveId)
     // Persist theme data to disk so iframes can load it
-    await window.aynite.setConfig('theme', {
+    await configMutations.set('theme', {
       id: updatedTheme.id,
       theme: updatedTheme,
-    })
+    } as any)
   }
 
   const handleDeleteTheme = async () => {
@@ -95,7 +97,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
     setLocalActiveId(newActiveId)
     persist(newThemes, newActiveId)
     // Delete theme file from disk
-    await window.aynite.deleteTheme(editingTheme.id)
+    await themeMutations.delete(editingTheme.id)
     setShowDeleteModal(false)
   }
 
@@ -126,7 +128,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
       setLocalActiveId(id)
       persist(newThemes, id)
       // Persist theme data to disk so it survives reload
-      await window.aynite.setConfig('theme', { id, theme: newTheme })
+      await configMutations.set('theme', { id, theme: newTheme } as any)
       setShowDuplicateModal(false)
       setDuplicateName('')
       setDuplicateError('')

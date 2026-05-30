@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai'
+import { aiMutations } from '../../../bridge/ai'
 import { genId } from './message'
 
 export async function executeCommandOnly(
@@ -26,7 +27,7 @@ export async function executeCommandOnly(
 
   setLoading(true)
   try {
-    const res = await window.aynite.runDirectCommand({
+    const res = await aiMutations.runDirectCommand({
       commandPath: path,
       params,
       currentFile: activeTabPath,

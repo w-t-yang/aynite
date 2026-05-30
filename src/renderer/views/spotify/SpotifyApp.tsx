@@ -1,6 +1,7 @@
 import { Disc3, Loader2, LogOut, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { SPOTIFY_AUTH_CALLBACK_HTTP } from '../../../lib/constants/app'
+import { systemMutations } from '../../bridge/system'
 import { PlayerBar } from './components/PlayerBar'
 import { Playlists } from './components/Playlists'
 import { PlaylistTracks } from './components/PlaylistTracks'
@@ -138,7 +139,7 @@ export function SpotifyApp() {
                   type="button"
                   className="text-primary underline"
                   onClick={() =>
-                    window.aynite.openExternal(
+                    systemMutations.openExternal(
                       'https://developer.spotify.com/dashboard',
                     )
                   }
