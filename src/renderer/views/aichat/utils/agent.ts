@@ -3,6 +3,7 @@ import type { AgentLoopConfig } from '../../../../lib/types/ai'
 export type { AgentLoopConfig }
 
 import type { TextStreamPart, UIMessage } from 'ai'
+import { aiMutations } from '../../../bridge/ai'
 import { genId } from './message'
 
 export async function runAgentLoop(
