@@ -51,6 +51,9 @@ export function useFileModes(
   const activePathRef = useRef(activePath)
   activePathRef.current = activePath
 
+  // ── Git status change listener (re-evaluate diff after commit) ────
+  const [_diffRefreshKey, setDiffRefreshKey] = useState(0)
+
   // ── Mode Selection Effect ──────────────────────────────────────────
   useEffect(() => {
     const prevActivePath = activePathRef.current
@@ -176,7 +179,6 @@ export function useFileModes(
   }, [activePath, fileInfo])
 
   // ── Git status change listener (re-evaluate diff after commit) ────
-  const [_diffRefreshKey, setDiffRefreshKey] = useState(0)
   const handleGitStatusChanged = useCallback((data: { root: string }) => {
     if (data?.root && activePathRef.current?.startsWith(data.root)) {
       setDiffRefreshKey((prev) => prev + 1)
