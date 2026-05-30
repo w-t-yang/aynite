@@ -131,7 +131,7 @@ export const WorkspaceProvider: React.FC<{
   }, [loadData])
 
   const switchWorkspace = useCallback(async (id: string) => {
-    await configMutations.set('activeWorkspace', id)
+    await workspaceMutations.switch(id)
     // Don't call loadData here — WORKSPACE_CHANGED event will trigger it
   }, [])
 
