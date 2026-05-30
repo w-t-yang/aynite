@@ -10,7 +10,8 @@ import { useApp } from '../../src/AppContext'
 import { KeyManager } from '../lib/key-handlers'
 
 export function FileSwitcher() {
-  const { setShowFileSwitcher, activeFile } = useApp()
+  const { setShowFileSwitcher, activeFile, getAllFiles, setActiveFile } =
+    useApp()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [files, setFiles] = useState<
@@ -19,10 +20,10 @@ export function FileSwitcher() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    window.aynite.workspaceAllFiles().then((res) => {
+    getAllFiles().then((res) => {
       if (res) setFiles(res)
     })
-  }, [])
+  }, [getAllFiles])
 
   const filtered = useMemo(() => {
     if (!query.trim()) {
@@ -50,10 +51,10 @@ export function FileSwitcher() {
 
   const handleSelect = useCallback(
     async (path: string) => {
-      await window.aynite.setConfig('activeFile', path)
+      await setActiveFile(path)
       setShowFileSwitcher(false)
     },
-    [setShowFileSwitcher],
+    [setShowFileSwitcher, setActiveFile],
   )
 
   useEffect(() => {

@@ -241,6 +241,7 @@ export const useApp = () => {
     workspaceConfig: workspace.workspaceConfig,
     workspaces: workspace.workspaces,
     availableViews: workspace.availableViews,
+    getAllFiles: workspace.getAllFiles,
     loadData: workspace.loadData,
     switchWorkspace: workspace.switchWorkspace,
     addWorkspace: workspace.addWorkspace,
@@ -270,6 +271,7 @@ export const useApp = () => {
     updateProgress: update.updateProgress,
     updateError: update.updateError,
     setUpdateStatus: update.setUpdateStatus,
+    installUpdate: update.installUpdate,
 
     // Window
     isMaximized: windowState.isMaximized,
@@ -281,6 +283,7 @@ export const useApp = () => {
     showFileSwitcher: ui.showFileSwitcher,
     setShowFileSwitcher: ui.setShowFileSwitcher,
     activeFile: ui.activeFile,
+    setActiveFile: ui.setActiveFile,
     showSettings: ui.showSettings,
     settingsTab: ui.settingsTab,
     setShowSettings: ui.setShowSettings,

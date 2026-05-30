@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { config } from '../../bridge/config'
+import { config, configMutations } from '../../bridge/config'
 
 export interface UIActions {
   setActiveFile: (path: string) => void
@@ -19,6 +19,8 @@ interface UIContextType {
   showFileSwitcher: boolean
   setShowFileSwitcher: (show: boolean) => void
   activeFile: string | null
+  /** Set active file via bridge — ACTIVE_FILE_CHANGED event will update state */
+  setActiveFile: (path: string) => Promise<void>
   showSettings: boolean
   settingsTab: string | null
   setShowSettings: (show: boolean, tab?: string) => void
@@ -54,6 +56,11 @@ export const UIProvider: React.FC<{
   const actionsRef = useRef<UIActions | null>(null)
 
   const dismissNotification = useCallback(() => setActiveNotification(null), [])
+
+  const setActiveFileViaBridge = useCallback(async (path: string) => {
+    await configMutations.set('activeFile', path)
+    // ACTIVE_FILE_CHANGED event will update activeFile state via AppContext router
+  }, [])
 
   const executeAppOperation = useCallback(
     (operation: string, payload?: unknown) => {
@@ -108,6 +115,7 @@ export const UIProvider: React.FC<{
         showFileSwitcher,
         setShowFileSwitcher,
         activeFile,
+        setActiveFile: setActiveFileViaBridge,
         showSettings,
         settingsTab,
         setShowSettings: (show: boolean, tab?: string) => {

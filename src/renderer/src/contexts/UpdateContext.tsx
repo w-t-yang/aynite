@@ -1,12 +1,14 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
 } from 'react'
 import type { UpdateStatus } from '../../../lib/types/app'
+import { updateMutations } from '../../bridge/update'
 
 export interface UpdateActions {
   setChecking: () => void
@@ -23,6 +25,8 @@ interface UpdateContextType {
   updateProgress: number
   updateError: string | null
   setUpdateStatus: (status: UpdateStatus) => void
+  /** Install update via bridge */
+  installUpdate: () => Promise<void>
   /** Exposed so AppContext single router can call event-driven updates */
   actionsRef: React.MutableRefObject<UpdateActions | null>
 }
@@ -70,6 +74,10 @@ export const UpdateProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [])
 
+  const installUpdate = useCallback(async () => {
+    await updateMutations.install()
+  }, [])
+
   return (
     <UpdateContext.Provider
       value={{
@@ -78,6 +86,7 @@ export const UpdateProvider: React.FC<{ children: ReactNode }> = ({
         updateProgress,
         updateError,
         setUpdateStatus,
+        installUpdate,
         actionsRef,
       }}
     >

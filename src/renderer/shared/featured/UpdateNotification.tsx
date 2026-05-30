@@ -12,6 +12,7 @@ export function UpdateNotification() {
     updateProgress,
     updateError,
     setUpdateStatus,
+    installUpdate,
   } = useApp()
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export function UpdateNotification() {
         {updateStatus === 'downloaded' && (
           <Button
             variant="primary"
-            onClick={() => window.aynite.installUpdate()}
+            onClick={() => installUpdate()}
             className="w-full mt-1 shadow-lg shadow-primary/20"
           >
             <RefreshCw size={14} /> Restart and Update

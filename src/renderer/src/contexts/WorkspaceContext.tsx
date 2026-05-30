@@ -10,7 +10,7 @@ import {
 import type { WorkspaceConfig } from '../../../lib/constants/types'
 import { config, configMutations } from '../../bridge/config'
 import { system as bridgeSystem, systemMutations } from '../../bridge/system'
-import { workspaceMutations } from '../../bridge/workspace'
+import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { getAllLeafIds } from '../utils/tile'
 
 export interface WorkspaceActions {
@@ -20,6 +20,9 @@ export interface WorkspaceActions {
 interface WorkspaceContextType {
   workspaceConfig: WorkspaceConfig | null
   workspaces: string[]
+  getAllFiles: () => Promise<
+    { name: string; path: string; isDirectory: boolean }[]
+  >
   loadData: () => void
   switchWorkspace: (id: string) => void
   addWorkspace: (name: string) => void
@@ -60,6 +63,10 @@ export const WorkspaceProvider: React.FC<{
 
   const registerRefreshThemes = useCallback((fn: () => void) => {
     refreshThemesRef.current = fn
+  }, [])
+
+  const getAllFiles = useCallback(async () => {
+    return workspace.allFiles()
   }, [])
 
   const loadData = useCallback(async () => {
@@ -159,6 +166,7 @@ export const WorkspaceProvider: React.FC<{
         workspaceConfig,
         workspaces,
         availableViews,
+        getAllFiles,
         loadData,
         switchWorkspace,
         addWorkspace,
