@@ -7,13 +7,15 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
 import type { WorkspaceConfig } from '../../../lib/constants/types'
 import { config, configMutations } from '../../bridge/config'
-import { events } from '../../bridge/events'
 import { system as bridgeSystem, systemMutations } from '../../bridge/system'
 import { workspaceMutations } from '../../bridge/workspace'
 import { getAllLeafIds } from '../utils/tile'
+
+export interface WorkspaceActions {
+  loadData: () => void
+}
 
 interface WorkspaceContextType {
   workspaceConfig: WorkspaceConfig | null
@@ -31,6 +33,8 @@ interface WorkspaceContextType {
   availableViews: { id: string; name: string }[]
   registerSetActiveTileId: (fn: (id: string | null) => void) => void
   registerRefreshThemes: (fn: () => void) => void
+  /** Exposed so AppContext single router can call event-driven updates */
+  actionsRef: React.MutableRefObject<WorkspaceActions | null>
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
@@ -51,6 +55,8 @@ export const WorkspaceProvider: React.FC<{
   const setActiveTileIdRef = useRef<((id: string | null) => void) | null>(null)
   // Ref to refreshThemes from ThemeContext — set by registerRefreshThemes
   const refreshThemesRef = useRef<(() => void) | null>(null)
+  // Ref exposed to AppContext for centralized event routing
+  const actionsRef = useRef<WorkspaceActions | null>(null)
 
   const registerRefreshThemes = useCallback((fn: () => void) => {
     refreshThemesRef.current = fn
@@ -107,20 +113,10 @@ export const WorkspaceProvider: React.FC<{
     loadDataRef.current = loadData
   }, [loadData])
 
-  // IPC: workspace changes from other windows
-  // Note: In the new architecture, this listener will be centralized in AppContext.
-  // For now, we use bridge.events to replace the raw window.aynite call.
+  // Keep actions ref in sync for AppContext
   useEffect(() => {
-    const unbind = events.onAppEvent((event: { type: string }) => {
-      if (
-        event.type === AppEvents.WORKSPACE_CHANGED ||
-        event.type === AppEvents.WORKSPACE_UPDATED
-      ) {
-        loadDataRef.current()
-      }
-    })
-    return unbind
-  }, [])
+    actionsRef.current = { loadData }
+  }, [loadData])
 
   const switchWorkspace = useCallback(async (id: string) => {
     await configMutations.set('activeWorkspace', id)
@@ -171,6 +167,7 @@ export const WorkspaceProvider: React.FC<{
         setWorkspaceConfig,
         registerSetActiveTileId,
         registerRefreshThemes,
+        actionsRef,
       }}
     >
       {children}

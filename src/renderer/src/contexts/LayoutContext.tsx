@@ -7,16 +7,18 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
 import type { LayoutNode, LeafNode } from '../../../lib/constants/types'
 import { configMutations } from '../../bridge/config'
-import { events } from '../../bridge/events'
 import {
   executeLayoutOperation,
   updateLayoutInConfig,
   updateNodeInLayout,
 } from '../utils/tile'
 import { useWorkspace } from './WorkspaceContext'
+
+export interface LayoutActions {
+  setActiveTileId: (id: string | null) => void
+}
 
 interface LayoutContextType {
   activeTileId: string | null
@@ -30,6 +32,8 @@ interface LayoutContextType {
   executeAppOperation: (operation: string, payload?: unknown) => void
   handleResizeStart: () => void
   handleResizeEnd: () => void
+  /** Exposed so AppContext single router can call event-driven updates */
+  actionsRef: React.MutableRefObject<LayoutActions | null>
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined)
@@ -191,21 +195,18 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     })
   }, [setWorkspaceConfig])
 
+  const actionsRef = useRef<LayoutActions | null>(null)
+
+  // Keep actions ref in sync
+  useEffect(() => {
+    actionsRef.current = { setActiveTileId }
+  }, [])
+
   // Register setActiveTileId with WorkspaceProvider so loadData can set it
   const { registerSetActiveTileId } = useWorkspace()
   useEffect(() => {
     registerSetActiveTileId(setActiveTileId)
   }, [registerSetActiveTileId])
-
-  // IPC: tile activation
-  useEffect(() => {
-    const unbind = events.onAppEvent((event: { type: string; data: any }) => {
-      if (event.type === AppEvents.TILE_ACTIVATED && event.data) {
-        setActiveTileId(event.data as string)
-      }
-    })
-    return unbind
-  }, [])
 
   return (
     <LayoutContext.Provider
@@ -221,6 +222,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         executeAppOperation,
         handleResizeStart,
         handleResizeEnd,
+        actionsRef,
       }}
     >
       {children}

@@ -4,19 +4,24 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
 import type { Theme } from '../../../lib/constants/types'
 import { config, configMutations } from '../../bridge/config'
-import { events } from '../../bridge/events'
 import { applyThemeColors } from '../../shared/lib/utils'
+
+export interface ThemeActions {
+  refreshThemes: () => Promise<void>
+}
 
 interface ThemeContextType {
   themes: Theme[]
   activeTheme: Theme | null
   setTheme: (themeId: string) => Promise<void>
   refreshThemes: () => Promise<void>
+  /** Exposed so AppContext single router can call event-driven updates */
+  actionsRef: React.MutableRefObject<ThemeActions | null>
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -26,6 +31,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [themes, setThemes] = useState<Theme[]>([])
   const [activeTheme, setActiveTheme] = useState<Theme | null>(null)
+
+  const actionsRef = useRef<ThemeActions | null>(null)
 
   useEffect(() => {
     if (activeTheme) {
@@ -49,25 +56,19 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [])
 
+  // Keep actions ref in sync
+  useEffect(() => {
+    actionsRef.current = { refreshThemes }
+  }, [refreshThemes])
+
   const setTheme = useCallback(async (themeId: string) => {
     await configMutations.set('activeTheme', themeId)
     // Don't call refreshThemes here — THEME_CHANGED event will trigger it
   }, [])
 
-  // IPC: theme changes from other windows
-  // Note: Will be centralized in AppContext in future phase
-  useEffect(() => {
-    const unbind = events.onAppEvent((event: { type: string }) => {
-      if (event.type === AppEvents.THEME_CHANGED) {
-        refreshThemes()
-      }
-    })
-    return unbind
-  }, [refreshThemes])
-
   return (
     <ThemeContext.Provider
-      value={{ themes, activeTheme, setTheme, refreshThemes }}
+      value={{ themes, activeTheme, setTheme, refreshThemes, actionsRef }}
     >
       {children}
     </ThemeContext.Provider>

@@ -3,13 +3,20 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
+
+export interface WindowActions {
+  setMaximized: (isMaximized: boolean) => void
+  setFullscreen: (isFullscreen: boolean) => void
+}
 
 interface WindowContextType {
   isMaximized: boolean
   isFullscreen: boolean
+  /** Exposed so AppContext single router can call event-driven updates */
+  actionsRef: React.MutableRefObject<WindowActions | null>
 }
 
 const WindowContext = createContext<WindowContextType | undefined>(undefined)
@@ -19,26 +26,18 @@ export const WindowProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [isMaximized, setIsMaximized] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const actionsRef = useRef<WindowActions | null>(null)
 
+  // Keep actions ref in sync
   useEffect(() => {
-    if (!window.aynite) return
-    const unbind = window.aynite.onAppEvent(
-      (event: { type: string; data: any }) => {
-        switch (event.type) {
-          case AppEvents.WINDOW_MAXIMIZED_CHANGED:
-            setIsMaximized((event.data as any)?.isMaximized ?? false)
-            break
-          case AppEvents.FULLSCREEN_CHANGED:
-            setIsFullscreen((event.data as any)?.isFullscreen ?? false)
-            break
-        }
-      },
-    )
-    return unbind
+    actionsRef.current = {
+      setMaximized: (val) => setIsMaximized(val),
+      setFullscreen: (val) => setIsFullscreen(val),
+    }
   }, [])
 
   return (
-    <WindowContext.Provider value={{ isMaximized, isFullscreen }}>
+    <WindowContext.Provider value={{ isMaximized, isFullscreen, actionsRef }}>
       {children}
     </WindowContext.Provider>
   )

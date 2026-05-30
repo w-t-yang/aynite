@@ -3,10 +3,19 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
 import type { UpdateStatus } from '../../../lib/types/app'
+
+export interface UpdateActions {
+  setChecking: () => void
+  setAvailable: (info: any) => void
+  setIdle: () => void
+  setError: (err: string) => void
+  setDownloading: (percent: number) => void
+  setDownloaded: (info: any) => void
+}
 
 interface UpdateContextType {
   updateStatus: UpdateStatus
@@ -14,6 +23,8 @@ interface UpdateContextType {
   updateProgress: number
   updateError: string | null
   setUpdateStatus: (status: UpdateStatus) => void
+  /** Exposed so AppContext single router can call event-driven updates */
+  actionsRef: React.MutableRefObject<UpdateActions | null>
 }
 
 const UpdateContext = createContext<UpdateContextType | undefined>(undefined)
@@ -26,37 +37,37 @@ export const UpdateProvider: React.FC<{ children: ReactNode }> = ({
   const [updateProgress, setUpdateProgress] = useState<number>(0)
   const [updateError, setUpdateError] = useState<string | null>(null)
 
+  const actionsRef = useRef<UpdateActions | null>(null)
+
+  // Keep actions ref in sync
   useEffect(() => {
-    if (!window.aynite) return
-    const unbind = window.aynite.onAppEvent(
-      (event: { type: string; data: any }) => {
-        switch (event.type) {
-          case AppEvents.UPDATE_CHECKING:
-            setUpdateStatus('checking')
-            break
-          case AppEvents.UPDATE_AVAILABLE:
-            setUpdateStatus('available')
-            setUpdateInfo(event.data)
-            break
-          case AppEvents.UPDATE_NOT_AVAILABLE:
-            setUpdateStatus('idle')
-            break
-          case AppEvents.UPDATE_ERROR:
-            setUpdateStatus('error')
-            setUpdateError(event.data)
-            break
-          case AppEvents.UPDATE_PROGRESS:
-            setUpdateStatus('downloading')
-            setUpdateProgress(event.data.percent)
-            break
-          case AppEvents.UPDATE_DOWNLOADED:
-            setUpdateStatus('downloaded')
-            setUpdateInfo(event.data)
-            break
-        }
+    actionsRef.current = {
+      setChecking: () => {
+        setUpdateStatus('checking')
       },
-    )
-    return unbind
+      setAvailable: (info) => {
+        setUpdateStatus('available')
+        setUpdateInfo(info)
+      },
+      setIdle: () => {
+        setUpdateStatus('idle')
+        setUpdateInfo(null)
+        setUpdateProgress(0)
+      },
+      setError: (err) => {
+        setUpdateStatus('error')
+        setUpdateError(err)
+      },
+      setDownloading: (percent) => {
+        setUpdateStatus('downloading')
+        setUpdateProgress(percent)
+      },
+      setDownloaded: (info) => {
+        setUpdateStatus('downloaded')
+        setUpdateProgress(100)
+        setUpdateInfo(info)
+      },
+    }
   }, [])
 
   return (
@@ -67,6 +78,7 @@ export const UpdateProvider: React.FC<{ children: ReactNode }> = ({
         updateProgress,
         updateError,
         setUpdateStatus,
+        actionsRef,
       }}
     >
       {children}

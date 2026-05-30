@@ -4,84 +4,167 @@
  * Composes all domain contexts into a single provider and exposes
  * a combined useApp() hook that preserves the original interface.
  *
- * The cross-cutting IPC event listener (iframe relaying) lives here
- * since it touches all domains and sends postMessage to all iframes.
+ * SINGLE EVENT ROUTER — This is the ONLY file that sets up
+ * a bridge.events.onAppEvent listener. All events are routed
+ * to context providers via their exposed action refs, then
+ * relayed to all iframe views via postMessage.
  *
  * Provider nesting order:
- *   Theme > Update > Window > Workspace > Layout > UI > IPC Relay
+ *   Theme > Update > Window > Workspace > Layout > UI > Event Router
  *
  * LayoutProvider reads workspace state from WorkspaceContext internally,
  * so WorkspaceProvider must be above it.
  * UIProvider needs executeAppOperation from LayoutContext.
- * IPC Relay needs useTheme() and useWorkspace().
  */
 import type React from 'react'
 import { useEffect, useRef } from 'react'
 import { AppEvents } from '../../lib/constants/app'
+import { events } from '../bridge/events'
+import type { LayoutActions } from './contexts/LayoutContext'
 import { LayoutProvider, useLayout } from './contexts/LayoutContext'
+import type { ThemeActions } from './contexts/ThemeContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
+import type { UIActions } from './contexts/UIContext'
 import { UIProvider, useUI } from './contexts/UIContext'
+import type { UpdateActions } from './contexts/UpdateContext'
 import { UpdateProvider, useUpdate } from './contexts/UpdateContext'
+import type { WindowActions } from './contexts/WindowContext'
 import { useWindowState, WindowProvider } from './contexts/WindowContext'
+import type { WorkspaceActions } from './contexts/WorkspaceContext'
 import { useWorkspace, WorkspaceProvider } from './contexts/WorkspaceContext'
 
-// ─── Cross-cutting IPC Listener ─────────────────────────────────────────
-// Relays all app events to iframes via postMessage.
+// ─── Event Router ──────────────────────────────────────────────────────
+// SINGLE point of event reception. All events from main process flow
+// through this single listener, which:
+//   1. Routes to the correct context provider via action refs
+//   2. Relays to all iframe views via postMessage
 
-function useIpcRelay() {
-  const { refreshThemes } = useTheme()
-  const { loadData } = useWorkspace()
+function useEventRouter() {
+  const themeRef = useRef<ThemeActions | null>(null)
+  const workspaceRef = useRef<WorkspaceActions | null>(null)
+  const uiRef = useRef<UIActions | null>(null)
+  const updateRef = useRef<UpdateActions | null>(null)
+  const windowRef = useRef<WindowActions | null>(null)
+  const layoutRef = useRef<LayoutActions | null>(null)
 
-  const handlersRef = useRef({ refreshThemes, loadData })
+  // Sync refs from context providers
+  const { actionsRef: themeActionsRef } = useTheme()
+  const { actionsRef: workspaceActionsRef } = useWorkspace()
+  const { actionsRef: uiActionsRef } = useUI()
+  const { actionsRef: updateActionsRef } = useUpdate()
+  const { actionsRef: windowActionsRef } = useWindowState()
+  const { actionsRef: layoutActionsRef } = useLayout()
+
+  // Keep synced on every render
+  themeRef.current = themeActionsRef.current
+  workspaceRef.current = workspaceActionsRef.current
+  uiRef.current = uiActionsRef.current
+  updateRef.current = updateActionsRef.current
+  windowRef.current = windowActionsRef.current
+  layoutRef.current = layoutActionsRef.current
+
   useEffect(() => {
-    handlersRef.current = { refreshThemes, loadData }
-  }, [refreshThemes, loadData])
+    const unbind = events.onAppEvent((event: { type: string; data: any }) => {
+      // Step 1: Route to context providers
+      switch (event.type) {
+        case AppEvents.THEME_CHANGED:
+          themeRef.current?.refreshThemes()
+          break
 
-  useEffect(() => {
-    if (!window.aynite) return
+        case AppEvents.WORKSPACE_CHANGED:
+        case AppEvents.WORKSPACE_UPDATED:
+          workspaceRef.current?.loadData()
+          break
 
-    const unbind = window.aynite.onAppEvent(
-      (event: { type: string; data: any }) => {
-        for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
-          'iframe',
-        )) {
-          iframe.contentWindow?.postMessage(
-            { type: `aynite:${event.type}`, data: event.data },
-            '*',
+        case AppEvents.ACTIVE_FILE_CHANGED: {
+          const path = (event.data as any)?.path || (event.data as string)
+          uiRef.current?.setActiveFile(path)
+          break
+        }
+
+        case AppEvents.UPDATE_CHECKING:
+          updateRef.current?.setChecking()
+          break
+        case AppEvents.UPDATE_AVAILABLE:
+          updateRef.current?.setAvailable(event.data)
+          break
+        case AppEvents.UPDATE_NOT_AVAILABLE:
+          updateRef.current?.setIdle()
+          break
+        case AppEvents.UPDATE_ERROR:
+          updateRef.current?.setError(event.data)
+          break
+        case AppEvents.UPDATE_DOWNLOADING:
+          // The first event with 0% triggers setDownloading
+          break
+        case AppEvents.UPDATE_PROGRESS:
+          updateRef.current?.setDownloading((event.data as any)?.percent ?? 0)
+          break
+        case AppEvents.UPDATE_DOWNLOADED:
+          updateRef.current?.setDownloaded(event.data)
+          break
+
+        case AppEvents.WINDOW_MAXIMIZED_CHANGED:
+          windowRef.current?.setMaximized(
+            (event.data as any)?.isMaximized ?? false,
           )
-        }
+          break
+        case AppEvents.FULLSCREEN_CHANGED:
+          windowRef.current?.setFullscreen(
+            (event.data as any)?.isFullscreen ?? false,
+          )
+          break
 
-        const { refreshThemes: rt, loadData: ld } = handlersRef.current
-        switch (event.type) {
-          case AppEvents.CONFIG_ERROR:
-            console.error('[App] Config Error:', event.data)
-            break
-          case AppEvents.THEME_CHANGED:
-            rt()
-            break
-          case AppEvents.WORKSPACE_CHANGED:
-          case AppEvents.WORKSPACE_UPDATED:
-            ld()
-            break
-        }
-      },
-    )
+        case AppEvents.TILE_ACTIVATED:
+          if (event.data) {
+            layoutRef.current?.setActiveTileId(event.data as string)
+          }
+          break
+
+        case AppEvents.CONFIG_ERROR:
+          console.error('[App] Config Error:', event.data)
+          break
+
+        // Events that are view-level only (no main-renderer handler)
+        case AppEvents.GIT_STATUS_CHANGED:
+        case AppEvents.FS_CHANGE:
+        case AppEvents.FILE_RENAMED:
+        case AppEvents.FILE_DELETED:
+        case AppEvents.AI_CHAT_DELTA:
+        case AppEvents.AI_APPROVAL_REQUEST:
+        case AppEvents.ACTIVE_SESSION_CHANGED:
+        case AppEvents.SESSION_DELETED:
+        case AppEvents.SESSION_SAVED:
+        case AppEvents.CONFIG_CHANGED:
+          // These are relayed to iframes — no main-renderer handler
+          break
+      }
+
+      // Step 2: Relay to all iframe views via postMessage
+      for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
+        'iframe',
+      )) {
+        iframe.contentWindow?.postMessage(
+          { type: `aynite:${event.type}`, data: event.data },
+          '*',
+        )
+      }
+    })
 
     return unbind
   }, [])
 }
 
 // ─── App Operations Listener ───────────────────────────────────────────
-// Listens for operations sent from the main process (e.g. keyboard shortcuts
-// matched via before-input-event in src/main/keybindings/index.ts) and
-// delegates them to the app operation handler.
+// Listens for operations sent from the main process (e.g. keyboard shortcuts)
+// and delegates them to the UI context's operation handler.
 
 function useAppOperations() {
   const { executeAppOperation } = useUI()
 
   useEffect(() => {
-    if (!window.aynite) return
-    const unbind = window.aynite.onAppOperation(
+    if (typeof window === 'undefined') return
+    const unbind = events.onAppOperation(
       (operation: string, data?: unknown) => {
         executeAppOperation(operation, data)
       },
@@ -91,7 +174,7 @@ function useAppOperations() {
 }
 
 // ─── Inner Providers ────────────────────────────────────────────────────
-// Nested inside LayoutProvider, provides UI context and IPC relay.
+// Nested inside LayoutProvider, provides UI context and event routing.
 
 const InnerProviders: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -100,7 +183,7 @@ const InnerProviders: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <UIProvider layoutExecuteAppOperation={layoutExecOp}>
-      <IpcRelayWrapper />
+      <EventRouterWrapper />
       <AppOperationsListener />
       {children}
     </UIProvider>
@@ -112,15 +195,13 @@ function AppOperationsListener() {
   return null
 }
 
-function IpcRelayWrapper() {
-  useIpcRelay()
-  // Trigger initial theme load on app startup
+function EventRouterWrapper() {
+  useEventRouter()
   const { refreshThemes } = useTheme()
   const { registerRefreshThemes } = useWorkspace()
   useEffect(() => {
     refreshThemes()
   }, [refreshThemes])
-  // Register refreshThemes with WorkspaceContext so loadData can trigger it
   useEffect(() => {
     registerRefreshThemes(refreshThemes)
   }, [registerRefreshThemes, refreshThemes])

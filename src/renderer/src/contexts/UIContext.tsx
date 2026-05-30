@@ -4,9 +4,14 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
+import { config } from '../../bridge/config'
+
+export interface UIActions {
+  setActiveFile: (path: string) => void
+}
 
 interface UIContextType {
   showTileControls: boolean
@@ -24,6 +29,8 @@ interface UIContextType {
   } | null
   dismissNotification: () => void
   executeAppOperation: (operation: string, payload?: unknown) => void
+  /** Exposed so AppContext single router can call event-driven updates */
+  actionsRef: React.MutableRefObject<UIActions | null>
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined)
@@ -43,6 +50,8 @@ export const UIProvider: React.FC<{
     title: string
     message: string
   } | null>(null)
+
+  const actionsRef = useRef<UIActions | null>(null)
 
   const dismissNotification = useCallback(() => setActiveNotification(null), [])
 
@@ -76,21 +85,19 @@ export const UIProvider: React.FC<{
     [layoutExecuteAppOperation],
   )
 
-  // Load initial active file + listen for changes
+  // Keep actions ref in sync so AppContext can call it
   useEffect(() => {
-    if (!window.aynite) return
-    window.aynite.getConfig('activeFile').then((path: string | null) => {
-      if (path) setActiveFile(path)
-    })
+    actionsRef.current = { setActiveFile }
+  }, [])
 
-    const unbind = window.aynite.onAppEvent(
-      (event: { type: string; data: any }) => {
-        if (event.type === AppEvents.ACTIVE_FILE_CHANGED && event.data) {
-          setActiveFile((event.data as any).path || (event.data as string))
-        }
-      },
-    )
-    return unbind
+  // Load initial active file
+  useEffect(() => {
+    config
+      .get('activeFile')
+      .then((path: string | null) => {
+        if (path) setActiveFile(path)
+      })
+      .catch(() => {})
   }, [])
 
   return (
@@ -111,6 +118,7 @@ export const UIProvider: React.FC<{
         activeNotification,
         dismissNotification,
         executeAppOperation,
+        actionsRef,
       }}
     >
       {children}
