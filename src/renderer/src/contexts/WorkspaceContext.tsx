@@ -71,17 +71,22 @@ export const WorkspaceProvider: React.FC<{
 
   const loadData = useCallback(async () => {
     try {
-      const [wsConfig, activeId] = await Promise.all([
+      const [wsConfigs, activeId] = await Promise.all([
         config.get('workspaces'),
         config.get('activeWorkspace'),
       ])
-      const workspaceList = wsConfig?.list || []
+
+      // wsConfigs is an array of WorkspaceConfig objects returned by the
+      // workspaceHandlers handler for key 'workspaces'.
+      const workspaceList: WorkspaceConfig[] = Array.isArray(wsConfigs)
+        ? wsConfigs
+        : []
       const wsId = activeId
 
-      // Find the matching workspace config
+      // Find the matching workspace config directly from the array
       const matchedConfig =
         workspaceList.length > 0
-          ? (await config.getWithPayload('workspace', { id: wsId })) || null
+          ? workspaceList.find((w: any) => w.id === wsId) || null
           : null
 
       setWorkspaceConfig(matchedConfig)
@@ -97,7 +102,7 @@ export const WorkspaceProvider: React.FC<{
           }
         }
       }
-      setWorkspaces(workspaceList)
+      setWorkspaces(workspaceList.map((w: any) => w.id))
 
       // Load available views
       const views = await bridgeSystem.getAvailableViews()
