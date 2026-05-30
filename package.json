@@ -29,6 +29,7 @@
     "audit:theme": "tsx scripts/base-audit-theme.ts",
     "audit:components": "tsx scripts/base-audit-components.ts",
     "audit:bridge": "tsx scripts/audit-ipc-bridge.ts",
+"audit:bridge-architecture": "tsx scripts/audit-bridge-architecture.ts",
     "audit:communication": "tsx scripts/audit-communication.ts",
     "audit:complexity": "tsx scripts/audit-complexity.ts",
     "audit:exports": "tsx scripts/audit-exports.ts",

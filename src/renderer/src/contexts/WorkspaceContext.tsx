@@ -8,8 +8,11 @@ import {
   useState,
 } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
-import { ayniteConfig } from '../../../lib/constants/renderer/config'
 import type { WorkspaceConfig } from '../../../lib/constants/types'
+import { config, configMutations } from '../../bridge/config'
+import { events } from '../../bridge/events'
+import { system as bridgeSystem, systemMutations } from '../../bridge/system'
+import { workspaceMutations } from '../../bridge/workspace'
 import { getAllLeafIds } from '../utils/tile'
 
 interface WorkspaceContextType {
@@ -53,20 +56,26 @@ export const WorkspaceProvider: React.FC<{
     refreshThemesRef.current = fn
   }, [])
 
-  const loadData = useCallback(() => {
-    if (!window.aynite) {
-      console.error('CRITICAL: Aynite Electron API not found.')
-      return
-    }
-    Promise.all([
-      ayniteConfig.getWorkspaces(),
-      ayniteConfig.getActiveWorkspace(),
-    ]).then(([workspaceList, activeId]) => {
-      const activeWorkspace = workspaceList.find((w) => w.id === activeId)
-      if (activeWorkspace) {
-        setWorkspaceConfig(activeWorkspace)
-        const activeLayout = activeWorkspace.layouts.find(
-          (l) => l.id === activeWorkspace.activeLayoutId,
+  const loadData = useCallback(async () => {
+    try {
+      const [wsConfig, activeId] = await Promise.all([
+        config.get('workspaces'),
+        config.get('activeWorkspace'),
+      ])
+      const workspaceList = wsConfig?.list || []
+      const wsId = activeId
+
+      // Find the matching workspace config
+      const matchedConfig =
+        workspaceList.length > 0
+          ? (await config.getWithPayload('workspace', { id: wsId })) || null
+          : null
+
+      setWorkspaceConfig(matchedConfig)
+
+      if (matchedConfig) {
+        const activeLayout = matchedConfig.layouts?.find(
+          (l: any) => l.id === matchedConfig.activeLayoutId,
         )
         if (activeLayout) {
           const leafIds = getAllLeafIds(activeLayout.layout)
@@ -75,15 +84,13 @@ export const WorkspaceProvider: React.FC<{
           }
         }
       }
-      setWorkspaces(workspaceList.map((w) => w.id))
-    })
+      setWorkspaces(workspaceList)
 
-    ayniteConfig.getActiveFile().then((_path) => {
-      // activeFile is handled by UIContext — just trigger load
-    })
-
-    if (window.aynite.getAvailableViews) {
-      window.aynite.getAvailableViews().then(setAvailableViews)
+      // Load available views
+      const views = await bridgeSystem.getAvailableViews()
+      setAvailableViews(views)
+    } catch (e) {
+      console.error('Failed to load workspace data:', e)
     }
 
     // Refresh themes after loading workspace data
@@ -101,9 +108,10 @@ export const WorkspaceProvider: React.FC<{
   }, [loadData])
 
   // IPC: workspace changes from other windows
+  // Note: In the new architecture, this listener will be centralized in AppContext.
+  // For now, we use bridge.events to replace the raw window.aynite call.
   useEffect(() => {
-    if (!window.aynite) return
-    const unbind = window.aynite.onAppEvent((event: { type: string }) => {
+    const unbind = events.onAppEvent((event: { type: string }) => {
       if (
         event.type === AppEvents.WORKSPACE_CHANGED ||
         event.type === AppEvents.WORKSPACE_UPDATED
@@ -114,28 +122,23 @@ export const WorkspaceProvider: React.FC<{
     return unbind
   }, [])
 
-  const switchWorkspace = useCallback(
-    (id: string) => {
-      ayniteConfig.setActiveWorkspace(id).then(() => {
-        loadData()
-      })
-    },
-    [loadData],
-  )
+  const switchWorkspace = useCallback(async (id: string) => {
+    await configMutations.set('activeWorkspace', id)
+    // Don't call loadData here — WORKSPACE_CHANGED event will trigger it
+  }, [])
 
-  const addWorkspace = useCallback((name: string) => {
+  const addWorkspace = useCallback(async (name: string) => {
     // Main process broadcasts WORKSPACE_CHANGED, IPC listener calls loadData
-    ayniteConfig.createWorkspace(name)
+    await workspaceMutations.create(name)
   }, [])
 
   const deleteWorkspace = useCallback(async (name: string) => {
     // Main process broadcasts WORKSPACE_CHANGED, IPC listener calls loadData
-    if (!window.aynite?.deleteWorkspace) return
-    await window.aynite.deleteWorkspace(name)
+    await workspaceMutations.delete(name)
   }, [])
 
   const openNewWindow = useCallback(() => {
-    window.aynite?.openNewWindow?.()
+    systemMutations.openNewWindow()
   }, [])
 
   const registerSetActiveTileId = useCallback(
@@ -148,7 +151,9 @@ export const WorkspaceProvider: React.FC<{
   // Persistence: save workspace config when it changes (debounced by isResizing guard)
   useEffect(() => {
     if (workspaceConfig) {
-      ayniteConfig.saveWorkspace(workspaceConfig)
+      configMutations
+        .set('workspace', { id: workspaceConfig.id, config: workspaceConfig })
+        .catch((e) => console.error('Failed to save workspace config:', e))
     }
   }, [workspaceConfig])
 

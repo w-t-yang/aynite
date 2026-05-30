@@ -8,8 +8,9 @@ import {
   useState,
 } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
-import { ayniteConfig } from '../../../lib/constants/renderer/config'
 import type { LayoutNode, LeafNode } from '../../../lib/constants/types'
+import { configMutations } from '../../bridge/config'
+import { events } from '../../bridge/events'
 import {
   executeLayoutOperation,
   updateLayoutInConfig,
@@ -179,7 +180,13 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     setIsResizing(false)
     document.body.classList.remove('is-resizing')
     setWorkspaceConfig((latest) => {
-      if (latest) ayniteConfig.saveWorkspace(latest)
+      if (latest) {
+        configMutations
+          .set('workspace', { id: latest.id, config: latest })
+          .catch((e) =>
+            console.error('Failed to save workspace on resize end:', e),
+          )
+      }
       return latest
     })
   }, [setWorkspaceConfig])
@@ -192,14 +199,11 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
 
   // IPC: tile activation
   useEffect(() => {
-    if (!window.aynite) return
-    const unbind = window.aynite.onAppEvent(
-      (event: { type: string; data: any }) => {
-        if (event.type === AppEvents.TILE_ACTIVATED && event.data) {
-          setActiveTileId(event.data as string)
-        }
-      },
-    )
+    const unbind = events.onAppEvent((event: { type: string; data: any }) => {
+      if (event.type === AppEvents.TILE_ACTIVATED && event.data) {
+        setActiveTileId(event.data as string)
+      }
+    })
     return unbind
   }, [])
 

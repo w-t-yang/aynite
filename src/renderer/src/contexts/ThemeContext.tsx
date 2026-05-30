@@ -7,8 +7,9 @@ import {
   useState,
 } from 'react'
 import { AppEvents } from '../../../lib/constants/app'
-import { ayniteConfig } from '../../../lib/constants/renderer/config'
 import type { Theme } from '../../../lib/constants/types'
+import { config, configMutations } from '../../bridge/config'
+import { events } from '../../bridge/events'
 import { applyThemeColors } from '../../shared/lib/utils'
 
 interface ThemeContextType {
@@ -33,29 +34,30 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
   }, [activeTheme])
 
   const refreshThemes = useCallback(async () => {
-    const loadedThemes = await ayniteConfig.getThemes()
-    setThemes(loadedThemes)
+    try {
+      const loadedThemes = await config.get('themes')
+      setThemes(loadedThemes || [])
 
-    const themeId = await ayniteConfig.getActiveThemeId()
-    const theme = await ayniteConfig.getTheme(themeId)
+      const themeId = await config.get('activeTheme')
+      const theme = await config.getWithPayload('theme', themeId)
 
-    if (theme) {
-      setActiveTheme(theme)
+      if (theme) {
+        setActiveTheme(theme)
+      }
+    } catch (e) {
+      console.error('[ThemeContext] Failed to refresh themes:', e)
     }
   }, [])
 
-  const setTheme = useCallback(
-    async (themeId: string) => {
-      await window.aynite.setConfig('activeTheme', themeId)
-      await refreshThemes()
-    },
-    [refreshThemes],
-  )
+  const setTheme = useCallback(async (themeId: string) => {
+    await configMutations.set('activeTheme', themeId)
+    // Don't call refreshThemes here — THEME_CHANGED event will trigger it
+  }, [])
 
   // IPC: theme changes from other windows
+  // Note: Will be centralized in AppContext in future phase
   useEffect(() => {
-    if (!window.aynite) return
-    const unbind = window.aynite.onAppEvent((event: { type: string }) => {
+    const unbind = events.onAppEvent((event: { type: string }) => {
       if (event.type === AppEvents.THEME_CHANGED) {
         refreshThemes()
       }
