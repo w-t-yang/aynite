@@ -14,6 +14,8 @@ import {
 import type React from 'react'
 import { useMemo, useState } from 'react'
 import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
+import { systemMutations } from '../../bridge/system'
+import { platform } from '../../bridge/utils'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { FormModal } from '../../shared/featured/FormModal'
@@ -22,7 +24,7 @@ import { cn } from '../../shared/lib/utils'
 import { useApp } from '../AppContext'
 import { LayoutVibeModal } from './LayoutVibeModal'
 
-const isMac = window.aynite?.platform === 'darwin'
+const isMac = platform() === 'darwin'
 
 const TitleBar: React.FC = () => {
   const {
@@ -78,13 +80,13 @@ const TitleBar: React.FC = () => {
   const handleWindowAction = (action: 'minimize' | 'maximize' | 'close') => {
     switch (action) {
       case 'minimize':
-        window.aynite?.minimizeWindow?.()
+        systemMutations.minimizeWindow()
         break
       case 'maximize':
-        window.aynite?.maximizeWindow?.()
+        systemMutations.maximizeWindow()
         break
       case 'close':
-        window.aynite?.closeWindow?.()
+        systemMutations.closeWindow()
         break
     }
   }

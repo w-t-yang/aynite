@@ -2,6 +2,9 @@ import { CloudDownload, RefreshCw, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { AppEvents } from '../../lib/constants/app'
 import type { UpdateStatus } from '../../lib/types/app'
+import { config } from '../bridge/config'
+import { events } from '../bridge/events'
+import { updateMutations } from '../bridge/update'
 import { Button } from '../shared/basic/Button'
 import { Modal } from '../shared/basic/Modal'
 
@@ -23,45 +26,44 @@ export function UpdateBanner() {
 
   // Listen for update events
   useEffect(() => {
-    if (!window.aynite) return
+    config
+      .get('version')
+      .then((v: string) => {
+        setAppVersion(v || '0.0.0')
+      })
+      .catch(() => {})
 
-    window.aynite.getConfig('version').then((v: string) => {
-      setAppVersion(v || '0.0.0')
+    const unbind = events.onAppEvent((event: { type: string; data: any }) => {
+      switch (event.type) {
+        case AppEvents.UPDATE_AVAILABLE:
+          setUpdateStatus('available')
+          setUpdateInfo(event.data)
+          break
+        case AppEvents.UPDATE_NOT_AVAILABLE:
+          setUpdateStatus('idle')
+          setUpdateInfo(null)
+          setDownloadProgress(0)
+          break
+        case AppEvents.UPDATE_DOWNLOADING:
+          setUpdateStatus('downloading')
+          setDownloadProgress(0)
+          break
+        case AppEvents.UPDATE_PROGRESS:
+          setUpdateStatus('downloading')
+          setDownloadProgress(event.data?.percent ?? 0)
+          break
+        case AppEvents.UPDATE_DOWNLOADED:
+          setUpdateStatus('downloaded')
+          setDownloadProgress(100)
+          setUpdateInfo(event.data)
+          setDismissed(false) // new download, show again
+          setShowModal(true)
+          break
+        case AppEvents.UPDATE_ERROR:
+          setUpdateStatus('error')
+          break
+      }
     })
-
-    const unbind = window.aynite.onAppEvent(
-      (event: { type: string; data: any }) => {
-        switch (event.type) {
-          case AppEvents.UPDATE_AVAILABLE:
-            setUpdateStatus('available')
-            setUpdateInfo(event.data)
-            break
-          case AppEvents.UPDATE_NOT_AVAILABLE:
-            setUpdateStatus('idle')
-            setUpdateInfo(null)
-            setDownloadProgress(0)
-            break
-          case AppEvents.UPDATE_DOWNLOADING:
-            setUpdateStatus('downloading')
-            setDownloadProgress(0)
-            break
-          case AppEvents.UPDATE_PROGRESS:
-            setUpdateStatus('downloading')
-            setDownloadProgress(event.data?.percent ?? 0)
-            break
-          case AppEvents.UPDATE_DOWNLOADED:
-            setUpdateStatus('downloaded')
-            setDownloadProgress(100)
-            setUpdateInfo(event.data)
-            setDismissed(false) // new download, show again
-            setShowModal(true)
-            break
-          case AppEvents.UPDATE_ERROR:
-            setUpdateStatus('error')
-            break
-        }
-      },
-    )
     return unbind
   }, [])
 
@@ -69,11 +71,11 @@ export function UpdateBanner() {
     setUpdateStatus('downloading')
     setDownloadProgress(0)
     setShowModal(true)
-    await window.aynite.downloadUpdate()
+    await updateMutations.download()
   }, [])
 
   const handleInstallUpdate = useCallback(async () => {
-    await window.aynite.installUpdate()
+    await updateMutations.install()
   }, [])
 
   const handleClose = useCallback(() => {

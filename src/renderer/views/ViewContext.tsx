@@ -8,6 +8,9 @@ import React, {
 import ReactDOM from 'react-dom/client'
 import { VIEW_CONTAINER } from '../../lib/constants/renderer/styles'
 import type { Theme } from '../../lib/constants/types'
+import { config, configMutations } from '../bridge/config'
+import { events, systemMutations } from '../bridge/index'
+import { theme as bridgeTheme } from '../bridge/theme'
 import { applyThemeColors } from '../shared/lib/utils'
 import '../shared/styles/index.css'
 
@@ -33,7 +36,18 @@ export const useView = () => {
 }
 
 /**
- * Standardized hook for Views to listen to relayed system events.
+ * Hook to trigger a global app operation from a view.
+ */
+export const useAppOperation = () => {
+  return useCallback((operation: string, data?: unknown) => {
+    events.execute(operation, data)
+  }, [])
+}
+
+/**
+ * @deprecated Views should not listen to events directly.
+ * Will be removed once all views are migrated to consume state from ViewContext.
+ * Use useAppEvent for now during migration — it listens to relayed postMessage events.
  */
 export const useAppEvent = (
   type: string,
@@ -50,12 +64,13 @@ export const useAppEvent = (
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, ...deps, callback])
 }
 
 /**
- * Hook that returns a subscription function for relayed system events.
- * Useful for non-React code (like agent loops) that need to manage listeners.
+ * @deprecated Views should not listen to events directly.
+ * Will be removed once all views are migrated to consume state from ViewContext.
  */
 export const useAppEventSubscriber = () => {
   return useCallback((callback: (event: any) => void) => {
@@ -70,23 +85,12 @@ export const useAppEventSubscriber = () => {
   }, [])
 }
 
-/**
- * Hook to trigger a global app operation from a view.
- */
-export const useAppOperation = () => {
-  return useCallback((operation: string, data?: unknown) => {
-    const w = window as any
-    if (w.aynite?.executeAppOperation) {
-      w.aynite.executeAppOperation(operation, data)
-    }
-  }, [])
-}
-
 // ─── View Provider ─────────────────────────────────────────────────────────
 
 /**
  * Unified Provider for micro-app views.
  * Handles theme application.
+ * Has a single postMessage listener for relayed events.
  */
 export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -95,20 +99,17 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
   const [activeThemeId, setActiveThemeId] = useState<string>('')
 
   const loadTheme = useCallback(async (themeId?: string) => {
-    const w = window as any
-    if (!w.aynite) return
-
     try {
-      const id = themeId || (await w.aynite.getConfig('activeTheme'))
+      const id = themeId || (await config.get('activeTheme'))
       setActiveThemeId(id)
 
-      const themeData = await w.aynite.getTheme(id)
+      const themeData = await bridgeTheme.get(id)
       if (themeData) {
         applyThemeColors(themeData as Theme)
       }
 
       // Also load theme list
-      const themesList = await w.aynite.getThemes()
+      const themesList = await config.get('themes')
       if (themesList) setThemes(themesList)
     } catch (e) {
       console.error('[ViewContext] Failed to load theme:', e)
@@ -119,24 +120,29 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
     loadTheme()
   }, [loadTheme])
 
-  // Listen for relayed theme changes
-  useAppEvent('theme-changed', () => {
-    loadTheme()
-  })
+  // Listen for relayed theme changes via single message listener
+  // (This is the ONE allowed postMessage listener per the architecture)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data
+      if (message?.type === 'aynite:theme-changed') {
+        loadTheme()
+      }
+      if (message?.type === 'aynite:refresh-tile') {
+        window.location.reload()
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [loadTheme])
 
-  const setTheme = useCallback(
-    async (id: string) => {
-      await window.aynite.setConfig('activeTheme', id)
-      await loadTheme(id)
-    },
-    [loadTheme],
-  )
+  const setTheme = useCallback(async (id: string) => {
+    await configMutations.set('activeTheme', id)
+    // Don't call loadTheme here — event loop will bring the new theme
+  }, [])
 
   // Report clicks to parent for tile activation
   useEffect(() => {
-    const w = window as any
-    if (!w.aynite) return
-
     // Extract tileId from hash (e.g. #tileId=...)
     const hash = window.location.hash
     const match = hash.match(/tileId=([^&]+)/)
@@ -145,23 +151,12 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!tileId) return
 
     const handleMouseDown = () => {
-      w.aynite.activateTile(tileId)
+      systemMutations.activateTile(tileId)
     }
     window.addEventListener('mousedown', handleMouseDown, true)
 
-    // Listen for refresh-tile messages from the parent (Cmd+R).
-    // On same-origin iframes, the parent can reload directly.
-    // On cross-origin iframes (file://), it sends a postMessage instead.
-    const handleRefresh = (e: MessageEvent) => {
-      if (e.data?.type === 'aynite:refresh-tile') {
-        window.location.reload()
-      }
-    }
-    window.addEventListener('message', handleRefresh)
-
     return () => {
       window.removeEventListener('mousedown', handleMouseDown, true)
-      window.removeEventListener('message', handleRefresh)
     }
   }, [])
 
