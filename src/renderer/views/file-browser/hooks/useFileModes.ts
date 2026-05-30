@@ -140,6 +140,7 @@ export function useFileModes(
           setShowDiff(true)
           setIsViewOnly(false)
         } else {
+          setShowDiff(false)
           setIsViewOnly(true)
         }
       }
