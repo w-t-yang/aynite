@@ -1,6 +1,5 @@
 import { Bot, Bug, CloudDownload, GitBranch, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
-import { AppEvents } from '../../../lib/constants/app'
+import { useCallback, useState } from 'react'
 import { FLEX_CENTER_GAP_2 } from '../../../lib/constants/renderer/styles'
 import type { UpdateStatus } from '../../../lib/types/app'
 import { updateMutations } from '../../bridge/update'
@@ -8,6 +7,7 @@ import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
+import { useAppEvent } from '../../ViewContext'
 
 interface AboutTabProps {
   state: {
@@ -29,52 +29,40 @@ export function AboutTab({ state, actions }: AboutTabProps) {
   const [showUpdateModal, setShowUpdateModal] = useState(false)
 
   // Listen for relayed update events — update the status text without auto-opening modal
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      const msg = e.data
-      if (!msg?.type?.startsWith('aynite:')) return
-      const eventType = msg.type.replace('aynite:', '')
-      const data = msg.data
-
-      switch (eventType) {
-        case AppEvents.UPDATE_CHECKING:
-          setUpdateStatus('checking')
-          setUpdateInfo(null)
-          setUpdateError(null)
-          setDownloadProgress(0)
-          break
-        case AppEvents.UPDATE_AVAILABLE:
-          setUpdateStatus('available')
-          setUpdateInfo(data)
-          break
-        case AppEvents.UPDATE_NOT_AVAILABLE:
-          setUpdateStatus('idle')
-          setUpdateInfo(null)
-          setDownloadProgress(0)
-          break
-        case AppEvents.UPDATE_DOWNLOADING:
-          setUpdateStatus('downloading')
-          setDownloadProgress(0)
-          break
-        case AppEvents.UPDATE_PROGRESS:
-          setUpdateStatus('downloading')
-          setDownloadProgress(data?.percent ?? 0)
-          break
-        case AppEvents.UPDATE_DOWNLOADED:
-          setUpdateStatus('downloaded')
-          setDownloadProgress(100)
-          setUpdateInfo(data)
-          break
-        case AppEvents.UPDATE_ERROR:
-          setUpdateStatus('error')
-          setUpdateError(data)
-          setDownloadProgress(0)
-          break
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [])
+  // Uses deprecated useAppEvent — will be replaced when ViewContext is the central router
+  useAppEvent('update-checking', () => {
+    setUpdateStatus('checking')
+    setUpdateInfo(null)
+    setUpdateError(null)
+    setDownloadProgress(0)
+  })
+  useAppEvent('update-available', (data) => {
+    setUpdateStatus('available')
+    setUpdateInfo(data)
+  })
+  useAppEvent('update-not-available', () => {
+    setUpdateStatus('idle')
+    setUpdateInfo(null)
+    setDownloadProgress(0)
+  })
+  useAppEvent('update-downloading', () => {
+    setUpdateStatus('downloading')
+    setDownloadProgress(0)
+  })
+  useAppEvent('update-download-progress', (data) => {
+    setUpdateStatus('downloading')
+    setDownloadProgress(data?.percent ?? 0)
+  })
+  useAppEvent('update-downloaded', (data) => {
+    setUpdateStatus('downloaded')
+    setDownloadProgress(100)
+    setUpdateInfo(data)
+  })
+  useAppEvent('update-error', (data) => {
+    setUpdateStatus('error')
+    setUpdateError(data)
+    setDownloadProgress(0)
+  })
 
   const handleCheckUpdates = useCallback(async () => {
     setShowUpdateModal(true)
