@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { ConfigKey } from '../../lib/constants/config'
 import { ConfigChannels } from '../../lib/constants/ipc-channels'
+import { setTelemetryEnabled, trackEvent } from '../telemetry/index'
 import { broadcastAppEvent, getWinIdFromSender, sendToWindow } from '../window'
 import { loadConfig, saveConfig } from './logic'
 import { routeGetConfig, routeSetConfig } from './router'
@@ -45,6 +46,7 @@ export function setupConfigIpc() {
           key === ConfigKey.ACTIVE_THEME
             ? payload
             : (payload as { id: string }).id
+        trackEvent('theme_changed')
         broadcastAppEvent(AppEvents.THEME_CHANGED, { themeId })
       } else if (
         [
@@ -61,6 +63,14 @@ export function setupConfigIpc() {
         // Active file change is window-scoped
         sendToWindow(winId, AppEvents.ACTIVE_FILE_CHANGED, { path: payload })
       }
+
+      // Handle telemetry toggle at runtime
+      if (key === 'telemetry') {
+        const enabled = payload?.enabled === true
+        setTelemetryEnabled(enabled)
+        trackEvent('telemetry_toggled', { enabled })
+      }
+
       // Note: ACTIVE_SESSION_CHANGED is already sent by routeSetConfig (router.ts)
       // to ensure it fires even for non-SET pathways. Do NOT duplicate here.
       return result

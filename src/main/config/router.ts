@@ -13,6 +13,7 @@ import { ConfigHandlerRegistry, HANDLER_NOT_FOUND } from './handler-registry'
 import { aiHandlers } from './handlers/ai-handlers'
 import { configFileHandlers } from './handlers/config-file-handlers'
 import { staticHandlers } from './handlers/static-handlers'
+import { telemetryHandlers } from './handlers/telemetry-handlers'
 import { themeHandlers } from './handlers/theme-handlers'
 import { workspaceHandlers } from './handlers/workspace-handlers'
 import { workspaceStateHandlers } from './handlers/workspace-state-handlers'
@@ -58,6 +59,8 @@ registry.register(
   ['version', 'playbook-path', 'view-config', 'matching-views'],
   staticHandlers,
 )
+
+registry.register(['telemetry'], telemetryHandlers)
 
 // ─── Public API ────────────────────────────────────────────────────────
 

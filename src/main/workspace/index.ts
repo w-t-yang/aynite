@@ -4,6 +4,7 @@ import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
 import { gitService } from '../git/index'
+import { trackEvent } from '../telemetry/index'
 import {
   broadcastAppEvent,
   getWinIdFromSender,
@@ -58,6 +59,7 @@ export function setupWorkspaceIpc(): void {
     // Switch the global config (for backward compatibility + new windows)
     const success = await switchWorkspace(name)
     if (success) {
+      trackEvent('workspace_switched')
       // Track this window's workspace independently
       setWindowWorkspace(winId, name)
       const folders = await getWorkspaceFolders(name)

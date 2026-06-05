@@ -11,6 +11,7 @@ import { setupSpellsIpc } from './spells/index'
 import { setupSpotifyIpc } from './spotify/index'
 import { handleSpotifyAuthCode } from './spotify/logic'
 import { setupProtocol, setupSystemIpc } from './system/index'
+import { endSession, startSession } from './telemetry/index'
 import { setupThemeIpc } from './theme/index'
 import { setupUpdater } from './updater'
 import { createMainWindow, isWindowActive } from './window'
@@ -102,6 +103,9 @@ app.whenReady().then(async () => {
   setupProtocol()
   await initAppFolders()
 
+  // Start telemetry session (opt-in GA4 usage tracking)
+  startSession()
+
   // 2. Window Initialization (Centralized in window.ts)
   createMainWindow(__dirname)
 
@@ -135,4 +139,9 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   app.quit()
+})
+
+// End telemetry session before quit (flushes events to GA4)
+app.on('before-quit', () => {
+  endSession()
 })

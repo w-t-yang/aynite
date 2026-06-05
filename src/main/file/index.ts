@@ -21,6 +21,7 @@ import {
 } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
 import { gitService } from '../git/index'
+import { trackEvent } from '../telemetry/index'
 import { broadcastAppEvent, getWinIdFromSender, sendToWindow } from '../window'
 import { onWindowClose } from '../window-state'
 
@@ -125,6 +126,7 @@ export function setupFileIpc() {
       } else {
         await writeText(filePath, '')
       }
+      trackEvent('file_created', { is_directory: isDirectory })
       // Notify all windows so treeview/file-browser can refresh
       broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'add',
@@ -139,6 +141,7 @@ export function setupFileIpc() {
     FileChannels.RENAME,
     async (_event, { oldPath, newPath }: FileRenamePayload) => {
       await rename(oldPath, newPath)
+      trackEvent('file_renamed')
       broadcastAppEvent(AppEventTypes.FILE_RENAMED, { oldPath, newPath })
       broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'rename',
@@ -153,6 +156,7 @@ export function setupFileIpc() {
     FileChannels.COPY,
     async (_event, { srcPath, destPath }: FileCopyPayload) => {
       await copy(srcPath, destPath, { recursive: true })
+      trackEvent('file_copied')
       broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'add',
         path: destPath,
@@ -164,6 +168,7 @@ export function setupFileIpc() {
 
   ipcMain.handle(FileChannels.DELETE, async (_event, filePath: string) => {
     await remove(filePath, { recursive: true, force: true })
+    trackEvent('file_deleted')
     broadcastAppEvent(AppEventTypes.FILE_DELETED, { path: filePath })
     broadcastAppEvent(AppEventTypes.FS_CHANGE, {
       event: 'unlink',
@@ -177,6 +182,9 @@ export function setupFileIpc() {
     FileChannels.SAVE,
     async (_event, { path: filePath, content }: FileSavePayload) => {
       await writeText(filePath, content)
+      trackEvent('file_saved', {
+        extension: getExtname(filePath).toLowerCase().slice(1) || 'none',
+      })
       broadcastAppEvent(AppEventTypes.FS_CHANGE, {
         event: 'change',
         path: filePath,

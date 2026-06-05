@@ -2,6 +2,7 @@ import type { UIMessage } from 'ai'
 import { ipcMain } from 'electron'
 import { AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
+import { trackEvent } from '../telemetry/index'
 import {
   getWinIdFromSender,
   sendOperationToWindow,
@@ -44,6 +45,10 @@ export function setupAiIpc() {
   })
 
   ipcMain.handle(AiChannels.CHAT, async (event, params: AiChatPayload) => {
+    trackEvent('ai_chat', {
+      provider: (params.config?.provider || 'unknown').toLowerCase(),
+      message_count: params.messages?.length || 0,
+    })
     const winId = getWinIdFromSender(event.sender)
     const provider = params.config?.provider?.toLowerCase()
     if (provider === 'ollama' && !params.config.baseUrl) {

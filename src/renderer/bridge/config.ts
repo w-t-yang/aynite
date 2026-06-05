@@ -44,6 +44,7 @@ export type ConfigSchema = {
   'session-delete': string
   'tile-data': any
   'playbook-path': string
+  telemetry: { enabled: boolean; clientId?: string }
 }
 
 // ── Getters (return data) ────────────────────────────────────────────

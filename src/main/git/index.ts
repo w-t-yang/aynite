@@ -9,6 +9,7 @@ import {
   joinPaths,
 } from '../../lib/path'
 import { execInUserShell } from '../system'
+import { trackEvent } from '../telemetry/index'
 import { getWorkspaceFolders } from '../workspace'
 import { generateCommitMessage } from './commit-gen'
 import { createGitWatcher } from './git-watcher'
@@ -190,6 +191,7 @@ class GitService {
           await execInUserShell(`git commit -m '${escapedMsg}'`, {
             cwd: root,
           })
+          trackEvent('git_commit')
           await this.statusManager.refreshStatus(root, true)
           return { success: true }
         } catch (e: unknown) {

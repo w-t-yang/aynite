@@ -75,6 +75,7 @@ export async function initAppFolders() {
     commands: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.COMMANDS)] },
     prompts: { files: getDefaultGlobalPrompts() },
     agents: createDefaultAgentConfig(getAynitePromptPath),
+    telemetry: { enabled: false },
   }
   const ignoreDefault = [
     'node_modules',
@@ -244,6 +245,7 @@ export async function loadConfig() {
 
   if (!mainConfig.skills) mainConfig.skills = await getSkillsConfig()
   if (!mainConfig.commands) mainConfig.commands = await getCommandsConfig()
+  if (!mainConfig.telemetry) mainConfig.telemetry = { enabled: false }
   if (mainConfig.prompts?.files) {
     mainConfig.prompts.files = mainConfig.prompts.files.filter((f: string) => {
       const filename = f.split('/').pop()
