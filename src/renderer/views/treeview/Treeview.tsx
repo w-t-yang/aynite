@@ -232,13 +232,14 @@ export function Treeview() {
   }, [activeFilePath, treeData.length, treeData])
 
   // Listen for active-file-changed broadcast from main
-  useViewEvent('active-file-changed', (data: { path: string }) => {
+  const handleActiveFileChanged = useCallback((data: { path: string }) => {
     if (data?.path) {
       setActiveFilePath(data.path)
     } else {
       setActiveFilePath(null)
     }
-  })
+  }, [])
+  useViewEvent('active-file-changed', handleActiveFileChanged)
 
   // Initial load of active file
   useEffect(() => {
