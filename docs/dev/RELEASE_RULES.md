@@ -47,4 +47,43 @@ The app uses `electron-updater` to check for updates against GitHub Releases.
 
 ## Security & Signing
 - **GitHub Token**: A `GH_TOKEN` must be configured in repository secrets for publishing.
-- **App Signing**: (Optional but recommended) macOS builds should be signed and notarized to avoid security warnings and enable auto-updates on macOS.
+- **App Signing**: macOS builds are **signed and notarized** to avoid Gatekeeper warnings and enable auto-updates.
+
+### macOS Code Signing Setup
+
+To enable signing, add the following **GitHub Actions secrets** to your repository (`Settings → Secrets and variables → Actions`):
+
+| Secret | Description | How to Get It |
+|--------|-------------|---------------|
+| `CSC_LINK` | Base64-encoded Developer ID Application certificate (.p12) | See below |
+| `CSC_KEY_PASSWORD` | Password for the .p12 file | Set when exporting the certificate |
+| `APPLE_ID` | Your Apple Developer account email | Your Apple ID |
+| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password for notarization | `appleid.apple.com` → Security → App-Specific Passwords |
+| `APPLE_TEAM_ID` | 10-character Team ID | `developer.apple.com` → Account → Membership |
+
+#### How to Export & Encode the Signing Certificate
+
+1. Open **Keychain Access** on your Mac
+2. Find your **Developer ID Application** certificate under "My Certificates"
+3. Right-click → **Export** → choose `.p12` format → set a strong password
+4. Encode the `.p12` file to base64:
+   ```bash
+   base64 -i DeveloperID.p12 | pbcopy
+   ```
+5. Paste the result as the `CSC_LINK` secret in GitHub
+
+#### How to Create an App-Specific Password
+
+1. Go to [appleid.apple.com](https://appleid.apple.com) → Sign In
+2. Navigate to **App-Specific Passwords** (under Security)
+3. Generate a new password (name it something like "Aynite CI")
+4. Copy and save it as the `APPLE_APP_SPECIFIC_PASSWORD` secret
+
+#### How it works in CI
+
+The pipeline:
+1. **Imports** the signing certificate into the CI keychain (using `apple-actions/import-codesign-certs@v3`)
+2. **electron-builder** reads `CSC_LINK` and `CSC_KEY_PASSWORD` to sign the `.app` bundle with hardened runtime
+3. **electron-builder** uses `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID` to notarize the signed `.zip` via Apple's notary service
+
+> **Note**: The signing certificate must be a **Developer ID Application** certificate (not a Development or Distribution certificate). If you already have one, you're good. If not, create it at `developer.apple.com → Certificates → + → Developer ID Application`.

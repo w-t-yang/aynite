@@ -6,14 +6,14 @@ Prioritized by importance. Done items are at the bottom.
 
 ## Release & Polish
 
-- [ ] Release and auto-update, mac signature
+- [x] macOS code signing pipeline — entitlements, CI cert import, notarization config
 - [x] Docs — README, project wiki, showcase
 - [/] Welcome workspace with settings and theme demo
 - [ ] Language / i18n support
 - [x] Track usage
 - [-] Collect feedback
-- [ ] Logo
-- [ ] Domain name
+- [x] Logo
+- [x] Domain name
 
 ## Promotion
 
