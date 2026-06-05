@@ -151,9 +151,70 @@ export function RSSApp() {
     return count
   }, [rss.config])
 
+  // Build flat list of sidebar source IDs for focus→selection mapping
+  const sidebarSourceIds = useMemo(() => {
+    if (!rss.config) return []
+    const ids: string[] = []
+    for (const group of rss.config.groups) {
+      for (const source of rss.config.sources) {
+        if (source.groupId === group.id) {
+          ids.push(source.id)
+        }
+      }
+    }
+    // Orphaned sources
+    for (const source of rss.config.sources) {
+      if (!rss.config.groups.find((g) => g.id === source.groupId)) {
+        ids.push(source.id)
+      }
+    }
+    return ids
+  }, [rss.config])
+
   // Determine which items to show based on view mode and selection
   const currentItems =
     view === 'bookmarks' ? rss.getBookmarkedItems() : rss.getCurrentItems()
+
+  // ─── Sync focus → actual selection ────────────────────────────────────
+  // When focus changes in column 0 (sidebar), select that source.
+  // When focus changes in column 1 (article list), select that item.
+  useEffect(() => {
+    if (focusColumn === 0) {
+      const todayShown = rss.config ? rss.config.sources.length > 0 : false
+      if (todayShown && focusRow === 0) {
+        // Row 0 = Today
+        rss.selectSource('__today__')
+        rss.selectItem(null)
+      } else {
+        const sourceIdx = focusRow - (todayShown ? 1 : 0)
+        const sourceId = sidebarSourceIds[sourceIdx]
+        if (sourceId !== undefined && sourceId !== rss.selectedSourceId) {
+          rss.selectSource(sourceId)
+          rss.selectItem(null)
+        }
+      }
+    }
+  }, [focusColumn, focusRow, sidebarSourceIds, rss])
+
+  useEffect(() => {
+    if (focusColumn === 1 && currentItems.length > 0) {
+      const item = currentItems[focusRow]
+      if (item && item.id !== rss.selectedItemId) {
+        rss.selectItem(item.id)
+        rss.markRead(item.id)
+      }
+    }
+  }, [focusColumn, focusRow, currentItems, rss])
+
+  // Auto-focus the view root so keyboard events are captured immediately
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // Small delay to ensure the iframe has rendered and focus can be set
+    const timer = setTimeout(() => {
+      rootRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   // ─── Keyboard Navigation ──────────────────────────────────────────────
 
@@ -354,11 +415,16 @@ export function RSSApp() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground">
+    <div
+      ref={rootRef}
+      tabIndex={-1}
+      className="flex flex-col h-full bg-background text-foreground outline-none"
+    >
       {/* Header */}
       <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-popover">
         <div className="flex items-center gap-2 min-w-0">
           <Tooltip
+            position="bottom"
             content={
               'Keyboard Shortcuts:\n' +
               `${rss.keyBindings.move_left?.key?.toUpperCase() || 'A'} — Move left\n` +
@@ -375,7 +441,7 @@ export function RSSApp() {
           </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Tooltip content="Keyboard shortcuts">
+          <Tooltip position="bottom" align="right" content="Keyboard shortcuts">
             <Keyboard
               size={13}
               className="text-muted-foreground/50 cursor-help"

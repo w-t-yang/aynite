@@ -5,22 +5,46 @@ interface TooltipProps {
   content: string
   children: React.ReactNode
   className?: string
+  /** Tooltip position relative to the trigger element. Default: 'top' */
+  position?: 'top' | 'bottom'
+  /** Horizontal alignment relative to the trigger. Default: 'left' */
+  align?: 'left' | 'right'
+}
+
+const positionClasses: Record<string, string> = {
+  top: 'bottom-full mb-1.5',
+  bottom: 'top-full mt-1.5',
+}
+
+const alignClasses: Record<string, string> = {
+  left: 'left-0',
+  right: 'right-0',
 }
 
 /**
  * A simple CSS-based tooltip that shows on hover.
  * Uses group-hover to toggle visibility without JavaScript.
  */
-export function Tooltip({ content, children, className }: TooltipProps) {
+export function Tooltip({
+  content,
+  children,
+  className,
+  position = 'top',
+  align = 'left',
+}: TooltipProps) {
   return (
     <div className={cn('relative group/tooltip', className)}>
       {children}
       <div
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-0 mb-1.5
-          opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150 z-popover
-          whitespace-nowrap px-2 py-1 rounded text-[11px] leading-none
-          bg-popover text-popover-foreground border border-border shadow-lg"
+        className={cn(
+          'pointer-events-none absolute',
+          positionClasses[position],
+          alignClasses[align],
+          'opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150 z-popover',
+          'whitespace-nowrap px-2 py-1 rounded text-[11px] leading-none',
+          'bg-popover text-popover-foreground border border-border shadow-lg',
+        )}
       >
         {content}
       </div>

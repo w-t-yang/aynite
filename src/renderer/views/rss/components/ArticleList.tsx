@@ -1,5 +1,5 @@
 import { Bookmark, CheckCheck, ExternalLink, Loader2 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { cn } from '../../../shared/lib/utils'
 import type { RssItem } from '../types'
 
@@ -108,6 +108,17 @@ export function ArticleList({
     [items, groupByDate],
   )
 
+  // Scroll focused item into view
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (focusColumn === 1 && scrollRef.current) {
+      const el = scrollRef.current.querySelector('[data-focused="true"]')
+      if (el) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }
+  }, [focusColumn])
+
   if (loading) {
     return (
       <div
@@ -151,10 +162,13 @@ export function ArticleList({
       // biome-ignore lint/a11y/noStaticElementInteractions: clickable list item, consistent with other views
       <div
         key={item.id}
+        data-focused={isFocused && !isSelected ? 'true' : undefined}
         className={cn(
           'flex items-start gap-2 px-4 py-2.5 cursor-pointer border-b border-border/20 transition-colors group',
           isSelected ? 'bg-accent' : 'hover:bg-accent/30',
-          isFocused && !isSelected && 'ring-1 ring-inset ring-primary/40',
+          isFocused &&
+            !isSelected &&
+            'bg-primary/[0.04] border-l-2 border-primary/50 pl-[14px]',
         )}
         onClick={() => onSelectItem(item.id)}
         onKeyDown={() => {}}
@@ -223,7 +237,7 @@ export function ArticleList({
       </div>
 
       {/* Article list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
         {dateGroups
           ? dateGroups.map((group) => (
               <div key={group.label}>

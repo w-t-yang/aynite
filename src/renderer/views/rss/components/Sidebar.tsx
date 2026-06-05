@@ -7,6 +7,7 @@ import {
   Rss,
   Trash2,
 } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
 import { cn } from '../../../shared/lib/utils'
 import type { RssConfig, RssContentStore, ViewMode } from '../types'
@@ -104,9 +105,24 @@ export function Sidebar({
   const isRowFocused = (rowIndex: number) =>
     focusColumn === 0 && focusRow === rowIndex
 
+  // Professional active indicator: a subtle 2px left border + lighter background
+  const focusRowClass =
+    'border-l-2 border-primary/50 bg-primary/[0.04] pl-[10px]'
+
   // Row 0 = "Today" (if shown), then source items follow
   const todayShown = config.sources.length > 0
   const sourceRowOffset = todayShown ? 1 : 0
+
+  // Scroll focused item into view
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (focusColumn === 0 && scrollRef.current) {
+      const el = scrollRef.current.querySelector('[data-focused="true"]')
+      if (el) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }
+  }, [focusColumn])
 
   return (
     <div
@@ -144,7 +160,7 @@ export function Sidebar({
       </div>
 
       {/* Groups & Sources */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
         {config.groups.length === 0 && config.sources.length === 0 && (
           <div className="p-4 text-center text-muted-foreground text-xs">
             No feeds yet. Add a feed to get started.
@@ -155,12 +171,13 @@ export function Sidebar({
         {todayShown && (
           // biome-ignore lint/a11y/noStaticElementInteractions: clickable item
           <div
+            data-focused={isRowFocused(0) ? 'true' : undefined}
             className={cn(
-              'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer group hover:bg-accent/30 transition-colors',
+              'flex items-center gap-2 px-[11px] py-1.5 text-xs cursor-pointer group hover:bg-accent/30 transition-colors',
               selectedSourceId === '__today__'
                 ? 'bg-accent text-accent-foreground font-medium'
                 : 'text-muted-foreground',
-              isRowFocused(0) && 'ring-1 ring-inset ring-primary/40',
+              isRowFocused(0) && focusRowClass,
             )}
             onClick={onSelectToday}
             onKeyDown={() => {}}
@@ -220,14 +237,15 @@ export function Sidebar({
                   // biome-ignore lint/a11y/noStaticElementInteractions: clickable source item, consistent with other views
                   <div
                     key={source.id}
+                    data-focused={
+                      isRowFocused(rowIdx) && !isSelected ? 'true' : undefined
+                    }
                     className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer group hover:bg-accent/30 transition-colors',
+                      'flex items-center gap-2 px-[11px] py-1.5 text-xs cursor-pointer group hover:bg-accent/30 transition-colors',
                       isSelected && 'bg-accent text-accent-foreground',
                       !isSelected &&
                         'text-muted-foreground hover:text-foreground',
-                      isRowFocused(rowIdx) &&
-                        !isSelected &&
-                        'ring-1 ring-inset ring-primary/40',
+                      isRowFocused(rowIdx) && !isSelected && focusRowClass,
                     )}
                     onClick={() => onSelectSource(source.id)}
                     onKeyDown={() => {}}
@@ -307,13 +325,18 @@ export function Sidebar({
                   // biome-ignore lint/a11y/noStaticElementInteractions: clickable source item
                   <div
                     key={source.id}
+                    data-focused={
+                      isRowFocused(rowIdx) && selectedSourceId !== source.id
+                        ? 'true'
+                        : undefined
+                    }
                     className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-accent/30 transition-colors',
+                      'flex items-center gap-2 px-[11px] py-1.5 text-xs cursor-pointer hover:bg-accent/30 transition-colors',
                       selectedSourceId === source.id &&
                         'bg-accent text-accent-foreground',
                       isRowFocused(rowIdx) &&
                         selectedSourceId !== source.id &&
-                        'ring-1 ring-inset ring-primary/40',
+                        focusRowClass,
                     )}
                     onClick={() => onSelectSource(source.id)}
                     onKeyDown={() => {}}

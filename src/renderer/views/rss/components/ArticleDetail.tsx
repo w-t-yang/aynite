@@ -125,7 +125,7 @@ export function ArticleDetail({
       <div
         className={cn(
           'flex-1 flex flex-col items-center justify-center min-w-[320px] p-8 text-center',
-          focusColumn === 2 && 'ring-1 ring-inset ring-primary/40',
+          focusColumn === 2 && 'border-l-2 border-primary/50 bg-primary/[0.04]',
         )}
       >
         <ExternalLink size={36} className="text-muted-foreground/20 mb-4" />
@@ -140,7 +140,7 @@ export function ArticleDetail({
     <div
       className={cn(
         'flex-1 flex flex-col min-w-[320px] bg-card',
-        focusColumn === 2 && 'ring-1 ring-inset ring-primary/40',
+        focusColumn === 2 && 'border-l-2 border-primary/50 bg-primary/[0.04]',
       )}
     >
       {/* Article content */}
