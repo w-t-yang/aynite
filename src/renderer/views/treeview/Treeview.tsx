@@ -70,6 +70,11 @@ export function Treeview() {
   const rootFilesPathsRef = useRef(rootFilesPaths)
   rootFilesPathsRef.current = rootFilesPaths
 
+  // Find which workspace root folder a path belongs to
+  const findRootForPath = useCallback((path: string): string | null => {
+    return rootFilesPathsRef.current.find((r) => path.startsWith(r)) || null
+  }, [])
+
   const { gitStatuses, gitRoots, fetchStatus } = useGitStatus()
 
   const [changesOnly, setChangesOnly] = useState(false)
@@ -372,14 +377,37 @@ export function Treeview() {
         return
       }
 
+      // All dragged items must belong to the same root workspace folder
+      // as the destination parent directory
+      const targetRoot = findRootForPath(parentId)
+      if (targetRoot) {
+        const allSameRoot = dragIds.every(
+          (id) => findRootForPath(id) === targetRoot,
+        )
+        if (!allSameRoot) {
+          ;(window as any).showToast(
+            'Cannot move files across different workspace folders.',
+            'error',
+          )
+          return
+        }
+      }
+
       const parentNode = treeRef.current?.get(parentId)
       if (!parentNode?.data.isDirectory) return
+
+      // Track source directories so we can refresh them after the move
+      const sourceDirs = new Set<string>()
 
       for (const id of dragIds) {
         const name = id.split(/[/\\]/).pop()
         if (!name) continue
         const newPath = utils.joinPath(parentId, name)
         if (id !== newPath) {
+          // Record the source directory before renaming
+          const sourceDir = id.split('/').slice(0, -1).join('/') || '.'
+          sourceDirs.add(sourceDir)
+
           await fileMutations.rename(id, newPath)
           window.dispatchEvent(
             new CustomEvent('file-renamed', {
@@ -388,9 +416,12 @@ export function Treeview() {
           )
         }
       }
-      window.dispatchEvent(
-        new CustomEvent('reload-folder', { detail: parentId }),
-      )
+
+      // Refresh both destination and all source directories
+      const dirsToRefresh = new Set([parentId, ...sourceDirs])
+      for (const dir of dirsToRefresh) {
+        window.dispatchEvent(new CustomEvent('reload-folder', { detail: dir }))
+      }
     }
   }
 
@@ -606,14 +637,27 @@ export function Treeview() {
                 onMove={onMove}
                 onToggle={handleToggle}
                 className="scrollbar-gutter-stable"
-                disableDrop={({ parentNode }) => {
+                disableDrop={({ parentNode, dragNodes }) => {
+                  // Must drop on a directory
                   if (
                     !parentNode ||
                     parentNode.isInternal ||
                     parentNode.level === -1
                   )
                     return false
-                  return !parentNode.data?.isDirectory
+                  if (!parentNode.data?.isDirectory) return true
+
+                  // All dragged items must belong to the same root folder
+                  // as the target parent directory
+                  const targetRoot = findRootForPath(parentNode.data.id)
+                  if (!targetRoot) return false
+
+                  for (const dragNode of dragNodes) {
+                    const dragRoot = findRootForPath(dragNode.data.id)
+                    if (dragRoot !== targetRoot) return true // reject
+                  }
+
+                  return false // allow drop
                 }}
               >
                 {(props) => (
