@@ -468,9 +468,9 @@ export function Treeview() {
     const isCreateOrPaste =
       action === 'new-file' || action === 'new-folder' || action === 'paste'
     const shouldReloadHere = file.isDirectory && isCreateOrPaste
-    const reloadPath = shouldReloadHere ? file.id : dirname
+    const reloadPath = shouldReloadHere ? file.id : dirnameVal
 
-    const parentDirForPaste = file.isDirectory ? file.id : dirname
+    const parentDirForPaste = file.isDirectory ? file.id : dirnameVal
 
     const executeAction = async (payloadVal?: string) => {
       try {
