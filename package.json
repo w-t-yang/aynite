@@ -197,18 +197,22 @@
         ]
       }
     ],
+    "icon": "build/icon.png",
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         "zip"
       ],
       "category": "public.app-category.developer-tools"
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis"
       ]
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         "AppImage"
       ],

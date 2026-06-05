@@ -14,7 +14,7 @@ import {
   AppEventChannel,
   AppOperationChannel,
 } from '../lib/constants/ipc-channels'
-import { getPreloadPath, getRendererHtmlPath } from '../lib/path'
+import { getIconPath, getPreloadPath, getRendererHtmlPath } from '../lib/path'
 import {
   getAllWindowIds,
   registerWindow,
@@ -67,6 +67,7 @@ export function createMainWindow(dirname: string): void {
     title: 'Aynite',
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
+    icon: getIconPath(dirname),
     webPreferences: {
       preload: getPreloadPath(dirname),
       sandbox: false,

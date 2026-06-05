@@ -231,6 +231,10 @@ export function getRendererHtmlPath(baseDir: string) {
   return path.resolve(baseDir, '../renderer/index.html')
 }
 
+export function getIconPath(baseDir: string) {
+  return path.resolve(baseDir, '../../build/icon.png')
+}
+
 export function getSkillsDir() {
   return getAynitePath('skills')
 }

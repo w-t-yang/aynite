@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aynite Logos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #f5f5f4;
+      font-family: 'Montserrat', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px 40px;
+    }
+
+    h1 {
+      font-weight: 300;
+      font-size: 14px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 60px;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 48px 60px;
+      max-width: 1200px;
+    }
+
+    .logo-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo-square {
+      width: 200px;
+      height: 200px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow 0.2s;
+    }
+
+    .logo-square:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06);
+    }
+
+    .logo-item .label {
+      margin-top: 16px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #bbb;
+    }
+
+    /* ── 1: Bold "A" with underline bar ── */
+    .logo-a-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+    }
+    .logo-a-bar .letter {
+      font-size: 72px;
+      font-weight: 700;
+      color: #111;
+      letter-spacing: -4px;
+    }
+    .logo-a-bar .bar {
+      width: 48px;
+      height: 3px;
+      background: #111;
+      margin-top: 2px;
+      border-radius: 2px;
+    }
+
+    /* ── 2: Badge "A" inside a solid circle ── */
+    .logo-circle .circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-circle .circle .letter {
+      font-size: 52px;
+      font-weight: 600;
+      color: #fff;
+      margin-top: -4px;
+    }
+
+    /* ── 3 (new): Outline "A" — a minimalist crest ── */
+    .logo-outline-a {
+      width: 92px;
+      height: 92px;
+      border: 2px solid #111;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-outline-a .letter {
+      font-size: 48px;
+      font-weight: 300;
+      color: #111;
+      margin-top: -2px;
+    }
+
+    /* ── 4: Thin "A" with dot beneath ── */
+    .logo-a-dot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+    }
+    .logo-a-dot .letter {
+      font-size: 80px;
+      font-weight: 200;
+      color: #111;
+      letter-spacing: 0;
+    }
+    .logo-a-dot .dot {
+      width: 6px;
+      height: 6px;
+      background: #111;
+      border-radius: 50%;
+      margin-top: 0px;
+    }
+
+    /* ── 5 (new): "ay" in lowercase, clean and modern ── */
+    .logo-lowercase {
+      display: flex;
+      align-items: baseline;
+      line-height: 1;
+    }
+    .logo-lowercase .a {
+      font-size: 64px;
+      font-weight: 700;
+      color: #111;
+    }
+    .logo-lowercase .y {
+      font-size: 64px;
+      font-weight: 300;
+      color: #999;
+    }
+
+    /* ── 6 (new): "A" with a horizontal line through the center ── */
+    .logo-a-strike {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .logo-a-strike .letter {
+      font-size: 80px;
+      font-weight: 400;
+      color: #111;
+    }
+    .logo-a-strike .line {
+      position: absolute;
+      width: 66px;
+      height: 2px;
+      background: #111;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Logo Explorations</h1>
+
+  <div class="grid">
+
+    <!-- 1: kept -->
+    <div class="logo-item">
+      <div class="logo-square">
+        <div class="logo-a-bar">
+          <span class="letter">A</span>
+          <span class="bar"></span>
+        </div>
+      </div>
+      <span class="label">Monogram · Bold Bar</span>
+    </div>
+
+    <!-- 2: kept -->
+    <div class="logo-item">
+      <div class="logo-square">
+        <div class="logo-circle">
+          <div class="circle">
+            <span class="letter">A</span>
+          </div>
+        </div>
+      </div>
+      <span class="label">Badge · Solid Circle</span>
+    </div>
+
+    <!-- 3: new — outline A -->
+    <div class="logo-item">
+      <div class="logo-square">
+        <div class="logo-outline-a">
+          <span class="letter">A</span>
+        </div>
+      </div>
+      <span class="label">Monogram · Outline Circle</span>
+    </div>
+
+    <!-- 4: kept (your favorite so far) -->
+    <div class="logo-item">
+      <div class="logo-square">
+        <div class="logo-a-dot">
+          <span class="letter">A</span>
+          <span class="dot"></span>
+        </div>
+      </div>
+      <span class="label">Monogram · Thin + Dot</span>
+    </div>
+
+    <!-- 5: new — lowercase ay -->
+    <div class="logo-item">
+      <div class="logo-square">
+        <div class="logo-lowercase">
+          <span class="a">a</span>
+          <span class="y">y</span>
+        </div>
+      </div>
+      <span class="label">Wordmark · Lowercase</span>
+    </div>
+
+    <!-- 6: new — A with horizontal strike-through -->
+    <div class="logo-item">
+      <div class="logo-square">
+        <div class="logo-a-strike">
+          <span class="letter">A</span>
+          <span class="line"></span>
+        </div>
+      </div>
+      <span class="label">Monogram · Centre Strike</span>
+    </div>
+
+  </div>
+</body>
+</html>

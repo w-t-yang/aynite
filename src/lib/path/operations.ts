@@ -269,7 +269,7 @@ export async function secureGlobSearch(
       cwd: expandHome(searchCwd),
       onlyFiles: true,
       absolute: true,
-      ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/out/**'],
+      ignore: ['**/node_modules/**', '**/.git/**'],
     })
     return files.join('\n') || ERROR_MESSAGES.NO_MATCHES_FOUND
   } catch (e: unknown) {
@@ -306,7 +306,7 @@ async function getFileTree(
   return output
 }
 
-const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'out'])
+const IGNORED_DIRS = new Set(['node_modules', '.git'])
 
 async function grepSearch(
   folderPath: string,

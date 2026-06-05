@@ -80,9 +80,6 @@ export async function initAppFolders() {
   const ignoreDefault = [
     'node_modules',
     '.DS_Store',
-    'dist',
-    'build',
-    'out',
     'target',
     'vendor',
     'venv',
