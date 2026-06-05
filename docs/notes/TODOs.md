@@ -6,12 +6,14 @@ Prioritized by importance. Done items are at the bottom.
 
 ## Release & Polish
 
-- [ ] Release and auto-update
-- [ ] Docs — README, project wiki, showcase
-- [ ] Welcome workspace with settings and theme demo
+- [ ] Release and auto-update, mac signature
+- [x] Docs — README, project wiki, showcase
+- [/] Welcome workspace with settings and theme demo
 - [ ] Language / i18n support
-- [ ] Track usage
-- [ ] Collect feedback
+- [x] Track usage
+- [-] Collect feedback
+- [ ] Logo
+- [ ] Domain name
 
 ## Promotion
 
