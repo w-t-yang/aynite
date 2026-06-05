@@ -38,6 +38,7 @@ export function UpdateBanner() {
         case AppEvents.UPDATE_AVAILABLE:
           setUpdateStatus('available')
           setUpdateInfo(event.data)
+          setShowModal(true) // auto-show modal on startup or check
           break
         case AppEvents.UPDATE_NOT_AVAILABLE:
           setUpdateStatus('idle')
@@ -139,14 +140,28 @@ export function UpdateBanner() {
           <div className="flex flex-col items-center text-center space-y-4 py-8">
             <CloudDownload size={40} className="text-primary" />
             <div className="space-y-1">
-              <p className="text-lg font-semibold">Update Ready</p>
+              <p className="text-lg font-semibold">
+                {updateInfo?.manualInstall
+                  ? 'Download Complete'
+                  : 'Update Ready'}
+              </p>
               <p className="text-sm text-muted-foreground">
-                v{updateInfo?.version || '?'} has been downloaded.
+                v{updateInfo?.version || '?'}
+                {updateInfo?.manualInstall
+                  ? ' saved to Downloads.'
+                  : ' has been downloaded.'}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Save your work, then restart to apply the update.
-            </p>
+            {updateInfo?.manualInstall ? (
+              <p className="text-xs text-muted-foreground">
+                Open the installer from your Downloads folder to complete the
+                update.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Save your work, then restart to apply the update.
+              </p>
+            )}
           </div>
         )
       default:
@@ -161,13 +176,24 @@ export function UpdateBanner() {
           <Button variant="ghost" onClick={handleDismiss}>
             Later
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleInstallUpdate}
-            className="shadow-lg shadow-primary/20"
-          >
-            Restart Now
-          </Button>
+          {updateInfo?.manualInstall ? (
+            <Button
+              variant="primary"
+              onClick={handleInstallUpdate}
+              className="shadow-lg shadow-primary/20"
+            >
+              <CloudDownload size={16} />
+              Open Downloads
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              onClick={handleInstallUpdate}
+              className="shadow-lg shadow-primary/20"
+            >
+              Restart Now
+            </Button>
+          )}
         </>
       )
     }

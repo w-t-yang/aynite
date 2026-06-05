@@ -1,4 +1,5 @@
-import { app, ipcMain } from 'electron'
+import path from 'node:path'
+import { app, ipcMain, shell } from 'electron'
 import isDev from 'electron-is-dev'
 import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
@@ -6,28 +7,19 @@ import { AppEvents } from '../../lib/constants/app'
 import { UpdateChannels } from '../../lib/constants/ipc-channels'
 import { broadcastAppEvent } from '../window'
 
-// Configure logger
+// ── Logger ────────────────────────────────────────────────────────────
+
 autoUpdater.logger = log
 ;(autoUpdater.logger as any).transports.file.level = 'info'
 
-/**
- * Disable auto-download — we want to ask the user first.
- * The download starts only when the user clicks "Download & Update".
- */
 autoUpdater.autoDownload = false
 
-/**
- * Parse a semver string into a numeric array for comparison.
- * Handles versions like "1.0.0", "1.0.0-beta.15", "0.0.1".
- */
+// ── Version helpers ───────────────────────────────────────────────────
+
 function parseVersion(version: string): number[] {
   return version.split(/[.-]/).map(Number)
 }
 
-/**
- * Compare two semver arrays. Returns >0 if a > b, <0 if a < b, 0 if equal.
- * Prerelease versions (with -beta suffix) are considered lower than release.
- */
 function compareVersions(a: number[], b: number[]): number {
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     const aVal = a[i] ?? (i >= 3 ? -1 : 0)
@@ -38,13 +30,178 @@ function compareVersions(a: number[], b: number[]): number {
   return 0
 }
 
-// Store latest release info so we can download it later
-let pendingUpdateInfo: { version: string; releaseNotes?: string } | null = null
+// ── Pending update tracking ──────────────────────────────────────────
+
+let pendingUpdateInfo: {
+  version: string
+  releaseNotes?: string
+  /** Whether the download was to ~/Downloads (manual install needed). */
+  manualInstall?: boolean
+  /** Path where the file was downloaded. */
+  downloadedFile?: string
+} | null = null
 
 /**
- * Fetch the latest non-draft, non-prerelease release from GitHub API.
- * Used in dev mode as a fallback since autoUpdater doesn't work in dev.
+ * Provides the release download URL for a given version from GitHub API.
+ * Used in dev mode where autoUpdater can't download.
  */
+async function getReleaseDownloadUrl(version: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/w-t-yang/aynite/releases/tags/v${version}`,
+      {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'Aynite-App',
+        },
+      },
+    )
+    if (!response.ok) return null
+    const release = await response.json()
+    // Find the platform-appropriate asset
+    const isArmMac = process.arch === 'arm64'
+    const isMac = process.platform === 'darwin'
+    const isWin = process.platform === 'win32'
+
+    for (const asset of release.assets) {
+      const name: string = asset.name
+      if (isMac && isArmMac && name.includes('arm64-mac.zip')) {
+        return asset.browser_download_url
+      }
+      if (
+        isMac &&
+        !isArmMac &&
+        name.includes('mac.zip') &&
+        !name.includes('arm64')
+      ) {
+        return asset.browser_download_url
+      }
+      if (isWin && name.endsWith('.exe')) {
+        return asset.browser_download_url
+      }
+      if (!isMac && !isWin && name.endsWith('.AppImage')) {
+        return asset.browser_download_url
+      }
+    }
+    // Fallback: first zip or first asset
+    const zip = release.assets.find((a: any) => a.name.endsWith('.zip'))
+    return (
+      zip?.browser_download_url ||
+      release.assets[0]?.browser_download_url ||
+      null
+    )
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Download a file from url to destination path with progress events.
+ */
+async function downloadFile(
+  url: string,
+  destPath: string,
+  onProgress?: (percent: number) => void,
+): Promise<void> {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`)
+
+  const contentLength = response.headers.get('content-length')
+  const total = contentLength ? Number.parseInt(contentLength, 10) : 0
+  const reader = response.body?.getReader()
+  const { createWriteStream } = await import('node:fs')
+
+  await new Promise<void>((resolve, reject) => {
+    const writer = createWriteStream(destPath)
+    let received = 0
+
+    const pump = () => {
+      reader
+        .read()
+        .then(({ done, value }) => {
+          if (done) {
+            writer.end()
+            resolve()
+            return
+          }
+          received += value.length
+          if (total && onProgress) {
+            onProgress(Math.round((received / total) * 1000) / 10)
+          }
+          writer.write(value, pump)
+        })
+        .catch(reject)
+    }
+    pump()
+    writer.on('error', reject)
+  })
+}
+
+/**
+ * Direct download to ~/Downloads (or platform-appropriate downloads folder).
+ * Used in dev mode where autoUpdater can't download or install.
+ */
+async function downloadToDownloads(): Promise<string | null> {
+  if (!pendingUpdateInfo) {
+    throw new Error('No pending update — check for updates first')
+  }
+
+  const version = pendingUpdateInfo.version
+  const url = await getReleaseDownloadUrl(version)
+  if (!url) throw new Error(`Could not find download URL for v${version}`)
+
+  const downloadsPath = app.getPath('downloads')
+  const filename = url.split('/').pop() || `Aynite-${version}.zip`
+  const destPath = path.join(downloadsPath, filename)
+
+  // Check if file already exists — skip download if it does
+  try {
+    const { stat } = await import('node:fs/promises')
+    const stats = await stat(destPath)
+    if (stats.size > 0) {
+      console.log(
+        `[Updater] File already exists at ${destPath} — skipping download`,
+      )
+      pendingUpdateInfo = {
+        ...pendingUpdateInfo,
+        manualInstall: true,
+        downloadedFile: destPath,
+      }
+      broadcastAppEvent(AppEvents.UPDATE_DOWNLOADED, {
+        version,
+        downloadedFile: destPath,
+        manualInstall: true,
+      })
+      return destPath
+    }
+  } catch {
+    // File doesn't exist — proceed with download
+  }
+
+  broadcastAppEvent(AppEvents.UPDATE_DOWNLOADING, null)
+
+  await downloadFile(url, destPath, (percent) => {
+    broadcastAppEvent(AppEvents.UPDATE_PROGRESS, { percent })
+  })
+
+  broadcastAppEvent(AppEvents.UPDATE_PROGRESS, { percent: 100 })
+  pendingUpdateInfo = {
+    ...pendingUpdateInfo,
+    manualInstall: true,
+    downloadedFile: destPath,
+  }
+
+  broadcastAppEvent(AppEvents.UPDATE_DOWNLOADED, {
+    version,
+    downloadedFile: destPath,
+    manualInstall: true,
+  })
+
+  return destPath
+}
+
+// ── GitHub API check (used in dev mode and startup, no keychain) ──────
+
 async function checkGithubForUpdates() {
   const currentVersion = app.getVersion()
   try {
@@ -72,7 +229,6 @@ async function checkGithubForUpdates() {
     }
 
     const releases = await response.json()
-
     const stableRelease = releases.find((r: any) => !r.draft && !r.prerelease)
 
     if (!stableRelease) {
@@ -112,76 +268,81 @@ async function checkGithubForUpdates() {
   }
 }
 
-/**
- * Simulate a download in dev mode with progress events.
- */
-function simulateDevDownload() {
-  if (!pendingUpdateInfo) return
-
-  broadcastAppEvent(AppEvents.UPDATE_DOWNLOADING, null)
-
-  let progress = 0
-  const interval = setInterval(() => {
-    progress += Math.random() * 15
-    if (progress >= 100) {
-      progress = 100
-      clearInterval(interval)
-      broadcastAppEvent(AppEvents.UPDATE_PROGRESS, { percent: 100 })
-      broadcastAppEvent(AppEvents.UPDATE_DOWNLOADED, {
-        version: pendingUpdateInfo?.version,
-      })
-      pendingUpdateInfo = null
-    } else {
-      broadcastAppEvent(AppEvents.UPDATE_PROGRESS, {
-        percent: Math.round(progress * 10) / 10,
-      })
-    }
-  }, 500)
-}
+// ── IPC Handlers ──────────────────────────────────────────────────────
 
 export function setupUpdater() {
+  // ── CHECK ─────────────────────────────────────────────────────────
   ipcMain.handle(UpdateChannels.CHECK, async () => {
-    // Use plain fetch() to GitHub API — avoids electron-updater's partitioned
-    // session which triggers unnecessary macOS keychain prompts on every check.
-    await checkGithubForUpdates()
+    if (isDev) {
+      // Dev mode: plain fetch to avoid autoUpdater's limitations in unpackaged apps
+      await checkGithubForUpdates()
+    } else {
+      // Production: use autoUpdater so its internal state is set for download/install
+      try {
+        await autoUpdater.checkForUpdates()
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        console.error('[Updater] autoUpdater check failed:', err)
+        broadcastAppEvent(
+          AppEvents.UPDATE_ERROR,
+          `Update check failed: ${message}`,
+        )
+      }
+    }
     return null
   })
 
+  // ── DOWNLOAD ──────────────────────────────────────────────────────
   ipcMain.handle(UpdateChannels.DOWNLOAD, async () => {
-    if (isDev) {
-      console.log('[Updater] Dev mode — simulating download')
-      simulateDevDownload()
-      return null
-    }
     try {
-      broadcastAppEvent(AppEvents.UPDATE_DOWNLOADING, null)
-      await autoUpdater.downloadUpdate()
+      if (isDev) {
+        console.log('[Updater] Dev mode — downloading to ~/Downloads')
+        await downloadToDownloads()
+      } else {
+        broadcastAppEvent(AppEvents.UPDATE_DOWNLOADING, null)
+        await autoUpdater.downloadUpdate()
+        // autoUpdater emits 'update-downloaded' on success via its event listener
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       console.error('[Updater] Download failed:', err)
-      // macOS code signing errors are expected in non-production scenarios.
-      // Fall back to simulation so the UI flow can still be tested.
-      if (message.includes('Code signature') || message.includes('code')) {
+
+      // If autoUpdater wasn't checked first (e.g. update found by startup check),
+      // fall back to direct download to ~/Downloads
+      if (message.includes('Please check update first') && !isDev) {
         console.log(
-          '[Updater] Code signing validation failed — falling back to simulated download',
+          '[Updater] autoUpdater has no pending update — direct downloading to ~/Downloads',
         )
-        simulateDevDownload()
-        return null
+        try {
+          await downloadToDownloads()
+          return null
+        } catch (dlErr: unknown) {
+          const dlMsg = dlErr instanceof Error ? dlErr.message : String(dlErr)
+          broadcastAppEvent(AppEvents.UPDATE_ERROR, `Download failed: ${dlMsg}`)
+          return null
+        }
       }
+
       broadcastAppEvent(AppEvents.UPDATE_ERROR, `Download failed: ${message}`)
-      return null
     }
   })
 
-  ipcMain.handle(UpdateChannels.INSTALL, () => {
-    if (isDev) {
-      console.log('[Updater] Install skipped in development mode.')
+  // ── INSTALL ────────────────────────────────────────────────────────
+  ipcMain.handle(UpdateChannels.INSTALL, async () => {
+    // If the download went to ~/Downloads (manual install), open that folder
+    // Works for both dev mode and production fallback (startup-check path).
+    if (isDev || pendingUpdateInfo?.manualInstall) {
+      const targetPath = pendingUpdateInfo?.downloadedFile
+        ? path.dirname(pendingUpdateInfo.downloadedFile)
+        : app.getPath('downloads')
+      console.log('[Updater] Opening download location:', targetPath)
+      shell.openPath(targetPath)
       return
     }
     autoUpdater.quitAndInstall()
   })
 
-  // Production — autoUpdater event listeners (for when user manually checks)
+  // ── Event listeners (production only) ──────────────────────────────
   if (!isDev) {
     autoUpdater.on('checking-for-update', () => {
       broadcastAppEvent(AppEvents.UPDATE_CHECKING, null)
@@ -219,8 +380,8 @@ export function setupUpdater() {
     })
   }
 
-  // Startup check using plain fetch() — avoids electron-updater's partitioned
-  // session which triggers macOS keychain prompt on every HTTPS request.
+  // ── Startup check ──────────────────────────────────────────────────
+  // Use plain fetch to avoid macOS keychain prompts on silent startup check.
   setTimeout(() => {
     checkGithubForUpdates()
   }, 5000)

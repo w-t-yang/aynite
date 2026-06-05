@@ -165,14 +165,28 @@ export function AboutTab({ state, actions }: AboutTabProps) {
           <div className="flex flex-col items-center text-center space-y-4 py-8">
             <CloudDownload size={40} className="text-primary" />
             <div className="space-y-1">
-              <p className="text-lg font-semibold">Update Ready</p>
+              <p className="text-lg font-semibold">
+                {updateInfo?.manualInstall
+                  ? 'Download Complete'
+                  : 'Update Ready'}
+              </p>
               <p className="text-sm text-muted-foreground">
-                v{updateInfo?.version || '?'} has been downloaded.
+                v{updateInfo?.version || '?'}
+                {updateInfo?.manualInstall
+                  ? ' saved to Downloads.'
+                  : ' has been downloaded.'}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Save your work, then restart to apply the update.
-            </p>
+            {updateInfo?.manualInstall ? (
+              <p className="text-xs text-muted-foreground">
+                Open the installer from your Downloads folder to complete the
+                update.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Save your work, then restart to apply the update.
+              </p>
+            )}
           </div>
         )
 
@@ -218,13 +232,24 @@ export function AboutTab({ state, actions }: AboutTabProps) {
           <Button variant="ghost" onClick={handleCloseModal}>
             Later
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleInstallUpdate}
-            className="shadow-lg shadow-primary/20"
-          >
-            Restart Now
-          </Button>
+          {updateInfo?.manualInstall ? (
+            <Button
+              variant="primary"
+              onClick={handleInstallUpdate}
+              className="shadow-lg shadow-primary/20"
+            >
+              <CloudDownload size={16} />
+              Open Downloads
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              onClick={handleInstallUpdate}
+              className="shadow-lg shadow-primary/20"
+            >
+              Restart Now
+            </Button>
+          )}
         </>
       )
     }
@@ -294,9 +319,15 @@ export function AboutTab({ state, actions }: AboutTabProps) {
           variant="primary"
           size="sm"
           onClick={handleInstallUpdate}
-          className="px-4 py-1.5 shadow-lg shadow-primary/20 transition-all"
+          className="px-4 py-1.5 shadow-lg shadow-primary/20 transition-all flex items-center gap-1"
         >
-          Restart Now
+          {updateInfo?.manualInstall ? (
+            <>
+              <CloudDownload size={14} /> Open Downloads
+            </>
+          ) : (
+            'Restart Now'
+          )}
         </Button>
       )}
     </div>
@@ -313,7 +344,9 @@ export function AboutTab({ state, actions }: AboutTabProps) {
       case 'downloading':
         return `Downloading... ${downloadProgress.toFixed(0)}%`
       case 'downloaded':
-        return 'Ready to install. Restart to apply.'
+        return updateInfo?.manualInstall
+          ? 'Saved to Downloads folder.'
+          : 'Ready to install. Restart to apply.'
       case 'error':
         return 'Check failed.'
     }
