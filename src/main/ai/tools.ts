@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs'
 import { jsonSchema } from '@ai-sdk/provider-utils'
 import { TOOL_METADATA } from '../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../lib/constants/messages'
-import { getAyniteDir, getWorkspaceDataPath } from '../../lib/path'
+import {
+  getAyniteDir,
+  getMainConfigPath,
+  getWorkspaceDataPath,
+} from '../../lib/path'
 import type { ToolContext } from '../../lib/types/ai'
 import { createFileOps } from './tools/file-ops'
 import { createMemoryManager } from './tools/memory-manager'
@@ -38,9 +42,23 @@ function readWorkspaceFolders(context: ToolContext): string[] {
   return context.workspaceFolders
 }
 
+function readSpellFolders(): string[] {
+  try {
+    const configPath = getMainConfigPath()
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw)
+    const skillsFolders: string[] = config.skills?.folders || []
+    const commandsFolders: string[] = config.commands?.folders || []
+    return [...skillsFolders, ...commandsFolders]
+  } catch {
+    return []
+  }
+}
+
 export function createTools(context: ToolContext) {
   const workspaceFolders = readWorkspaceFolders(context)
-  const domains = [...workspaceFolders, getAyniteDir()]
+  const spellFolders = readSpellFolders()
+  const domains = [...workspaceFolders, getAyniteDir(), ...spellFolders]
   const workspaceName = getWorkspaceName(context)
 
   return {
