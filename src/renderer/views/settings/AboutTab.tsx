@@ -8,7 +8,6 @@ import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
-import { Tooltip } from '../../shared/basic/Tooltip'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import { useViewEvent } from '../useViewEvents'
 
@@ -366,45 +365,6 @@ export function AboutTab({ state, actions }: AboutTabProps) {
           </Section>
 
           <Section
-            title="Usage Analytics"
-            description="Help improve Aynite by sharing anonymous usage data."
-          >
-            <div className="p-6 rounded-2xl border border-border bg-accent/5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    Share Anonymous Usage Data
-                  </h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
-                    Send anonymized event data (no file paths, workspace names,
-                    or personal content) to help improve Aynite.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Tooltip
-                    content={
-                      telemetryEnabled
-                        ? 'Usage data sharing is enabled'
-                        : 'Usage data sharing is disabled'
-                    }
-                    position="top"
-                  >
-                    <Switch
-                      checked={telemetryEnabled}
-                      onCheckedChange={handleTelemetryToggle}
-                    />
-                  </Tooltip>
-                </div>
-              </div>
-              <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
-                Only basic event names and counts are sent — no file contents,
-                paths, workspace names, or any personal information. You can
-                change this setting at any time.
-              </p>
-            </div>
-          </Section>
-
-          <Section
             title="Resources"
             description="Join the community and help improve the project."
           >
@@ -441,6 +401,26 @@ export function AboutTab({ state, actions }: AboutTabProps) {
                   </div>
                 </div>
               </Button>
+            </div>
+          </Section>
+
+          <Section
+            title="Usage Analytics"
+            description="Help improve Aynite by sharing anonymous usage data."
+          >
+            <div className="p-6 rounded-2xl border border-border bg-accent/5 flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold">
+                  Share anonymous usage data
+                </h4>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                  No file paths, names, or personal content
+                </p>
+              </div>
+              <Switch
+                checked={telemetryEnabled}
+                onCheckedChange={handleTelemetryToggle}
+              />
             </div>
           </Section>
         </div>
