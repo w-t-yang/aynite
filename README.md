@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Your AI desktop that connects everything.**
+**Your AI desktop that can connect anything.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0--beta.15-blue)](https://github.com/w-t-yang/aynite/releases)
