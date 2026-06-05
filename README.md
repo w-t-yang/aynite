@@ -6,8 +6,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0--beta.15-blue)](https://github.com/w-t-yang/aynite/releases)
-[![Electron](https://img.shields.io/badge/Electron-42.x-47848F?logo=electron)](https://www.electronjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
 </div>
 
@@ -17,7 +15,7 @@
 
 <div align="center">
 
-### AI Chat · Git Diff · Data Visualization · File Browser · RSS · Spotify
+### AI Agent · Data Visualization · File Browser · RSS/Spotify/Unlimited Integration
 
 All in one desktop app. Your AI agent, your files, your tools.
 
@@ -28,36 +26,36 @@ All in one desktop app. Your AI agent, your files, your tools.
     <td width="50%" align="center">
       <img src="docs/images/ai-chat.png" alt="AI Chat with tool calls and command output streaming" width="100%">
       <br>
-      <sub>🤖 AI Chat — multi-provider, tool execution, real-time command streaming</sub>
+      <sub>🤖 AI Agent <br> multi-provider, tool execution, plan, memory, and more</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/images/data-views.png" alt="Data visualization views: charts, graphs, mindmaps" width="100%">
       <br>
-      <sub>🎨 Data Views — 8 visualization types from any JSON data</sub>
+      <sub>🎨 Data Views <br> visualizations from JSON data</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
       <img src="docs/images/git-diff.png" alt="Side-by-side git diff view with hunk staging" width="100%">
       <br>
-      <sub>🔄 Git Integration — side-by-side diff, hunk staging, AI commit messages</sub>
+      <sub>🔄 Git Integration <br> side-by-side diff, hunk staging, AI commit messages</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/images/file-browser.png" alt="File browser with tabs, search, and syntax highlighting" width="100%">
       <br>
-      <sub>📂 File Browser — tabs, syntax highlighting, search, 6 built-in file viewers</sub>
+      <sub>📂 File Browser <br> tabs, syntax highlighting, search, 6 built-in file viewers</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
       <img src="docs/images/rss-reader.png" alt="RSS reader with feed management and AI summarization" width="100%">
       <br>
-      <sub>📡 RSS Reader — feed management, groups, AI article summarization</sub>
+      <sub>📡 RSS Reader <br> feed management, AI summarization</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/images/spotify.png" alt="Spotify player with playlist browsing" width="100%">
       <br>
-      <sub>🎵 Spotify — browse, search, control playback without leaving the app</sub>
+      <sub>🎵 Spotify <br> browser and control your favorite songs</sub>
     </td>
   </tr>
 </table>
