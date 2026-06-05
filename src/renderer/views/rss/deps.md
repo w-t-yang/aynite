@@ -4,7 +4,8 @@
 
 | Provider | Functions Used | Purpose |
 |----------|---------------|---------|
-| **Bridge: systemMutations** | `systemMutations.openExternal(url)` | Open article URLs in system browser |
+| **Bridge: systemMutations** | `systemMutations.openExternal(url)` | Open article URLs in system browser (also via Space key in keyboard nav) |
+| **Bridge: config** (getWithPayload) | `config.getWithPayload('view-config', { view: 'rss' })` | Load view config (key bindings) from `~/.aynite/views/rss/config.json` |
 
 ## Events (via `useViewEvent`)
 

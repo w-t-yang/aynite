@@ -17,6 +17,8 @@ interface SidebarProps {
   selectedSourceId: string | null
   view: ViewMode
   width: number
+  focusColumn: number
+  focusRow: number
   onSelectSource: (sourceId: string | null) => void
   onSelectToday: () => void
   onViewChange: (view: ViewMode) => void
@@ -63,6 +65,8 @@ export function Sidebar({
   selectedSourceId,
   view,
   width,
+  focusColumn,
+  focusRow,
   onSelectSource,
   onSelectToday,
   onViewChange,
@@ -81,6 +85,28 @@ export function Sidebar({
   }
 
   const todayUnread = getTodayUnreadCount(config, contents)
+
+  // Build a flat list of navigable source items (in display order) for focus tracking
+  const sourceItems: Array<{ type: 'source'; sourceId: string }> = []
+  for (const group of config.groups) {
+    const sources = groupedSources.get(group.id) || []
+    for (const source of sources) {
+      sourceItems.push({ type: 'source', sourceId: source.id })
+    }
+  }
+  // Orphaned sources
+  for (const source of config.sources) {
+    if (!config.groups.find((g) => g.id === source.groupId)) {
+      sourceItems.push({ type: 'source', sourceId: source.id })
+    }
+  }
+
+  const isRowFocused = (rowIndex: number) =>
+    focusColumn === 0 && focusRow === rowIndex
+
+  // Row 0 = "Today" (if shown), then source items follow
+  const todayShown = config.sources.length > 0
+  const sourceRowOffset = todayShown ? 1 : 0
 
   return (
     <div
@@ -125,15 +151,16 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Today - special item before all groups */}
-        {config.sources.length > 0 && (
+        {/* Today - special item before all groups (row 0) */}
+        {todayShown && (
           // biome-ignore lint/a11y/noStaticElementInteractions: clickable item
           <div
             className={cn(
               'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer group hover:bg-accent/30 transition-colors',
-              selectedSourceId === '__today__' &&
-                'bg-accent text-accent-foreground',
-              selectedSourceId !== '__today__' && 'text-muted-foreground',
+              selectedSourceId === '__today__'
+                ? 'bg-accent text-accent-foreground font-medium'
+                : 'text-muted-foreground',
+              isRowFocused(0) && 'ring-1 ring-inset ring-primary/40',
             )}
             onClick={onSelectToday}
             onKeyDown={() => {}}
@@ -150,6 +177,10 @@ export function Sidebar({
 
         {config.groups.map((group) => {
           const sources = groupedSources.get(group.id) || []
+          // Find the index of the first source in this group within the sourceItems array
+          const firstSourceIdx = sourceItems.findIndex(
+            (s) => s.sourceId === sources[0]?.id,
+          )
           return (
             <div key={group.id}>
               {/* Group header */}
@@ -181,9 +212,10 @@ export function Sidebar({
               </div>
 
               {/* Sources in group */}
-              {sources.map((source) => {
+              {sources.map((source, sourceIdx) => {
                 const unread = getUnreadCount(contents, source.id)
                 const isSelected = selectedSourceId === source.id
+                const rowIdx = sourceRowOffset + firstSourceIdx + sourceIdx
                 return (
                   // biome-ignore lint/a11y/noStaticElementInteractions: clickable source item, consistent with other views
                   <div
@@ -193,6 +225,9 @@ export function Sidebar({
                       isSelected && 'bg-accent text-accent-foreground',
                       !isSelected &&
                         'text-muted-foreground hover:text-foreground',
+                      isRowFocused(rowIdx) &&
+                        !isSelected &&
+                        'ring-1 ring-inset ring-primary/40',
                     )}
                     onClick={() => onSelectSource(source.id)}
                     onKeyDown={() => {}}
@@ -263,24 +298,33 @@ export function Sidebar({
               <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Uncategorized
               </div>
-              {orphaned.map((source) => (
-                // biome-ignore lint/a11y/noStaticElementInteractions: clickable source item
-                <div
-                  key={source.id}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-accent/30 transition-colors',
-                    selectedSourceId === source.id &&
-                      'bg-accent text-accent-foreground',
-                  )}
-                  onClick={() => onSelectSource(source.id)}
-                  onKeyDown={() => {}}
-                >
-                  <Rss size={12} className="text-primary/60 shrink-0" />
-                  <span className="flex-1 truncate">
-                    {source.title || source.url}
-                  </span>
-                </div>
-              ))}
+              {orphaned.map((source) => {
+                const orphanedIdx = sourceItems.findIndex(
+                  (s) => s.sourceId === source.id,
+                )
+                const rowIdx = sourceRowOffset + orphanedIdx
+                return (
+                  // biome-ignore lint/a11y/noStaticElementInteractions: clickable source item
+                  <div
+                    key={source.id}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-accent/30 transition-colors',
+                      selectedSourceId === source.id &&
+                        'bg-accent text-accent-foreground',
+                      isRowFocused(rowIdx) &&
+                        selectedSourceId !== source.id &&
+                        'ring-1 ring-inset ring-primary/40',
+                    )}
+                    onClick={() => onSelectSource(source.id)}
+                    onKeyDown={() => {}}
+                  >
+                    <Rss size={12} className="text-primary/60 shrink-0" />
+                    <span className="flex-1 truncate">
+                      {source.title || source.url}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           )
         })()}

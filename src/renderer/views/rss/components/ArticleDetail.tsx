@@ -8,6 +8,7 @@ import type { RssItem } from '../types'
 interface ArticleDetailProps {
   item: RssItem | null
   isBookmarked: boolean
+  focusColumn: number
   onToggleBookmark: () => void
   onOpenExternal: (url: string) => void
 }
@@ -15,6 +16,7 @@ interface ArticleDetailProps {
 export function ArticleDetail({
   item,
   isBookmarked,
+  focusColumn,
   onToggleBookmark,
   onOpenExternal,
 }: ArticleDetailProps) {
@@ -120,7 +122,12 @@ export function ArticleDetail({
 
   if (!item) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-w-[320px] p-8 text-center">
+      <div
+        className={cn(
+          'flex-1 flex flex-col items-center justify-center min-w-[320px] p-8 text-center',
+          focusColumn === 2 && 'ring-1 ring-inset ring-primary/40',
+        )}
+      >
         <ExternalLink size={36} className="text-muted-foreground/20 mb-4" />
         <p className="text-sm text-muted-foreground/50">
           Select an article to read
@@ -130,7 +137,12 @@ export function ArticleDetail({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-[320px] bg-card">
+    <div
+      className={cn(
+        'flex-1 flex flex-col min-w-[320px] bg-card',
+        focusColumn === 2 && 'ring-1 ring-inset ring-primary/40',
+      )}
+    >
       {/* Article content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-3xl mx-auto p-6">

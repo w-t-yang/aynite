@@ -23,6 +23,7 @@ export interface RssConfig {
     sidebar?: number
     articleList?: number
   }
+  key_bindings?: Record<string, unknown>
 }
 
 export interface RssItem {

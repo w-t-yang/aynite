@@ -12,6 +12,8 @@ interface ArticleListProps {
   width?: number
   groupByDate?: boolean
   showSourceBadge?: boolean
+  focusColumn: number
+  focusRow: number
   onSelectItem: (itemId: string) => void
   onMarkAllRead: () => void
   onOpenExternal: (url: string) => void
@@ -95,6 +97,8 @@ export function ArticleList({
   width,
   groupByDate = false,
   showSourceBadge = false,
+  focusColumn,
+  focusRow,
   onSelectItem,
   onMarkAllRead,
   onOpenExternal: _onOpenExternal,
@@ -107,10 +111,19 @@ export function ArticleList({
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center min-w-[280px]"
+        className="flex flex-col min-w-[280px] border-r border-border"
         style={width ? { width, flex: 'none' } : { flex: 1 }}
       >
-        <Loader2 size={20} className="animate-spin text-muted-foreground" />
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 bg-muted/20 shrink-0">
+          <span className="text-xs font-semibold text-muted-foreground">
+            {sourceTitle || 'All Articles'}
+          </span>
+        </div>
+        {/* Spinner */}
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 size={20} className="animate-spin text-muted-foreground" />
+        </div>
       </div>
     )
   }
@@ -130,9 +143,10 @@ export function ArticleList({
     )
   }
 
-  const renderItem = (item: RssItem) => {
+  const renderItem = (item: RssItem, index: number) => {
     const isSelected = selectedItemId === item.id
     const isBookmarked = !!bookmarks[item.id]
+    const isFocused = focusColumn === 1 && focusRow === index
     return (
       // biome-ignore lint/a11y/noStaticElementInteractions: clickable list item, consistent with other views
       <div
@@ -140,6 +154,7 @@ export function ArticleList({
         className={cn(
           'flex items-start gap-2 px-4 py-2.5 cursor-pointer border-b border-border/20 transition-colors group',
           isSelected ? 'bg-accent' : 'hover:bg-accent/30',
+          isFocused && !isSelected && 'ring-1 ring-inset ring-primary/40',
         )}
         onClick={() => onSelectItem(item.id)}
         onKeyDown={() => {}}
@@ -215,10 +230,10 @@ export function ArticleList({
                 <div className="sticky top-0 z-10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 backdrop-blur-sm border-b border-border/10">
                   {group.label}
                 </div>
-                {group.items.map(renderItem)}
+                {group.items.map((item, idx) => renderItem(item, idx))}
               </div>
             ))
-          : items.map(renderItem)}
+          : items.map((item, idx) => renderItem(item, idx))}
       </div>
     </div>
   )

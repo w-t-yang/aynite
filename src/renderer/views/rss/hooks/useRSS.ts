@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { config } from '../../../bridge/config'
 import { rss, rssMutations } from '../../../bridge/rss'
 import type {
   RssBookmarks,
@@ -20,6 +21,7 @@ interface RSSState {
   selectedSourceId: string | null
   selectedItemId: string | null
   panelWidths: { sidebar: number; articleList: number }
+  keyBindings: Record<string, { key: string; ctrl?: boolean; shift?: boolean }>
 }
 
 export function useRSS() {
@@ -33,6 +35,13 @@ export function useRSS() {
     selectedSourceId: '__today__',
     selectedItemId: null,
     panelWidths: { sidebar: 220, articleList: 340 },
+    keyBindings: {
+      move_left: { key: 'a' },
+      move_right: { key: 'd' },
+      move_up: { key: 'w' },
+      move_down: { key: 's' },
+      open_in_browser: { key: ' ' },
+    },
   })
 
   const autoFetchDone = useRef(false)
@@ -40,28 +49,42 @@ export function useRSS() {
   const loadAll = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
-      const [config, contents, bookmarks] = await Promise.all([
+      const [rssConfig, contents, bookmarks, viewCfg] = await Promise.all([
         rss.getConfig(),
         rss.getAllContents(),
         rss.getBookmarks(),
+        config.getWithPayload<{
+          key_bindings?: Record<
+            string,
+            { key: string; ctrl?: boolean; shift?: boolean }
+          >
+        }>('view-config', { view: 'rss' }),
       ])
       setState((s) => ({
         ...s,
-        config,
+        config: rssConfig,
         contents,
         bookmarks,
         loading: false,
         error: null,
         panelWidths: {
-          sidebar: config?.panelWidths?.sidebar ?? 220,
-          articleList: config?.panelWidths?.articleList ?? 340,
+          sidebar: rssConfig?.panelWidths?.sidebar ?? 220,
+          articleList: rssConfig?.panelWidths?.articleList ?? 340,
+        },
+        keyBindings: {
+          move_left: { key: 'a' },
+          move_right: { key: 'd' },
+          move_up: { key: 'w' },
+          move_down: { key: 's' },
+          open_in_browser: { key: ' ' },
+          ...(viewCfg?.key_bindings || {}),
         },
       }))
 
       // Auto-fetch stale sources
-      if (config && !autoFetchDone.current) {
+      if (rssConfig && !autoFetchDone.current) {
         autoFetchDone.current = true
-        const stale = config.sources.filter((src: RssSource) => {
+        const stale = rssConfig.sources.filter((src: RssSource) => {
           const store = contents[src.id]
           if (!store) return true
           const lastFetched = src.lastFetchedAt || store.lastFetchedAt
