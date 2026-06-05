@@ -45,13 +45,20 @@ jobs:
       - name: Build the app
         run: npm run build
 
-      - name: Publish the release
+      # ---------- macOS: Sign + Notarize ----------
+      - name: Sign and notarize (macOS)
+        if: matrix.os == 'macos-latest'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS signing & notarization
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder --${{ matrix.os == 'macos-latest' && 'mac' || (matrix.os == 'windows-latest' && 'win' || 'linux') }} --publish always
+        run: npx electron-builder --mac --publish always
+
+      # ---------- Windows / Linux: No signing needed ----------
+      - name: Package and publish (Windows / Linux)
+        if: matrix.os != 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --${{ matrix.os == 'windows-latest' && 'win' || 'linux' }} --publish always
