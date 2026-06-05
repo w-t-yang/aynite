@@ -24,6 +24,7 @@ const alignClasses: Record<string, string> = {
 /**
  * A simple CSS-based tooltip that shows on hover.
  * Uses group-hover to toggle visibility without JavaScript.
+ * When `content` contains newlines, it renders as a multi-line tooltip.
  */
 export function Tooltip({
   content,
@@ -32,6 +33,7 @@ export function Tooltip({
   position = 'top',
   align = 'left',
 }: TooltipProps) {
+  const isMultiLine = content.includes('\n')
   return (
     <div className={cn('relative group/tooltip', className)}>
       {children}
@@ -42,7 +44,9 @@ export function Tooltip({
           positionClasses[position],
           alignClasses[align],
           'opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150 z-popover',
-          'whitespace-nowrap px-2 py-1 rounded text-[11px] leading-none',
+          isMultiLine
+            ? 'whitespace-pre-line px-3 py-1.5 rounded text-[11px] leading-relaxed min-w-[160px]'
+            : 'whitespace-nowrap px-2 py-1 rounded text-[11px] leading-none',
           'bg-popover text-popover-foreground border border-border shadow-lg',
         )}
       >

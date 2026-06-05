@@ -406,6 +406,30 @@ export function RSSApp() {
   const showSourceBadge =
     rss.selectedSourceId === null || rss.selectedSourceId === '__today__'
 
+  // Build the keybindings tooltip text
+  const keybindingsTooltip = useMemo(() => {
+    const fmt = (kb: { key: string; ctrl?: boolean; shift?: boolean }) => {
+      const parts: string[] = []
+      if (kb.ctrl) parts.push('Ctrl')
+      if (kb.shift) parts.push('Shift')
+      const keyLabel = kb.key === ' ' ? 'Space' : kb.key.toUpperCase()
+      parts.push(keyLabel)
+      return parts.join('+')
+    }
+    const lines: string[] = ['Keyboard shortcuts']
+    if (rss.keyBindings.move_left)
+      lines.push(`${fmt(rss.keyBindings.move_left)} — Move left`)
+    if (rss.keyBindings.move_right)
+      lines.push(`${fmt(rss.keyBindings.move_right)} — Move right`)
+    if (rss.keyBindings.move_up)
+      lines.push(`${fmt(rss.keyBindings.move_up)} — Move up`)
+    if (rss.keyBindings.move_down)
+      lines.push(`${fmt(rss.keyBindings.move_down)} — Move down`)
+    if (rss.keyBindings.open_in_browser)
+      lines.push(`${fmt(rss.keyBindings.open_in_browser)} — Open in browser`)
+    return lines.join('\n')
+  }, [rss.keyBindings])
+
   if (rss.loading) {
     return (
       <div className="flex items-center justify-center h-full bg-background">
@@ -423,25 +447,15 @@ export function RSSApp() {
       {/* Header */}
       <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-popover">
         <div className="flex items-center gap-2 min-w-0">
-          <Tooltip
-            position="bottom"
-            content={
-              'Keyboard Shortcuts:\n' +
-              `${rss.keyBindings.move_left?.key?.toUpperCase() || 'A'} — Move left\n` +
-              `${rss.keyBindings.move_right?.key?.toUpperCase() || 'D'} — Move right\n` +
-              `${rss.keyBindings.move_up?.key?.toUpperCase() || 'W'} — Move up\n` +
-              `${rss.keyBindings.move_down?.key?.toUpperCase() || 'S'} — Move down\n` +
-              `${rss.keyBindings.open_in_browser?.key === ' ' ? 'Space' : rss.keyBindings.open_in_browser?.key?.toUpperCase() || 'Space'} — Open in browser`
-            }
-          >
-            <Rss size={14} className="text-primary cursor-pointer" />
+          <Tooltip position="bottom" content="RSS Reader">
+            <Rss size={14} className="text-primary" />
           </Tooltip>
           <span className="text-[10px] font-bold uppercase tracking-widest truncate text-muted-foreground">
             RSS Reader
           </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Tooltip position="bottom" align="right" content="Keyboard shortcuts">
+          <Tooltip position="bottom" align="right" content={keybindingsTooltip}>
             <Keyboard
               size={13}
               className="text-muted-foreground/50 cursor-help"
