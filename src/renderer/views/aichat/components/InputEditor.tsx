@@ -102,6 +102,10 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
           orderedList: false,
           blockquote: false,
           horizontalRule: false,
+          bold: false,
+          italic: false,
+          strike: false,
+          code: false,
         }),
         Placeholder.configure({
           placeholder,

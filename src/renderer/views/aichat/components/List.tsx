@@ -12,6 +12,7 @@ interface ListProps {
   pendingApproval: { command: string; cwd: string } | null
   onApprove: () => void
   onReject: () => void
+  onAutoApprove: () => void
   onOpenFile: (path: string) => void
   onCopy: (content: string) => void
   onRevert: (index: number) => void
@@ -26,6 +27,7 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
       pendingApproval,
       onApprove,
       onReject,
+      onAutoApprove,
       onOpenFile,
       onCopy,
       onRevert,
@@ -34,7 +36,7 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
   ) => {
     return (
       <div
-        className="flex-1 overflow-y-auto px-12 pb-32 mask-fade-vertical"
+        className="flex-1 overflow-y-auto px-12 pb-36 mask-fade-vertical"
         ref={ref}
       >
         <div className="max-w-[900px] mx-auto">
@@ -91,6 +93,7 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
               cwd={pendingApproval.cwd}
               onApprove={onApprove}
               onReject={onReject}
+              onAutoApprove={onAutoApprove}
             />
           )}
 

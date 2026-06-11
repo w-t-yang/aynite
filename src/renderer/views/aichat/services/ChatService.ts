@@ -174,6 +174,13 @@ export function init(subscribe: SubscribeFn) {
       const { id, command, cwd } = event.data as any
       for (const [, session] of sessions) {
         if (session.state.loading) {
+          // Check localStorage for auto-approve on this session
+          const sid = session.state.sessionId
+          if (sid && localStorage.getItem(`autoApprove:${sid}`) === 'true') {
+            // Auto-approve: respond immediately without showing modal
+            aiMutations.respondToAiApproval(id, true)
+            return
+          }
           session.approvalId = id
           updateState(session, { pendingApproval: { command, cwd } })
           break

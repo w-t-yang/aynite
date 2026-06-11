@@ -117,29 +117,54 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
             </div>
 
             {tokenCount > 0 && (
-              <div
-                className={cn(
-                  'flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider cursor-help transition-all',
-                  tokenCount >= 800_000
-                    ? 'bg-destructive/10 border-destructive/20 text-destructive/80 hover:bg-destructive/15'
-                    : tokenCount >= 500_000
-                      ? 'bg-warning/10 border-warning/20 text-warning/80 hover:bg-warning/15'
-                      : 'bg-foreground/[0.02] border-border/5 text-muted-foreground/40 hover:bg-foreground/[0.04] hover:text-muted-foreground/60',
-                )}
-                title={`Estimated context tokens used in this session: ${tokenCount.toLocaleString()}`}
-              >
-                <div
-                  className={cn(
-                    'w-1 h-1 rounded-full animate-pulse',
-                    tokenCount >= 800_000
-                      ? 'bg-destructive/60'
-                      : tokenCount >= 500_000
-                        ? 'bg-warning/60'
-                        : 'bg-primary/30',
-                  )}
-                />
-                {formatNumber(tokenCount)} tokens
-              </div>
+              <SelectionMenu
+                items={[
+                  {
+                    id: 'context-info',
+                    label: '',
+                    subtitle: '',
+                    disabled: true,
+                  },
+                ]}
+                onSelect={() => {}}
+                side="top"
+                align="right"
+                footer={
+                  <div className="px-3 py-2.5 max-w-[220px]">
+                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+                      Estimated context usage based on message content size.
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed mt-2">
+                      Start a new session if context is getting too large.
+                    </p>
+                  </div>
+                }
+                trigger={
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all select-none',
+                      tokenCount >= 800_000
+                        ? 'bg-destructive/10 border-destructive/20 text-destructive/80 hover:bg-destructive/15'
+                        : tokenCount >= 500_000
+                          ? 'bg-warning/10 border-warning/20 text-warning/80 hover:bg-warning/15'
+                          : 'bg-foreground/[0.02] border-border/5 text-muted-foreground/40 hover:bg-foreground/[0.04] hover:text-muted-foreground/60',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'w-1 h-1 rounded-full animate-pulse',
+                        tokenCount >= 800_000
+                          ? 'bg-destructive/60'
+                          : tokenCount >= 500_000
+                            ? 'bg-warning/60'
+                            : 'bg-primary/30',
+                      )}
+                    />
+                    {formatNumber(tokenCount)} tokens
+                  </div>
+                }
+                title="Context Tokens"
+              />
             )}
           </div>
 

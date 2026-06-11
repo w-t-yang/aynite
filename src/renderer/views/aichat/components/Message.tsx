@@ -9,7 +9,7 @@ import {
   Save,
   Terminal,
 } from 'lucide-react'
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PROTOCOL } from '../../../../lib/constants/app'
@@ -74,6 +74,52 @@ const MarkdownRenderer = memo(
     </div>
   ),
 )
+
+/**
+ * Renders long text progressively in chunks to avoid UI freezes.
+ * Shows the first chunk immediately, then appends remaining chunks
+ * via requestAnimationFrame to let the browser breathe between frames.
+ */
+function ProgressiveOutput({ text }: { text: string }) {
+  const [displayed, setDisplayed] = useState('')
+  const CHUNK_SIZE = 500
+  const isLong = text.length > CHUNK_SIZE
+
+  useEffect(() => {
+    if (!isLong) {
+      setDisplayed(text)
+      return
+    }
+
+    let cancelled = false
+    let pos = 0
+
+    const renderNext = () => {
+      if (cancelled) return
+      const nextPos = Math.min(pos + CHUNK_SIZE, text.length)
+      setDisplayed(text.slice(0, nextPos))
+      pos = nextPos
+      if (pos < text.length) {
+        requestAnimationFrame(renderNext)
+      }
+    }
+
+    // Show first chunk immediately
+    const firstChunk = text.slice(0, CHUNK_SIZE)
+    setDisplayed(firstChunk)
+    pos = CHUNK_SIZE
+
+    if (text.length > CHUNK_SIZE) {
+      requestAnimationFrame(renderNext)
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [text, isLong])
+
+  return <>{isLong ? displayed : text}</>
+}
 
 const ToolPartRenderer = memo(({ part }: { part: any }) => {
   const { toolName, state, errorText } = part
@@ -209,13 +255,12 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
         >
           {isResult ? (
             output !== undefined && output !== null && output !== '' ? (
-              formatOutput(output)
+              <ProgressiveOutput text={formatOutput(output)} />
             ) : (
               errorText || '(No output)'
             )
           ) : isExecuting && output ? (
             <span>
-              {formatOutput(output)}
               <span className="inline-block w-1.5 h-4 bg-primary/70 ml-0.5 animate-pulse align-middle" />
             </span>
           ) : (

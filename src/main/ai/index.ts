@@ -1,11 +1,12 @@
 import type { UIMessage } from 'ai'
 import { ipcMain } from 'electron'
-import { AppOperation } from '../../lib/constants/app'
+import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
 import { trackEvent } from '../telemetry/index'
 import {
   getWinIdFromSender,
   sendOperationToWindow,
+  sendToWindow,
   showOpenDialog,
 } from '../window'
 import { getWindowWorkspace } from '../window-state'
@@ -76,7 +77,15 @@ export function setupAiIpc() {
     async (event, { sessionId, messages, metadata }: SessionSavePayload) => {
       const winId = getWinIdFromSender(event.sender)
       const workspaceName = await getWindowWorkspace(winId)
-      return await saveSession(workspaceName, sessionId, messages, metadata)
+      const result = await saveSession(
+        workspaceName,
+        sessionId,
+        messages,
+        metadata,
+      )
+      // Notify views so they can refresh (e.g., workspace view session list)
+      sendToWindow(winId, AppEvents.SESSION_SAVED, { id: sessionId })
+      return result
     },
   )
 

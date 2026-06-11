@@ -32,6 +32,7 @@ export function AIChat() {
     setError,
     artifactStatus,
     tokenCount,
+    activeSessionId,
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -162,6 +163,11 @@ export function AIChat() {
             pendingApproval={pendingApproval}
             onApprove={handleApprove}
             onReject={handleReject}
+            onAutoApprove={() => {
+              if (activeSessionId) {
+                localStorage.setItem(`autoApprove:${activeSessionId}`, 'true')
+              }
+            }}
             onOpenFile={(path) => fileMutations.open(path)}
             onCopy={copyToClipboard}
             onRevert={revertToMessage}

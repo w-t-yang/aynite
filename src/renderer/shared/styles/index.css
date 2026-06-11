@@ -424,9 +424,9 @@ body.is-resizing iframe {
   mask-image: linear-gradient(
     to bottom,
     transparent,
-    black 5%,
-    black 95%,
-    transparent
+    black 4%,
+    black 92%,
+    transparent 99%
   );
 }
 

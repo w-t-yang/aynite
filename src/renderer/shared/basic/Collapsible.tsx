@@ -42,9 +42,14 @@ export function Collapsible({
           onClick={() => setExpanded(!expanded)}
           className="flex-1 flex items-center justify-between"
         >
-          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
-            {Icon && <Icon size={compact ? 10 : 12} className={textColor} />}
-            <span>{title}</span>
+          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight min-w-0">
+            {Icon && (
+              <Icon
+                size={compact ? 10 : 12}
+                className={`${textColor} shrink-0`}
+              />
+            )}
+            <span className="truncate">{title}</span>
           </div>
           <ChevronRight
             size={compact ? 8 : 10}

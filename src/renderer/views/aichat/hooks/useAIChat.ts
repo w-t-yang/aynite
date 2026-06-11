@@ -273,6 +273,9 @@ export function useAIChat() {
     inputRef,
     abortRef,
 
+    // Session ID
+    activeSessionId,
+
     // Artifact status
     artifactStatus,
     loadArtifactStatus,

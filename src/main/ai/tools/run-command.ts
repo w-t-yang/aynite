@@ -67,14 +67,24 @@ export function createRunCommand(
                 output += `\n\nSTDERR:\n${stderr}`
               }
 
+              // Non-zero exit code: if there's meaningful stdout, include it
+              // as part of the output rather than treating it as a strict error.
+              // Many Unix tools use non-zero exit codes for non-error states
+              // (e.g., grep returns 1 for no matches, diff returns 1 for differences).
               if (code !== 0) {
-                resolve(
-                  ERROR_MESSAGES.COMMAND_EXEC_ERROR(
-                    `Exit code: ${code}`,
-                    stdout || '',
-                    stderr || '',
-                  ),
-                )
+                if (stdout.trim()) {
+                  // There's useful stdout content — return it with an exit code note
+                  const exitNote = `\n\n(Process exited with code ${code})`
+                  resolve(output + exitNote)
+                } else {
+                  resolve(
+                    ERROR_MESSAGES.COMMAND_EXEC_ERROR(
+                      `Exit code: ${code}`,
+                      stdout || '',
+                      stderr || '',
+                    ),
+                  )
+                }
                 return
               }
 

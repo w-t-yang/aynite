@@ -1,4 +1,5 @@
 import { AlertTriangle, Check, Folder, Terminal, X } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '../../../shared/basic/Button'
 
 export function ApprovalModal({
@@ -6,12 +7,23 @@ export function ApprovalModal({
   cwd,
   onApprove,
   onReject,
+  onAutoApprove,
 }: {
   command: string
   cwd: string
   onApprove: () => void
   onReject: () => void
+  onAutoApprove: () => void
 }) {
+  const [autoApprove, setAutoApprove] = useState(false)
+
+  const handleApprove = () => {
+    if (autoApprove) {
+      onAutoApprove()
+    }
+    onApprove()
+  }
+
   return (
     <div className="relative group/approval overflow-hidden rounded-md border border-warning/30 bg-warning/5 backdrop-blur-md shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 mb-3 px-6 py-4 mx-4">
       <div className="relative space-y-3">
@@ -42,9 +54,35 @@ export function ApprovalModal({
           </div>
         </div>
 
+        {/* Auto-approve toggle */}
+        <label className="flex items-center gap-2.5 cursor-pointer group/auto select-none py-1">
+          <div className="relative flex items-center">
+            <input
+              type="checkbox"
+              checked={autoApprove}
+              onChange={(e) => setAutoApprove(e.target.checked)}
+              className="sr-only"
+            />
+            <div
+              className={`w-9 h-5 rounded-full transition-colors duration-200 flex items-center ${
+                autoApprove ? 'bg-warning' : 'bg-muted/50'
+              }`}
+            >
+              <div
+                className={`w-3.5 h-3.5 rounded-full bg-background shadow-sm transition-transform duration-200 mx-0.5 ${
+                  autoApprove ? 'translate-x-[18px]' : 'translate-x-0'
+                }`}
+              />
+            </div>
+          </div>
+          <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider group-hover/auto:text-foreground transition-colors leading-tight">
+            Auto-approve commands for this session
+          </span>
+        </label>
+
         <div className="flex gap-2 pt-1">
           <Button
-            onClick={onApprove}
+            onClick={handleApprove}
             className="flex-1 h-8 bg-warning text-warning-foreground hover:bg-warning/90 transition-all active:scale-[0.98] font-bold text-[10px] uppercase tracking-widest shadow shadow-warning/10 flex items-center justify-center gap-1.5 group/btn rounded"
           >
             <Check
