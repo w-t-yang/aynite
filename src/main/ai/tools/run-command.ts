@@ -9,6 +9,7 @@ import { jsonSchema } from '@ai-sdk/provider-utils'
 import { TOOL_METADATA } from '../../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../../lib/constants/messages'
 import type { ToolContext } from '../../../lib/types/ai'
+import { getShellConfig } from '../../system/logic'
 import { requestAiApproval } from '../../window'
 
 export function createRunCommand(
@@ -31,16 +32,9 @@ export function createRunCommand(
 
         try {
           return await new Promise<string>((resolve, reject) => {
-            const shell =
-              process.platform === 'win32'
-                ? process.env.ComSpec || 'cmd.exe'
-                : process.env.SHELL ||
-                  (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash')
-
-            const shellArgs =
-              process.platform === 'win32'
-                ? ['/c', command]
-                : ['-l', '-c', command]
+            const config = getShellConfig()
+            const shell = config.shell
+            const shellArgs = [...config.args, command]
 
             const child = spawn(shell, shellArgs, {
               cwd: runCwd,
