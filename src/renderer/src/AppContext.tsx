@@ -95,7 +95,7 @@ function useEventRouter() {
           updateRef.current?.setError(event.data)
           break
         case AppEvents.UPDATE_DOWNLOADING:
-          // The first event with 0% triggers setDownloading
+          updateRef.current?.setDownloading(0)
           break
         case AppEvents.UPDATE_PROGRESS:
           updateRef.current?.setDownloading((event.data as any)?.percent ?? 0)

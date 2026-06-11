@@ -24,7 +24,7 @@ export const updateMutations = {
     return Promise.resolve()
   },
 
-  download: (): Promise<void> => (getAynite() as any).downloadUpdate(),
+  download: (): Promise<void> => getAynite().downloadUpdate(),
 
   install: (): Promise<void> => getAynite().installUpdate(),
 }

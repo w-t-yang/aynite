@@ -12,9 +12,11 @@ import { Modal } from '../shared/basic/Modal'
  * Global update notification.
  * Listens for update events from the main process and notifies the user.
  *
- * - Auto-shows the modal ONLY when an update is DOWNLOADED (ready to install).
- * - Shows a floating badge when update is downloaded but not yet dismissed.
- * - User can dismiss the badge entirely (until next download).
+ * Flow:
+ *   1. UPDATE_AVAILABLE  → auto-shows modal with "Download & Update" button
+ *   2. User clicks Download → UPDATE_DOWNLOADING → UPDATE_PROGRESS → UPDATE_DOWNLOADED
+ *   3. UPDATE_DOWNLOADED  → auto-shows modal with "Restart Now" button
+ *   4. User clicks Restart → autoUpdater.quitAndInstall()
  */
 export function UpdateBanner() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
@@ -38,7 +40,7 @@ export function UpdateBanner() {
         case AppEvents.UPDATE_AVAILABLE:
           setUpdateStatus('available')
           setUpdateInfo(event.data)
-          setShowModal(true) // auto-show modal on startup or check
+          setShowModal(true)
           break
         case AppEvents.UPDATE_NOT_AVAILABLE:
           setUpdateStatus('idle')
@@ -57,7 +59,7 @@ export function UpdateBanner() {
           setUpdateStatus('downloaded')
           setDownloadProgress(100)
           setUpdateInfo(event.data)
-          setDismissed(false) // new download, show again
+          setDismissed(false)
           setShowModal(true)
           break
         case AppEvents.UPDATE_ERROR:
@@ -140,28 +142,14 @@ export function UpdateBanner() {
           <div className="flex flex-col items-center text-center space-y-4 py-8">
             <CloudDownload size={40} className="text-primary" />
             <div className="space-y-1">
-              <p className="text-lg font-semibold">
-                {updateInfo?.manualInstall
-                  ? 'Download Complete'
-                  : 'Update Ready'}
-              </p>
+              <p className="text-lg font-semibold">Update Ready</p>
               <p className="text-sm text-muted-foreground">
-                v{updateInfo?.version || '?'}
-                {updateInfo?.manualInstall
-                  ? ' saved to Downloads.'
-                  : ' has been downloaded.'}
+                v{updateInfo?.version || '?'} has been downloaded.
               </p>
-            </div>
-            {updateInfo?.manualInstall ? (
-              <p className="text-xs text-muted-foreground">
-                Open the installer from your Downloads folder to complete the
-                update.
-              </p>
-            ) : (
               <p className="text-xs text-muted-foreground">
                 Save your work, then restart to apply the update.
               </p>
-            )}
+            </div>
           </div>
         )
       default:
@@ -176,24 +164,14 @@ export function UpdateBanner() {
           <Button variant="ghost" onClick={handleDismiss}>
             Later
           </Button>
-          {updateInfo?.manualInstall ? (
-            <Button
-              variant="primary"
-              onClick={handleInstallUpdate}
-              className="shadow-lg shadow-primary/20"
-            >
-              <CloudDownload size={16} />
-              Open Downloads
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              onClick={handleInstallUpdate}
-              className="shadow-lg shadow-primary/20"
-            >
-              Restart Now
-            </Button>
-          )}
+          <Button
+            variant="primary"
+            onClick={handleInstallUpdate}
+            className="shadow-lg shadow-primary/20"
+          >
+            <RefreshCw size={16} />
+            Restart Now
+          </Button>
         </>
       )
     }

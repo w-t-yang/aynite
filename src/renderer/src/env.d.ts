@@ -146,8 +146,9 @@ interface AyniteWindow {
   onThemeChanged: (callback: (themeId: string) => void) => () => void
 
   // Update
-  installUpdate: () => Promise<void>
   checkForUpdates: () => void
+  downloadUpdate: () => Promise<void>
+  installUpdate: () => Promise<void>
   onUpdateChecking: (callback: () => void) => () => void
   onUpdateAvailable: (callback: (info: any) => void) => () => void
   onUpdateNotAvailable: (callback: () => void) => () => void
