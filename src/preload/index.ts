@@ -15,6 +15,7 @@ import {
   UpdateChannels,
   WorkspaceChannels,
 } from '../lib/constants/ipc-channels'
+import { splitPath } from '../lib/platform'
 
 /**
  * Unified Aynite Bridge
@@ -241,8 +242,25 @@ const aynite = {
   },
 
   // ── Utilities ───────────────────────────────────────────────────────────
-  joinPath: (...paths: string[]) => paths.join('/'),
-  dirname: (p: string) => p.split('/').slice(0, -1).join('/') || '.',
+  /**
+   * Join path segments using forward slashes.
+   * Each segment is split on both / and \ then rejoined with /.
+   * This ensures correct behavior on Windows where filesystem paths
+   * use backslashes but IPC and display paths use forward slashes.
+   */
+  joinPath: (...paths: string[]) =>
+    paths
+      .flatMap((p) => splitPath(p))
+      .filter(Boolean)
+      .join('/'),
+  /**
+   * Get the parent directory of a path.
+   * Works with both / and \ separators via splitPath.
+   */
+  dirname: (p: string) => {
+    const parts = splitPath(p).filter(Boolean)
+    return parts.length > 1 ? parts.slice(0, -1).join('/') : '.'
+  },
   platform: process.platform,
   writeClipboard: (text: string) =>
     ipcRenderer.invoke(SystemChannels.CLIPBOARD_WRITE_TEXT, text),

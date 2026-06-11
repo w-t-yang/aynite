@@ -8,7 +8,7 @@ import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { GitDiffView } from '../../shared/featured/GitDiffView'
-import { cn } from '../../shared/lib/utils'
+import { cn, normalizePath } from '../../shared/lib/utils'
 import { useViewEvent } from '../useViewEvents'
 
 interface Session {
@@ -57,8 +57,11 @@ export function WorkspaceView() {
         setArtifacts([])
         return
       }
-      // Derive the artifacts directory path from memory.md path
-      const artifactsDir = status.memory.path.replace(/\/[^/]+$/, '')
+      // Derive the artifacts directory path from memory.md path.
+      // Normalize to forward slashes first so the regex works on Windows
+      // where path.join() returns backslashes.
+      const normalizedPath = normalizePath(status.memory.path)
+      const artifactsDir = normalizedPath.replace(/\/[^/]+$/, '')
       const files = await bridgeFile.list(artifactsDir)
       setArtifacts(
         files

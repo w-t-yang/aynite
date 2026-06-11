@@ -7,6 +7,7 @@ import {
   getAbsolutePath,
   getRelativePath,
   joinPaths,
+  toUnixPath,
 } from '../../lib/path'
 import { trackEvent } from '../telemetry/index'
 import { getWorkspaceFolders } from '../workspace'
@@ -78,16 +79,15 @@ class GitService {
      * Git expects forward slashes in pathspec arguments regardless of
      * platform. On Windows, `path.relative` returns backslashes, so we
      * normalize to forward slashes before passing to git commands.
+     * Uses shared `toUnixPath()` from `src/lib/platform.ts`.
      */
-    const toGitPath = (p: string) => p.replace(/\\/g, '/')
-
     ipcMain.handle(
       GitChannels.HEAD_CONTENT,
       async (_event, filePath: string) => {
         try {
           const root = await this.rootFinder.findGitRoot(filePath)
           if (!root) return null
-          const relative = toGitPath(getRelativePath(root, filePath))
+          const relative = toUnixPath(getRelativePath(root, filePath))
           const { stdout } = await execAsync(`git show HEAD:${relative}`, {
             cwd: root,
           })
@@ -104,7 +104,7 @@ class GitService {
         try {
           const root = await this.rootFinder.findGitRoot(filePath)
           if (!root) return null
-          const relative = toGitPath(getRelativePath(root, filePath))
+          const relative = toUnixPath(getRelativePath(root, filePath))
           try {
             const { stdout } = await execAsync(`git show :${relative}`, {
               cwd: root,

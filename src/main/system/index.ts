@@ -13,6 +13,7 @@ import {
   copy as fsCopy,
   getBasename,
   joinPaths,
+  toUnixPath,
 } from '../../lib/path'
 import {
   createNewWindow,
@@ -155,7 +156,11 @@ export function setupProtocol() {
   protocol.handle('aynite', async (request) => {
     const url = request.url.replace('aynite://', '')
     try {
-      const decodedPath = decodeURIComponent(url)
+      // Strip hash fragment — Electron protocol.handle includes the hash
+      // in the URL (unlike HTTP), but we only need the path to the HTML file.
+      // The hash is parsed by the view itself via window.location.hash.
+      const pathPart = url.split('#')[0]
+      const decodedPath = decodeURIComponent(pathPart)
       let filePath = ''
 
       if (decodedPath.includes('assets/')) {
@@ -166,9 +171,18 @@ export function setupProtocol() {
         }
       } else {
         filePath = expandHome(joinPaths('~/.aynite', 'views', decodedPath))
+        // If the path has a query string (?param=value), strip it
+        // to get the clean file path.
+        if (filePath.includes('?')) {
+          filePath = filePath.split('?')[0]
+        }
       }
 
-      const fileUrl = `file://${filePath.startsWith('/') ? '' : '/'}${filePath}`
+      // On Windows, file:// URLs need forward slashes (e.g. file:///C:/path/to/file).
+      // Node.js path.join() returns backslashes on Windows, so we must normalize.
+      const unixPath = toUnixPath(filePath)
+      const prefix = unixPath.startsWith('/') ? '' : '/'
+      const fileUrl = `file://${prefix}${unixPath}`
       return net.fetch(fileUrl)
     } catch (e) {
       console.error('Failed to handle aynite protocol:', e)
@@ -197,8 +211,11 @@ export function setupProtocol() {
   protocol.handle('aynite-resource', async (request) => {
     const url = request.url.replace('aynite-resource://', '')
     try {
-      const decodedPath = decodeURIComponent(url)
-      const filePath = `${decodedPath.startsWith('/') ? '' : '/'}${decodedPath}`
+      // Strip hash and query from the URL path before decoding
+      const pathPart = url.split('#')[0].split('?')[0]
+      const decodedPath = decodeURIComponent(pathPart)
+      const unixPath = toUnixPath(decodedPath)
+      const filePath = `${unixPath.startsWith('/') ? '' : '/'}${unixPath}`
       const fileUrl = `file://${filePath}`
 
       // Let net.fetch handle everything (streaming, content-type detection)

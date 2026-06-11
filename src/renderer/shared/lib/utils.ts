@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import type { Theme } from '../../../lib/constants/types'
+import { toUnixPath } from '../../../lib/platform'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -15,9 +16,12 @@ export function toCSSVar(key: string): string {
  * On Windows, Node.js paths use backslashes but git output and some
  * IPC channels may use forward slashes. Normalizing avoids mismatches.
  * On macOS/Linux, this is a no-op since paths already use forward slashes.
+ *
+ * Delegates to the shared `toUnixPath()` from `src/lib/platform.ts` to
+ * ensure consistent behavior across all processes (main, preload, renderer).
  */
 export function normalizePath(p: string): string {
-  return p.replace(/\\/g, '/')
+  return toUnixPath(p)
 }
 
 /**

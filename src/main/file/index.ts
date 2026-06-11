@@ -84,6 +84,15 @@ export function setupFileIpc() {
       })
       return result
     } catch (error: unknown) {
+      // ENOENT means the directory doesn't exist — return empty array
+      // instead of throwing. This is common for workspaces that haven't
+      // initialized their artifacts directory yet.
+      if (
+        error instanceof Error &&
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
+      ) {
+        return []
+      }
       console.error('aynite:file-list error:', error)
       throw error
     }
