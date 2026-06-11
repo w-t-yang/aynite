@@ -8,6 +8,7 @@ import {
   getWorkspaceDataPath,
 } from '../../lib/path'
 import type { ToolContext } from '../../lib/types/ai'
+import { getShellConfig } from '../system/logic'
 import { createFileOps } from './tools/file-ops'
 import { createMemoryManager } from './tools/memory-manager'
 import { createRunCommand } from './tools/run-command'
@@ -99,11 +100,22 @@ export function createTools(context: ToolContext) {
       description: TOOL_METADATA.get_workspace_info.description,
       inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),
       execute: async () => {
+        const shellConfig = getShellConfig()
         return {
           workspaceFolders,
           configDir: getAyniteDir(),
           activeFile: context.activeFile || null,
           workspaceName,
+          shell: {
+            platform: process.platform,
+            shell: shellConfig.shell,
+            isPowershell: shellConfig.isPowershell,
+            runCommandHint: shellConfig.isWindows
+              ? shellConfig.isPowershell
+                ? 'Use PowerShell syntax. Commands run via: pwsh -NoProfile -Command <command>'
+                : 'Use cmd.exe syntax. Commands run via: cmd /d /c <command>'
+              : 'Use POSIX shell syntax. Commands run via: <shell> -l -c <command>',
+          },
         }
       },
     },
