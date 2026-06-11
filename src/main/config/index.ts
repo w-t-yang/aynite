@@ -60,7 +60,9 @@ export function setupConfigIpc() {
       ) {
         broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key })
       } else if (key === ConfigKey.ACTIVE_FILE) {
-        // Active file change is window-scoped
+        // Active file change is window-scoped — all iframe views in this
+        // window (treeview, file-browser, etc.) receive the event via the
+        // AppContext → postMessage relay chain.
         sendToWindow(winId, AppEvents.ACTIVE_FILE_CHANGED, { path: payload })
       }
 
