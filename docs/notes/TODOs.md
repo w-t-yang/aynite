@@ -12,7 +12,8 @@ Prioritized by importance. Done items are at the bottom.
 - [ ] Language / i18n support
 - [x] Track usage
 - [-] Collect feedback
-- [x] Logo
+- [ ] Logo
+- [ ] Update
 - [x] Domain name
 
 ## Promotion
@@ -26,7 +27,7 @@ Prioritized by importance. Done items are at the bottom.
 - [ ] Advanced agent features
 - [ ] RAG (Retrieval-Augmented Generation)
 - [ ] Tools section — include skills and tasks in tool management
-- [ ] Make sure read/write/edit file only works on text files, not binaries
+- [x] Make sure read/write/edit file only works on text files, not binaries
 - [ ] When updating memory, update session metadata with title and description
 - [ ] Support uploading files
 - [ ] Ensure session/task/plan/memory are bound to workspace from chat view/tools (fix multi-window issues with different workspaces/sessions)
@@ -34,7 +35,7 @@ Prioritized by importance. Done items are at the bottom.
 ## Chat View
 
 - [ ] Stream writing/editing for large files
-- [ ] Improve block display — e.g. grep function name, line break handling
+- [x] Improve block display — e.g. grep function name, line break handling
 
 ## Editor
 
