@@ -1,4 +1,5 @@
 import {
+  Bug,
   ExternalLink,
   Minus,
   Moon,
@@ -272,12 +273,23 @@ const TitleBar: React.FC = () => {
                 icon: <Palette size={14} />,
                 isActive: showTileControls,
               },
+              ...(import.meta.env.DEV
+                ? [
+                    { id: 'divider-3', type: 'divider' },
+                    {
+                      id: 'inspector',
+                      label: 'Toggle Inspector',
+                      icon: <Bug size={14} />,
+                    },
+                  ]
+                : []),
             ]}
             onSelect={(id: string) => {
               if (id === 'settings') setShowSettings(true)
               else if (id === 'new-window') openNewWindow()
               else if (id === 'toggle-controls')
                 setShowTileControls(!showTileControls)
+              else if (id === 'inspector') systemMutations.openDevTools()
             }}
             onSelectSubmenu={(parentId: string, childId: string) => {
               if (parentId === 'theme') setTheme(childId)

@@ -135,6 +135,7 @@ interface AyniteWindow {
   maximizeWindow: () => Promise<boolean>
   closeWindow: () => Promise<boolean>
   openNewWindow: () => Promise<boolean>
+  openDevTools: () => Promise<boolean>
 
   onAppOperation: (
     callback: (operation: string, data?: unknown) => void,

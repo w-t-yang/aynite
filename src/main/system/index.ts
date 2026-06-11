@@ -101,6 +101,11 @@ export function setupSystemIpc() {
     return true
   })
 
+  ipcMain.handle(SystemChannels.WINDOW_DEVTOOLS, (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.webContents.toggleDevTools()
+    return true
+  })
+
   ipcMain.handle(
     SystemChannels.CLIPBOARD_COPY,
     async (_event, path: string) => {

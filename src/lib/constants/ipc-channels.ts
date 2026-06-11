@@ -79,6 +79,7 @@ export const SystemChannels = {
   WINDOW_MAXIMIZE: 'aynite:window-maximize',
   WINDOW_CLOSE: 'aynite:window-close',
   WINDOW_NEW: 'aynite:window-new',
+  WINDOW_DEVTOOLS: 'aynite:window-devtools',
   CLIPBOARD_COPY: 'aynite:file-clipboard-copy',
   CLIPBOARD_PASTE: 'aynite:file-clipboard-paste',
   CLIPBOARD_WRITE_TEXT: 'aynite:clipboard-write-text',

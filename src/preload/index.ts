@@ -135,6 +135,7 @@ const aynite = {
   maximizeWindow: () => ipcRenderer.invoke(SystemChannels.WINDOW_MAXIMIZE),
   closeWindow: () => ipcRenderer.invoke(SystemChannels.WINDOW_CLOSE),
   openNewWindow: () => ipcRenderer.invoke(SystemChannels.WINDOW_NEW),
+  openDevTools: () => ipcRenderer.invoke(SystemChannels.WINDOW_DEVTOOLS),
 
   // ── Theme operations ────────────────────────────────────────────────────
   getThemes: () => ipcRenderer.invoke(ThemeChannels.LIST),

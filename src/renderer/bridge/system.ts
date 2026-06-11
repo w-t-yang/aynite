@@ -41,6 +41,8 @@ export const systemMutations = {
 
   openNewWindow: (): Promise<boolean> => getAynite().openNewWindow(),
 
+  openDevTools: (): Promise<boolean> => getAynite().openDevTools(),
+
   activateTile: (tileId: string): Promise<boolean> =>
     getAynite().activateTile(tileId),
 }
