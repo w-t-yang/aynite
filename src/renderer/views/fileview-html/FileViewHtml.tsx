@@ -1,4 +1,5 @@
 import type { FileInfo } from '../../shared/lib/file-handlers'
+import { normalizePath } from '../../shared/lib/utils'
 
 interface FileViewHtmlProps {
   file: FileInfo
@@ -8,7 +9,9 @@ interface FileViewHtmlProps {
 export function FileViewHtml({ file, content }: FileViewHtmlProps) {
   if (!content) return null
 
-  const dirPath = file.path.substring(0, file.path.lastIndexOf('/'))
+  // Normalize to forward slashes and compute parent directory
+  const normalizedPath = normalizePath(file.path)
+  const dirPath = normalizedPath.replace(/\/[^/]*$/, '')
 
   // Inject theme variables and base href for relative resource resolution
   const rootStyle = getComputedStyle(document.documentElement)

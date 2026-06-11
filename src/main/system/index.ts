@@ -215,7 +215,20 @@ export function setupProtocol() {
       const pathPart = url.split('#')[0].split('?')[0]
       const decodedPath = decodeURIComponent(pathPart)
       const unixPath = toUnixPath(decodedPath)
-      const filePath = `${unixPath.startsWith('/') ? '' : '/'}${unixPath}`
+
+      // On Windows, Chromium's URL parser may consume the colon after a
+      // drive letter (e.g. "C:"), treating "C" as a hostname and ":" as a
+      // port separator. The extracted path then looks like "C/Users/..."
+      // instead of "C:/Users/...". Re-add the colon if this pattern is
+      // detected.
+      const fixedPath = toUnixPath(
+        unixPath.replace(
+          /^([A-Za-z])(\/)/,
+          (_, letter: string, slash: string) => `${letter}:${slash}`,
+        ),
+      )
+
+      const filePath = `${fixedPath.startsWith('/') ? '' : '/'}${fixedPath}`
       const fileUrl = `file://${filePath}`
 
       // Let net.fetch handle everything (streaming, content-type detection)

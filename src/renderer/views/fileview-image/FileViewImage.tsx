@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { type FileInfo, formatFileSize } from '../../shared/lib/file-handlers'
+import { normalizePath } from '../../shared/lib/utils'
 
 interface FileViewImageProps {
   file: FileInfo
@@ -40,7 +41,7 @@ export function FileViewImage({ file }: FileViewImageProps) {
       setLoaded(true)
     }
     img.onerror = () => setError(true)
-    img.src = `aynite-resource://${file.path}`
+    img.src = `aynite-resource://${normalizePath(file.path)}`
 
     return () => {
       img.onload = null
@@ -185,7 +186,7 @@ export function FileViewImage({ file }: FileViewImageProps) {
       >
         <div className="flex flex-col items-center gap-6 min-h-full justify-center">
           <img
-            src={`aynite-resource://${file.path}`}
+            src={`aynite-resource://${normalizePath(file.path)}`}
             alt={file.name}
             className="shadow-xl rounded-sm bg-white h-auto"
             style={{ width: intrinsic.w * scale }}

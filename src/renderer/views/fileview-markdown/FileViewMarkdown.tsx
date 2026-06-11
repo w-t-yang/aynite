@@ -9,7 +9,7 @@ import { systemMutations } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import type { FileInfo } from '../../shared/lib/file-handlers'
 import { highlightCode } from '../../shared/lib/syntax'
-import { cn } from '../../shared/lib/utils'
+import { cn, normalizePath } from '../../shared/lib/utils'
 
 interface CodeBlockProps {
   language?: string
@@ -210,7 +210,9 @@ export const FileViewMarkdown: React.FC<{
                 const src = props.src || ''
                 // Resolve local image paths
                 if (isLocalPath(src)) {
-                  const resolvedSrc = resolveLocalPath(src, file.path)
+                  const resolvedSrc = normalizePath(
+                    resolveLocalPath(src, file.path),
+                  )
                   return (
                     <img
                       {...props}
