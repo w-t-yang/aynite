@@ -105,10 +105,10 @@
   .grad-row { display: flex; gap: 16px; margin-bottom: 8px; align-items: center; }
   .grad-row .grad-label { font-size: 12px; color: #71717a; min-width: 80px; }
   .grad-row .grad-bar { flex: 1; height: 24px; border-radius: 4px; }
-  .grad-row .grad-bar.left { background: linear-gradient(to bottom right, #fff 0%, #e8e8e8 40%, #b0b0b0 55%, #707070 70.7%, #282828 85%, #050505 100%); }
-  .grad-row .grad-bar.right { background: linear-gradient(to bottom right, #f5f5f5 0%, #c8c8c8 15%, #787878 29.3%, #383838 50%, #101010 75%, #000 100%); }
-  .grad-row .grad-bar.dot { background: linear-gradient(to bottom right, #fff 0%, #d8d8d8 40%, #909090 55%, #505050 70.7%, #181818 85%, #000 100%); }
-  .grad-row .grad-bar.bg { background: linear-gradient(to bottom right, #000 0%, #1a1a1a 30%, #404040 55%, #606060 70.7%, #808080 85%, #9e9e9e 100%); }
+  .grad-row .grad-bar.left { background: linear-gradient(to bottom right, #fff 0%, #606060 70.7%, #1a1a1a 88%, #050505 100%); }
+  .grad-row .grad-bar.right { background: linear-gradient(to bottom right, #f5f5f5 0%, #787878 29.3%, #282828 55%, #000 100%); }
+  .grad-row .grad-bar.dot { background: radial-gradient(circle at 35% 30%, #fff 0%, #d0d0d0 30%, #606060 65%, #1a1a1a 100%); }
+  .grad-row .grad-bar.bg { background: linear-gradient(to bottom right, #000 0%, #141414 40%, #404040 70.7%, #7a7a7a 100%); }
   .grad-row .grad-marker { font-family: 'SF Mono', monospace; font-size: 11px; color: #52525b; min-width: 100px; text-align: right; }
 
   .grad-note { font-size: 12px; color: #52525b; line-height: 1.6; margin-top: 12px; }
@@ -162,24 +162,20 @@
     <svg viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="nl" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#fff"/><stop offset="40%" stop-color="#e8e8e8"/>
-          <stop offset="55%" stop-color="#b0b0b0"/><stop offset="70.7%" stop-color="#707070"/>
-          <stop offset="85%" stop-color="#282828"/><stop offset="100%" stop-color="#050505"/>
+          <stop offset="0%" stop-color="#fff"/><stop offset="70.7%" stop-color="#606060"/>
+          <stop offset="88%" stop-color="#1a1a1a"/><stop offset="100%" stop-color="#050505"/>
         </linearGradient>
         <linearGradient id="nr" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#f5f5f5"/><stop offset="15%" stop-color="#c8c8c8"/>
-          <stop offset="29.3%" stop-color="#787878"/><stop offset="50%" stop-color="#383838"/>
-          <stop offset="75%" stop-color="#101010"/><stop offset="100%" stop-color="#000"/>
+          <stop offset="0%" stop-color="#f5f5f5"/><stop offset="29.3%" stop-color="#787878"/>
+          <stop offset="55%" stop-color="#282828"/><stop offset="100%" stop-color="#000"/>
         </linearGradient>
-        <linearGradient id="nd" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#fff"/><stop offset="40%" stop-color="#d8d8d8"/>
-          <stop offset="55%" stop-color="#909090"/><stop offset="70.7%" stop-color="#505050"/>
-          <stop offset="85%" stop-color="#181818"/><stop offset="100%" stop-color="#000"/>
-        </linearGradient>
+        <radialGradient id="nd" cx="0.35" cy="0.3" r="0.7">
+          <stop offset="0%" stop-color="#fff"/><stop offset="30%" stop-color="#d0d0d0"/>
+          <stop offset="65%" stop-color="#606060"/><stop offset="100%" stop-color="#1a1a1a"/>
+        </radialGradient>
         <linearGradient id="nBg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#000"/><stop offset="30%" stop-color="#1a1a1a"/>
-          <stop offset="55%" stop-color="#404040"/><stop offset="70.7%" stop-color="#606060"/>
-          <stop offset="85%" stop-color="#808080"/><stop offset="100%" stop-color="#9e9e9e"/>
+          <stop offset="0%" stop-color="#000"/><stop offset="40%" stop-color="#141414"/>
+          <stop offset="70.7%" stop-color="#404040"/><stop offset="100%" stop-color="#7a7a7a"/>
         </linearGradient>
         <clipPath id="nLogo"><polygon points="500,236 146,708 854,708"/></clipPath>
         <clipPath id="nDot"><circle cx="500" cy="713" r="25"/></clipPath>
@@ -203,24 +199,20 @@
     <svg viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
       <defs>
         <linearGradient id="hl" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#fff"/><stop offset="40%" stop-color="#e8e8e8"/>
-          <stop offset="55%" stop-color="#b0b0b0"/><stop offset="70.7%" stop-color="#707070"/>
-          <stop offset="85%" stop-color="#282828"/><stop offset="100%" stop-color="#050505"/>
+          <stop offset="0%" stop-color="#fff"/><stop offset="70.7%" stop-color="#606060"/>
+          <stop offset="88%" stop-color="#1a1a1a"/><stop offset="100%" stop-color="#050505"/>
         </linearGradient>
         <linearGradient id="hr" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#f5f5f5"/><stop offset="15%" stop-color="#c8c8c8"/>
-          <stop offset="29.3%" stop-color="#787878"/><stop offset="50%" stop-color="#383838"/>
-          <stop offset="75%" stop-color="#101010"/><stop offset="100%" stop-color="#000"/>
+          <stop offset="0%" stop-color="#f5f5f5"/><stop offset="29.3%" stop-color="#787878"/>
+          <stop offset="55%" stop-color="#282828"/><stop offset="100%" stop-color="#000"/>
         </linearGradient>
-        <linearGradient id="hd" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#fff"/><stop offset="40%" stop-color="#d8d8d8"/>
-          <stop offset="55%" stop-color="#909090"/><stop offset="70.7%" stop-color="#505050"/>
-          <stop offset="85%" stop-color="#181818"/><stop offset="100%" stop-color="#000"/>
-        </linearGradient>
+        <radialGradient id="hd" cx="0.35" cy="0.3" r="0.7">
+          <stop offset="0%" stop-color="#fff"/><stop offset="30%" stop-color="#d0d0d0"/>
+          <stop offset="65%" stop-color="#606060"/><stop offset="100%" stop-color="#1a1a1a"/>
+        </radialGradient>
         <linearGradient id="hBg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#000"/><stop offset="30%" stop-color="#1a1a1a"/>
-          <stop offset="55%" stop-color="#404040"/><stop offset="70.7%" stop-color="#606060"/>
-          <stop offset="85%" stop-color="#808080"/><stop offset="100%" stop-color="#9e9e9e"/>
+          <stop offset="0%" stop-color="#000"/><stop offset="40%" stop-color="#141414"/>
+          <stop offset="70.7%" stop-color="#404040"/><stop offset="100%" stop-color="#7a7a7a"/>
         </linearGradient>
         <clipPath id="hLogo"><polygon points="500,236 146,708 854,708"/></clipPath>
         <clipPath id="hDot"><circle cx="500" cy="713" r="25"/></clipPath>
@@ -271,10 +263,10 @@
     <div class="step-card">
       <div class="sc-number">3</div>
       <div class="sc-content">
-        <div class="sc-rule">The <span class="hl">dot</span> has a moon surface. The stroke equals the dot's diameter (<span class="hl">W = D</span>).</div>
-        <div class="sc-reason">D = 50, W = 50. The stroke width matches the dot diameter exactly. The dot contains craters whose positions and sizes are derived from π digits.</div>
-        <div class="sc-eq">W = D = 50 &middot; Moon craters from π digits</div>
-        <div class="sc-result">Dot diameter D = 50px &middot; Stroke W = 50px</div>
+        <div class="sc-rule">The <span class="hl">stroke</span> and <span class="hl">dot</span> share the same thickness (<span class="hl">W = D</span>).</div>
+        <div class="sc-reason">W = D = 50. Clean, minimal — the stroke width matches the dot diameter exactly. No π relationship, just intentional simplicity.</div>
+        <div class="sc-eq">W = D = 50</div>
+        <div class="sc-result">Stroke W = 50px &middot; Dot D = 50px</div>
       </div>
     </div>
 
@@ -282,9 +274,19 @@
       <div class="sc-number">4</div>
       <div class="sc-content">
         <div class="sc-rule">The <span class="hl">gap</span> uses <span class="hl">π²</span>, making the dot sit higher.</div>
-        <div class="sc-reason">gap = D/π² = 50/9.87 ≈ 5. The dot nestles close to the base — higher than before.</div>
+        <div class="sc-reason">Gap = D/π² = 50/9.87 ≈ 5. The dot nestles close to the base, almost touching.</div>
         <div class="sc-eq">Gap = D/π² ≈ 5</div>
         <div class="sc-result">Dot center at (500, 708 + 5) = (500, 713)</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="sc-number">5</div>
+      <div class="sc-content">
+        <div class="sc-rule">The <span class="hl">dot</span> uses a <span class="hl">3D sphere gradient</span> — offset radial for volume.</div>
+        <div class="sc-reason">Radial gradient at cx=0.35, cy=0.3 with r=0.7. Highlight at top-left, shadow at bottom-right — consistent with the light source implied by the stroke gradients. The dot feels like a physical object.</div>
+        <div class="sc-eq">Offset radial — cx=0.35, cy=0.3, r=0.7</div>
+        <div class="sc-result">3D sphere: white → grey → dark</div>
       </div>
     </div>
 
@@ -326,9 +328,9 @@
       <div class="grad-marker">mid at 29.3% (bright → dark early)</div>
     </div>
     <div class="grad-row">
-      <div class="grad-label">Dot</div>
+      <div class="grad-label">Dot (sphere)</div>
       <div class="grad-bar dot"></div>
-      <div class="grad-marker">matches left leg (70.7%)</div>
+      <div class="grad-marker">offset radial — 3D volume</div>
     </div>
     <div class="grad-row">
       <div class="grad-label">Background</div>
@@ -336,10 +338,11 @@
       <div class="grad-marker">same direction (↘), contrast = 1/φ</div>
     </div>
     <div class="grad-note">
-      <strong>All shape gradients share the same direction</strong> (↘).<br>
-      The <strong>background is reversed</strong> (↖) — its contrast is governed by φ.<br>
-      Background luminance = (1 − shape_luminance) / φ.<br>
-      Max background brightness = 1/φ ≈ 0.618 → #9e9e9e. Where shape is white, bg is black. Where shape is black, bg is 61.8% grey.
+      <strong>4-stop gradients</strong> — smoother, no banding.<br>
+      Left leg: bright until 70.7% (√2), then rapid falloff.<br>
+      Right leg: transitions early at 29.3%, then gradual fade.<br>
+      <strong>Dot</strong>: radial at 35%/30%, like a sphere lit from top-left.<br>
+      <strong>Background</strong>: 4 stops, max brightness 1/φ ≈ 0.618 → #7a7a7a.
     </div>
   </div>
 
@@ -392,9 +395,9 @@
       <strong>Euler's Identity</strong> does not set any single value. It is the <strong>rule that governs how the rules relate</strong> — five seemingly unrelated constants forming a single system. The logo mirrors this: five design rules, one unified mark.
     </div>
     <div class="ec-map">
-      <span class="em-e"><strong>e</strong> → Dot position (Gap = D/e)</span>
+      <span class="em-e"><strong>e</strong> → Related via π² (Gap = D/π²)</span>
       <span class="em-i"><strong>i</strong> → Gradient cross-fade (left-right rotation)</span>
-      <span class="em-p"><strong>π</strong> → Moon crater positions + digits</span>
+      <span class="em-p"><strong>π</strong> → Gap (D/π²)</span>
       <span class="em-1"><strong>1</strong> → White at apex</span>
       <span class="em-0"><strong>0</strong> → Black at base + negative space</span>
     </div>
@@ -409,9 +412,9 @@
   <div class="summary-grid">
     <div class="summary-item"><div class="si-step">Step 1</div><div class="si-const">φ³</div><div class="si-rule">Apex y = 1000/φ³ = 236</div></div>
     <div class="summary-item"><div class="si-step">Step 2</div><div class="si-const">φ⁴+3-4-5</div><div class="si-rule">Base x = 1000/φ⁴ = 146, y = 708</div></div>
-    <div class="summary-item"><div class="si-step">Step 3</div><div class="si-const">π</div><div class="si-rule">Moon craters from π digits</div></div>
-    <div class="summary-item"><div class="si-step">Step 4</div><div class="si-const">—</div><div class="si-rule">W = D = 50</div></div>
-    <div class="summary-item"><div class="si-step">Step 5</div><div class="si-const">π²</div><div class="si-rule">Gap = D/π² = 5</div></div>
+    <div class="summary-item"><div class="si-step">Step 3</div><div class="si-const">—</div><div class="si-rule">W = D = 50</div></div>
+    <div class="summary-item"><div class="si-step">Step 4</div><div class="si-const">π²</div><div class="si-rule">Gap = D/π² = 5</div></div>
+    <div class="summary-item"><div class="si-step">Step 5</div><div class="si-const">—</div><div class="si-rule">Sphere dot (offset radial)</div></div>
     <div class="summary-item"><div class="si-step">Step 6</div><div class="si-const">√2</div><div class="si-rule">Cross-fade at 1/√2</div></div>
     <div class="summary-item"><div class="si-step">Step 7</div><div class="si-const">φ</div><div class="si-rule">Bg contrast = 1/φ (↘)</div></div>
     <div class="summary-item"><div class="si-step">Step 8</div><div class="si-const">0</div><div class="si-rule">Negative space</div></div>
