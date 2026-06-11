@@ -1,62 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="none">
   <defs>
-    <!-- Background — same direction as shapes (↘), contrast = 1/φ -->
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"   stop-color="#000000"/>
-      <stop offset="40%"  stop-color="#141414"/>
-      <stop offset="70.7%" stop-color="#404040"/>
-      <stop offset="100%" stop-color="#7a7a7a"/>
-    </linearGradient>
-
     <!-- 
-      LEFT LEG — Simplified smooth gradient, 4 stops
-      Midpoint at 1/√2 ≈ 70.7%
+      BACKGROUND — radial from right leg endpoint (854, 708)
+      White at the center → black at the edges
+      This ensures the right leg's dark end is always against a light background
     -->
+    <radialGradient id="bgGrad" cx="0.854" cy="0.708" r="0.6">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="40%"  stop-color="#cccccc"/>
+      <stop offset="70%"  stop-color="#555555"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <!-- LEFT LEG — bright top-left, dark bottom-right -->
     <linearGradient id="legL" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%"   stop-color="#ffffff"/>
-      <stop offset="70.7%" stop-color="#606060"/>
-      <stop offset="88%"  stop-color="#1a1a1a"/>
-      <stop offset="100%" stop-color="#050505"/>
-    </linearGradient>
-
-    <!-- 
-      RIGHT LEG — Cross-fade with left via √2
-      Midpoint at 1-1/√2 ≈ 29.3%
-    -->
-    <linearGradient id="legR" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"   stop-color="#f5f5f5"/>
-      <stop offset="29.3%" stop-color="#787878"/>
-      <stop offset="55%"  stop-color="#282828"/>
+      <stop offset="55%"  stop-color="#ffffff"/>
+      <stop offset="70.7%" stop-color="#666666"/>
+      <stop offset="88%"  stop-color="#000000"/>
       <stop offset="100%" stop-color="#000000"/>
     </linearGradient>
 
-    <!-- 
-      DOT — 3D sphere gradient, offset for depth
-      Highlight from top-left, shadow at bottom-right
-    -->
+    <!-- RIGHT LEG — same direction (↘) -->
+    <linearGradient id="legR" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="29.3%" stop-color="#666666"/>
+      <stop offset="50%"  stop-color="#000000"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+
+    <!-- DOT — 3D sphere -->
     <radialGradient id="dotGrad" cx="0.35" cy="0.3" r="0.7">
       <stop offset="0%"   stop-color="#ffffff"/>
-      <stop offset="30%"  stop-color="#d0d0d0"/>
-      <stop offset="65%"  stop-color="#606060"/>
-      <stop offset="100%" stop-color="#1a1a1a"/>
+      <stop offset="25%"  stop-color="#ffffff"/>
+      <stop offset="45%"  stop-color="#888888"/>
+      <stop offset="100%" stop-color="#000000"/>
     </radialGradient>
 
     <clipPath id="logoClip">
       <polygon points="500,236 146,708 854,708"/>
     </clipPath>
-
-    <clipPath id="dotClip">
-      <circle cx="500" cy="713" r="25"/>
-    </clipPath>
   </defs>
 
+  <!-- Background: white at right leg endpoint → black at edges -->
   <rect x="0" y="0" width="1000" height="1000" fill="url(#bgGrad)"/>
 
+  <!-- W = 80 (thinner than before, better proportioned) -->
   <g clip-path="url(#logoClip)">
-    <line x1="548" y1="172" x2="98" y2="772" stroke="url(#legL)" stroke-width="50" stroke-linecap="square"/>
-    <line x1="452" y1="172" x2="902" y2="772" stroke="url(#legR)" stroke-width="50" stroke-linecap="square"/>
+    <line x1="548" y1="172" x2="98" y2="772" stroke="url(#legL)" stroke-width="80" stroke-linecap="square"/>
+    <line x1="452" y1="172" x2="902" y2="772" stroke="url(#legR)" stroke-width="80" stroke-linecap="square"/>
   </g>
 
-  <!-- Dot — 3D sphere with offset radial gradient -->
   <circle cx="500" cy="713" r="25" fill="url(#dotGrad)"/>
 </svg>
