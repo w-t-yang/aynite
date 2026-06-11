@@ -20,7 +20,7 @@ import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { GitDiffView } from '../../shared/featured/GitDiffView'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { KeyManager } from '../../shared/lib/key-handlers'
-import { cn } from '../../shared/lib/utils'
+import { cn, normalizePath } from '../../shared/lib/utils'
 import { useViewEvent } from '../useViewEvents'
 import {
   ConfirmModal,
@@ -72,7 +72,12 @@ export function Treeview() {
 
   // Find which workspace root folder a path belongs to
   const findRootForPath = useCallback((path: string): string | null => {
-    return rootFilesPathsRef.current.find((r) => path.startsWith(r)) || null
+    const normalizedPath = normalizePath(path)
+    return (
+      rootFilesPathsRef.current.find((r) =>
+        normalizedPath.startsWith(normalizePath(r)),
+      ) || null
+    )
   }, [])
 
   const { gitStatuses, gitRoots, fetchStatus } = useGitStatus()
@@ -173,7 +178,7 @@ export function Treeview() {
   const changesCount = useMemo(() => {
     const paths = Object.entries(gitStatuses)
       .filter(([, status]) => status !== 'none' && status !== 'ignored')
-      .map(([path]) => path)
+      .map(([path]) => normalizePath(path))
     // Exclude parent directory entries (prefix of another entry)
     return paths.filter(
       (p) => !paths.some((other) => other !== p && other.startsWith(`${p}/`)),
@@ -278,7 +283,9 @@ export function Treeview() {
 
       // Also refresh git status for the workspace root that contains this path
       const roots = rootFilesPathsRef.current
-      const affectedRoot = roots.find((r) => data.path.startsWith(r))
+      const affectedRoot = roots.find((r) =>
+        normalizePath(data.path).startsWith(normalizePath(r)),
+      )
       if (affectedRoot) {
         fetchStatus(affectedRoot)
       }

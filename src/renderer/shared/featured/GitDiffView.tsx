@@ -4,7 +4,7 @@ import type { DiffStats } from '../../../lib/types/files'
 import { useViewEvent } from '../../views/useViewEvents'
 import { Button } from '../basic/Button'
 import { Modal } from '../basic/Modal'
-import { cn } from '../lib/utils'
+import { cn, normalizePath } from '../lib/utils'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -153,14 +153,16 @@ export function GitDiffView({
                 : await (window as any).aynite.getGitStatus(folderPath)
               if (statusMap) {
                 const allPaths: string[] = []
+                const normalizedFolder = normalizePath(folderPath)
                 for (const [absPath, status] of Object.entries(statusMap)) {
+                  const normalizedPath = normalizePath(absPath)
                   if (
-                    absPath.startsWith(`${folderPath}/`) &&
-                    absPath !== folderPath &&
+                    normalizedPath.startsWith(`${normalizedFolder}/`) &&
+                    normalizedPath !== normalizedFolder &&
                     status !== 'none' &&
                     status !== 'ignored'
                   ) {
-                    allPaths.push(absPath)
+                    allPaths.push(normalizedPath)
                   }
                 }
                 const leafPaths = allPaths.filter(
@@ -169,11 +171,15 @@ export function GitDiffView({
                       (other) => other !== p && other.startsWith(`${p}/`),
                     ),
                 )
-                const changed: GitChangedFile[] = leafPaths.map((absPath) => ({
-                  name: absPath.split('/').pop() || absPath,
-                  path: absPath,
-                  status: statusMap[absPath],
-                }))
+                const changed: GitChangedFile[] = leafPaths.map(
+                  (normalizedPath) => ({
+                    name: normalizedPath.split('/').pop() || normalizedPath,
+                    path: normalizedPath,
+                    status:
+                      statusMap[normalizedPath] ||
+                      statusMap[normalizedPath.replace(/\//g, '\\')],
+                  }),
+                )
                 if (changed.length > 0) {
                   newChangedFiles[folderPath] = changed.sort((a, b) =>
                     a.name.localeCompare(b.name),

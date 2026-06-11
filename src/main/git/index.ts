@@ -8,7 +8,6 @@ import {
   getRelativePath,
   joinPaths,
 } from '../../lib/path'
-import { execInUserShell } from '../system'
 import { trackEvent } from '../telemetry/index'
 import { getWorkspaceFolders } from '../workspace'
 import { generateCommitMessage } from './commit-gen'
@@ -187,9 +186,27 @@ class GitService {
             return { error: 'Commit message cannot be empty' }
           }
           await execAsync('git add -A', { cwd: root })
-          const escapedMsg = message.replace(/'/g, "'\\''")
-          await execInUserShell(`git commit -m '${escapedMsg}'`, {
+          // Use spawn with stdin to pass the commit message, avoiding all
+          // shell escaping issues on Windows (PowerShell) and Unix.
+          const commitProc = spawn('git', ['commit', '-F', '-'], {
             cwd: root,
+            stdio: ['pipe', 'pipe', 'pipe'],
+          })
+          commitProc.stdin.write(message)
+          commitProc.stdin.end()
+          await new Promise<void>((resolve, reject) => {
+            let stderr = ''
+            commitProc.stderr.on('data', (d: Buffer) => {
+              stderr += d.toString()
+            })
+            commitProc.on('close', (code) => {
+              if (code === 0) resolve()
+              else
+                reject(
+                  new Error(stderr || `git commit exited with code ${code}`),
+                )
+            })
+            commitProc.on('error', reject)
           })
           trackEvent('git_commit')
           await this.statusManager.refreshStatus(root, true)

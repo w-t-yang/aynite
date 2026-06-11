@@ -11,6 +11,16 @@ export function toCSSVar(key: string): string {
 }
 
 /**
+ * Normalize path separators to forward slashes for consistent comparison.
+ * On Windows, Node.js paths use backslashes but git output and some
+ * IPC channels may use forward slashes. Normalizing avoids mismatches.
+ * On macOS/Linux, this is a no-op since paths already use forward slashes.
+ */
+export function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/')
+}
+
+/**
  * Apply theme colors as CSS custom properties on document.documentElement.
  * Shared between the main renderer (ThemeContext) and iframe views.
  */

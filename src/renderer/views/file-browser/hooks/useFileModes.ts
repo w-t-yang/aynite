@@ -18,6 +18,7 @@ import type { FileInfo } from '../../../../lib/types/files'
 import { config } from '../../../bridge/config'
 import { file as bridgeFile } from '../../../bridge/file'
 import { git } from '../../../bridge/git'
+import { normalizePath } from '../../../shared/lib/utils'
 import { useViewEvent } from '../../useViewEvents'
 
 const FILEVIEW_NAMES = Object.keys(fileviewComponents)
@@ -181,7 +182,12 @@ export function useFileModes(
 
   // ── Git status change listener (re-evaluate diff after commit) ────
   const handleGitStatusChanged = useCallback((data: { root: string }) => {
-    if (data?.root && activePathRef.current?.startsWith(data.root)) {
+    if (
+      data?.root &&
+      normalizePath(activePathRef.current ?? '').startsWith(
+        normalizePath(data.root),
+      )
+    ) {
       setDiffRefreshKey((prev) => prev + 1)
     }
   }, [])

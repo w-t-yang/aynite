@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { GitStatusType } from '../../../../lib/types/files'
+import { normalizePath } from '../../../shared/lib/utils'
 import { useViewEvent } from '../../useViewEvents'
 
 interface GitStatusMap {
@@ -20,7 +21,14 @@ export function useGitStatus() {
         setGitRoots((prev) => new Set(prev).add(path))
       }
       if (status) {
-        setGitStatuses((prev) => ({ ...prev, ...status }))
+        // Normalize status map keys for consistent comparison
+        const normalized: GitStatusMap = {}
+        for (const [key, val] of Object.entries(
+          status as Record<string, GitStatusType>,
+        )) {
+          normalized[normalizePath(key)] = val
+        }
+        setGitStatuses((prev) => ({ ...prev, ...normalized }))
       }
     } catch (e) {
       console.error('[useGitStatus] Failed to fetch git status:', e)
@@ -31,18 +39,26 @@ export function useGitStatus() {
   const handleGitStatusChangedRef = useRef(
     (data: { root: string; status: GitStatusMap }) => {
       if (data?.status) {
+        const normalizedRoot = normalizePath(data.root)
+        // Also normalize the incoming status map keys
+        const normalizedStatus: GitStatusMap = {}
+        for (const [key, val] of Object.entries(data.status)) {
+          normalizedStatus[normalizePath(key)] = val
+        }
+
         setGitStatuses((prev) => {
           const next = { ...prev }
           for (const path in next) {
+            const normalizedPath = normalizePath(path)
             if (
-              path === data.root ||
-              path.startsWith(`${data.root}/`) ||
-              path.startsWith(`${data.root}\\`)
+              normalizedPath === normalizedRoot ||
+              normalizedPath.startsWith(`${normalizedRoot}/`) ||
+              normalizedPath.startsWith(`${normalizedRoot}\\`)
             ) {
               delete next[path]
             }
           }
-          return { ...next, ...data.status }
+          return { ...next, ...normalizedStatus }
         })
       }
     },
