@@ -49,19 +49,26 @@ export function useFileModes(
 
   // userModeRef prevents async mode auto-detection from overriding user's choice
   const userModeRef = useRef(false)
-  const activePathRef = useRef(activePath)
-  activePathRef.current = activePath
+  // Tracks the previous activePath so we can detect file switches inside the
+  // effect and reset userModeRef. IMPORTANT: DO NOT update this ref in the
+  // hook body — it must be updated INSIDE the effect AFTER the comparison,
+  // otherwise prevActivePath will always equal activePath.
+  const prevActivePathRef = useRef(activePath)
 
   // ── Git status change listener (re-evaluate diff after commit) ────
   const [_diffRefreshKey, setDiffRefreshKey] = useState(0)
 
   // ── Mode Selection Effect ──────────────────────────────────────────
   useEffect(() => {
-    const prevActivePath = activePathRef.current
+    const prevActivePath = prevActivePathRef.current
 
     if (activePath !== prevActivePath) {
       userModeRef.current = false
     }
+    // Update the ref AFTER the comparison so the next effect invocation
+    // has the correct previous value. The ref is intentionally NOT updated
+    // in the hook body to avoid the comparison always being equal.
+    prevActivePathRef.current = activePath
 
     if (!userModeRef.current) {
       setIsEditing(false)
@@ -192,7 +199,7 @@ export function useFileModes(
   const handleGitStatusChanged = useCallback((data: { root: string }) => {
     if (
       data?.root &&
-      normalizePath(activePathRef.current ?? '').startsWith(
+      normalizePath(prevActivePathRef.current ?? '').startsWith(
         normalizePath(data.root),
       )
     ) {
