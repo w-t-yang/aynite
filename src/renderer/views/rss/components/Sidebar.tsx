@@ -3,6 +3,7 @@ import {
   Clock,
   ExternalLink,
   Globe,
+  Loader2,
   Plus,
   Rss,
   Trash2,
@@ -18,6 +19,7 @@ interface SidebarProps {
   selectedSourceId: string | null
   view: ViewMode
   width: number
+  fetching: boolean
   focusColumn: number
   focusRow: number
   onSelectSource: (sourceId: string | null) => void
@@ -66,6 +68,7 @@ export function Sidebar({
   selectedSourceId,
   view,
   width,
+  fetching,
   focusColumn,
   focusRow,
   onSelectSource,
@@ -182,9 +185,16 @@ export function Sidebar({
             onClick={onSelectToday}
             onKeyDown={() => {}}
           >
-            <Clock size={12} className="shrink-0 text-muted-foreground" />
+            {fetching ? (
+              <Loader2
+                size={12}
+                className="shrink-0 text-muted-foreground animate-spin"
+              />
+            ) : (
+              <Clock size={12} className="shrink-0 text-muted-foreground" />
+            )}
             <span className="flex-1 truncate font-medium">Today</span>
-            {todayUnread > 0 && (
+            {!fetching && todayUnread > 0 && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                 {todayUnread}
               </span>

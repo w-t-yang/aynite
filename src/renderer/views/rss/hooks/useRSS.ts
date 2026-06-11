@@ -9,7 +9,7 @@ import type {
   RssSource,
 } from '../types'
 
-const STALE_MS = 24 * 60 * 60 * 1000 // 24 hours
+const _STALE_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 interface RSSState {
   config: RssConfig | null
@@ -81,37 +81,28 @@ export function useRSS() {
         },
       }))
 
-      // Auto-fetch stale sources
+      // Auto-fetch all feeds on initial load. This ensures the "Today" view
+      // has fresh content. Uses a ref to ensure it only runs once.
       if (rssConfig && !autoFetchDone.current) {
         autoFetchDone.current = true
-        const stale = rssConfig.sources.filter((src: RssSource) => {
-          const store = contents[src.id]
-          if (!store) return true
-          const lastFetched = src.lastFetchedAt || store.lastFetchedAt
-          if (!lastFetched) return true
-          const age = Date.now() - new Date(lastFetched).getTime()
-          return age > STALE_MS
-        })
-        if (stale.length > 0) {
-          setState((s) => ({ ...s, fetching: true }))
-          for (const src of stale) {
-            try {
-              await rss.fetchFeed(src.id)
-            } catch {
-              /* individual fetch failure is non-fatal */
-            }
+        setState((s) => ({ ...s, fetching: true }))
+        for (const src of rssConfig.sources) {
+          try {
+            await rss.fetchFeed(src.id)
+          } catch {
+            /* individual fetch failure is non-fatal */
           }
-          const [freshConfig, freshContents] = await Promise.all([
-            rss.getConfig(),
-            rss.getAllContents(),
-          ])
-          setState((s) => ({
-            ...s,
-            config: freshConfig,
-            contents: freshContents,
-            fetching: false,
-          }))
         }
+        const [freshConfig, freshContents] = await Promise.all([
+          rss.getConfig(),
+          rss.getAllContents(),
+        ])
+        setState((s) => ({
+          ...s,
+          config: freshConfig,
+          contents: freshContents,
+          fetching: false,
+        }))
       }
     } catch (e: any) {
       setState((s) => ({
@@ -139,23 +130,34 @@ export function useRSS() {
   )
 
   const selectSource = useCallback((sourceId: string | null) => {
-    setState((s) => ({
-      ...s,
-      selectedSourceId: sourceId,
-      selectedItemId: null,
-    }))
+    setState((s) => {
+      // Bail out if the source hasn't changed — prevents infinite loops
+      // when effects re-run due to rss object identity changes.
+      if (s.selectedSourceId === sourceId) return s
+      return {
+        ...s,
+        selectedSourceId: sourceId,
+        selectedItemId: null,
+      }
+    })
   }, [])
 
   const selectToday = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      selectedSourceId: '__today__',
-      selectedItemId: null,
-    }))
+    setState((s) => {
+      if (s.selectedSourceId === '__today__') return s
+      return {
+        ...s,
+        selectedSourceId: '__today__',
+        selectedItemId: null,
+      }
+    })
   }, [])
 
   const selectItem = useCallback((itemId: string | null) => {
-    setState((s) => ({ ...s, selectedItemId: itemId }))
+    setState((s) => {
+      if (s.selectedItemId === itemId) return s
+      return { ...s, selectedItemId: itemId }
+    })
   }, [])
 
   const getCurrentItems = useCallback((): RssItem[] => {

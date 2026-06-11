@@ -178,9 +178,13 @@ export function RSSApp() {
   // ─── Sync focus → actual selection ────────────────────────────────────
   // When focus changes in column 0 (sidebar), select that source.
   // When focus changes in column 1 (article list), select that item.
+  // IMPORTANT: Do NOT include `rss` in the dependency array. Including it
+  // causes the effect to re-fire on every state change (since useRSS returns
+  // a new object identity each render), which clobbers user clicks by
+  // re-selecting the focused item even when the user clicked something else.
   useEffect(() => {
     if (focusColumn === 0) {
-      const todayShown = rss.config ? rss.config.sources.length > 0 : false
+      const todayShown = sidebarSourceIds.length > 0
       if (todayShown && focusRow === 0) {
         // Row 0 = Today
         rss.selectSource('__today__')
@@ -188,23 +192,31 @@ export function RSSApp() {
       } else {
         const sourceIdx = focusRow - (todayShown ? 1 : 0)
         const sourceId = sidebarSourceIds[sourceIdx]
-        if (sourceId !== undefined && sourceId !== rss.selectedSourceId) {
+        if (sourceId !== undefined) {
           rss.selectSource(sourceId)
           rss.selectItem(null)
         }
       }
     }
-  }, [focusColumn, focusRow, sidebarSourceIds, rss])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    focusColumn,
+    focusRow,
+    sidebarSourceIds,
+    rss.selectItem,
+    rss.selectSource,
+  ])
 
   useEffect(() => {
     if (focusColumn === 1 && currentItems.length > 0) {
       const item = currentItems[focusRow]
-      if (item && item.id !== rss.selectedItemId) {
+      if (item) {
         rss.selectItem(item.id)
         rss.markRead(item.id)
       }
     }
-  }, [focusColumn, focusRow, currentItems, rss])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusColumn, focusRow, currentItems, rss.selectItem, rss.markRead])
 
   // Auto-focus the view root so keyboard events are captured immediately
   const rootRef = useRef<HTMLDivElement>(null)
@@ -484,6 +496,7 @@ export function RSSApp() {
           selectedSourceId={rss.selectedSourceId}
           view={view}
           width={sidebarWidth}
+          fetching={rss.fetching}
           focusColumn={focusColumn}
           focusRow={focusRow}
           onSelectSource={handleSelectSource}
