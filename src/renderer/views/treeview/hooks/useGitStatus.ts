@@ -48,12 +48,12 @@ export function useGitStatus() {
 
         setGitStatuses((prev) => {
           const next = { ...prev }
+          const rootPrefix = `${normalizedRoot}/`
           for (const path in next) {
             const normalizedPath = normalizePath(path)
             if (
               normalizedPath === normalizedRoot ||
-              normalizedPath.startsWith(`${normalizedRoot}/`) ||
-              normalizedPath.startsWith(`${normalizedRoot}\\`)
+              normalizedPath.startsWith(rootPrefix)
             ) {
               delete next[path]
             }

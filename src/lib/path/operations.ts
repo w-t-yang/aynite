@@ -174,6 +174,14 @@ export async function secureWriteText(
   )
 }
 
+/**
+ * Normalize line endings in a string: convert \r\n to \n.
+ * This ensures consistent matching regardless of the file's line ending style.
+ */
+function normalizeLineEndings(s: string): string {
+  return s.replace(/\r\n/g, '\n')
+}
+
 export async function secureEditFile(
   filePath: string,
   targetContent: string,
@@ -185,16 +193,40 @@ export async function secureEditFile(
     domainFolders,
     async () => {
       const content = await readText(filePath)
-      const parts = content.split(targetContent)
+
+      // Normalize line endings to LF for consistent matching.
+      // On Windows, git may checkout files with CRLF, and the AI tool
+      // caller may send LF-only targetContent. Normalizing both sides
+      // avoids false "not found" errors.
+      const normalizedContent = normalizeLineEndings(content)
+      const normalizedTarget = normalizeLineEndings(targetContent)
+      const normalizedReplacement = normalizeLineEndings(replacementContent)
+
+      const parts = normalizedContent.split(normalizedTarget)
 
       if (parts.length === 1) {
+        // Provide context to help the caller debug the mismatch.
+        const firstLine = targetContent.split('\n')[0]?.trim() || ''
+        console.warn(
+          `[secureEditFile] Target not found in ${filePath}. ` +
+            `First line: "${firstLine}". ` +
+            `Target length: ${targetContent.length}. ` +
+            `File length: ${content.length}. ` +
+            `File has CRLF: ${content.includes('\r\n')}. ` +
+            `Target has CRLF: ${targetContent.includes('\r\n')}.`,
+        )
         return ERROR_MESSAGES.FILE_EDIT_NOT_UNIQUE(0)
       }
       if (parts.length > 2) {
+        const firstLine = targetContent.split('\n')[0]?.trim() || ''
+        console.warn(
+          `[secureEditFile] Target found ${parts.length - 1} times in ${filePath}. ` +
+            `First line: "${firstLine}".`,
+        )
         return ERROR_MESSAGES.FILE_EDIT_NOT_UNIQUE(parts.length - 1)
       }
 
-      const newContent = parts.join(replacementContent)
+      const newContent = parts.join(normalizedReplacement)
       await writeText(filePath, newContent)
       return ERROR_MESSAGES.FILE_EDIT_SUCCESS(filePath)
     },

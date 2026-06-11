@@ -171,13 +171,18 @@ export function GitDiffView({
                       (other) => other !== p && other.startsWith(`${p}/`),
                     ),
                 )
+                // Build a lookup map with normalized keys so we can
+                // reliably index into it regardless of the original
+                // path separator style from the main process.
+                const normalizedStatusMap: Record<string, string> = {}
+                for (const [k, v] of Object.entries(statusMap)) {
+                  normalizedStatusMap[normalizePath(k)] = v
+                }
                 const changed: GitChangedFile[] = leafPaths.map(
                   (normalizedPath) => ({
                     name: normalizedPath.split('/').pop() || normalizedPath,
                     path: normalizedPath,
-                    status:
-                      statusMap[normalizedPath] ||
-                      statusMap[normalizedPath.replace(/\//g, '\\')],
+                    status: normalizedStatusMap[normalizedPath],
                   }),
                 )
                 if (changed.length > 0) {

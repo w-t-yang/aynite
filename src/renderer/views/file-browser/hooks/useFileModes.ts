@@ -111,12 +111,20 @@ export function useFileModes(
       let diffResult: { head: string; current: string } | null = null
       try {
         const statusMap = await git.getStatus(activePath)
-        if (!cancelled && statusMap?.[activePath]) {
-          const [base, current] = await Promise.all([
-            git.getIndexContent(activePath),
-            bridgeFile.read(activePath),
-          ])
-          if (base) diffResult = { head: base, current: current || '' }
+        if (statusMap) {
+          // Normalize both the lookup key and status map keys to forward
+          // slashes for consistent matching across platforms.
+          const normalizedPath = normalizePath(activePath)
+          const matched = Object.keys(statusMap).some(
+            (key) => normalizePath(key) === normalizedPath,
+          )
+          if (!cancelled && matched) {
+            const [base, current] = await Promise.all([
+              git.getIndexContent(activePath),
+              bridgeFile.read(activePath),
+            ])
+            if (base) diffResult = { head: base, current: current || '' }
+          }
         }
       } catch {
         // not a git file
