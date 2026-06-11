@@ -12,7 +12,7 @@ Prioritized by importance. Done items are at the bottom.
 - [ ] Language / i18n support
 - [x] Track usage
 - [-] Collect feedback
-- [ ] Logo
+- [x] Logo
 - [ ] Update
 - [x] Domain name
 
