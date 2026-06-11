@@ -114,6 +114,7 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "rss-parser": "^3.13.0",
+    "sharp": "^0.35.0",
     "tailwind-merge": "^3.6.0",
     "tippy.js": "^6.3.7",
     "zod": "^4.4.3"
