@@ -147,7 +147,7 @@ export function UpdateBanner() {
                 v{updateInfo?.version || '?'} has been downloaded.
               </p>
               <p className="text-xs text-muted-foreground">
-                Save your work, then restart to apply the update.
+                Save your work, then quit and install the update.
               </p>
             </div>
           </div>
@@ -170,7 +170,7 @@ export function UpdateBanner() {
             className="shadow-lg shadow-primary/20"
           >
             <RefreshCw size={16} />
-            Restart Now
+            Quit & Install
           </Button>
         </>
       )

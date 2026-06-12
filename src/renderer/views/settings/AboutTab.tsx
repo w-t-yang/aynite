@@ -170,7 +170,7 @@ export function AboutTab({ state, actions }: AboutTabProps) {
                 v{updateInfo?.version || '?'} has been downloaded.
               </p>
               <p className="text-xs text-muted-foreground">
-                Save your work, then restart to apply the update.
+                Save your work, then quit and install the update.
               </p>
             </div>
           </div>
@@ -224,7 +224,7 @@ export function AboutTab({ state, actions }: AboutTabProps) {
             className="shadow-lg shadow-primary/20"
           >
             <RefreshCw size={16} />
-            Restart Now
+            Quit & Install
           </Button>
         </>
       )
@@ -297,7 +297,7 @@ export function AboutTab({ state, actions }: AboutTabProps) {
           onClick={handleInstallUpdate}
           className="px-4 py-1.5 shadow-lg shadow-primary/20 transition-all flex items-center gap-1"
         >
-          <RefreshCw size={14} /> Restart Now
+          <RefreshCw size={14} /> Quit & Install
         </Button>
       )}
     </div>
@@ -314,7 +314,7 @@ export function AboutTab({ state, actions }: AboutTabProps) {
       case 'downloading':
         return `Downloading... ${downloadProgress.toFixed(0)}%`
       case 'downloaded':
-        return 'Ready to install. Restart to apply.'
+        return 'Ready to install. Quit and install the update.'
       case 'error':
         return 'Check failed.'
     }

@@ -41,9 +41,24 @@ Once a tag is pushed, a GitHub Action is triggered:
 
 ## Auto-Update Mechanism
 The app uses `electron-updater` to check for updates against GitHub Releases.
-- It checks the `latest.yml` (stable) or `beta.yml` (beta) metadata files.
-- Updates are downloaded in the background.
+- It checks the `latest-mac.yml` (macOS), `latest.yml` (Windows), or `latest-linux.yml` (Linux) metadata files.
+- Updates are downloaded to the app's dedicated updates cache directory.
 - Users are prompted to restart to apply the update once the download is complete.
+
+## macOS Build Target
+The macOS build target is **DMG** (disk image), the industry standard for distributing Electron apps on macOS.
+- **Apple Silicon**: `Aynite-{version}-arm64.dmg`
+- **Intel**: `Aynite-{version}.dmg`
+
+All macOS artifacts are **signed and notarized** to avoid Gatekeeper warnings and enable seamless auto-updates.
+
+### Update Asset Location
+Downloaded update installers are cached in the app's user data directory under `__updates__/`:
+- **macOS**: `~/Library/Application Support/aynite-app/__updates__/`
+- **Windows**: `%APPDATA%/aynite-app/__updates__/`
+- **Linux**: `~/.config/aynite-app/__updates__/`
+
+This follows the same convention used by Chrome, VS Code, and other major Electron apps.
 
 ## Security & Signing
 - **GitHub Token**: A `GH_TOKEN` must be configured in repository secrets for publishing.

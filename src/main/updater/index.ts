@@ -92,6 +92,12 @@ async function fetchLatestReleaseFromGithub(): Promise<{
 
 /**
  * Find the right download asset URL for the current platform from a GitHub release.
+ *
+ * Naming conventions from electron-builder:
+ *   - macOS arm64:  Aynite-{version}-arm64.dmg
+ *   - macOS x64:    Aynite-{version}.dmg
+ *   - Windows:      Aynite Setup {version}.exe
+ *   - Linux:        Aynite-{version}.AppImage (or .deb, .rpm)
  */
 async function getPlatformAssetUrl(version: string): Promise<string | null> {
   const response = await fetch(
@@ -112,13 +118,15 @@ async function getPlatformAssetUrl(version: string): Promise<string | null> {
 
   for (const asset of release.assets) {
     const name: string = asset.name
-    if (isMac && isArmMac && name.includes('arm64-mac.zip')) {
+    // macOS arm64: Aynite-{version}-arm64.dmg
+    if (isMac && isArmMac && name.includes('arm64') && name.endsWith('.dmg')) {
       return asset.browser_download_url
     }
+    // macOS x64: Aynite-{version}.dmg (without arm64)
     if (
       isMac &&
       !isArmMac &&
-      name.includes('mac.zip') &&
+      name.endsWith('.dmg') &&
       !name.includes('arm64')
     ) {
       return asset.browser_download_url
@@ -136,7 +144,11 @@ async function getPlatformAssetUrl(version: string): Promise<string | null> {
       return asset.browser_download_url
     }
   }
-  // Fallback: first zip or first asset
+  // Fallback: first .dmg (macOS), first .zip, or first asset
+  if (isMac) {
+    const dmg = release.assets.find((a: any) => a.name.endsWith('.dmg'))
+    if (dmg) return dmg.browser_download_url
+  }
   const zip = release.assets.find((a: any) => a.name.endsWith('.zip'))
   return (
     zip?.browser_download_url || release.assets[0]?.browser_download_url || null
@@ -226,7 +238,34 @@ async function devCheckForUpdates() {
 }
 
 /**
- * Dev mode download: download to ~/Downloads and open the folder.
+ * Returns the directory for storing downloaded update installers.
+ * Uses `app.getPath('userData')/__updates__` — a dedicated cache directory
+ * that follows the industry standard for Electron apps (similar to how
+ * Chrome, VS Code, and other Electron apps store update artifacts).
+ *
+ * On macOS: ~/Library/Application Support/aynite-app/__updates__/
+ * On Windows: %APPDATA%/aynite-app/__updates__/
+ * On Linux: ~/.config/aynite-app/__updates__/
+ */
+async function getUpdatesDir(): Promise<string> {
+  const path = await import('node:path')
+  const { mkdir } = await import('node:fs/promises')
+  const updatesDir = path.join(app.getPath('userData'), '__updates__')
+  await mkdir(updatesDir, { recursive: true })
+  return updatesDir
+}
+
+/**
+ * Build a standardised filename for the downloaded installer.
+ * macOS: Aynite-{version}-{arch}.dmg
+ */
+function buildInstallerFilename(version: string): string {
+  const arch = process.arch === 'arm64' ? '-arm64' : ''
+  return `Aynite-${version}${arch}.dmg`
+}
+
+/**
+ * Dev mode download: download the DMG to the app's dedicated updates cache.
  */
 async function devDownloadUpdate(): Promise<void> {
   if (!pendingUpdateInfo) {
@@ -237,9 +276,9 @@ async function devDownloadUpdate(): Promise<void> {
   const url = await getPlatformAssetUrl(version)
   if (!url) throw new Error(`Could not find download URL for v${version}`)
 
-  const downloadsPath = app.getPath('downloads')
-  const filename = url.split('/').pop() || `Aynite-${version}.zip`
-  const destPath = (await import('node:path')).join(downloadsPath, filename)
+  const updatesDir = await getUpdatesDir()
+  const filename = buildInstallerFilename(version)
+  const destPath = (await import('node:path')).join(updatesDir, filename)
 
   // Skip download if file already exists
   try {
@@ -274,13 +313,39 @@ async function devDownloadUpdate(): Promise<void> {
 }
 
 /**
- * Dev mode install: open the Downloads folder so the user can install manually.
+ * Dev mode install: open the downloaded DMG file to trigger the macOS
+ * disk image mount and install flow. On Windows/Linux, opens the updates
+ * directory so the user can run the installer manually.
  */
-async function devOpenDownloadFolder(): Promise<void> {
-  // The last UPDATE_DOWNLOADED event carries the downloadedFile path.
-  // We broadcast it again here — the renderer already has it from the event.
-  // Just open the downloads folder.
-  shell.openPath(app.getPath('downloads'))
+async function devInstallUpdate(): Promise<void> {
+  if (!pendingUpdateInfo) {
+    throw new Error('No pending update — check for updates first')
+  }
+
+  const version = pendingUpdateInfo.version
+  const updatesDir = await getUpdatesDir()
+  const path = await import('node:path')
+  const { readdir } = await import('node:fs/promises')
+
+  // Find the downloaded file matching this version
+  const files = await readdir(updatesDir)
+  const installer = files.find((f) => f.includes(version))
+  if (!installer) {
+    // Fallback: just open the folder
+    shell.openPath(updatesDir)
+    return
+  }
+
+  const installerPath = path.join(updatesDir, installer)
+
+  if (process.platform === 'darwin') {
+    // On macOS, open the DMG — it auto-mounts and shows the standard
+    // drag-to-Applications install dialog.
+    shell.openPath(installerPath)
+  } else {
+    // On Windows/Linux, open the folder so the user can run the installer
+    shell.openPath(updatesDir)
+  }
 }
 
 // ── Production autoUpdater event listeners ────────────────────────────
@@ -354,7 +419,7 @@ export function setupUpdater() {
   // ── DOWNLOAD ──────────────────────────────────────────────────────
   ipcMain.handle(UpdateChannels.DOWNLOAD, async () => {
     if (isDev) {
-      console.log('[Updater] Dev mode — downloading to ~/Downloads')
+      console.log('[Updater] Dev mode — downloading update')
       try {
         await devDownloadUpdate()
       } catch (err: unknown) {
@@ -379,7 +444,7 @@ export function setupUpdater() {
   // ── INSTALL ────────────────────────────────────────────────────────
   ipcMain.handle(UpdateChannels.INSTALL, async () => {
     if (isDev) {
-      await devOpenDownloadFolder()
+      await devInstallUpdate()
     } else {
       autoUpdater.quitAndInstall()
     }
