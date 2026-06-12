@@ -38,10 +38,23 @@ export function useFileTabs() {
   const handleTabSelect = useCallback(
     (path: string) => {
       if (activePath === path) return
+      // Set isBroadcasting to prevent re-processing our own event
       isBroadcastingRef.current = true
-      configMutations.set('activeFile', path).then(() => {
+      // Safety timeut: if the IPC never resolves (rejected promise, unmount),
+      // release the broadcast lock after 2s so treeview clicks still work
+      const releaseTimer = setTimeout(() => {
         isBroadcastingRef.current = false
-      })
+      }, 2000)
+      configMutations
+        .set('activeFile', path)
+        .then(() => {
+          clearTimeout(releaseTimer)
+          isBroadcastingRef.current = false
+        })
+        .catch(() => {
+          clearTimeout(releaseTimer)
+          isBroadcastingRef.current = false
+        })
       setActivePath(path)
       setHistory((prev) => {
         const filtered = prev.filter((p) => p !== path)

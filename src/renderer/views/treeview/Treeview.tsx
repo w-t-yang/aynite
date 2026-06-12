@@ -84,13 +84,16 @@ export function Treeview() {
 
   const [changesOnly, setChangesOnly] = useState(false)
 
-  // Fetch git status for workspace folders once they're loaded
+  // Fetch git status for workspace folders once they're loaded.
+  // Only depends on treeData.length (not treeData reference) to prevent
+  // cascading re-renders when setTreeData creates a new array reference.
   useEffect(() => {
     if (treeData.length > 0) {
       for (const root of treeData) {
         fetchStatus(root.id)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [treeData.length, fetchStatus, treeData])
 
   const [promptModal, setPromptModal] = useState<{
@@ -234,6 +237,9 @@ export function Treeview() {
         lastExpandedPathRef.current = activeFilePath
       }
     }
+    // Only depends on treeData.length (not treeData reference) to prevent
+    // cascading re-renders when setTreeData creates a new array reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilePath, treeData.length, treeData])
 
   // Listen for active-file-changed broadcast from main
