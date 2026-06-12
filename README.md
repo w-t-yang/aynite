@@ -26,20 +26,24 @@
 
 <table>
   <tr>
-    <td width="33%" align="center">
+    <td width="100%" align="center">
       <img src="docs/images/ai-chat.png" alt="AI coding agent with tool calls and command streaming" width="100%">
       <br>
-      <sub>AI Agent — multi-provider, tool calls, command streaming</sub>
+      <sub>🤖 AI Agent — multi-provider, tool calls, command streaming</sub>
     </td>
-    <td width="33%" align="center">
+  </tr>
+  <tr>
+    <td width="100%" align="center">
       <img src="docs/images/file-browser.png" alt="File browser with syntax highlighting" width="100%">
       <br>
-      <sub>File Browser — tabs, search, 6 file viewers</sub>
+      <sub>📂 File Browser — tabs, search, 6 file viewers</sub>
     </td>
-    <td width="33%" align="center">
+  </tr>
+  <tr>
+    <td width="100%" align="center">
       <img src="docs/images/git-diff.png" alt="Git integration with side-by-side diff" width="100%">
       <br>
-      <sub>Git Integration — diff, hunk staging, AI commit messages</sub>
+      <sub>🔄 Git Integration — diff, hunk staging, AI commit messages</sub>
     </td>
   </tr>
 </table>
@@ -122,17 +126,21 @@ This opens up endless possibilities:
 
 <table>
   <tr>
-    <td width="33%" align="center">
+    <td width="100%" align="center">
       <img src="docs/images/stock-1.png" alt="Candlestick chart with AI-generated analysis" width="100%">
       <br>
       <sub>📊 Candlestick Chart — AI-powered trend analysis on any stock data</sub>
     </td>
-    <td width="33%" align="center">
+  </tr>
+  <tr>
+    <td width="100%" align="center">
       <img src="docs/images/stock-2.png" alt="AI analysis results panel" width="100%">
       <br>
       <sub>🧠 AI Analysis — ask questions about trends, patterns, and forecasts</sub>
     </td>
-    <td width="33%" align="center">
+  </tr>
+  <tr>
+    <td width="100%" align="center">
       <img src="docs/images/stock-3.png" alt="Multiple stock charts in tiled layout" width="100%">
       <br>
       <sub>🪟 Tiled Layout — compare multiple charts side-by-side with built-in indicators</sub>
