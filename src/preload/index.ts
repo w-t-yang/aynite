@@ -247,19 +247,29 @@ const aynite = {
    * Each segment is split on both / and \ then rejoined with /.
    * This ensures correct behavior on Windows where filesystem paths
    * use backslashes but IPC and display paths use forward slashes.
+   *
+   * Preserves leading slash for absolute paths like /home/user/...
+   * (splitPath produces an empty string at index 0 for absolute paths;
+   *  filter(Boolean) would incorrectly strip it, turning /home into home)
    */
-  joinPath: (...paths: string[]) =>
-    paths
-      .flatMap((p) => splitPath(p))
-      .filter(Boolean)
-      .join('/'),
+  joinPath: (...paths: string[]) => {
+    const parts = paths.flatMap((p) => splitPath(p))
+    const hasLeadingSlash = parts.length > 0 && parts[0] === ''
+    const joined = parts.filter(Boolean).join('/')
+    return hasLeadingSlash ? `/${joined}` : joined
+  },
   /**
    * Get the parent directory of a path.
    * Works with both / and \ separators via splitPath.
+   * Preserves leading slash for absolute paths.
    */
   dirname: (p: string) => {
-    const parts = splitPath(p).filter(Boolean)
-    return parts.length > 1 ? parts.slice(0, -1).join('/') : '.'
+    const parts = splitPath(p)
+    const hasLeadingSlash = parts.length > 0 && parts[0] === ''
+    const filtered = parts.filter(Boolean)
+    if (filtered.length <= 1) return hasLeadingSlash ? '/' : '.'
+    const joined = filtered.slice(0, -1).join('/')
+    return hasLeadingSlash ? `/${joined}` : joined
   },
   platform: process.platform,
   writeClipboard: (text: string) =>
