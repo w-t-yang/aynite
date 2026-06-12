@@ -20,7 +20,6 @@
     "@tailwindcss/typography",
     "autoprefixer",
     "serve",
-    "@google/genai",
     "@types/prismjs"
   ],
   "rules": {
