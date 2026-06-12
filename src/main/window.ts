@@ -331,3 +331,43 @@ export function getWinIdFromSender(sender: Electron.WebContents): number {
   const win = BrowserWindow.fromWebContents(sender)
   return win?.id ?? -1
 }
+
+/**
+ * Toggle DevTools for the window associated with the given WebContents.
+ * Only window.ts should access .webContents — use this helper from other modules.
+ */
+export function toggleDevToolsForSender(sender: Electron.WebContents): void {
+  const win = BrowserWindow.fromWebContents(sender)
+  win?.webContents.toggleDevTools()
+}
+
+/**
+ * Minimize the window associated with the given WebContents.
+ */
+export function minimizeWindowBySender(sender: Electron.WebContents): void {
+  BrowserWindow.fromWebContents(sender)?.minimize()
+}
+
+/**
+ * Toggle maximize state for the window associated with the given WebContents.
+ */
+export function toggleMaximizeBySender(sender: Electron.WebContents): void {
+  const win = BrowserWindow.fromWebContents(sender)
+  if (win) {
+    if (win.isMaximized()) {
+      win.unmaximize()
+    } else {
+      win.maximize()
+    }
+  }
+}
+
+/**
+ * Close the window associated with the given WebContents.
+ */
+export function closeWindowBySender(sender: Electron.WebContents): void {
+  const win = BrowserWindow.fromWebContents(sender)
+  if (win && !win.isDestroyed()) {
+    win.close()
+  }
+}

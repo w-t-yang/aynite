@@ -13,7 +13,7 @@ function getAynite() {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const system = {
+export const system = (() => ({
   getPlatform: (): string => getAynite().platform,
 
   getSystemFonts: (): Promise<string[]> => getAynite().getSystemFonts(),
@@ -25,11 +25,11 @@ export const system = {
 
   selectFile: (options?: any): Promise<string[] | null> =>
     getAynite().selectFile(options),
-}
+}))()
 
 // ── Setters (return void) ────────────────────────────────────────────
 
-export const systemMutations = {
+export const systemMutations = (() => ({
   openExternal: (url: string): Promise<boolean> =>
     getAynite().openExternal(url),
 
@@ -45,4 +45,4 @@ export const systemMutations = {
 
   activateTile: (tileId: string): Promise<boolean> =>
     getAynite().activateTile(tileId),
-}
+}))()

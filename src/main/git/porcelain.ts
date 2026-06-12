@@ -3,7 +3,12 @@
  * Extracted from GitService for testability.
  */
 import { getDirname, joinPaths } from '../../lib/path'
-import type { DiffStats, GitStatusType } from '../../lib/types/files'
+import type {
+  DiffStats,
+  GitStatusMap,
+  GitStatusType,
+  HunkData,
+} from '../../lib/types/files'
 
 // ─── Status Parsing ─────────────────────────────────────────────────────
 
@@ -87,19 +92,9 @@ export function parsePorcelain(stdout: string, root: string): GitStatusMap {
   return statusMap
 }
 
-export interface GitStatusMap {
-  [path: string]: GitStatusType
-}
+export type { GitStatusMap, HunkData }
 
 // ─── Hunk Patch Building ────────────────────────────────────────────────
-
-export interface HunkData {
-  filePath: string
-  oldStart: number
-  oldLines: string[]
-  newStart: number
-  newLines: string[]
-}
 
 /**
  * Builds a unified diff patch string for a single hunk.

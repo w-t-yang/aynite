@@ -241,7 +241,7 @@ export function ArticleList({
         {dateGroups
           ? dateGroups.map((group) => (
               <div key={group.label}>
-                <div className="sticky top-0 z-10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 backdrop-blur-sm border-b border-border/10">
+                <div className="sticky top-0 z-base px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 backdrop-blur-sm border-b border-border/10">
                   {group.label}
                 </div>
                 {group.items.map((item, idx) => renderItem(item, idx))}

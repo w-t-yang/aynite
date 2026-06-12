@@ -22,17 +22,17 @@ interface FileEntry {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const workspace = {
+export const workspace = (() => ({
   list: (): Promise<WorkspacesConfig> => getAynite().getWorkspacesList(),
 
   folders: (): Promise<string[]> => getAynite().getWorkspaceFolders(),
 
   allFiles: (): Promise<FileEntry[]> => getAynite().workspaceAllFiles(),
-}
+}))()
 
 // ── Setters (return void — state changes come through events) ────────
 
-export const workspaceMutations = {
+export const workspaceMutations = (() => ({
   create: (name: string): Promise<void> =>
     getAynite()
       .createWorkspace(name)
@@ -55,4 +55,4 @@ export const workspaceMutations = {
 
   reorderFolders: (folders: string[]): Promise<boolean> =>
     getAynite().reorderWorkspaceFolders(folders),
-}
+}))()

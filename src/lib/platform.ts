@@ -11,19 +11,9 @@
 
 // ─── Platform Detection ─────────────────────────────────────────────────
 
-/** Internal function to safely get the platform string */
-function getPlatform(): string {
-  try {
-    return typeof process !== 'undefined' ? process.platform : ''
-  } catch {
-    return ''
-  }
-}
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from './constants/platform'
 
-const _platform: string = getPlatform()
-export const IS_WINDOWS: boolean = _platform === 'win32'
-export const IS_MAC: boolean = _platform === 'darwin'
-export const IS_LINUX: boolean = _platform === 'linux'
+export { IS_LINUX, IS_MAC, IS_WINDOWS }
 
 // ─── Path Normalization ─────────────────────────────────────────────────
 

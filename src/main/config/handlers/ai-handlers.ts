@@ -17,7 +17,7 @@ import {
 import type { ConfigHandler } from '../handler-registry'
 import { loadConfig } from '../logic'
 
-export const aiHandlers: ConfigHandler = {
+export const aiHandlers: ConfigHandler = (() => ({
   get: async (key: string, _payload: any, winId?: number) => {
     switch (key) {
       case 'ai': {
@@ -79,4 +79,4 @@ export const aiHandlers: ConfigHandler = {
         return false
     }
   },
-}
+}))()

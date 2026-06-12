@@ -29,17 +29,17 @@ interface CommandEntry {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const spells = {
+export const spells = (() => ({
   getAvailableSkills: (): Promise<SkillEntry[]> =>
     getAynite().getAvailableSkills(),
 
   getAvailableCommands: (): Promise<CommandEntry[]> =>
     getAynite().getAvailableCommands(),
-}
+}))()
 
 // ── Setters (return void) ────────────────────────────────────────────
 
-export const spellsMutations = {
+export const spellsMutations = (() => ({
   restoreSkills: (): Promise<boolean> => getAynite().restoreSkills(),
 
   restoreCommands: (): Promise<boolean> => getAynite().restoreCommands(),
@@ -48,4 +48,4 @@ export const spellsMutations = {
 
   pickCommandFolder: (): Promise<string | null> =>
     getAynite().pickCommandFolder(),
-}
+}))()

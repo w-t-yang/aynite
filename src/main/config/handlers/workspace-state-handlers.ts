@@ -29,7 +29,7 @@ async function resolveWorkspace(winId?: number): Promise<string> {
   return wsConfig.active
 }
 
-export const workspaceStateHandlers: ConfigHandler = {
+export const workspaceStateHandlers: ConfigHandler = (() => ({
   get: async (key: string, payload: any, winId?: number) => {
     const workspaceName = await resolveWorkspace(winId)
     switch (key) {
@@ -127,4 +127,4 @@ export const workspaceStateHandlers: ConfigHandler = {
         return false
     }
   },
-}
+}))()

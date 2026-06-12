@@ -7,17 +7,8 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { UpdateStatus } from '../../../lib/types/app'
+import type { UpdateActions, UpdateStatus } from '../../../lib/types/app'
 import { updateMutations } from '../../bridge/update'
-
-export interface UpdateActions {
-  setChecking: () => void
-  setAvailable: (info: any) => void
-  setIdle: () => void
-  setError: (err: string) => void
-  setDownloading: (percent: number) => void
-  setDownloaded: (info: any) => void
-}
 
 interface UpdateContextType {
   updateStatus: UpdateStatus

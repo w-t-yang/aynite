@@ -1,3 +1,35 @@
+import type { WorkspacesConfig } from './workspace'
+
+export type ConfigSchema = {
+  activeFile: string | null
+  activeTheme: string
+  activeWorkspace: string
+  activeSessionId: string | null
+  version: string
+  ai: { activeId: string; providers?: any[] }
+  agents: { activeId: string; list?: any[] }
+  prompts: { files?: string[] }
+  tools: { active?: Record<string, boolean> }
+  skills: any
+  commands: any
+  keybindings: any
+  themes: any[]
+  workspaces: WorkspacesConfig
+  workspace: any
+  theme: any
+  'theme-delete': string
+  openedFiles: string[]
+  'view-config': any
+  'matching-views': any
+  chatLogs: any
+  'load-chat-log': any
+  'save-chat-log': any
+  'session-delete': string
+  'tile-data': any
+  'playbook-path': string
+  telemetry: { enabled: boolean; clientId?: string }
+}
+
 export interface GlobalAPI {
   saveActiveTab: () => void
   reload: () => void

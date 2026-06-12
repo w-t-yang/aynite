@@ -18,7 +18,7 @@ import {
 import type { ConfigHandler } from '../handler-registry'
 import { validateAgainstSchema } from '../schema-validator'
 
-export const staticHandlers: ConfigHandler = {
+export const staticHandlers: ConfigHandler = (() => ({
   get: async (key: string, payload: any) => {
     switch (key) {
       case 'version':
@@ -100,4 +100,4 @@ export const staticHandlers: ConfigHandler = {
         return false
     }
   },
-}
+}))()

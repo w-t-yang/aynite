@@ -13,7 +13,7 @@ function getAynite() {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const spotify = {
+export const spotify = (() => ({
   checkAuth: (): Promise<boolean> => getAynite().spotifyCheckAuth(),
 
   checkProtocol: (): Promise<boolean> => getAynite().spotifyCheckProtocol(),
@@ -36,11 +36,11 @@ export const spotify = {
     playlistId: string,
   ): Promise<{ success: boolean; data?: any }> =>
     getAynite().spotifyLoadPlaylistTracks(playlistId),
-}
+}))()
 
 // ── Setters (return void) ────────────────────────────────────────────
 
-export const spotifyMutations = {
+export const spotifyMutations = (() => ({
   initAuth: (
     clientId: string,
     useProtocol?: boolean,
@@ -79,4 +79,4 @@ export const spotifyMutations = {
 
   playContext: (uri: string): Promise<{ success: boolean; error?: string }> =>
     getAynite().spotifyPlayContext(uri),
-}
+}))()

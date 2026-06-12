@@ -13,7 +13,7 @@ function getAynite() {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const rss = {
+export const rss = (() => ({
   getConfig: (): Promise<any> => getAynite().rssGetConfig(),
 
   fetchFeed: (sourceId: string): Promise<any> =>
@@ -40,11 +40,11 @@ export const rss = {
     contentSnippet?: string,
   ): Promise<string> =>
     getAynite().rssSummarizeArticle(itemId, url, content, contentSnippet),
-}
+}))()
 
 // ── Setters (return void — state changes come through events) ────────
 
-export const rssMutations = {
+export const rssMutations = (() => ({
   saveConfig: (config: any): Promise<void> =>
     getAynite()
       .rssSaveConfig(config)
@@ -64,4 +64,4 @@ export const rssMutations = {
     getAynite()
       .rssDeleteSourceContent(sourceId)
       .then(() => {}),
-}
+}))()

@@ -1,12 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  clipboard,
-  ipcMain,
-  net,
-  protocol,
-  shell,
-} from 'electron'
+import { app, clipboard, ipcMain, net, protocol, shell } from 'electron'
 import {
   exists,
   expandHome,
@@ -16,11 +8,15 @@ import {
   toUnixPath,
 } from '../../lib/path'
 import {
+  closeWindowBySender,
   createNewWindow,
   getWinIdFromSender,
+  minimizeWindowBySender,
   sendToWindow,
   showOpenDialog,
   showSaveDialog,
+  toggleDevToolsForSender,
+  toggleMaximizeBySender,
 } from '../window'
 import { getAvailableViews, getSystemFonts } from './logic'
 
@@ -73,27 +69,17 @@ export function setupSystemIpc() {
   })
 
   ipcMain.handle(SystemChannels.WINDOW_MINIMIZE, (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.minimize()
+    minimizeWindowBySender(event.sender)
     return true
   })
 
   ipcMain.handle(SystemChannels.WINDOW_MAXIMIZE, (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender)
-    if (win) {
-      if (win.isMaximized()) {
-        win.unmaximize()
-      } else {
-        win.maximize()
-      }
-    }
+    toggleMaximizeBySender(event.sender)
     return true
   })
 
   ipcMain.handle(SystemChannels.WINDOW_CLOSE, (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender)
-    if (win && !win.isDestroyed()) {
-      win.close()
-    }
+    closeWindowBySender(event.sender)
     return true
   })
 
@@ -103,7 +89,7 @@ export function setupSystemIpc() {
   })
 
   ipcMain.handle(SystemChannels.WINDOW_DEVTOOLS, (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.webContents.toggleDevTools()
+    toggleDevToolsForSender(event.sender)
     return true
   })
 
@@ -250,4 +236,10 @@ export function setupProtocol() {
   })
 }
 
-export { execInUserShell, getAvailableViews, getSystemFonts } from './logic'
+export type { ShellConfig } from './logic'
+export {
+  execInUserShell,
+  getAvailableViews,
+  getShellConfig,
+  getSystemFonts,
+} from './logic'

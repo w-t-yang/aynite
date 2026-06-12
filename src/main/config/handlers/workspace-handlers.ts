@@ -11,7 +11,7 @@ import {
 } from '../../workspace'
 import type { ConfigHandler } from '../handler-registry'
 
-export const workspaceHandlers: ConfigHandler = {
+export const workspaceHandlers: ConfigHandler = (() => ({
   get: async (key: string, _payload: any, winId?: number) => {
     switch (key) {
       case 'workspaces': {
@@ -59,4 +59,4 @@ export const workspaceHandlers: ConfigHandler = {
         return false
     }
   },
-}
+}))()

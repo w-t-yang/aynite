@@ -8,7 +8,7 @@ import {
   getWorkspaceDataPath,
 } from '../../lib/path'
 import type { ToolContext } from '../../lib/types/ai'
-import { getShellConfig } from '../system/logic'
+import { getShellConfig } from '../system'
 import { createFileOps } from './tools/file-ops'
 import { createMemoryManager } from './tools/memory-manager'
 import { createRunCommand } from './tools/run-command'

@@ -8,12 +8,9 @@ import {
   useState,
 } from 'react'
 import type { Theme } from '../../../lib/constants/types'
+import type { ThemeActions } from '../../../lib/types/ui'
 import { config, configMutations } from '../../bridge/config'
 import { applyThemeColors } from '../../shared/lib/utils'
-
-export interface ThemeActions {
-  refreshThemes: () => Promise<void>
-}
 
 interface ThemeContextType {
   themes: Theme[]

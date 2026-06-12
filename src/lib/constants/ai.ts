@@ -1,3 +1,15 @@
+/**
+ * Provider options that disable reasoning/thinking for all supported providers.
+ * Use this for simple tasks (summarization, commit messages, etc.) where
+ * reasoning is unnecessary and only adds latency + cost.
+ */
+export const DISABLED_REASONING_OPTIONS: Record<string, any> = {
+  anthropic: { thinking: { type: 'disabled' } },
+  deepseek: { thinking: { type: 'disabled' } },
+  google: { thinkingConfig: { thinkingLevel: 'minimal' } },
+  openai: { reasoning_effort: null },
+}
+
 export const DEFAULT_PROVIDER_MODELS: Record<string, string> = {
   ollama: 'gemma4:e4b',
   openai: 'gpt-4o',

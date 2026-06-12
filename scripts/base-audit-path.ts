@@ -8,8 +8,9 @@ const violations: any[] = []
 walk(SRC_DIR, (fullPath) => {
   const relPath = path.relative(ROOT_DIR, fullPath)
 
-  // Whitelist src/lib/path.ts
+  // Whitelist src/lib/path/ (implementation layer) and src/lib/path.ts (old location)
   if (relPath === 'src/lib/path.ts') return
+  if (relPath.startsWith('src/lib/path/')) return
 
   const content = fs.readFileSync(fullPath, 'utf-8')
 

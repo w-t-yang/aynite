@@ -38,7 +38,7 @@ interface DirectCommandPayload {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const ai = {
+export const ai = (() => ({
   listSessions: (): Promise<ChatSessionEntry[]> => getAynite().listSessions(),
 
   loadSession: (sessionId: string, date?: string): Promise<any> =>
@@ -52,11 +52,11 @@ export const ai = {
 
   getArtifactsStatus: (): Promise<any> =>
     (getAynite() as any).getArtifactsStatus(),
-}
+}))()
 
 // ── Setters (return void — state changes come through events) ────────
 
-export const aiMutations = {
+export const aiMutations = (() => ({
   chat: (
     payload: AiChatPayload,
   ): Promise<{ requestId?: string; error?: string }> =>
@@ -77,15 +77,15 @@ export const aiMutations = {
     getAynite().respondToAiApproval(id, approved),
 
   restorePrompts: (): Promise<boolean> => getAynite().restorePrompts(),
-}
+}))()
 
 // ── Stream listeners (special — return cleanup functions) ───────────
 
-export const aiStream = {
+export const aiStream = (() => ({
   onDelta: (requestId: string, callback: (part: any) => void): (() => void) =>
     getAynite().onAiChatDelta(requestId, callback),
 
   onApprovalRequest: (
     callback: (data: { id: string; command: string; cwd: string }) => void,
   ): (() => void) => getAynite().onAiApprovalRequest(callback),
-}
+}))()

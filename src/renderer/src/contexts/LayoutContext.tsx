@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react'
 import type { LayoutNode, LeafNode } from '../../../lib/constants/types'
+import type { LayoutActions } from '../../../lib/types/ui'
 import { configMutations } from '../../bridge/config'
 import {
   executeLayoutOperation,
@@ -15,10 +16,6 @@ import {
   updateNodeInLayout,
 } from '../utils/tile'
 import { useWorkspace } from './WorkspaceContext'
-
-export interface LayoutActions {
-  setActiveTileId: (id: string | null) => void
-}
 
 interface LayoutContextType {
   activeTileId: string | null

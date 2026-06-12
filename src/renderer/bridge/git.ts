@@ -27,7 +27,7 @@ interface HunkData {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const git = {
+export const git = (() => ({
   getStatus: (path: string): Promise<Record<string, string> | null> =>
     (getAynite() as any).getGitStatus(path),
 
@@ -45,11 +45,11 @@ export const git = {
 
   checkIsRoot: (path: string): Promise<boolean> =>
     (getAynite() as any).checkIsGitRoot(path),
-}
+}))()
 
 // ── Setters (return void — state changes come through events) ────────
 
-export const gitMutations = {
+export const gitMutations = (() => ({
   stageHunk: (data: HunkData): Promise<{ error?: string }> =>
     (getAynite() as any).stageHunk(data),
 
@@ -66,4 +66,4 @@ export const gitMutations = {
     message: string,
   ): Promise<{ success?: boolean; error?: string }> =>
     (getAynite() as any).commitExecute(root, message),
-}
+}))()

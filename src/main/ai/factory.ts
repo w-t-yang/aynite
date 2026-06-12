@@ -5,21 +5,11 @@ import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
 import { createOllama } from 'ai-sdk-ollama'
 
+import { DISABLED_REASONING_OPTIONS } from '../../lib/constants/ai'
 import type { AIProvider } from '../../lib/types/ai'
 
 export type { AIProvider }
-
-/**
- * Provider options that disable reasoning/thinking for all supported providers.
- * Use this for simple tasks (summarization, commit messages, etc.) where
- * reasoning is unnecessary and only adds latency + cost.
- */
-export const DISABLED_REASONING_OPTIONS: Record<string, any> = {
-  anthropic: { thinking: { type: 'disabled' } },
-  deepseek: { thinking: { type: 'disabled' } },
-  google: { thinkingConfig: { thinkingLevel: 'minimal' } },
-  openai: { reasoning_effort: null },
-}
+export { DISABLED_REASONING_OPTIONS }
 
 export function getAIModel(config: AIProvider): LanguageModel {
   const { provider, apiKey, baseUrl, model, compatibility } = config

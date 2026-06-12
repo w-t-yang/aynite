@@ -6,16 +6,11 @@
  * registered handlers instead of using a giant switch statement.
  */
 
-export interface ConfigHandler {
-  get?: (key: string, payload: any, winId?: number) => Promise<any>
-  set?: (key: string, payload: any, winId?: number) => Promise<boolean>
-}
+import { HANDLER_NOT_FOUND } from '../../lib/constants/config'
+import type { ConfigHandler } from '../../lib/types/config'
 
-/**
- * Sentinel value returned by dispatchGet when no handler is registered.
- * Distinguishable from a handler that returns null (valid data).
- */
-export const HANDLER_NOT_FOUND = Symbol('handler-not-found')
+export type { ConfigHandler }
+export { HANDLER_NOT_FOUND }
 
 export class ConfigHandlerRegistry {
   private handlers = new Map<string, ConfigHandler>()

@@ -31,7 +31,7 @@ interface FileInfo {
 
 // ── Getters (return data) ────────────────────────────────────────────
 
-export const file = {
+export const file = (() => ({
   read: (path: string): Promise<string> => getAynite().readFile(path),
 
   readBinary: (path: string): Promise<Uint8Array> =>
@@ -43,11 +43,11 @@ export const file = {
 
   checkIsText: (path: string): Promise<boolean> =>
     getAynite().checkIsTextFile(path),
-}
+}))()
 
 // ── Setters (return void ── state changes come through events) ───────
 
-export const fileMutations = {
+export const fileMutations = (() => ({
   write: (path: string, content: string): Promise<void> =>
     getAynite()
       .writeFile(path, content)
@@ -76,12 +76,12 @@ export const fileMutations = {
       .then(() => {}),
 
   open: (path: string): Promise<boolean> => getAynite().openFile(path),
-}
+}))()
 
 // ── Legacy file operations available on window.aynite ────────────────
 // These are inconsistently named in the preload but still used.
 
-export const legacyFile = {
+export const legacyFile = (() => ({
   getFiles: (path: string): Promise<FileEntry[]> => getAynite().getFiles(path),
 
   move: (oldPath: string, newPath: string): Promise<boolean> =>
@@ -96,4 +96,4 @@ export const legacyFile = {
   onFileSystemChange: (
     cb: (data: { event: string; path: string }) => void,
   ): (() => void) => getAynite().onFileSystemChange(cb),
-}
+}))()

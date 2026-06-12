@@ -8,14 +8,11 @@ import {
   useState,
 } from 'react'
 import type { WorkspaceConfig } from '../../../lib/constants/types'
+import type { WorkspaceActions } from '../../../lib/types/workspace'
 import { config, configMutations } from '../../bridge/config'
 import { system as bridgeSystem, systemMutations } from '../../bridge/system'
 import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { getAllLeafIds } from '../utils/tile'
-
-export interface WorkspaceActions {
-  loadData: () => void
-}
 
 interface WorkspaceContextType {
   workspaceConfig: WorkspaceConfig | null

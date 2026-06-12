@@ -56,3 +56,5 @@ export interface RssBookmark {
 }
 
 export type RssBookmarks = Record<string, RssBookmark>
+
+export type ViewMode = 'all' | 'bookmarks'

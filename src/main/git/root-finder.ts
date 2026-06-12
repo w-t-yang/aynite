@@ -3,11 +3,9 @@
  * Maintains an in-memory cache of resolved paths.
  */
 import { exists, getAbsolutePath, getDirname, joinPaths } from '../../lib/path'
+import type { RootFinder } from '../../lib/types/files'
 
-export interface RootFinder {
-  findGitRoot(path: string): Promise<string | null>
-  clearCache(): void
-}
+export type { RootFinder }
 
 export function createRootFinder(): RootFinder {
   const rootCache = new Map<string, string | null>()

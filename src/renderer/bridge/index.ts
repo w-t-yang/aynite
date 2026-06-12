@@ -16,13 +16,13 @@
  *   bridge → views (direct imports for imperative operations)
  */
 
+export type { ConfigSchema } from '../../lib/types/bridge'
 export { ai, aiMutations, aiStream } from './ai'
-export type { ConfigSchema } from './config'
 
 // Domain modules
 export { config, configMutations } from './config'
 // Events (special — setup in AppContext only)
-export { events, isAvailable } from './events'
+export { events } from './events'
 export { file, fileMutations, legacyFile } from './file'
 export { git, gitMutations } from './git'
 export { rss, rssMutations } from './rss'

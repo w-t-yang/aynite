@@ -6,7 +6,7 @@ import { getMainConfigPath, readJson, writeJson } from '../../../lib/path'
 import { deleteTheme, getTheme, getThemesList, saveTheme } from '../../theme'
 import type { ConfigHandler } from '../handler-registry'
 
-export const themeHandlers: ConfigHandler = {
+export const themeHandlers: ConfigHandler = (() => ({
   get: async (key: string, payload: any) => {
     switch (key) {
       case 'themes':
@@ -45,4 +45,4 @@ export const themeHandlers: ConfigHandler = {
         return false
     }
   },
-}
+}))()

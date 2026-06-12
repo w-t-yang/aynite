@@ -7,11 +7,8 @@ import {
   useRef,
   useState,
 } from 'react'
+import type { UIActions } from '../../../lib/types/ui'
 import { config, configMutations } from '../../bridge/config'
-
-export interface UIActions {
-  setActiveFile: (path: string) => void
-}
 
 interface UIContextType {
   showTileControls: boolean

@@ -34,6 +34,23 @@ export type GitStatusType =
   | 'renamed'
   | 'none'
 
+export interface GitStatusMap {
+  [path: string]: GitStatusType
+}
+
+export interface HunkData {
+  filePath: string
+  oldStart: number
+  oldLines: string[]
+  newStart: number
+  newLines: string[]
+}
+
+export interface RootFinder {
+  findGitRoot(path: string): Promise<string | null>
+  clearCache(): void
+}
+
 export interface FileNode {
   id: string
   name: string

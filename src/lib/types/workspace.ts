@@ -1,3 +1,7 @@
+export interface WorkspaceActions {
+  loadData: () => void
+}
+
 export interface WorkspaceTab {
   id: string
   type: 'file' | 'settings' | 'chat' | string

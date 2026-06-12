@@ -6,11 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
-
-export interface WindowActions {
-  setMaximized: (isMaximized: boolean) => void
-  setFullscreen: (isFullscreen: boolean) => void
-}
+import type { WindowActions } from '../../../lib/types/window'
 
 interface WindowContextType {
   isMaximized: boolean

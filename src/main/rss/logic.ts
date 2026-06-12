@@ -24,7 +24,7 @@ import type {
   RssItem,
   RssSource,
 } from '../../lib/types/rss'
-import { DISABLED_REASONING_OPTIONS, getAIModel } from '../ai/factory'
+import { DISABLED_REASONING_OPTIONS, getAIModel } from '../ai'
 
 const MAX_ITEMS_PER_SOURCE = 500
 

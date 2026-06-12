@@ -18,7 +18,7 @@ function getAynite() {
 
 // ── Setters (return void ── state changes come through events) ───────
 
-export const updateMutations = {
+export const updateMutations = (() => ({
   check: (): Promise<void> => {
     getAynite().checkForUpdates()
     return Promise.resolve()
@@ -27,4 +27,4 @@ export const updateMutations = {
   download: (): Promise<void> => getAynite().downloadUpdate(),
 
   install: (): Promise<void> => getAynite().installUpdate(),
-}
+}))()

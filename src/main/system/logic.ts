@@ -7,15 +7,11 @@ import {
   joinPaths,
   readdir,
 } from '../../lib/path'
+import type { ShellConfig } from '../../lib/types/system'
+
+export type { ShellConfig }
 
 const execAsync = promisify(exec)
-
-export interface ShellConfig {
-  shell: string
-  args: string[]
-  isWindows: boolean
-  isPowershell: boolean
-}
 
 /**
  * Resolves the best available shell on the current platform.

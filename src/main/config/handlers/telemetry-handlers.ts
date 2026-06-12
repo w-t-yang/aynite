@@ -9,7 +9,7 @@ import type { MainConfig } from '../../../lib/constants/types'
 import { getMainConfigPath, readJson, writeJson } from '../../../lib/path'
 import type { ConfigHandler } from '../handler-registry'
 
-export const telemetryHandlers: ConfigHandler = {
+export const telemetryHandlers: ConfigHandler = (() => ({
   get: async () => {
     const config = await readJson<MainConfig>(getMainConfigPath(), {})
     return config.telemetry || { enabled: false }
@@ -24,4 +24,4 @@ export const telemetryHandlers: ConfigHandler = {
     await writeJson(getMainConfigPath(), mainConfig)
     return true
   },
-}
+}))()

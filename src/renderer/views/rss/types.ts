@@ -6,6 +6,5 @@ export type {
   RssGroup,
   RssItem,
   RssSource,
+  ViewMode,
 } from '../../../../src/lib/types/rss'
-
-export type ViewMode = 'all' | 'bookmarks'

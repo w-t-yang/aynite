@@ -1,5 +1,17 @@
 import type React from 'react'
 
+export interface LayoutActions {
+  setActiveTileId: (id: string | null) => void
+}
+
+export interface UIActions {
+  setActiveFile: (path: string) => void
+}
+
+export interface ThemeActions {
+  refreshThemes: () => Promise<void>
+}
+
 export type VibeType = 'chat' | 'file' | 'code' | 'empty'
 
 export interface SelectionItem {

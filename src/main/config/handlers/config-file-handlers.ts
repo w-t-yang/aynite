@@ -14,7 +14,7 @@ import { getToolsMetadata } from '../../ai'
 import type { ConfigHandler } from '../handler-registry'
 import { loadConfig } from '../logic'
 
-export const configFileHandlers: ConfigHandler = {
+export const configFileHandlers: ConfigHandler = (() => ({
   get: async (key: string) => {
     switch (key) {
       case 'keybindings': {
@@ -78,4 +78,4 @@ export const configFileHandlers: ConfigHandler = {
         return false
     }
   },
-}
+}))()

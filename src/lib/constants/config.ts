@@ -1,3 +1,9 @@
+/**
+ * Sentinel value returned by dispatchGet when no handler is registered.
+ * Distinguishable from a handler that returns null (valid data).
+ */
+export const HANDLER_NOT_FOUND = Symbol('handler-not-found')
+
 export enum ConfigKey {
   WORKSPACE = 'workspace',
   WORKSPACES = 'workspaces',

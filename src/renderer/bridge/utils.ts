@@ -11,13 +11,13 @@ function getAynite() {
   return window.aynite
 }
 
-export const utils = {
+export const utils = (() => ({
   joinPath: (...paths: string[]): string => getAynite().joinPath(...paths),
 
   dirname: (p: string): string => getAynite().dirname(p),
 
   writeClipboard: (text: string): Promise<boolean> =>
     getAynite().writeClipboard(text),
-}
+}))()
 
 export const platform = (): string => getAynite().platform
