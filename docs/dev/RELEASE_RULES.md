@@ -41,7 +41,7 @@ Once a tag is pushed, a GitHub Action is triggered:
 - **Platforms**: Builds for macOS (Universal), Windows (x64), and Linux (x64).
 - **Linux Formats**: `.deb`, `.rpm`, and `.AppImage`.
 - **Distribution**: Artifacts are automatically uploaded to a new GitHub Release.
-- **Pre-releases**: Tags containing `-beta` are automatically marked as "Pre-release" on GitHub.
+- **Pre-releases**: Tags containing `-beta` are automatically marked as "Pre-release" by electron-builder.
 
 ## Auto-Update Mechanism
 The app uses `electron-updater` to check for updates against GitHub Releases.
