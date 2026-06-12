@@ -19,7 +19,10 @@ export function useGitStatus() {
         git.checkIsRoot(path),
       ])
       if (isRoot) {
-        setGitRoots((prev) => new Set(prev).add(path))
+        setGitRoots((prev) => {
+          if (prev.has(path)) return prev
+          return new Set(prev).add(path)
+        })
       }
       if (status) {
         // Normalize status map keys for consistent comparison
@@ -29,7 +32,14 @@ export function useGitStatus() {
         )) {
           normalized[normalizePath(key)] = val
         }
-        setGitStatuses((prev) => ({ ...prev, ...normalized }))
+        setGitStatuses((prev) => {
+          const merged = { ...prev, ...normalized }
+          // Deep compare to avoid re-rendering when nothing actually changed
+          if (JSON.stringify(prev) === JSON.stringify(merged)) {
+            return prev
+          }
+          return merged
+        })
       }
     } catch (e) {
       console.error('[useGitStatus] Failed to fetch git status:', e)
@@ -48,6 +58,7 @@ export function useGitStatus() {
         }
 
         setGitStatuses((prev) => {
+          // Build the new state
           const next = { ...prev }
           const rootPrefix = `${normalizedRoot}/`
           for (const path in next) {
@@ -59,7 +70,12 @@ export function useGitStatus() {
               delete next[path]
             }
           }
-          return { ...next, ...normalizedStatus }
+          const merged = { ...next, ...normalizedStatus }
+          // Deep compare to avoid re-rendering when nothing actually changed
+          if (JSON.stringify(prev) === JSON.stringify(merged)) {
+            return prev
+          }
+          return merged
         })
       }
     },
