@@ -1,15 +1,8 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#8B5CF6"/>
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background circle: Morandi very dark muted clay -->
+  <circle cx="512" cy="512" r="512" fill="#403A35"/>
 
-  <!-- Background circle -->
-  <circle cx="512" cy="512" r="512" fill="url(#bgGrad)"/>
-
-  <!-- Letter A -->
+  <!-- Letter A (monogram) -->
   <g transform="translate(512, 512)">
     <!-- Left stroke -->
     <polygon
@@ -33,7 +26,15 @@
       fill="#FFFFFF"
     />
 
-    <!-- Dot -->
-    <circle cx="0" cy="200" r="40" fill="#FFFFFF"/>
+    <!-- Dash (disconnected from legs): gap = 80px (same as stroke) on each side -->
+    <polygon
+      points="
+        -100,320
+        100,320
+        72.67,240
+        -72.67,240
+      "
+      fill="#FFFFFF"
+    />
   </g>
 </svg>
