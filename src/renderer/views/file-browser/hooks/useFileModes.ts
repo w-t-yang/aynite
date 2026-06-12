@@ -57,7 +57,7 @@ export function useFileModes(
 
   // ── Git status change listener (re-evaluate diff after commit) ────
   // Must be declared BEFORE the useEffect that uses diffRefreshKey
-  const [diffRefreshKey, setDiffRefreshKey] = useState(0)
+  const [_diffRefreshKey, setDiffRefreshKey] = useState(0)
 
   // ── Mode Selection Effect ──────────────────────────────────────────
   useEffect(() => {
@@ -169,7 +169,7 @@ export function useFileModes(
     return () => {
       cancelled = true
     }
-  }, [activePath, diffRefreshKey])
+  }, [activePath])
 
   // ── Dataview matching (for JSON files) ─────────────────────────────
   useEffect(() => {

@@ -221,8 +221,18 @@ export const FileViewMarkdown: React.FC<{
                     />
                   )
                 }
-                /* biome-ignore lint/a11y/useAltText: alt text comes from markdown content via props.alt */
-                return <img {...props} />
+                // Remote images (badges, etc.) should stay inline to render on the same row
+                const isShieldBadge = src.includes('img.shields.io')
+                return (
+                  <img
+                    {...props}
+                    alt={props.alt || ''}
+                    className={cn(
+                      props.className,
+                      isShieldBadge && 'inline-block align-middle',
+                    )}
+                  />
+                )
               },
             }}
           >

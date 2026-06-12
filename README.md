@@ -2,11 +2,9 @@
 
 <div align="center">
 
-**Most apps bundle your data, their tools, and their interface. Aynite sets them free.**
+**Pick any AI. Use any tool. Render your data any way you like. Aynite sets your creativity free.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/github/v/release/w-t-yang/aynite?include_prereleases&label=version)](https://github.com/w-t-yang/aynite/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/w-t-yang/aynite/total?color=blue)](https://github.com/w-t-yang/aynite/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)&nbsp; [![Version](https://img.shields.io/github/v/release/w-t-yang/aynite?include_prereleases&label=version)](https://github.com/w-t-yang/aynite/releases/latest)&nbsp; [![Downloads](https://img.shields.io/github/downloads/w-t-yang/aynite/total?color=blue)](https://github.com/w-t-yang/aynite/releases/latest)
 
 </div>
 
@@ -16,40 +14,7 @@
 
 <div align="center">
 
-### Get Aynite — available for all platforms
-
-<br>
-
-<a href="https://github.com/w-t-yang/aynite/releases/latest">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/macOS-download-000?style=for-the-badge&logo=apple&logoColor=white&labelColor=%23333">
-    <img alt="Download for macOS" src="https://img.shields.io/badge/macOS-download-000?style=for-the-badge&logo=apple&logoColor=white&labelColor=%23e8e8e8">
-  </picture>
-</a>
-&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="https://github.com/w-t-yang/aynite/releases/latest">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Linux-download-000?style=for-the-badge&logo=linux&logoColor=white&labelColor=%23333">
-    <img alt="Download for Linux" src="https://img.shields.io/badge/Linux-download-000?style=for-the-badge&logo=linux&logoColor=white&labelColor=%23e8e8e8">
-  </picture>
-</a>
-&nbsp;&nbsp;&nbsp;&nbsp;
-<a href="https://github.com/w-t-yang/aynite/releases/latest">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Windows-download-000?style=for-the-badge&logo=windows&logoColor=white&labelColor=%23333">
-    <img alt="Download for Windows" src="https://img.shields.io/badge/Windows-download-000?style=for-the-badge&logo=windows&logoColor=white&labelColor=%23e8e8e8">
-  </picture>
-</a>
-
-<br>
-<br>
-
-| Platform | Format |
-|:---------|:-------|
-| 🍎 macOS (Apple Silicon) | `.dmg` (arm64) |
-| 🍎 macOS (Intel) | `.dmg` (x64) |
-| 🐧 Linux | `.AppImage` |
-| 🪟 Windows | `.exe` (NSIS installer) |
+[![macOS](https://img.shields.io/badge/macOS-.dmg-black?logo=apple&logoColor=white)](https://github.com/w-t-yang/aynite/releases/latest)&nbsp; [![Linux](https://img.shields.io/badge/Linux-.AppImage-black?logo=linux&logoColor=white)](https://github.com/w-t-yang/aynite/releases/latest)&nbsp; [![Windows](https://img.shields.io/badge/Windows-.exe-black?logo=windows&logoColor=white)](https://github.com/w-t-yang/aynite/releases/latest)
 
 </div>
 
