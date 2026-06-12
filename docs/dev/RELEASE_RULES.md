@@ -2,35 +2,39 @@
 
 This document outlines the standard release process for Aynite.
 
-## Release Versioning
+## Versioning
 We follow [Semantic Versioning (SemVer)](https://semver.org/):
-- **Major**: Breaking changes.
-- **Minor**: New features, non-breaking.
-- **Patch**: Bug fixes, internal improvements.
+- **Major** (`x.0.0`): Breaking changes.
+- **Minor** (`0.x.0`): New features, non-breaking.
+- **Patch** (`0.0.x`): Bug fixes, internal improvements.
+- **Beta** (`0.1.0-beta.0`): Pre-release builds for testing.
 
-## Release Channels
-1. **Stable**: Production-ready releases.
-2. **Beta**: Pre-release builds for testing and early feedback.
+Current version: **0.1.0** (fresh start after cleaning up all `v1.0.0-beta.*` tags).
+
+## Release Scripts
+
+All release scripts bump the version in `package.json`, create a git tag, and push both the commit and tag to GitHub, which triggers the CI pipeline.
+
+```bash
+# Major release (breaking changes) — e.g., 0.1.0 → 1.0.0
+npm run release:major
+
+# Minor release (new features) — e.g., 0.1.0 → 0.2.0
+npm run release:minor
+
+# Patch release (bug fixes) — e.g., 0.1.0 → 0.1.1
+npm run release:patch
+
+# Beta pre-release — e.g., 0.1.0 → 0.1.0-beta.0 → 0.1.0-beta.1
+npm run release:beta
+```
+
+> **Note**: Beta tags are automatically marked as "Pre-release" on GitHub Releases.
 
 ## Tagging Convention
-Tags must be prefixed with `v`.
-- **Stable**: `v1.0.0`, `v1.2.3`
-- **Beta**: `v1.0.0-beta.0`, `v1.0.0-beta.1`
-
-### How to Create a Release
-1. Ensure you are on the `main` branch and it's up to date.
-2. Update the version and create a tag:
-   ```bash
-   # For a patch release (e.g., 1.0.0 -> 1.0.1)
-   npm version patch
-   
-   # For a specific beta version
-   npm version 1.0.0-beta.0
-   ```
-3. Push the tag to GitHub:
-   ```bash
-   git push --tags
-   ```
+Tags must be prefixed with `v` and match the SemVer version in `package.json`.
+- **Stable**: `v0.1.0`, `v0.2.0`, `v1.0.0`
+- **Beta**: `v0.1.0-beta.0`, `v0.1.0-beta.1`
 
 ## Automated Pipeline
 Once a tag is pushed, a GitHub Action is triggered:

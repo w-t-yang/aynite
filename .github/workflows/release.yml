@@ -11,6 +11,9 @@ jobs:
       contents: write
     runs-on: ${{ matrix.os }}
 
+    env:
+      IS_BETA: ${{ contains(github.ref, '-beta') }}
+
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
@@ -59,11 +62,11 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder --mac --publish always
+        run: npx electron-builder --mac --publish always ${{ env.IS_BETA && '--prelease' || '' }}
 
       # ---------- Windows / Linux: No signing needed ----------
       - name: Package and publish (Windows / Linux)
         if: matrix.os != 'macos-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --${{ matrix.os == 'windows-latest' && 'win' || 'linux' }} --publish always
+        run: npx electron-builder --${{ matrix.os == 'windows-latest' && 'win' || 'linux' }} --publish always ${{ env.IS_BETA && '--prelease' || '' }}
