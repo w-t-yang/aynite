@@ -20,58 +20,151 @@
 
 ---
 
-## Showcase
+## What You Can Do With Aynite
 
-<div align="center">
-
-### AI Agent · Data Visualization · File Browser · RSS/Spotify/Unlimited Integration
-
-All in one desktop app. Your AI agent, your files, your tools.
-
-</div>
+### 🤖 AI Coding Agent
 
 <table>
   <tr>
-    <td width="50%" align="center">
-      <img src="docs/images/ai-chat.png" alt="AI Chat with tool calls and command output streaming" width="100%">
+    <td width="33%" align="center">
+      <img src="docs/images/ai-chat.png" alt="AI coding agent with tool calls and command streaming" width="100%">
       <br>
-      <sub>🤖 AI Agent <br> multi-provider, tool execution, plan, memory, and more</sub>
+      <sub>AI Agent — multi-provider, tool calls, command streaming</sub>
     </td>
-    <td width="50%" align="center">
-      <img src="docs/images/data-views.png" alt="Data visualization views: charts, graphs, mindmaps" width="100%">
+    <td width="33%" align="center">
+      <img src="docs/images/file-browser.png" alt="File browser with syntax highlighting" width="100%">
       <br>
-      <sub>🎨 Data Views <br> visualizations from JSON data</sub>
+      <sub>File Browser — tabs, search, 6 file viewers</sub>
     </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <img src="docs/images/git-diff.png" alt="Side-by-side git diff view with hunk staging" width="100%">
+    <td width="33%" align="center">
+      <img src="docs/images/git-diff.png" alt="Git integration with side-by-side diff" width="100%">
       <br>
-      <sub>🔄 Git Integration <br> side-by-side diff, hunk staging, AI commit messages</sub>
-    </td>
-    <td width="50%" align="center">
-      <img src="docs/images/file-browser.png" alt="File browser with tabs, search, and syntax highlighting" width="100%">
-      <br>
-      <sub>📂 File Browser <br> tabs, syntax highlighting, search, 6 built-in file viewers</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <img src="docs/images/rss-reader.png" alt="RSS reader with feed management and AI summarization" width="100%">
-      <br>
-      <sub>📡 RSS Reader <br> feed management, AI summarization</sub>
-    </td>
-    <td width="50%" align="center">
-      <img src="docs/images/spotify.png" alt="Spotify player with playlist browsing" width="100%">
-      <br>
-      <sub>🎵 Spotify <br> browser and control your favorite songs</sub>
+      <sub>Git Integration — diff, hunk staging, AI commit messages</sub>
     </td>
   </tr>
 </table>
 
+Aynite is a capable AI coding agent. It reads your files, writes code, runs shell commands, manages git operations, and works across all major AI providers (OpenAI, Anthropic, Google, DeepSeek, Ollama).
+
+**Is it perfect? No.** But it handles most coding tasks well — and it's already self-evolving.
+
+> ⚡ **Aynite was built with Aynite.** As of today, **43.2%** of Aynite's own commit history (224 out of 519 commits) was authored by Aynite itself (powered by DeepSeek-V4-Flash). The app reads its own source, understands its own architecture, and writes code for itself — including this very README.
+>
+> ```
+> Aynite + DeepSeek-V4-Flash     224 commits  (43.2%)
+> Claude Code + DeepSeek-V4-Flash  71 commits  (13.7%)
+> Antigravity + Gemini            224 commits  (43.2%)
+> ─────────────────────────────────────────
+> Total                           519 commits
+> ```
+>
+> Check the latest ratio anytime with `npm run count:aynite`.
+
+---
+
+### 🎨 Transform Any Data Into Any View
+
+<table>
+  <tr>
+    <td width="100%" align="center">
+      <img src="docs/images/data-views.png" alt="Data visualization: charts, graphs, mindmaps" width="100%">
+      <br>
+      <sub>8 built-in dataviews — chart, graph, flow, diagram, mindmap, canvas, stock, theme</sub>
+    </td>
+  </tr>
+</table>
+
+Aynite's core idea: **AI can generate standalone views on the fly.** Each view declares its expected data schema. Aynite's AI understands those schemas and converts your raw data — CSV, JSON, clipboard text, anything — into the right format for any view.
+
+So instead of fighting with spreadsheet apps or wrestling with charting libraries, you just:
+
+1. **Pick your data** — a file, a folder, clipboard content, an API response
+2. **Pick a view** — chart, graph, mindmap, diagram, flow, canvas, stock, theme
+3. **Let AI handle the transformation** — try the built-in skill: `/transform-to-dataview`
+
+**Built-in today:** 8 dataviews (chart, graph, flow, diagram, mindmap, canvas, stock, theme) + 6 file viewers (PDF, image, audio, video, HTML, markdown). More are arriving. And because a view is just a component that reads a file and renders it, **you can build your own anytime**.
+
+**The result? You'll never be locked into a fixed interface again.** Your data, your views, your choice.
+
+---
+
+### 🔌 Build Any Integration
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/images/rss-reader.png" alt="RSS reader with AI summarization" width="100%">
+      <br>
+      <sub>📡 RSS Reader — feed management, AI summarization</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/images/spotify.png" alt="Spotify player with playlist browsing" width="100%">
+      <br>
+      <sub>🎵 Spotify — browse and control your favorite songs</sub>
+    </td>
+  </tr>
+</table>
+
+RSS and Spotify aren't "plugins you install" — they're **reference implementations** of what's possible. Every built-in integration shows you how to connect Aynite's AI, data, and views together for any third-party service.
+
+This opens up endless possibilities:
+- **Build slides** from your notes or outlines — try `/create-slides`
+- **Transform a mindmap** into a structured document, or a table into a flowchart
+- **Discover new music** by asking AI to analyze your Spotify playlists
+- **Summarize RSS feeds** and turn them into a personal briefing dashboard
+- **Generate stock charts** with AI-powered analysis — skills for fetching and analyzing financial data are on the way
+
+**Creativity is in your hands.** Aynite gives you the building blocks; you decide what to build.
+
+---
+
+### 📈 Stock Charts & Data Analysis
+
+<table>
+  <tr>
+    <td width="33%" align="center">
+      <img src="docs/images/stock-1.png" alt="Candlestick chart with AI-generated analysis" width="100%">
+      <br>
+      <sub>📊 Candlestick Chart — AI-powered trend analysis on any stock data</sub>
+    </td>
+    <td width="33%" align="center">
+      <img src="docs/images/stock-2.png" alt="AI analysis results panel" width="100%">
+      <br>
+      <sub>🧠 AI Analysis — ask questions about trends, patterns, and forecasts</sub>
+    </td>
+    <td width="33%" align="center">
+      <img src="docs/images/stock-3.png" alt="Multiple stock charts in tiled layout" width="100%">
+      <br>
+      <sub>🪟 Tiled Layout — compare multiple charts side-by-side with built-in indicators</sub>
+    </td>
+  </tr>
+</table>
+
+Stock chart is one of the 8 built-in dataviews. Combined with Aynite's extensibility, it demonstrates a powerful pattern:
+
+> **Connect any data source → Transform with AI → Render in any view**
+
+More skills and commands are being added to let you fetch live stock data, perform technical analysis, and visualize the results — all driven by AI conversations. This is Aynite's promise in action: **no app can predict what integrations you'll need, so Aynite gives you the tools to build them yourself.**
+
+---
+
+### 🧩 More to Explore
+
+Aynite is packed with capabilities that don't fit in a single screenshot:
+
+| What | How |
+|------|-----|
+| **Tiled Layout** | Split tiles vertically/horizontally, multiple workspaces, multi-window support |
+| **Slide Decks** | Turn notes into interactive reveal.js presentations — `/create-slides` |
+| **Mind Maps** | Visualize hierarchical data as interactive trees |
+| **Infinite Canvas** | Freeform sketches, wireframes, whiteboards with Excalidraw |
+| **Theme Studio** | Customize 32 CSS variables, create your own with `/create-theme` |
+| **AI Browser** | Browse the web through AI — ask questions about any page |
+| **Workspace Manager** | Organize projects with separate workspaces, each with its own layout and files |
+
 <div align="center">
 
-**And more:** mind maps 🧠, flow diagrams 🔀, interactive graphs 🕸️, Mermaid diagrams 📐, Excalidraw canvas ✏️, stock charts 📈, theme studio 🎨, AI browser, workspace manager, and a fully customizable tiled layout.
+**Whatever you want to build — Aynite is the toolkit that makes it possible.**
 
 </div>
 
@@ -114,27 +207,6 @@ Most apps bundle three things together: your data, their processing, and their i
 
 ---
 
-## Features
-
-| Area | What You Can Do |
-|------|----------------|
-| 🤖 **AI Chat** | Multi-provider chat (OpenAI, Anthropic, Google, DeepSeek, Ollama), tool execution, command streaming, session history |
-| 📂 **File Browser** | Tabs, syntax highlighting, search with match navigation, git diff integration |
-| 🎨 **Data Views** | 8 built-in visualizations — charts, stock candlestick, graphs, flow diagrams, Mermaid diagrams, mind maps, infinite canvas, color themes |
-| 🖼️ **File Views** | 6 built-in file renderers — PDF, image, audio, video, HTML, markdown. Bring your own fileview for any file type |
-| 🔧 **Extensible** | Create your own skills (`/create-skill`), commands (`> command-name`), themes (`/create-theme`), and views |
-| 🔄 **Git Integration** | File status, side-by-side diff, hunk staging/discard, AI-powered commit message generation |
-| 📡 **RSS** | Built-in RSS reader with groups, bookmarks, and AI article summarization |
-| 🎵 **Spotify** | Built-in Spotify player — browse, search, control playback |
-| 🪟 **Tiled Layout** | Split tiles vertically/horizontally, multiple workspaces, multi-window support |
-| 🎭 **Themes** | Fully customizable with 32 CSS variables, create your own with `/create-theme` |
-
-> 💡 **See how it works:** RSS, Spotify, and the 8 data views + 6 file views are all built into Aynite to show you what's possible. They're not "integrations" you need to install — they're templates for how YOU can build and share your own views, file renderers, and third-party connections. Every built-in view is also a reference implementation. [Learn how →](docs/guides/EXTENDING_AYNITE.md)
-
-> 🧰 **More extensions:** Additional skills, commands, dataviews, and fileviews are available in the [aynite-batteries](https://github.com/w-t-yang/aynite-batteries) repo — the dedicated place for community-contributed extensions.
-
----
-
 ## Quick Start
 
 ### 1. Download
@@ -143,8 +215,10 @@ Most apps bundle three things together: your data, their processing, and their i
 
 ### 2. Set Up Your AI Provider
 
-Open **Settings → AI**, add your API key, and pick a model. Aynite supports all major providers through the Vercel AI SDK.
+Open **Settings → AI**, add your API key, pick a model, and you're ready to go.
 
+> 💡 **Aynite doesn't try to list hundreds of AI providers.** Instead, the **Other** option lets you specify a **compatibility mode** — OpenAI, Claude, or Gemini. Most providers (OpenAI-compatible, Anthropic API-compatible, Google AI-compatible, and everything in between) are covered without an endless dropdown of names that go out of date. If your provider speaks one of these protocols, it just works.
+>
 > 🙋 **A note from the developer:** As a part-time individual developer, I've personally only tested Gemini, DeepSeek, and Ollama — I don't have subscriptions to every AI provider. If you run into any issues connecting to a provider, I'd greatly appreciate you [reporting it](https://github.com/w-t-yang/aynite/issues). Apologies in advance if some providers don't work out of the box!
 
 ### 3. Try Your First Chat
@@ -163,7 +237,9 @@ Here is mine, how does yours look like?
 
 ### 4. Explore More
 
-- **`Ctrl+Tab`** — Fuzzy-find and switch files
+- **🗂️ Workspace** — A workspace groups your working folders together. Click the workspace name in the top-left of the title bar to create one, then add folders to it. The AI agent is aware of your workspace folders — it can read, write, and search across all of them.
+- **🧩 Layout** — A layout defines your tiling arrangement. Click the layout name in the middle of the title bar to switch or create one. You can have as many layouts as you want in a workspace, each with its own unique tiling configuration.
+- **🔍 Fuzzy-Find** — Prefer keyboard over mouse? Press **`Ctrl+Tab`** to fuzzy-find and open any file instantly without clicking through the tree.
 
 → **[Full getting started guide →](docs/GETTING_STARTED.md)**
 
@@ -210,14 +286,14 @@ Aynite is in active development (beta). The app ships regularly, has a growing s
 
 Everyone is welcome to contribute! There's just one small request: **write your code and make contributions with Aynite**. I believe contributors should be the people who love using Aynite the most — for everything.
 
-> ⚡ **Aynite Contribution Ratio** — Up to this point (2026-05-27), **27.9%** of the project's commit history has already been authored by Aynite + DeepSeek-V4-Flash, and this ratio keeps climbing.
+> ⚡ **Aynite Contribution Ratio** — Up to this point, **43.2%** of the project's commit history has already been authored by Aynite itself (powered by DeepSeek-V4-Flash), and this ratio keeps climbing.
 >
 > ```
-> Aynite + DeepSeek-V4-Flash     114 commits  (27.9%)
-> Claude Code + DeepSeek-V4-Flash  71 commits  (17.4%)
-> Antigravity + Gemini            224 commits  (54.8%)
+> Aynite + DeepSeek-V4-Flash     224 commits  (43.2%)
+> Claude Code + DeepSeek-V4-Flash  71 commits  (13.7%)
+> Antigravity + Gemini            224 commits  (43.2%)
 > ─────────────────────────────────────────
-> Total                           409 commits
+> Total                           519 commits
 > ```
 >
 > Check the latest ratio anytime with `npm run count:aynite`.
