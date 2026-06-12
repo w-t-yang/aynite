@@ -52,14 +52,14 @@ Aynite is a capable AI coding agent. It reads your files, writes code, runs shel
 
 **Is it perfect? No.** But it handles most coding tasks well — and it's already self-evolving.
 
-> ⚡ **Aynite is being built with Aynite.** As of today, **43.7%** of Aynite's own commit history (229 out of 524 commits) was authored by Aynite itself (powered by DeepSeek-V4-Flash). The app reads its own source, understands its own architecture, and writes code for itself — including this very README.
+> ⚡ **Aynite is being built with Aynite.** As of today, **43.9%** of Aynite's own commit history (231 out of 526 commits) was authored by Aynite itself (powered by DeepSeek-V4-Flash). The app reads its own source, understands its own architecture, and writes code for itself — including this very README.
 >
 > ```
-> Aynite + DeepSeek-V4-Flash      229 commits  ( 43.7%)
+> Aynite + DeepSeek-V4-Flash      231 commits  ( 43.9%)
 > Claude Code + DeepSeek-V4-Flash   71 commits  ( 13.5%)
-> Antigravity + Gemini            224 commits  ( 42.7%)
+> Antigravity + Gemini            224 commits  ( 42.6%)
 > ─────────────────────────────────────────
-> Total                            524 commits
+> Total                            526 commits
 > ```
 >
 > Check the latest ratio anytime with `npm run count:aynite`.
@@ -294,14 +294,14 @@ Aynite is in active development (beta). The app ships regularly, has a growing s
 
 Everyone is welcome to contribute! There's just one small request: **write your code and make contributions with Aynite**. I believe contributors should be the people who love using Aynite the most — for everything.
 
-> ⚡ **Aynite Contribution Ratio** — Up to this point, **43.7%** of the project's commit history has already been authored by Aynite itself (powered by DeepSeek-V4-Flash), and this ratio keeps climbing. Aynite is being built with Aynite.
+> ⚡ **Aynite Contribution Ratio** — Up to this point, **43.9%** of the project's commit history has already been authored by Aynite itself (powered by DeepSeek-V4-Flash), and this ratio keeps climbing. Aynite is being built with Aynite.
 >
 > ```
-> Aynite + DeepSeek-V4-Flash      229 commits  ( 43.7%)
+> Aynite + DeepSeek-V4-Flash      231 commits  ( 43.9%)
 > Claude Code + DeepSeek-V4-Flash   71 commits  ( 13.5%)
-> Antigravity + Gemini            224 commits  ( 42.7%)
+> Antigravity + Gemini            224 commits  ( 42.6%)
 > ─────────────────────────────────────────
-> Total                            524 commits
+> Total                            526 commits
 > ```
 >
 > Check the latest ratio anytime with `npm run count:aynite`.
