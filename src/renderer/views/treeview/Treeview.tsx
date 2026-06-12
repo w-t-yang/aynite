@@ -94,7 +94,7 @@ export function Treeview() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [treeData.length, fetchStatus, treeData])
+  }, [treeData.length, fetchStatus])
 
   const [promptModal, setPromptModal] = useState<{
     isOpen: boolean
@@ -240,7 +240,7 @@ export function Treeview() {
     // Only depends on treeData.length (not treeData reference) to prevent
     // cascading re-renders when setTreeData creates a new array reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilePath, treeData.length, treeData])
+  }, [activeFilePath, treeData.length])
 
   // Listen for active-file-changed broadcast from main
   const handleActiveFileChanged = useCallback((data: { path: string }) => {
