@@ -261,40 +261,73 @@ export function Treeview() {
     })
   }, [])
 
+  // Debounced reload-folder handler — coalesces rapid tree refreshes into one.
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingReloadsRef = useRef<Set<string>>(new Set())
+
   useEffect(() => {
     const handleReload = async (e: any) => {
       const folderPath = e.detail
+      pendingReloadsRef.current.add(folderPath)
 
-      const children = await fetchFiles(folderPath)
-      setTreeData((prev: FileNode[]) =>
-        updateNodeChildren(prev, folderPath, children),
-      )
+      if (reloadTimerRef.current) {
+        clearTimeout(reloadTimerRef.current)
+      }
+      reloadTimerRef.current = setTimeout(async () => {
+        reloadTimerRef.current = null
+        const paths = Array.from(pendingReloadsRef.current)
+        pendingReloadsRef.current.clear()
+
+        for (const fp of paths) {
+          try {
+            const children = await fetchFiles(fp)
+            setTreeData((prev: FileNode[]) =>
+              updateNodeChildren(prev, fp, children),
+            )
+          } catch (e) {
+            console.error('[Treeview] Failed to reload folder:', e)
+          }
+        }
+      }, 200)
     }
     window.addEventListener('reload-folder', handleReload)
     return () => window.removeEventListener('reload-folder', handleReload)
   }, [])
 
+  // Debounce timer for fs-change events — prevents rapid re-renders from
+  // interrupting user interactions (clicking a file while fs events fire).
+  const fsChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Auto-refresh tree when files are created/deleted/renamed via the app
-  // (e.g. AI tool operations, manual file operations)
+  // (e.g. AI tool operations, manual file operations).
+  // Debounced to avoid disrupting react-arborist's internal state during
+  // user interactions (clicking on a file while fs-change events arrive
+  // can cause the row element to be unmounted mid-click).
   const handleFsChange = useCallback(
     (data: { event: string; path: string }) => {
-      // Determine the parent directory of the changed file to refresh
-      const parentDir = data.path.split('/').slice(0, -1).join('/')
-      if (!parentDir) return
-
-      // Dispatch reload-folder to refresh the tree
-      window.dispatchEvent(
-        new CustomEvent('reload-folder', { detail: parentDir }),
-      )
-
-      // Also refresh git status for the workspace root that contains this path
-      const roots = rootFilesPathsRef.current
-      const affectedRoot = roots.find((r) =>
-        normalizePath(data.path).startsWith(normalizePath(r)),
-      )
-      if (affectedRoot) {
-        fetchStatus(affectedRoot)
+      if (fsChangeTimerRef.current) {
+        clearTimeout(fsChangeTimerRef.current)
       }
+      fsChangeTimerRef.current = setTimeout(() => {
+        fsChangeTimerRef.current = null
+        // Determine the parent directory of the changed file to refresh
+        const parentDir = data.path.split('/').slice(0, -1).join('/')
+        if (!parentDir) return
+
+        // Dispatch reload-folder to refresh the tree
+        window.dispatchEvent(
+          new CustomEvent('reload-folder', { detail: parentDir }),
+        )
+
+        // Also refresh git status for the workspace root that contains this path
+        const roots = rootFilesPathsRef.current
+        const affectedRoot = roots.find((r) =>
+          normalizePath(data.path).startsWith(normalizePath(r)),
+        )
+        if (affectedRoot) {
+          fetchStatus(affectedRoot)
+        }
+      }, 300)
     },
     [fetchStatus],
   )
