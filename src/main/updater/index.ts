@@ -144,15 +144,28 @@ async function getPlatformAssetUrl(version: string): Promise<string | null> {
       return asset.browser_download_url
     }
   }
-  // Fallback: first .dmg (macOS), first .zip, or first asset
+  // Fallback: platform-matched installer, then first asset
   if (isMac) {
+    // macOS: only accept .dmg — never fall back to zip
     const dmg = release.assets.find((a: any) => a.name.endsWith('.dmg'))
     if (dmg) return dmg.browser_download_url
   }
-  const zip = release.assets.find((a: any) => a.name.endsWith('.zip'))
-  return (
-    zip?.browser_download_url || release.assets[0]?.browser_download_url || null
-  )
+  if (isWin) {
+    // Windows: .exe
+    const exe = release.assets.find((a: any) => a.name.endsWith('.exe'))
+    if (exe) return exe.browser_download_url
+  }
+  if (!isMac && !isWin) {
+    // Linux: AppImage, deb, rpm
+    const linux = release.assets.find(
+      (a: any) =>
+        a.name.endsWith('.AppImage') ||
+        a.name.endsWith('.deb') ||
+        a.name.endsWith('.rpm'),
+    )
+    if (linux) return linux.browser_download_url
+  }
+  return release.assets[0]?.browser_download_url || null
 }
 
 /**

@@ -203,7 +203,8 @@
     "mac": {
       "icon": "build/icon.icns",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.developer-tools",
       "hardenedRuntime": true,

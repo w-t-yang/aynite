@@ -46,11 +46,13 @@ The app uses `electron-updater` to check for updates against GitHub Releases.
 - Users are prompted to restart to apply the update once the download is complete.
 
 ## macOS Build Target
-The macOS build target is **DMG** (disk image), the industry standard for distributing Electron apps on macOS.
-- **Apple Silicon**: `Aynite-{version}-arm64.dmg`
-- **Intel**: `Aynite-{version}.dmg`
+The macOS build produces **two** artifacts:
+1. **DMG** — For distribution and initial install (`Aynite-{version}-arm64.dmg` / `Aynite-{version}.dmg`)
+2. **ZIP** — For electron-updater's auto-update mechanism (`Aynite-{version}-arm64-mac.zip` / `Aynite-{version}-mac.zip`)
 
-All macOS artifacts are **signed and notarized** to avoid Gatekeeper warnings and enable seamless auto-updates.
+The DMG is the user-facing installer. The ZIP is the Squirrel.Mac update package used internally by `autoUpdater.downloadUpdate()` and `autoUpdater.quitAndInstall()`.
+
+Both artifacts are **signed and notarized** to avoid Gatekeeper warnings.
 
 ### Update Asset Location
 Downloaded update installers are cached in the app's user data directory under `__updates__/`:
