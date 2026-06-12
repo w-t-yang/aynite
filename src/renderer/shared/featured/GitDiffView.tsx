@@ -1,6 +1,7 @@
 import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { DiffStats } from '../../../lib/types/files'
+import { git, gitMutations } from '../../bridge/git'
 import { useViewEvent } from '../../views/useViewEvents'
 import { Button } from '../basic/Button'
 import { Modal } from '../basic/Modal'
@@ -142,15 +143,13 @@ export function GitDiffView({
       try {
         for (const folderPath of folderPaths) {
           try {
-            const isRoot = await (window as any).aynite.checkIsGitRoot(
-              folderPath,
-            )
+            const isRoot = await git.checkIsRoot(folderPath)
             if (isRoot) {
               newRoots.add(folderPath)
 
               const statusMap = forceRefresh
-                ? await (window as any).aynite.refreshGitStatus(folderPath)
-                : await (window as any).aynite.getGitStatus(folderPath)
+                ? await git.refreshStatus(folderPath)
+                : await git.getStatus(folderPath)
               if (statusMap) {
                 const allPaths: string[] = []
                 const normalizedFolder = normalizePath(folderPath)
@@ -192,9 +191,7 @@ export function GitDiffView({
                 }
               }
 
-              const stats = await (window as any).aynite.getGitDiffStats(
-                folderPath,
-              )
+              const stats = await git.getDiffStats(folderPath)
               if (stats) {
                 Object.assign(newDiffStats, stats)
               }
@@ -223,58 +220,66 @@ export function GitDiffView({
   }, [loadGitStatus, folders])
 
   // Listen for git status changes — stable callback to avoid listener thrashing
+  // Uses _foldersKey (stable string) instead of `folders` (array ref) to avoid
+  // constant re-registration of the event listener on every parent render.
   const handleGitStatusChanged = useCallback(
     (data: { root: string }) => {
-      if (data?.root && folders.includes(data.root)) {
-        loadGitStatus(folders)
+      if (data?.root && prevFoldersRef.current.includes(data.root)) {
+        loadGitStatus(prevFoldersRef.current)
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loadGitStatus, folders.includes, folders],
+    [loadGitStatus],
   )
   useViewEvent('git-status-changed', handleGitStatusChanged)
 
   // ─── Commit Flow ──────────────────────────────────────────────────────────
 
+  const commitStateRef = useRef<CommitState | null>(null)
+
   const handleCommit = useCallback(async (root: string) => {
-    setCommitState({ generating: true, message: '', root, error: null })
+    const newState = { generating: true, message: '', root, error: null }
+    commitStateRef.current = newState
+    setCommitState(newState)
     try {
-      const result = await (window as any).aynite.commitGenerate(root)
+      const result = await gitMutations.commitGenerate(root)
       if (result.error) {
-        setCommitState((prev) =>
-          prev ? { ...prev, generating: false, error: result.error } : null,
-        )
+        const errState = { ...newState, generating: false, error: result.error }
+        commitStateRef.current = errState
+        setCommitState(errState)
         return
       }
-      setCommitState((prev) =>
-        prev
-          ? { ...prev, generating: false, message: result.message || '' }
-          : null,
-      )
+      const msgState = {
+        ...newState,
+        generating: false,
+        message: result.message || '',
+      }
+      commitStateRef.current = msgState
+      setCommitState(msgState)
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setCommitState((prev) =>
-        prev ? { ...prev, generating: false, error: msg } : null,
-      )
+      const errMsg = e instanceof Error ? e.message : String(e)
+      const errState = { ...newState, generating: false, error: errMsg }
+      commitStateRef.current = errState
+      setCommitState(errState)
     }
   }, [])
 
   const handleCommitConfirm = useCallback(async () => {
-    if (!commitState) return
-    const result = await (window as any).aynite.commitExecute(
-      commitState.root,
-      commitState.message,
-    )
+    const cs = commitStateRef.current
+    if (!cs) return
+    const result = await gitMutations.commitExecute(cs.root, cs.message)
     if (result.error) {
-      setCommitState((prev) => (prev ? { ...prev, error: result.error } : null))
+      const errState = { ...cs, error: result.error }
+      commitStateRef.current = errState
+      setCommitState(errState)
       return
     }
+    commitStateRef.current = null
     setCommitState(null)
-    // Refresh git status
-    loadGitStatus(folders)
-  }, [commitState, loadGitStatus, folders])
+    // GIT_STATUS_CHANGED event will trigger refresh via handleGitStatusChanged
+  }, [])
 
   const handleCommitCancel = useCallback(() => {
+    commitStateRef.current = null
     setCommitState(null)
   }, [])
 

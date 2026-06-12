@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { GitStatusType } from '../../../../lib/types/files'
+import { git } from '../../../bridge/git'
 import { normalizePath } from '../../../shared/lib/utils'
 import { useViewEvent } from '../../useViewEvents'
 
@@ -14,8 +15,8 @@ export function useGitStatus() {
   const fetchStatus = useCallback(async (path: string) => {
     try {
       const [status, isRoot] = await Promise.all([
-        (window as any).aynite.getGitStatus(path),
-        (window as any).aynite.checkIsGitRoot(path),
+        git.getStatus(path),
+        git.checkIsRoot(path),
       ])
       if (isRoot) {
         setGitRoots((prev) => new Set(prev).add(path))

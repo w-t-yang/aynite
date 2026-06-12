@@ -1,6 +1,7 @@
 import { diffLines } from 'diff'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { gitMutations } from '../../../bridge/git'
 import { useView } from '../../../views/ViewContext'
 import { highlightCode } from '../../lib/syntax'
 import { cn } from '../../lib/utils'
@@ -190,7 +191,7 @@ export function DiffViewer({
     async (hunk: DiffHunk) => {
       if (!filePath) return
       try {
-        const result = await (window as any).aynite.stageHunk({
+        const result = await gitMutations.stageHunk({
           filePath,
           oldStart: hunk.oldStart,
           oldLines: hunk.oldLines,
@@ -214,7 +215,7 @@ export function DiffViewer({
     async (hunk: DiffHunk) => {
       if (!filePath) return
       try {
-        const result = await (window as any).aynite.discardHunk({
+        const result = await gitMutations.discardHunk({
           filePath,
           oldStart: hunk.oldStart,
           oldLines: hunk.oldLines,

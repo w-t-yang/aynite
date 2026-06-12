@@ -56,6 +56,7 @@ export function useFileModes(
   const prevActivePathRef = useRef(activePath)
 
   // ── Git status change listener (re-evaluate diff after commit) ────
+  // Must be declared BEFORE the useEffect that uses diffRefreshKey
   const [_diffRefreshKey, setDiffRefreshKey] = useState(0)
 
   // ── Mode Selection Effect ──────────────────────────────────────────
@@ -156,9 +157,13 @@ export function useFileModes(
           setShowDiff(true)
           setIsViewOnly(false)
         } else {
+          // No diff after re-evaluation — clear showDiff if it was previously set
           setShowDiff(false)
           setIsViewOnly(true)
         }
+      } else if (!diffResult) {
+        // User mode but diff disappeared (e.g. after commit) — clear diff data
+        setShowDiff(false)
       }
     })()
     return () => {

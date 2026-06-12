@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileInfo } from '../../../../lib/types/files'
 import { file as bridgeFile, fileMutations } from '../../../bridge/file'
+import { normalizePath } from '../../../shared/lib/utils'
 import { useViewEvent } from '../../useViewEvents'
 
 export function useFileContent(activePath: string | null) {
@@ -99,6 +100,40 @@ export function useFileContent(activePath: string | null) {
           })
         } catch (e) {
           console.error('Failed to refresh file on disk change', e)
+        }
+      }, 200)
+    }
+  })
+
+  // After a git discard-hunk or commit, the file on disk may have changed
+  // (discard-hunk applies reverse patch to the working tree).
+  // Re-read the file content if the current file is in the affected git root.
+  // We check dirty state via a ref to avoid stale closure issues.
+  const isDirtyRef = useRef(isDirty)
+  isDirtyRef.current = isDirty
+
+  useViewEvent('git-status-changed', (data: { root: string }) => {
+    if (!activePath || !data?.root) return
+    if (
+      normalizePath(activePath).startsWith(normalizePath(data.root)) &&
+      !isDirtyRef.current
+    ) {
+      // Only re-read if the file isn't dirty (user hasn't unsaved edits)
+      if (fsChangeTimerRef.current) {
+        clearTimeout(fsChangeTimerRef.current)
+      }
+      fsChangeTimerRef.current = setTimeout(async () => {
+        fsChangeTimerRef.current = null
+        try {
+          const textStatus = await bridgeFile.checkIsText(activePath)
+          setIsText(textStatus)
+          if (textStatus) {
+            const text = await bridgeFile.read(activePath)
+            setContent(text)
+            setOriginalContent(text)
+          }
+        } catch (e) {
+          console.error('Failed to refresh file after git operation', e)
         }
       }, 200)
     }
