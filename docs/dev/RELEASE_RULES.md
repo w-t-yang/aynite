@@ -11,9 +11,23 @@ We follow [Semantic Versioning (SemVer)](https://semver.org/):
 
 Current version: **0.1.0** (fresh start after cleaning up all `v1.0.0-beta.*` tags).
 
+## Pre-Release: README Update
+
+Before a release is built, the README is automatically updated by `scripts/update-readme-for-release.ts`. This script:
+
+1. **Updates download links** — Points the macOS/Linux/Windows badges to the actual asset download URLs for this version (e.g., `Aynite-0.1.5-arm64.dmg`), instead of the generic release page.
+2. **Updates Aynite commit counts** — Recalculates the percentage of commits authored by Aynite itself and updates both places in the README (AI Coding Agent section + Contributing section).
+3. **Updates contributors** — Fetches the latest contributor list from GitHub API.
+
+The script runs automatically as the first step of each `npm run release:*` command. The updated README is committed along with the version bump.
+
 ## Release Scripts
 
-All release scripts bump the version in `package.json`, create a git tag, and push both the commit and tag to GitHub, which triggers the CI pipeline.
+All release scripts:
+1. Run the README update script
+2. Bump the version in `package.json`
+3. Create a git commit and tag
+4. Push both to GitHub, which triggers the CI pipeline
 
 ```bash
 # Major release (breaking changes) — e.g., 0.1.0 → 1.0.0
