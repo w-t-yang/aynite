@@ -257,7 +257,7 @@ async function devCheckForUpdates() {
  * Chrome, VS Code, and other Electron apps store update artifacts).
  *
  * On macOS: ~/Library/Application Support/aynite-app/__updates__/
- * On Windows: %APPDATA%/aynite-app/__updates__/
+ * On Windows: ~/.aynite/__updates__/
  * On Linux: ~/.config/aynite-app/__updates__/
  */
 async function getUpdatesDir(): Promise<string> {

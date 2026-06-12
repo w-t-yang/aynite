@@ -11,8 +11,7 @@ A skill for creating new "Direct Commands" and iteratively improving them.
 
 Before creating any files, confirm the output folder with the user. If the user doesn't specify one:
 
-- **Linux / Mac**: Commands are stored in `~/.aynite/commands/`
-- **Windows**: Commands are stored in `%AppData%/aynite/commands/`
+- **All platforms**: Commands are stored in `~/.aynite/commands/`
 
 Each command lives in its own subdirectory: `<output-folder>/<command-name>/`
 
@@ -57,7 +56,7 @@ The `run.sh` script is the primary execution point. It should:
 
 ## Creation Workflow
 
-1. **Confirm the output folder** — Ask the user where to create the command. If they don't have a preference, use the default Aynite commands folder (`~/.aynite/commands/` on Linux/Mac, `%AppData%/aynite/commands/` on Windows). Create the folder if it doesn't exist.
+1. **Confirm the output folder** — Ask the user where to create the command. If they don't have a preference, use the default Aynite commands folder (`~/.aynite/commands/` on all platforms). Create the folder if it doesn't exist.
 
 2. **Define Interface** — What parameters does this command need?
 

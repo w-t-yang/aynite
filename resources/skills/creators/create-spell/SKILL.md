@@ -20,8 +20,8 @@ The spell-creator is the starting point: it helps you decide which kind of spell
 
 Before creating any files, confirm the output folder with the user. If the user doesn't specify one:
 
-- **Commands** → `~/.aynite/commands/` (Linux/Mac) or `%AppData%/aynite/commands/` (Windows)
-- **Skills** → `~/.aynite/skills/` (Linux/Mac) or `%AppData%/aynite/skills/` (Windows)
+- **Commands** → `~/.aynite/commands/` (all platforms)
+- **Skills** → `~/.aynite/skills/` (all platforms)
 
 Create the folders if they don't exist.
 

@@ -61,7 +61,7 @@ Both artifacts are **signed and notarized** to avoid Gatekeeper warnings.
 ### Update Asset Location
 Downloaded update installers are cached in the app's user data directory under `__updates__/`:
 - **macOS**: `~/Library/Application Support/aynite-app/__updates__/`
-- **Windows**: `%APPDATA%/aynite-app/__updates__/`
+- **Windows**: `~/.aynite/__updates__/`
 - **Linux**: `~/.config/aynite-app/__updates__/`
 
 This follows the same convention used by Chrome, VS Code, and other major Electron apps.

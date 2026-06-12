@@ -11,8 +11,7 @@ Create beautiful, harmonious Aynite themes from user descriptions.
 
 Before creating any files, confirm the output folder with the user. If the user doesn't specify one:
 
-- **Linux / Mac**: Themes are stored in `~/.aynite/themes/`
-- **Windows**: Themes are stored in `%AppData%/aynite/themes/`
+- **All platforms**: Themes are stored in `~/.aynite/themes/`
 
 If the folder doesn't exist, create it.
 
@@ -111,7 +110,7 @@ When creating themes, follow these principles:
 
 ## Workflow
 
-1. **Confirm the output folder** — Ask the user where to save the theme. If they don't specify, use the default Aynite themes folder (`~/.aynite/themes/` on Linux/Mac, `%AppData%/aynite/themes/` on Windows). Create the folder if it doesn't exist.
+1. **Confirm the output folder** — Ask the user where to save the theme. If they don't specify, use the default Aynite themes folder (`~/.aynite/themes/` on all platforms). Create the folder if it doesn't exist.
 
 2. **Ask the user** what mood, style, or colors they want (e.g., "ocean blue", "warm sunset", "cyberpunk neon", "forest green").
 

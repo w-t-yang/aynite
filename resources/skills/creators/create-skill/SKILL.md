@@ -34,7 +34,7 @@ Cool? Cool.
 Before creating any files, confirm the output folder with the user. If the user doesn't specify one:
 
 - **Linux / Mac**: Skills are stored in `~/.aynite/skills/`
-- **Windows**: Skills are stored in `%AppData%/aynite/skills/`
+- **All platforms**: Skills are stored in `~/.aynite/skills/`
 
 Each skill lives in its own subdirectory: `<output-folder>/<skill-name>/`
 
