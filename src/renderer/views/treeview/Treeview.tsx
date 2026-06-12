@@ -301,10 +301,14 @@ export function Treeview() {
   // Auto-refresh tree when files are created/deleted/renamed via the app
   // (e.g. AI tool operations, manual file operations).
   // Debounced to avoid disrupting react-arborist's internal state during
-  // user interactions (clicking on a file while fs-change events arrive
-  // can cause the row element to be unmounted mid-click).
+  // user interactions.
+  // Only refreshes for 'add', 'unlink', 'rename' events (structural changes).
+  // Skips 'change' events because file content changes don't affect the tree listing.
   const handleFsChange = useCallback(
     (data: { event: string; path: string }) => {
+      // Skip pure content changes — they don't affect the file tree structure
+      if (data.event === 'change') return
+
       if (fsChangeTimerRef.current) {
         clearTimeout(fsChangeTimerRef.current)
       }
