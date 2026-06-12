@@ -132,14 +132,21 @@ export function useFileTabs() {
   }, [tabs])
 
   // Listen for active-file-changed broadcast from main
-  useViewEvent('active-file-changed', (data: { path: string }) => {
-    if (isBroadcastingRef.current) return
-    if (data?.path) {
-      openFile(data.path)
-    } else {
-      setActivePath(null)
-    }
-  })
+  // IMPORTANT: callback must be stable (useCallback) to prevent useEffect
+  // in useViewEvent from tearing down and re-creating the message listener
+  // on every render, which would drop events during the gap.
+  const handleActiveFileChanged = useCallback(
+    (data: { path: string }) => {
+      if (isBroadcastingRef.current) return
+      if (data?.path) {
+        openFile(data.path)
+      } else {
+        setActivePath(null)
+      }
+    },
+    [openFile],
+  )
+  useViewEvent('active-file-changed', handleActiveFileChanged)
 
   return {
     tabs,
