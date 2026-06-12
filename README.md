@@ -2,10 +2,54 @@
 
 <div align="center">
 
-**Your AI desktop that can connect anything.**
+**Most apps bundle your data, their tools, and their interface. Aynite sets them free.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0--beta.15-blue)](https://github.com/w-t-yang/aynite/releases)
+[![Version](https://img.shields.io/github/v/release/w-t-yang/aynite?include_prereleases&label=version)](https://github.com/w-t-yang/aynite/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/w-t-yang/aynite/total?color=blue)](https://github.com/w-t-yang/aynite/releases/latest)
+
+</div>
+
+---
+
+## Download
+
+<div align="center">
+
+### Get Aynite — available for all platforms
+
+<br>
+
+<a href="https://github.com/w-t-yang/aynite/releases/latest">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/macOS-download-000?style=for-the-badge&logo=apple&logoColor=white&labelColor=%23333">
+    <img alt="Download for macOS" src="https://img.shields.io/badge/macOS-download-000?style=for-the-badge&logo=apple&logoColor=white&labelColor=%23e8e8e8">
+  </picture>
+</a>
+&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://github.com/w-t-yang/aynite/releases/latest">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Linux-download-000?style=for-the-badge&logo=linux&logoColor=white&labelColor=%23333">
+    <img alt="Download for Linux" src="https://img.shields.io/badge/Linux-download-000?style=for-the-badge&logo=linux&logoColor=white&labelColor=%23e8e8e8">
+  </picture>
+</a>
+&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="https://github.com/w-t-yang/aynite/releases/latest">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Windows-download-000?style=for-the-badge&logo=windows&logoColor=white&labelColor=%23333">
+    <img alt="Download for Windows" src="https://img.shields.io/badge/Windows-download-000?style=for-the-badge&logo=windows&logoColor=white&labelColor=%23e8e8e8">
+  </picture>
+</a>
+
+<br>
+<br>
+
+| Platform | Format |
+|:---------|:-------|
+| 🍎 macOS (Apple Silicon) | `.dmg` (arm64) |
+| 🍎 macOS (Intel) | `.dmg` (x64) |
+| 🐧 Linux | `.AppImage` |
+| 🪟 Windows | `.exe` (NSIS installer) |
 
 </div>
 
@@ -130,9 +174,7 @@ Most apps bundle three things together: your data, their processing, and their i
 
 ### 1. Download
 
-[Download the latest release](https://github.com/w-t-yang/aynite/releases) for macOS (Apple Silicon).
-
-> 🚧 **Windows and Linux builds are in progress.** The app is built for all three platforms — see the [build instructions](docs/DEVELOPER.md#building) if you want to build from source.
+[Download the latest release](https://github.com/w-t-yang/aynite/releases/latest) for your platform — macOS (`.dmg`), Linux (`.AppImage`), or Windows (`.exe`).
 
 ### 2. Set Up Your AI Provider
 
