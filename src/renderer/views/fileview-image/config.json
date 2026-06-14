@@ -3,6 +3,17 @@
   "description": "Image file viewer with zoom and pan support",
   "author": "Aynite",
   "version": "1.0.0",
+  "file_extensions": [
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "svg",
+    "webp",
+    "ico",
+    "bmp",
+    "tiff"
+  ],
   "key_bindings": {},
   "i18n": {
     "zh": {

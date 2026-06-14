@@ -3,6 +3,7 @@
   "description": "PDF document viewer with page navigation",
   "author": "Aynite",
   "version": "1.0.0",
+  "file_extensions": ["pdf"],
   "key_bindings": {},
   "i18n": {
     "zh": {

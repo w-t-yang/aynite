@@ -3,6 +3,7 @@
   "description": "Audio file player with playback controls",
   "author": "Aynite",
   "version": "1.0.0",
+  "file_extensions": ["mp3", "wav", "flac", "aac", "m4a", "ogg", "opus", "wma"],
   "key_bindings": {},
   "i18n": {
     "zh": {

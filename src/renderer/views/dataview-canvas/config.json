@@ -3,6 +3,22 @@
   "description": "Infinite canvas for diagrams, sketches, and visual thinking",
   "author": "Aynite",
   "version": "1.0.0",
+  "expected_file_type": {
+    "ext": "json",
+    "schema": {
+      "type": "object",
+      "required": ["elements", "appState"],
+      "properties": {
+        "type": { "type": "string" },
+        "version": { "type": "number" },
+        "elements": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "appState": { "type": "object" }
+      }
+    }
+  },
   "key_bindings": {},
   "i18n": {
     "zh": {

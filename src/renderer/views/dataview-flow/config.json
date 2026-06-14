@@ -3,6 +3,51 @@
   "description": "Node-based flow editor for workflows and process diagrams",
   "author": "Aynite",
   "version": "1.0.0",
+  "expected_file_type": {
+    "ext": "json",
+    "schema": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["position", "data"],
+            "properties": {
+              "id": { "type": "string" },
+              "position": {
+                "type": "object",
+                "required": ["x", "y"],
+                "properties": {
+                  "x": { "type": "number" },
+                  "y": { "type": "number" }
+                }
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "label": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "target"],
+            "properties": {
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
   "key_bindings": {},
   "i18n": {
     "zh": {

@@ -3,6 +3,24 @@
   "description": "Live color theme editor with real-time preview",
   "author": "Aynite",
   "version": "1.0.0",
+  "expected_file_type": {
+    "ext": "json",
+    "schema": {
+      "type": "object",
+      "required": ["id", "colors"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["light", "dark"] },
+        "colors": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9_-]+$": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
   "key_bindings": {},
   "i18n": {
     "zh": {
