@@ -7,16 +7,11 @@ import { events } from '../bridge/events'
 import { updateMutations } from '../bridge/update'
 import { Button } from '../shared/basic/Button'
 import { Modal } from '../shared/basic/Modal'
+import { useI18n } from '../shared/i18n/useI18n'
 
 /**
  * Global update notification.
  * Listens for update events from the main process and notifies the user.
- *
- * Flow:
- *   1. UPDATE_AVAILABLE  → auto-shows modal with "Download & Update" button
- *   2. User clicks Download → UPDATE_DOWNLOADING → UPDATE_PROGRESS → UPDATE_DOWNLOADED
- *   3. UPDATE_DOWNLOADED  → auto-shows modal with "Restart Now" button
- *   4. User clicks Restart → autoUpdater.quitAndInstall()
  */
 export function UpdateBanner() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
@@ -25,13 +20,22 @@ export function UpdateBanner() {
   const [showModal, setShowModal] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [appVersion, setAppVersion] = useState('')
+  const [locale, setLocale] = useState<'en' | 'zh'>('en')
+  const { t } = useI18n(locale)
 
-  // Listen for update events
+  // Listen for update events and locale
   useEffect(() => {
     config
       .get('version')
       .then((v: string) => {
         setAppVersion(v || '0.0.0')
+      })
+      .catch(() => {})
+
+    config
+      .get('language')
+      .then((lang: string) => {
+        if (lang === 'zh' || lang === 'en') setLocale(lang)
       })
       .catch(() => {})
 
@@ -65,6 +69,11 @@ export function UpdateBanner() {
         case AppEvents.UPDATE_ERROR:
           setUpdateStatus('error')
           break
+        case AppEvents.LANGUAGE_CHANGED: {
+          const newLocale = (event.data as any)?.language
+          if (newLocale === 'zh' || newLocale === 'en') setLocale(newLocale)
+          break
+        }
       }
     })
     return unbind
@@ -104,12 +113,13 @@ export function UpdateBanner() {
           <div className="flex flex-col items-center text-center space-y-4 py-8">
             <CloudDownload size={40} className="text-primary" />
             <div className="space-y-1">
-              <p className="text-lg font-semibold">Update Available</p>
+              <p className="text-lg font-semibold">{t('update.available')}</p>
               <p className="text-sm text-muted-foreground">
-                Current: {appVersion}
+                {t('update.current')} {appVersion}
               </p>
               <p className="text-sm font-medium text-primary">
-                New: v{updateInfo?.version || '?'}
+                {t('update.new')} v
+                {updateInfo?.version || t('update.unknownVersion')}
               </p>
             </div>
           </div>
@@ -119,9 +129,9 @@ export function UpdateBanner() {
           <div className="flex flex-col items-center text-center space-y-6 py-8">
             <RefreshCw size={40} className="animate-spin text-primary" />
             <div className="space-y-1">
-              <p className="text-lg font-semibold">Downloading Update...</p>
+              <p className="text-lg font-semibold">{t('update.downloading')}</p>
               <p className="text-sm text-muted-foreground">
-                v{updateInfo?.version || '?'}
+                v{updateInfo?.version || t('update.unknownVersion')}
               </p>
             </div>
             <div className="w-full max-w-xs mx-auto space-y-2">
@@ -142,12 +152,13 @@ export function UpdateBanner() {
           <div className="flex flex-col items-center text-center space-y-4 py-8">
             <CloudDownload size={40} className="text-primary" />
             <div className="space-y-1">
-              <p className="text-lg font-semibold">Update Ready</p>
+              <p className="text-lg font-semibold">{t('update.ready')}</p>
               <p className="text-sm text-muted-foreground">
-                v{updateInfo?.version || '?'} has been downloaded.
+                v{updateInfo?.version || t('update.unknownVersion')}{' '}
+                {t('update.downloaded')}
               </p>
               <p className="text-xs text-muted-foreground">
-                Save your work, then quit and install the update.
+                {t('update.saveWork')}
               </p>
             </div>
           </div>
@@ -162,7 +173,7 @@ export function UpdateBanner() {
       return (
         <>
           <Button variant="ghost" onClick={handleDismiss}>
-            Later
+            {t('update.later')}
           </Button>
           <Button
             variant="primary"
@@ -170,7 +181,7 @@ export function UpdateBanner() {
             className="shadow-lg shadow-primary/20"
           >
             <RefreshCw size={16} />
-            Quit & Install
+            {t('update.quitInstall')}
           </Button>
         </>
       )
@@ -179,7 +190,7 @@ export function UpdateBanner() {
       return (
         <>
           <Button variant="ghost" onClick={handleClose}>
-            Cancel
+            {t('update.cancel')}
           </Button>
           <Button
             variant="primary"
@@ -187,7 +198,7 @@ export function UpdateBanner() {
             className="shadow-lg shadow-primary/20"
           >
             <CloudDownload size={16} />
-            Download & Update
+            {t('update.downloadUpdate')}
           </Button>
         </>
       )
@@ -197,7 +208,7 @@ export function UpdateBanner() {
     }
     return (
       <Button variant="ghost" onClick={handleClose}>
-        Close
+        {t('update.close')}
       </Button>
     )
   }
@@ -213,13 +224,15 @@ export function UpdateBanner() {
             className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all animate-in slide-in-from-bottom-4"
           >
             <CloudDownload size={16} />
-            <span className="text-sm font-medium">Update Ready</span>
+            <span className="text-sm font-medium">
+              {t('update.badgeReady')}
+            </span>
           </button>
           <button
             type="button"
             onClick={handleDismiss}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-accent/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-            aria-label="Dismiss"
+            aria-label={t('update.dismiss')}
           >
             <X size={14} />
           </button>
@@ -230,7 +243,9 @@ export function UpdateBanner() {
         isOpen={showModal && updateStatus !== 'idle'}
         onClose={handleClose}
         title={
-          updateStatus === 'downloaded' ? 'Update Ready' : 'Software Update'
+          updateStatus === 'downloaded'
+            ? t('update.ready')
+            : t('update.softwareUpdate')
         }
         size="sm"
         footer={modalFooter()}

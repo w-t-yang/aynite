@@ -4,12 +4,21 @@ import type { LeafNode } from '../../../lib/constants/types'
 
 import { Button } from '../../shared/basic/Button'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
+import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
 import { useApp } from '../AppContext'
 
 interface TileProps {
   node: LeafNode
 }
+
+const SHORTCUTS = [
+  { keys: 'Ctrl + -', actionKey: 'tile.splitVertical' },
+  { keys: 'Ctrl + =', actionKey: 'tile.splitHorizontal' },
+  { keys: 'Ctrl + Q', actionKey: 'tile.closeTile' },
+  { keys: 'Ctrl + O', actionKey: 'tile.cycleTiles' },
+  { keys: 'Ctrl + R', actionKey: 'tile.refreshTile' },
+]
 
 const Tile: React.FC<TileProps> = ({ node }) => {
   const {
@@ -20,14 +29,19 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     availableViews,
     isResizing,
     showTileControls,
+    locale,
   } = useApp()
+  const { t } = useI18n(locale)
   const { id, name, size } = node
   const isActive = activeTileId === id
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [loaded, setLoaded] = useState(false)
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const viewOptions = availableViews.map((v) => ({ id: v.id, label: v.name }))
+  const viewOptions = useMemo(
+    () => availableViews.map((v) => ({ id: v.id, label: v.name })),
+    [availableViews],
+  )
 
   const handleSelectView = (selectedUrl: string) => {
     if (selectedUrl === 'close') {
@@ -39,11 +53,14 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     }
   }
 
-  const menuItems = [
-    ...viewOptions,
-    { id: 'divider-1', type: 'divider' },
-    { id: 'close', label: 'Close Tile', className: 'text-destructive' },
-  ]
+  const menuItems = useMemo(
+    () => [
+      ...viewOptions,
+      { id: 'divider-1', type: 'divider' },
+      { id: 'close', label: t('tile.close'), className: 'text-destructive' },
+    ],
+    [viewOptions, t],
+  )
 
   // Menu for empty tile — no close option since there's nothing to close
   const loadViewItems = useMemo(() => viewOptions, [viewOptions])
@@ -53,14 +70,6 @@ const Tile: React.FC<TileProps> = ({ node }) => {
     if (loadTimerRef.current) clearTimeout(loadTimerRef.current)
     updateTileView(id, { name: selectedUrl })
   }
-
-  const SHORTCUTS = [
-    { keys: 'Ctrl + -', action: 'Split vertically' },
-    { keys: 'Ctrl + =', action: 'Split horizontally' },
-    { keys: 'Ctrl + Q', action: 'Close tile' },
-    { keys: 'Ctrl + O', action: 'Cycle around tiles' },
-    { keys: 'Ctrl + R', action: 'Refresh tile' },
-  ]
 
   const handleIframeLoad = useCallback(() => {
     loadTimerRef.current = setTimeout(() => setLoaded(true), 80)
@@ -104,7 +113,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
             <Button
               variant="ghost"
               size="icon"
-              title="Tile Options"
+              title={t('tile.options')}
               className="bg-background/80 backdrop-blur-md border border-border/50 hover:border-primary/50"
             >
               <svg
@@ -115,7 +124,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
                 stroke="currentColor"
                 strokeWidth={2}
                 role="img"
-                aria-label="Tile options"
+                aria-label={t('tile.options')}
               >
                 <circle cx="12" cy="12" r="1" />
                 <circle cx="12" cy="5" r="1" />
@@ -137,7 +146,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
               <div className="flex flex-col items-center gap-3">
                 <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
                 <span className="text-[10px] text-muted-foreground/50 font-medium tracking-wider uppercase">
-                  Loading {name}...
+                  {t('tile.loading')} {name}...
                 </span>
               </div>
             </div>
@@ -178,22 +187,22 @@ const Tile: React.FC<TileProps> = ({ node }) => {
                     stroke="currentColor"
                     strokeWidth={2}
                     role="img"
-                    aria-label="Load view"
+                    aria-label={t('tile.loadView')}
                   >
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
                   </svg>
-                  Load View
+                  {t('tile.loadView')}
                 </Button>
               }
-              title="Available Views"
+              title={t('tile.availableViews')}
             />
 
             {/* Keyboard Shortcut Instructions */}
             <div className="space-y-1.5 max-w-[260px]">
               <div className="text-[11px] font-semibold text-muted-foreground/40 uppercase tracking-wider text-center mb-2">
-                Tile Shortcuts
+                {t('tile.shortcuts')}
               </div>
               {SHORTCUTS.map((shortcut) => (
                 <div
@@ -204,7 +213,7 @@ const Tile: React.FC<TileProps> = ({ node }) => {
                     {shortcut.keys}
                   </kbd>
                   <span className="text-muted-foreground/50 text-[11px]">
-                    {shortcut.action}
+                    {t(shortcut.actionKey)}
                   </span>
                 </div>
               ))}

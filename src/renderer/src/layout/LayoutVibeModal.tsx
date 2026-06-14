@@ -2,7 +2,9 @@ import { Code, Files, Layout, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
+import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
+import { useApp } from '../AppContext'
 import { getVibeLayout, type VibeType } from '../utils/vibe'
 
 interface LayoutVibeModalProps {
@@ -14,31 +16,30 @@ interface LayoutVibeModalProps {
 const VIBES = [
   {
     id: 'chat' as VibeType,
-    label: 'Chat Vibe',
-    description: 'Sessions panel with hybrid AI Chat and File Browser view.',
+    labelKey: 'vibe.chatLabel',
+    descKey: 'vibe.chatDesc',
     icon: <MessageSquare className="text-blue-500" size={24} />,
     color: 'bg-blue-500/10 border-blue-500/20 hover:border-blue-500/50',
   },
   {
     id: 'file' as VibeType,
-    label: 'File Vibe',
-    description:
-      'A traditional file management setup with Treeview and Explorer.',
+    labelKey: 'vibe.fileLabel',
+    descKey: 'vibe.fileDesc',
     icon: <Files className="text-emerald-500" size={24} />,
     color:
       'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/50',
   },
   {
     id: 'code' as VibeType,
-    label: 'Code Vibe',
-    description: 'The ultimate dev environment: Treeview, Files, and AI Chat.',
+    labelKey: 'vibe.codeLabel',
+    descKey: 'vibe.codeDesc',
     icon: <Code className="text-purple-500" size={24} />,
     color: 'bg-purple-500/10 border-purple-500/20 hover:border-purple-500/50',
   },
   {
     id: 'empty' as VibeType,
-    label: 'Empty Layout',
-    description: 'Start with a single empty tile, then choose a view to load.',
+    labelKey: 'vibe.emptyLabel',
+    descKey: 'vibe.emptyDesc',
     icon: <Layout className="text-neutral-500" size={24} />,
     color:
       'bg-neutral-500/10 border-neutral-500/20 hover:border-neutral-500/50',
@@ -50,13 +51,15 @@ export function LayoutVibeModal({
   onClose,
   onConfirm,
 }: LayoutVibeModalProps) {
+  const { locale } = useApp()
+  const { t } = useI18n(locale)
   const [selected, setSelected] = useState<VibeType | null>(null)
 
   const handleConfirm = () => {
     if (!selected) return
     const vibe = VIBES.find((v) => v.id === selected)
     const layout = getVibeLayout(selected)
-    onConfirm(vibe?.label || 'New Layout', layout)
+    onConfirm(t(vibe?.labelKey || 'vibe.chatLabel'), layout)
     onClose()
   }
 
@@ -64,19 +67,19 @@ export function LayoutVibeModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="How would you like your new layout?"
+      title={t('vibe.title')}
       size="2xl"
       footer={
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t('vibe.cancel')}
           </Button>
           <Button
             variant="primary"
             disabled={!selected}
             onClick={handleConfirm}
           >
-            Confirm Vibe
+            {t('vibe.confirm')}
           </Button>
         </div>
       }
@@ -99,9 +102,9 @@ export function LayoutVibeModal({
               {vibe.icon}
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-base">{vibe.label}</h3>
+              <h3 className="font-bold text-base">{t(vibe.labelKey)}</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                {vibe.description}
+                {t(vibe.descKey)}
               </p>
             </div>
           </Button>

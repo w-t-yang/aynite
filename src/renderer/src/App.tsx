@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import { FileSwitcher } from '../shared/featured/FileSwitcher'
 import { SettingsModal } from '../shared/featured/SettingsModal'
+import { useI18n } from '../shared/i18n/useI18n'
 import { KeyManager } from '../shared/lib/key-handlers'
 import { AppProvider, useApp } from './AppContext'
 import TileNode from './layout/TileNode'
@@ -16,7 +17,9 @@ const AppContent: React.FC = () => {
     showFileSwitcher,
     setShowFileSwitcher,
     showSettings,
+    locale,
   } = useApp()
+  const { t } = useI18n(locale)
 
   useEffect(() => {
     const api = {
@@ -60,7 +63,7 @@ const AppContent: React.FC = () => {
   if (!workspaceConfig)
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
-        <div className="animate-pulse font-semibold">Loading Aynite...</div>
+        <div className="animate-pulse font-semibold">{t('app.loading')}</div>
       </div>
     )
 
