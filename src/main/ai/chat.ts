@@ -275,7 +275,7 @@ export async function aiChat(params: {
           system,
           messages: modelMessages,
           tools: enabledTools,
-          stopWhen: stepCountIs(100),
+          stopWhen: stepCountIs(1000),
           providerOptions: getProviderReasoningOptions(config) as any,
         })
 
