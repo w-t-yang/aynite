@@ -37,6 +37,8 @@ interface FileContentProps {
   activeMatchIndex?: number
   /** Called with total match count */
   onSearchResult?: (total: number) => void
+  /** i18n translate function */
+  t?: (key: string) => string
 }
 
 export function FileContent({
@@ -57,15 +59,19 @@ export function FileContent({
   searchQuery,
   activeMatchIndex,
   onSearchResult,
+  t: tProp,
 }: FileContentProps) {
+  const t = tProp || ((key: string) => key)
   const execOp = useAppOperation()
 
   if (!path) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground select-none">
-        <div className="text-4xl font-bold mb-2 opacity-20">Aynite</div>
+        <div className="text-4xl font-bold mb-2 opacity-20">
+          {t('empty.title')}
+        </div>
         <div className="text-xs tracking-widest uppercase opacity-20 mb-8">
-          No file open
+          {t('empty.subtitle')}
         </div>
         <Button
           variant="outline"
@@ -74,7 +80,7 @@ export function FileContent({
           className="gap-2 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
         >
           <Plus size={16} />
-          <span>Select File</span>
+          <span>{t('empty.selectFile')}</span>
           <span className="ml-2 text-[10px] opacity-40 px-1.5 py-0.5 rounded border border-border bg-muted/50">
             Ctrl+Tab
           </span>
@@ -95,7 +101,7 @@ export function FileContent({
     return (
       <div className="flex-1 flex items-center justify-center text-destructive p-8 text-center">
         <div>
-          <div className="text-lg font-bold mb-2">Error</div>
+          <div className="text-lg font-bold mb-2">{t('error.title')}</div>
           <div className="text-sm opacity-80">{error}</div>
         </div>
       </div>

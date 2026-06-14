@@ -1,56 +1,10 @@
 {
   "name": "Stock Chart",
-  "description": "Candlestick chart with technical indicators and multi-timeframe support",
+  "description": "Financial candlestick chart with technical indicators",
   "author": "Aynite",
   "version": "1.0.0",
-  "expected_file_type": {
-    "ext": "json",
-    "schema": {
-      "anyOf": [
-        {
-          "type": "object",
-          "required": ["symbol", "data"],
-          "properties": {
-            "symbol": { "type": "string" },
-            "data": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "required": ["open", "high", "low", "close", "volume"],
-                "properties": {
-                  "time": { "type": "string" },
-                  "date": { "type": "string" },
-                  "open": { "type": "number" },
-                  "high": { "type": "number" },
-                  "low": { "type": "number" },
-                  "close": { "type": "number" },
-                  "volume": { "type": "number" }
-                }
-              }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["metadata", "history"],
-          "properties": {
-            "metadata": {
-              "type": "object",
-              "properties": {
-                "symbol": { "type": "string" }
-              }
-            },
-            "history": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "required": ["open", "high", "low", "close", "volume"]
-              }
-            }
-          }
-        }
-      ]
-    }
-  },
-  "key_bindings": {}
+  "key_bindings": {},
+  "i18n": {
+    "zh": { "name": "股票图表", "description": "金融 K 线图，包含技术指标" }
+  }
 }

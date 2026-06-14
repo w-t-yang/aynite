@@ -9,7 +9,7 @@ Prioritized by importance. Done items are at the bottom.
 - [x] macOS code signing pipeline — entitlements, CI cert import, notarization config
 - [x] Docs — README, project wiki, showcase
 - [/] Welcome workspace with settings and theme demo
-- [ ] Language / i18n support
+- [x] Language / i18n support
 - [x] Track usage
 - [-] Collect feedback
 - [x] Logo

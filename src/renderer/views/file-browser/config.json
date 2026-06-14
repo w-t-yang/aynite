@@ -5,23 +5,46 @@
   "version": "1.0.0",
   "key_bindings": {
     "edit": {
-      "save": {
-        "ctrl": true,
-        "key": "s"
-      },
-      "search": {
-        "ctrl": true,
-        "key": "f"
-      }
+      "save": { "ctrl": true, "key": "s" },
+      "search": { "ctrl": true, "key": "f" }
     },
     "search": {
-      "next": {
-        "ctrl": true,
-        "key": "n"
+      "next": { "ctrl": true, "key": "n" },
+      "previous": { "ctrl": true, "key": "p" }
+    }
+  },
+  "i18n": {
+    "zh": {
+      "name": "文件浏览器",
+      "description": "多标签文件编辑器，支持语法高亮",
+      "empty": {
+        "title": "Aynite",
+        "subtitle": "未打开文件",
+        "selectFile": "选择文件"
       },
-      "previous": {
-        "ctrl": true,
-        "key": "p"
+      "error": {
+        "title": "错误"
+      },
+      "search": {
+        "placeholder": "在文件中查找…",
+        "matchCount": "{current} / {total} 个匹配项",
+        "noMatches": "无匹配项",
+        "prevTitle": "上一个匹配项 (Ctrl+P)",
+        "nextTitle": "下一个匹配项 (Ctrl+N)"
+      },
+      "tab": {
+        "options": "标签选项",
+        "prevTab": "上一个标签",
+        "nextTab": "下一个标签",
+        "closeAll": "关闭所有标签"
+      },
+      "status": {
+        "diff": "查看 Git 差异",
+        "view": "查看文件（只读）",
+        "edit": "编辑文件",
+        "save": "保存 (Ctrl+S)",
+        "words": "{count} 个词",
+        "word": "个词"
       }
     }
   }

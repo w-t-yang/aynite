@@ -1,54 +1,13 @@
 {
-  "name": "Flow Editor",
-  "description": "Interactive node-based flow chart editor using React Flow",
+  "name": "Flow",
+  "description": "Node-based flow editor for workflows and process diagrams",
   "author": "Aynite",
   "version": "1.0.0",
-  "expected_file_type": {
-    "ext": "json",
-    "schema": {
-      "type": "object",
-      "required": ["nodes", "edges"],
-      "properties": {
-        "nodes": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["position", "data"],
-            "properties": {
-              "id": { "type": "string" },
-              "position": {
-                "type": "object",
-                "required": ["x", "y"],
-                "properties": {
-                  "x": { "type": "number" },
-                  "y": { "type": "number" }
-                }
-              },
-              "data": {
-                "type": "object",
-                "required": ["label"]
-              },
-              "type": { "type": "string" }
-            }
-          },
-          "minItems": 1
-        },
-        "edges": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["source", "target"],
-            "properties": {
-              "id": { "type": "string" },
-              "source": { "type": "string" },
-              "target": { "type": "string" },
-              "label": { "type": "string" }
-            }
-          }
-        },
-        "viewport": { "type": "object" }
-      }
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "流程图",
+      "description": "基于节点的流程编辑器，用于工作流和流程图表"
     }
-  },
-  "key_bindings": {}
+  }
 }

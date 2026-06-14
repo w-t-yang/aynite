@@ -33,6 +33,7 @@ interface InputAreaProps {
     plan: { exists: boolean; path: string }
   } | null
   tokenCount: number
+  t?: (key: string) => string
 }
 
 export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
@@ -50,6 +51,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       setError,
       artifactStatus,
       tokenCount,
+      t = (key: string) => key,
     },
     ref,
   ) => {
@@ -109,10 +111,10 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
                     className="text-muted-foreground/30 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[9px] hover:bg-transparent flex items-center gap-1.5"
                   >
                     <Layers size={13} />
-                    Artifacts
+                    {t('input.artifacts')}
                   </Button>
                 }
-                title="Project Artifacts"
+                title={t('input.artifacts')}
               />
             </div>
 
@@ -132,10 +134,10 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
                 footer={
                   <div className="px-3 py-2.5 max-w-[220px]">
                     <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                      Estimated context usage based on message content size.
+                      {t('tokens.info')}
                     </p>
                     <p className="text-[10px] text-muted-foreground/70 leading-relaxed mt-2">
-                      Start a new session if context is getting too large.
+                      {t('tokens.hint')}
                     </p>
                   </div>
                 }
@@ -163,7 +165,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
                     {formatNumber(tokenCount)} tokens
                   </div>
                 }
-                title="Context Tokens"
+                title={t('input.contextTokens')}
               />
             )}
           </div>
@@ -174,10 +176,10 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
               <div className="flex-1 space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-destructive/80">
                   {error.type === 'tool'
-                    ? 'Tool Execution Error'
+                    ? t('error.tool')
                     : error.type === 'system'
-                      ? 'System Error'
-                      : 'AI Stream Error'}
+                      ? t('error.system')
+                      : t('error.stream')}
                 </p>
                 <p className="text-xs text-foreground/90 leading-relaxed font-medium">
                   {error.redacted}
@@ -188,7 +190,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
                     onClick={() => executeOperation('SETTINGS', { tab: 'ai' })}
                     className="text-[11px] font-bold text-primary hover:text-primary/80 transition-colors mt-1 p-0 h-auto inline-flex"
                   >
-                    Update AI Provider Settings →
+                    {t('error.updateSettings')} →
                   </Button>
                 )}
               </div>

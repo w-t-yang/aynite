@@ -10,6 +10,7 @@ interface HeaderProps {
   onCopy: () => void
   onSwitchAgent: (id: string) => void
   onSwitchProvider: (id: string) => void
+  t?: (key: string) => string
 }
 
 export function Header({
@@ -19,6 +20,7 @@ export function Header({
   onCopy,
   onSwitchAgent,
   onSwitchProvider,
+  t = (key: string) => key,
 }: HeaderProps) {
   const activeAgent = settings.agents?.list?.find(
     (a) => a.id === settings.agents?.activeId,
@@ -61,7 +63,7 @@ export function Header({
                 {agentName}
               </Button>
             }
-            title="Switch Agent"
+            title={t('header.switchAgent')}
           />
           <span className="text-muted-foreground/20 font-normal select-none">
             /
@@ -78,7 +80,7 @@ export function Header({
                 {modelName}
               </Button>
             }
-            title="Switch Model"
+            title={t('header.switchModel')}
           />
         </div>
       </div>
@@ -89,7 +91,7 @@ export function Header({
           size="icon"
           onClick={onClear}
           className="w-8 h-8 rounded-lg hover:bg-accent text-muted-foreground transition-all active:scale-95"
-          title="New Session"
+          title={t('header.newSession')}
         >
           <Plus size={16} />
         </Button>
@@ -98,7 +100,7 @@ export function Header({
           size="icon"
           onClick={onShowHistory}
           className="w-8 h-8 rounded-lg hover:bg-accent text-muted-foreground transition-all active:scale-95"
-          title="Load Session"
+          title={t('header.loadSession')}
         >
           <History size={16} />
         </Button>
@@ -107,7 +109,7 @@ export function Header({
           size="icon"
           onClick={onCopy}
           className="w-8 h-8 rounded-lg hover:bg-accent text-muted-foreground transition-all active:scale-95"
-          title="Copy Session"
+          title={t('header.copySession')}
         >
           <Copy size={16} />
         </Button>

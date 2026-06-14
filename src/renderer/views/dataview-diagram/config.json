@@ -1,19 +1,13 @@
 {
   "name": "Diagram",
-  "description": "Mermaid-based diagram renderer supporting flowcharts, sequence diagrams, and more",
+  "description": "Mermaid diagram renderer for flowcharts, sequence diagrams, and more",
   "author": "Aynite",
   "version": "1.0.0",
-  "expected_file_type": {
-    "ext": "json",
-    "schema": {
-      "type": "object",
-      "required": ["definition"],
-      "properties": {
-        "title": { "type": "string" },
-        "type": { "type": "string" },
-        "definition": { "type": "string" }
-      }
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "图表",
+      "description": "Mermaid 图表渲染器，支持流程图、时序图等"
     }
-  },
-  "key_bindings": {}
+  }
 }

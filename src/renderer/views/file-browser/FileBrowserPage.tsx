@@ -1,14 +1,24 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
+import { useI18n } from '../../shared/i18n/useI18n'
+import { useView } from '../ViewContext'
 import { FileContent } from './components/FileContent'
 import { FileSearchBar } from './components/FileSearchBar'
 import { StatusBar } from './components/StatusBar'
 import { TabBar } from './components/TabBar'
+import viewConfig from './config.json'
 import { useFileContent } from './hooks/useFileContent'
 import { useFileModes } from './hooks/useFileModes'
 import { useFileTabs } from './hooks/useFileTabs'
 import { useSearchBar } from './hooks/useSearchBar'
 
 export function FileBrowserPage() {
+  const { locale } = useView()
+  const customTranslations = useMemo(
+    () => loadViewTranslations((viewConfig as any).i18n),
+    [],
+  )
+  const { t } = useI18n(locale, customTranslations)
   // ── Hooks ──────────────────────────────────────────────────────────────
   const {
     tabs,
@@ -131,6 +141,7 @@ export function FileBrowserPage() {
           onTabSelect={handleTabSelect}
           onTabClose={closeTab}
           onCloseAll={closeAll}
+          t={t}
         />
       )}
 
@@ -144,6 +155,7 @@ export function FileBrowserPage() {
           onPrevMatch={prevMatch}
           onClose={closeSearch}
           searchInputRef={searchInputRef}
+          t={t}
         />
       )}
 
@@ -166,6 +178,7 @@ export function FileBrowserPage() {
           searchQuery={showSearch ? searchQuery : undefined}
           activeMatchIndex={activeMatchIndex}
           onSearchResult={handleSearchResult}
+          t={t}
         />
       </div>
 
@@ -189,6 +202,7 @@ export function FileBrowserPage() {
           matchedFileviews={matchedFileviews}
           activeFileview={activeFileview}
           onSelectFileview={handleSelectFileview}
+          t={t}
         />
       )}
     </div>

@@ -26,6 +26,7 @@ interface TabBarProps {
   onTabSelect: (path: string) => void
   onTabClose: (path: string) => void
   onCloseAll: () => void
+  t?: (key: string) => string
 }
 
 function getFileIcon(name: string) {
@@ -64,7 +65,9 @@ export function TabBar({
   onTabSelect,
   onTabClose,
   onCloseAll,
+  t: tProp,
 }: TabBarProps) {
+  const t = tProp || ((key: string) => key)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const _scroll = (direction: 'left' | 'right') => {
@@ -91,12 +94,12 @@ export function TabBar({
   }
 
   const menuItems = [
-    { id: 'prev', label: 'Previous Tab', icon: <ChevronLeft size={14} /> },
-    { id: 'next', label: 'Next Tab', icon: <ChevronRight size={14} /> },
+    { id: 'prev', label: t('tab.prevTab'), icon: <ChevronLeft size={14} /> },
+    { id: 'next', label: t('tab.nextTab'), icon: <ChevronRight size={14} /> },
     { id: 'divider-1', type: 'divider' },
     {
       id: 'close-all',
-      label: 'Close All Tabs',
+      label: t('tab.closeAll'),
       icon: <X size={14} />,
       className: 'text-destructive',
     },
@@ -203,7 +206,7 @@ export function TabBar({
               variant="ghost"
               size="icon"
               className="h-7 w-7 rounded-md hover:bg-accent/40 transition-colors text-muted-foreground/50 hover:text-foreground"
-              title="Tab options"
+              title={t('tab.options')}
             >
               <Menu size={14} />
             </Button>

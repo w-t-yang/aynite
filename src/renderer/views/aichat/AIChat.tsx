@@ -1,15 +1,26 @@
 import { Bot, Plus } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { configMutations } from '../../bridge/config'
 import { events } from '../../bridge/events'
 import { fileMutations } from '../../bridge/file'
 import { spells } from '../../bridge/spells'
 import { workspace } from '../../bridge/workspace'
+import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
+import { useI18n } from '../../shared/i18n/useI18n'
+import { useView } from '../ViewContext'
 import { Header, InputArea, List, SessionsModal } from './components'
+import viewConfig from './config.json'
 import { useAIChat } from './hooks/useAIChat'
 import { getMessageText } from './utils/message'
 
 export function AIChat() {
+  const { locale } = useView()
+  const customTranslations = useMemo(
+    () => loadViewTranslations((viewConfig as any).i18n),
+    [],
+  )
+  const { t } = useI18n(locale, customTranslations)
+
   const {
     settings,
     messages,
@@ -149,8 +160,7 @@ export function AIChat() {
         }}
         onSwitchAgent={switchAgent}
         onSwitchProvider={switchProvider}
-        artifactStatus={artifactStatus}
-        tokenCount={tokenCount}
+        t={t}
       />
 
       {hasProviders ? (
@@ -187,6 +197,7 @@ export function AIChat() {
             setError={setError}
             artifactStatus={artifactStatus}
             tokenCount={tokenCount}
+            t={t}
           />
         </>
       ) : (
@@ -194,19 +205,16 @@ export function AIChat() {
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse">
             <Bot size={40} className="text-primary" />
           </div>
-          <h3 className="text-2xl font-bold mb-2">
-            No AI Providers Configured
-          </h3>
+          <h3 className="text-2xl font-bold mb-2">{t('noProviders')}</h3>
           <p className="text-muted-foreground max-w-sm mb-8 leading-relaxed">
-            To start using the AI assistant, you need to configure at least one
-            provider (Ollama, OpenAI, Anthropic, etc.) in the settings.
+            {t('noProvidersDesc')}
           </p>
           <button
             type="button"
             onClick={openAISettings}
             className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
           >
-            <Plus size={18} /> Setup AI Providers
+            <Plus size={18} /> {t('setupProviders')}
           </button>
         </div>
       )}

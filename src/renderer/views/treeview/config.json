@@ -1,7 +1,55 @@
 {
-  "name": "File Tree",
+  "name": "File Explorer",
   "description": "Project file tree explorer with git status indicators",
   "author": "Aynite",
   "version": "1.0.0",
-  "key_bindings": {}
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "文件浏览器",
+      "description": "项目文件树形浏览，包含 Git 状态指示器",
+      "header": "文件浏览器",
+      "gitDiff": "Git 差异",
+      "openFolder": "打开文件夹",
+      "empty": "点击下方按钮打开文件夹",
+      "contextMenu": {
+        "addFolder": "添加文件夹到工作区...",
+        "newFile": "新建文件",
+        "newFolder": "新建文件夹",
+        "refresh": "刷新",
+        "rename": "重命名",
+        "copy": "复制",
+        "paste": "粘贴",
+        "delete": "删除",
+        "removeFromWorkspace": "从工作区移除"
+      },
+      "prompt": {
+        "newFileTitle": "新建文件",
+        "newFilePlaceholder": "文件名.扩展名",
+        "newFolderTitle": "新建文件夹",
+        "newFolderPlaceholder": "文件夹名称",
+        "renameTitle": "重命名",
+        "renamePlaceholder": "新名称",
+        "cancel": "取消",
+        "confirm": "确定"
+      },
+      "confirm": {
+        "title": "确认删除",
+        "deleteTitle": "确认删除",
+        "deleteBody": "确定要删除 \"{name}\" 吗？",
+        "removeBody": "确定要从工作区中移除 \"{name}\" 吗？",
+        "cancel": "取消",
+        "delete": "删除",
+        "newWorkspaceTitle": "新建工作区",
+        "newWorkspacePlaceholder": "工作区名称"
+      },
+      "gitStatus": {
+        "modified": "已修改",
+        "added": "已添加",
+        "untracked": "未跟踪",
+        "deleted": "已删除",
+        "renamed": "已重命名"
+      }
+    }
+  }
 }

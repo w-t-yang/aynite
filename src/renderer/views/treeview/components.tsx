@@ -199,6 +199,7 @@ export function PromptModal({
   onChange,
   onConfirm,
   onCancel,
+  labels,
 }: {
   title: string
   placeholder: string
@@ -206,6 +207,7 @@ export function PromptModal({
   onChange: (v: string) => void
   onConfirm: (v: string) => void
   onCancel: () => void
+  labels?: { cancel: string; confirm: string }
 }) {
   return (
     <ModalShell>
@@ -224,14 +226,14 @@ export function PromptModal({
           onClick={onCancel}
           className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors"
         >
-          Cancel
+          {labels?.cancel || 'Cancel'}
         </Button>
         <Button
           variant="ghost"
           onClick={() => value.trim() && onConfirm(value.trim())}
           className="px-4 py-2 text-sm bg-primary text-primary-foreground hover:opacity-90 rounded-md transition-colors font-medium"
         >
-          Confirm
+          {labels?.confirm || 'Confirm'}
         </Button>
       </div>
     </ModalShell>
@@ -244,15 +246,17 @@ export function ConfirmModal({
   message,
   onConfirm,
   onCancel,
+  labels,
 }: {
   message: string
   onConfirm: () => void
   onCancel: () => void
+  labels?: { cancel: string; delete: string }
 }) {
   return (
     <ModalShell>
       <h3 className="text-lg font-medium mb-4 text-foreground">
-        Confirm Deletion
+        {labels?.delete || 'Confirm Deletion'}
       </h3>
       <p className="text-sm text-muted-foreground mb-6 break-words">
         {message}
@@ -263,14 +267,14 @@ export function ConfirmModal({
           onClick={onCancel}
           className="px-4 py-2 text-sm text-foreground hover:bg-accent rounded-md transition-colors"
         >
-          Cancel
+          {labels?.cancel || 'Cancel'}
         </Button>
         <Button
           variant="ghost"
           onClick={onConfirm}
           className="px-4 py-2 text-sm bg-destructive text-destructive-foreground hover:opacity-90 rounded-md transition-colors font-medium"
         >
-          Delete
+          {labels?.delete || 'Delete'}
         </Button>
       </div>
     </ModalShell>

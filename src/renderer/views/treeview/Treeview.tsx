@@ -4,6 +4,7 @@ import {
   FilePlus,
   FolderPlus,
   FolderTree,
+  GitBranch,
   RefreshCw,
   Trash2,
   X,
@@ -19,20 +20,31 @@ import type { SelectionItem } from '../../shared/basic/SelectionList'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { GitDiffView } from '../../shared/featured/GitDiffView'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
+import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
+import { useI18n } from '../../shared/i18n/useI18n'
 import { KeyManager } from '../../shared/lib/key-handlers'
 import { cn, normalizePath } from '../../shared/lib/utils'
 import { useViewEvent } from '../useViewEvents'
+import { useView } from '../ViewContext'
 import {
   ConfirmModal,
   type FileNode,
   NodeRenderer,
   PromptModal,
 } from './components'
+import viewConfig from './config.json'
 import { useGitStatus } from './hooks/useGitStatus'
 import { expandPathIteratively } from './tree-expand'
 import { fetchFiles, findNodeData, updateNodeChildren } from './utils'
 
 export function Treeview() {
+  const { locale } = useView()
+  const customTranslations = useMemo(
+    () => loadViewTranslations((viewConfig as any).i18n),
+    [],
+  )
+  const { t } = useI18n(locale, customTranslations)
+
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
   const lastExpandedPathRef = useRef<string | null>(null)
   const onWorkspaceChange = () => {}
@@ -85,8 +97,6 @@ export function Treeview() {
   const [changesOnly, setChangesOnly] = useState(false)
 
   // Fetch git status for workspace folders once they're loaded.
-  // Only depends on treeData.length (not treeData reference) to prevent
-  // cascading re-renders when setTreeData creates a new array reference.
   useEffect(() => {
     if (treeData.length > 0) {
       for (const root of treeData) {
@@ -123,10 +133,11 @@ export function Treeview() {
   const contextMenuItems = useMemo((): SelectionItem[] => {
     if (!contextMenu) return []
     const { file } = contextMenu
+    const cm = (key: string) => t(`contextMenu.${key}`)
 
     const addFolderItem: SelectionItem = {
       id: 'add-folder',
-      label: 'Add Folder to Workspace...',
+      label: cm('addFolder'),
       icon: <FolderPlus size={14} />,
     }
 
@@ -137,52 +148,51 @@ export function Treeview() {
     if (file.isDirectory) {
       items.push({
         id: 'new-file',
-        label: 'New File',
+        label: cm('newFile'),
         icon: <FilePlus size={14} />,
       })
       items.push({
         id: 'new-folder',
-        label: 'New Folder',
+        label: cm('newFolder'),
         icon: <FolderPlus size={14} />,
       })
       items.push({
         id: 'refresh',
-        label: 'Refresh',
+        label: cm('refresh'),
         icon: <RefreshCw size={14} />,
       })
     }
 
-    items.push({ id: 'rename', label: 'Rename', icon: <Edit2 size={14} /> })
-    items.push({ id: 'copy', label: 'Copy', icon: <Copy size={14} /> })
+    items.push({ id: 'rename', label: cm('rename'), icon: <Edit2 size={14} /> })
+    items.push({ id: 'copy', label: cm('copy'), icon: <Copy size={14} /> })
 
     if (clipboard && file.isDirectory) {
-      items.push({ id: 'paste', label: 'Paste', icon: <Copy size={14} /> })
+      items.push({ id: 'paste', label: cm('paste'), icon: <Copy size={14} /> })
     }
 
     if (rootFilesPaths.includes(file.id)) {
       items.push(addFolderItem)
       items.push({
         id: 'remove-from-workspace',
-        label: 'Remove from Workspace',
+        label: cm('removeFromWorkspace'),
         icon: <X size={14} />,
       })
     } else {
       items.push({
         id: 'delete',
-        label: 'Delete',
+        label: cm('delete'),
         icon: <Trash2 size={14} className="text-destructive" />,
         className: 'text-destructive',
       })
     }
 
     return items
-  }, [contextMenu, clipboard, rootFilesPaths])
+  }, [contextMenu, clipboard, rootFilesPaths, t])
 
   const changesCount = useMemo(() => {
     const paths = Object.entries(gitStatuses)
       .filter(([, status]) => status !== 'none' && status !== 'ignored')
       .map(([path]) => normalizePath(path))
-    // Exclude parent directory entries (prefix of another entry)
     return paths.filter(
       (p) => !paths.some((other) => other !== p && other.startsWith(`${p}/`)),
     ).length
@@ -237,12 +247,9 @@ export function Treeview() {
         lastExpandedPathRef.current = activeFilePath
       }
     }
-    // Only depends on treeData.length (not treeData reference) to prevent
-    // cascading re-renders when setTreeData creates a new array reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilePath, treeData.length, treeData])
 
-  // Listen for active-file-changed broadcast from main
   const handleActiveFileChanged = useCallback((data: { path: string }) => {
     if (data?.path) {
       setActiveFilePath(data.path)
@@ -252,7 +259,6 @@ export function Treeview() {
   }, [])
   useViewEvent('active-file-changed', handleActiveFileChanged)
 
-  // Initial load of active file
   useEffect(() => {
     config.get('activeFile').then((path: string | null) => {
       if (path) {
@@ -261,7 +267,6 @@ export function Treeview() {
     })
   }, [])
 
-  // Debounced reload-folder handler — coalesces rapid tree refreshes into one.
   const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingReloadsRef = useRef<Set<string>>(new Set())
 
@@ -294,19 +299,10 @@ export function Treeview() {
     return () => window.removeEventListener('reload-folder', handleReload)
   }, [])
 
-  // Debounce timer for fs-change events — prevents rapid re-renders from
-  // interrupting user interactions (clicking a file while fs events fire).
   const fsChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Auto-refresh tree when files are created/deleted/renamed via the app
-  // (e.g. AI tool operations, manual file operations).
-  // Debounced to avoid disrupting react-arborist's internal state during
-  // user interactions.
-  // Only refreshes for 'add', 'unlink', 'rename' events (structural changes).
-  // Skips 'change' events because file content changes don't affect the tree listing.
   const handleFsChange = useCallback(
     (data: { event: string; path: string }) => {
-      // Skip pure content changes — they don't affect the file tree structure
       if (data.event === 'change') return
 
       if (fsChangeTimerRef.current) {
@@ -314,16 +310,13 @@ export function Treeview() {
       }
       fsChangeTimerRef.current = setTimeout(() => {
         fsChangeTimerRef.current = null
-        // Determine the parent directory of the changed file to refresh
         const parentDir = data.path.split('/').slice(0, -1).join('/')
         if (!parentDir) return
 
-        // Dispatch reload-folder to refresh the tree
         window.dispatchEvent(
           new CustomEvent('reload-folder', { detail: parentDir }),
         )
 
-        // Also refresh git status for the workspace root that contains this path
         const roots = rootFilesPathsRef.current
         const affectedRoot = roots.find((r) =>
           normalizePath(data.path).startsWith(normalizePath(r)),
@@ -387,7 +380,6 @@ export function Treeview() {
     } catch (e: any) {
       console.error('[Treeview] Failed to add folder:', e)
       const msg = e.message || String(e)
-      // Extract the error message from Electron's remote error string if needed
       const cleanMsg = msg.includes('Error: ')
         ? msg.split('Error: ').pop()
         : msg
@@ -428,8 +420,6 @@ export function Treeview() {
         return
       }
 
-      // All dragged items must belong to the same root workspace folder
-      // as the destination parent directory
       const targetRoot = findRootForPath(parentId)
       if (targetRoot) {
         const allSameRoot = dragIds.every(
@@ -447,7 +437,6 @@ export function Treeview() {
       const parentNode = treeRef.current?.get(parentId)
       if (!parentNode?.data.isDirectory) return
 
-      // Track source directories so we can refresh them after the move
       const sourceDirs = new Set<string>()
 
       for (const id of dragIds) {
@@ -455,7 +444,6 @@ export function Treeview() {
         if (!name) continue
         const newPath = utils.joinPath(parentId, name)
         if (id !== newPath) {
-          // Record the source directory before renaming
           const sourceDir = id.split('/').slice(0, -1).join('/') || '.'
           sourceDirs.add(sourceDir)
 
@@ -468,7 +456,6 @@ export function Treeview() {
         }
       }
 
-      // Refresh both destination and all source directories
       const dirsToRefresh = new Set([parentId, ...sourceDirs])
       for (const dir of dirsToRefresh) {
         window.dispatchEvent(new CustomEvent('reload-folder', { detail: dir }))
@@ -488,6 +475,9 @@ export function Treeview() {
       | 'add-folder'
       | 'refresh',
   ) => {
+    const promptT = (key: string) => t(`prompt.${key}`)
+    const confirmT = (key: string) => t(`confirm.${key}`)
+
     if (action === 'add-folder') {
       handleAddFolder()
       setContextMenu(null)
@@ -505,7 +495,6 @@ export function Treeview() {
       return
     }
 
-    // Refresh: reload folder contents and re-fetch git status
     if (action === 'refresh') {
       const children = await fetchFiles(file.id)
       setTreeData((prev: FileNode[]) =>
@@ -582,28 +571,34 @@ export function Treeview() {
       setPromptValue('')
       setPromptModal({
         isOpen: true,
-        title: action === 'new-file' ? 'New File' : 'New Folder',
-        placeholder: action === 'new-file' ? 'filename.ext' : 'folder_name',
+        title:
+          action === 'new-file'
+            ? promptT('newFileTitle')
+            : promptT('newFolderTitle'),
+        placeholder:
+          action === 'new-file'
+            ? promptT('newFilePlaceholder')
+            : promptT('newFolderPlaceholder'),
         onConfirm: async (val) => await executeAction(val),
       })
     } else if (action === 'rename') {
       setPromptValue(file.name)
       setPromptModal({
         isOpen: true,
-        title: 'Rename',
-        placeholder: 'New name',
+        title: promptT('renameTitle'),
+        placeholder: promptT('renamePlaceholder'),
         onConfirm: async (val) => await executeAction(val),
       })
     } else if (action === 'delete') {
       setConfirmModal({
         isOpen: true,
-        message: `Are you sure you want to delete "${file.name}"?`,
+        message: confirmT('deleteBody').replace('{name}', file.name),
         onConfirm: async () => await executeAction(),
       })
     } else if (action === 'remove-from-workspace') {
       setConfirmModal({
         isOpen: true,
-        message: `Are you sure you want to remove "${file.name}" from workspace?`,
+        message: confirmT('removeBody').replace('{name}', file.name),
         onConfirm: async () => await executeAction(),
       })
     }
@@ -651,18 +646,24 @@ export function Treeview() {
       className="sidebar-container w-full h-full bg-card flex flex-col shrink-0 overflow-hidden outline-none"
       tabIndex={-1}
     >
-      <ViewHeader icon={<FolderTree size={16} />} title="File Explorer">
+      <ViewHeader icon={<FolderTree size={16} />} title={t('header')}>
         <button
           type="button"
           onClick={() => setChangesOnly(!changesOnly)}
+          title={t('gitDiff')}
           className={cn(
-            'text-[10px] px-2 py-0.5 rounded font-medium transition-colors shrink-0',
+            'p-1 rounded transition-colors shrink-0 relative',
             changesOnly
-              ? 'bg-primary/20 text-primary'
+              ? 'text-primary bg-primary/10'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted',
           )}
         >
-          Git Diff{changesCount > 0 ? ` (${changesCount})` : ''}
+          <GitBranch size={14} />
+          {changesCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground leading-none">
+              {changesCount > 9 ? '9+' : changesCount}
+            </span>
+          )}
         </button>
       </ViewHeader>
       <section
@@ -675,7 +676,6 @@ export function Treeview() {
       >
         {treeData.length > 0 ? (
           <div className="relative h-full">
-            {/* Keep Tree mounted at all times to preserve expand/collapse state */}
             <div className={changesOnly ? 'hidden' : 'h-full'}>
               <Tree
                 ref={treeRef}
@@ -689,7 +689,6 @@ export function Treeview() {
                 onToggle={handleToggle}
                 className="scrollbar-gutter-stable"
                 disableDrop={({ parentNode, dragNodes }) => {
-                  // Must drop on a directory
                   if (
                     !parentNode ||
                     parentNode.isInternal ||
@@ -698,17 +697,15 @@ export function Treeview() {
                     return false
                   if (!parentNode.data?.isDirectory) return true
 
-                  // All dragged items must belong to the same root folder
-                  // as the target parent directory
                   const targetRoot = findRootForPath(parentNode.data.id)
                   if (!targetRoot) return false
 
                   for (const dragNode of dragNodes) {
                     const dragRoot = findRootForPath(dragNode.data.id)
-                    if (dragRoot !== targetRoot) return true // reject
+                    if (dragRoot !== targetRoot) return true
                   }
 
-                  return false // allow drop
+                  return false
                 }}
               >
                 {(props) => (
@@ -746,7 +743,7 @@ export function Treeview() {
               onClick={handleAddFolder}
               className="mt-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
             >
-              Open Folder
+              {t('openFolder')}
             </Button>
           </div>
         )}
@@ -754,8 +751,8 @@ export function Treeview() {
 
       {showNewWorkspaceModal && (
         <PromptModal
-          title="New Workspace"
-          placeholder="Workspace name"
+          title={t('confirm.newWorkspaceTitle')}
+          placeholder={t('confirm.newWorkspacePlaceholder')}
           value={newWorkspaceName}
           onChange={setNewWorkspaceName}
           onConfirm={(v) => handleCreateWorkspace(v)}
@@ -763,6 +760,7 @@ export function Treeview() {
             setShowNewWorkspaceModal(false)
             setNewWorkspaceName('')
           }}
+          labels={{ cancel: t('prompt.cancel'), confirm: t('prompt.confirm') }}
         />
       )}
 
@@ -777,6 +775,7 @@ export function Treeview() {
             setPromptModal(null)
           }}
           onCancel={() => setPromptModal(null)}
+          labels={{ cancel: t('prompt.cancel'), confirm: t('prompt.confirm') }}
         />
       )}
 
@@ -788,6 +787,7 @@ export function Treeview() {
             setConfirmModal(null)
           }}
           onCancel={() => setConfirmModal(null)}
+          labels={{ cancel: t('confirm.cancel'), delete: t('confirm.delete') }}
         />
       )}
 

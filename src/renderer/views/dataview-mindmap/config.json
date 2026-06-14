@@ -1,28 +1,13 @@
 {
-  "name": "MindMap",
-  "description": "Interactive mind map visualization with collapsible tree branches",
+  "name": "Mind Map",
+  "description": "Interactive mind map viewer with collapsible nodes",
   "author": "Aynite",
   "version": "1.0.0",
-  "expected_file_type": {
-    "ext": "json",
-    "schema": {
-      "type": "object",
-      "required": ["root"],
-      "properties": {
-        "root": {
-          "type": "object",
-          "required": ["id", "label"],
-          "properties": {
-            "id": { "type": "string" },
-            "label": { "type": "string" },
-            "children": {
-              "type": "array",
-              "items": { "type": "object" }
-            }
-          }
-        }
-      }
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "思维导图",
+      "description": "交互式思维导图查看器，支持可折叠节点"
     }
-  },
-  "key_bindings": {}
+  }
 }

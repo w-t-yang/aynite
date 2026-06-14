@@ -9,5 +9,40 @@
     "move_up": { "key": "w" },
     "move_down": { "key": "s" },
     "open_in_browser": { "key": " " }
+  },
+  "i18n": {
+    "zh": {
+      "name": "RSS 阅读器",
+      "description": "RSS/Atom 订阅源阅读器，支持书签和分组管理",
+      "header": "RSS 阅读器",
+      "sidebar": {
+        "today": "今天",
+        "allFeeds": "全部订阅",
+        "bookmarks": "书签",
+        "groups": "分组",
+        "addGroup": "添加分组",
+        "addSource": "添加订阅源",
+        "editSource": "编辑订阅源",
+        "deleteSource": "删除订阅源"
+      },
+      "articleList": {
+        "noArticles": "无文章",
+        "loading": "加载中..."
+      },
+      "articleDetail": {
+        "openInBrowser": "在浏览器中打开",
+        "bookmark": "书签",
+        "summary": "摘要",
+        "noContent": "无法加载文章内容"
+      },
+      "keyboard": {
+        "title": "键盘快捷键",
+        "moveLeft": "向左移动",
+        "moveRight": "向右移动",
+        "moveUp": "向上移动",
+        "moveDown": "向下移动",
+        "openInBrowser": "在浏览器中打开"
+      }
+    }
   }
 }

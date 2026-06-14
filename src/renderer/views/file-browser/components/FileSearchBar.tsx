@@ -16,6 +16,7 @@ interface FileSearchBarProps {
   onPrevMatch: () => void
   onClose: () => void
   searchInputRef: React.RefObject<HTMLInputElement | null>
+  t?: (key: string) => string
 }
 
 export function FileSearchBar({
@@ -27,6 +28,7 @@ export function FileSearchBar({
   onPrevMatch,
   onClose,
   searchInputRef,
+  t = (key: string) => key,
 }: FileSearchBarProps) {
   return (
     <div className="shrink-0 bg-sidebar border-b border-border flex items-center gap-2 px-3 py-1.5 select-none">
@@ -38,7 +40,7 @@ export function FileSearchBar({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
-          placeholder="Find in file…"
+          placeholder={t('search.placeholder')}
           className="w-full text-sm text-foreground placeholder:text-muted-foreground/40"
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
@@ -53,8 +55,10 @@ export function FileSearchBar({
       {searchQuery && (
         <span className="text-[11px] text-muted-foreground/50 shrink-0">
           {totalMatchCount > 0
-            ? `${activeMatchIndex + 1} of ${totalMatchCount} matches`
-            : 'No matches'}
+            ? t('search.matchCount')
+                .replace('{current}', String(activeMatchIndex + 1))
+                .replace('{total}', String(totalMatchCount))
+            : t('search.noMatches')}
         </span>
       )}
 
@@ -65,7 +69,7 @@ export function FileSearchBar({
             size="icon"
             type="button"
             onClick={onPrevMatch}
-            title="Previous match (Ctrl+P)"
+            title={t('search.prevTitle')}
             className="p-0.5 size-auto"
           >
             <ChevronUp size={14} />
@@ -75,7 +79,7 @@ export function FileSearchBar({
             size="icon"
             type="button"
             onClick={onNextMatch}
-            title="Next match (Ctrl+N)"
+            title={t('search.nextTitle')}
             className="p-0.5 size-auto"
           >
             <ChevronDown size={14} />

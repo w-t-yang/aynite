@@ -1,23 +1,13 @@
 {
   "name": "Canvas",
-  "description": "Excalidraw-based canvas for sketching diagrams and wireframes",
+  "description": "Infinite canvas for diagrams, sketches, and visual thinking",
   "author": "Aynite",
   "version": "1.0.0",
-  "expected_file_type": {
-    "ext": "json",
-    "schema": {
-      "type": "object",
-      "required": ["elements", "appState"],
-      "properties": {
-        "type": { "type": "string" },
-        "version": { "type": "number" },
-        "elements": {
-          "type": "array",
-          "items": { "type": "object" }
-        },
-        "appState": { "type": "object" }
-      }
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "画布",
+      "description": "用于图表、草图和视觉思维的无限画布"
     }
-  },
-  "key_bindings": {}
+  }
 }

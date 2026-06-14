@@ -3,5 +3,61 @@
   "description": "AI assistant chat interface with session management",
   "author": "Aynite",
   "version": "1.0.0",
-  "key_bindings": {}
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "AI 聊天",
+      "description": "AI 助手聊天界面，支持会话管理",
+      "header": {
+        "switchAgent": "切换智能体",
+        "switchModel": "切换模型",
+        "newSession": "新建会话",
+        "loadSession": "加载会话",
+        "copySession": "复制会话"
+      },
+      "input": {
+        "placeholder": "输入消息或使用 / 查看技能...",
+        "artifacts": "项目文件",
+        "contextTokens": "上下文令牌数",
+        "send": "发送消息 (Ctrl+Enter)",
+        "stop": "停止 (Esc)"
+      },
+      "tokens": {
+        "info": "基于消息内容大小估算的上下文使用量。",
+        "hint": "如果上下文过大，请开始新会话。"
+      },
+      "error": {
+        "tool": "工具执行错误",
+        "system": "系统错误",
+        "stream": "AI 流错误",
+        "updateSettings": "更新 AI 提供商设置"
+      },
+      "message": {
+        "system": "系统",
+        "revertToHere": "还原至此",
+        "thinking": "思考中",
+        "copyResponse": "复制回复"
+      },
+      "sessions": {
+        "title": "会话历史",
+        "searchPlaceholder": "搜索会话...",
+        "noResults": "无匹配会话",
+        "today": "今天",
+        "yesterday": "昨天",
+        "earlier": "更早",
+        "empty": "无历史会话",
+        "deleteConfirm": "确定要删除此会话吗？"
+      },
+      "approval": {
+        "title": "等待审批",
+        "approve": "批准",
+        "reject": "拒绝",
+        "command": "命令",
+        "workingDir": "工作目录"
+      },
+      "noProviders": "未配置 AI 提供商",
+      "noProvidersDesc": "要开始使用 AI 助手，您需要在设置中配置至少一个提供商（Ollama、OpenAI、Anthropic 等）。",
+      "setupProviders": "设置 AI 提供商"
+    }
+  }
 }

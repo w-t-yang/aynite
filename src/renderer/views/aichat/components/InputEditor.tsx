@@ -20,7 +20,7 @@ import { createSuggestion, serializeTiptapToText } from '../utils/input'
 
 export type { ChatInputHandle }
 
-interface InputEditorProps {
+export interface InputEditorProps {
   onSend: (text: string) => void
   placeholder?: string
   loading?: boolean

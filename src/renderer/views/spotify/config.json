@@ -1,7 +1,48 @@
 {
-  "name": "Spotify Explorer",
-  "description": "Spotify music library browser with playback controls",
+  "name": "Spotify",
+  "description": "Spotify music player with playlists, saved tracks, and top artists",
   "author": "Aynite",
   "version": "1.0.0",
-  "key_bindings": {}
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "Spotify",
+      "description": "Spotify 音乐播放器，支持播放列表、收藏曲目和热门艺术家",
+      "sidebar": {
+        "playlists": "播放列表",
+        "savedTracks": "收藏曲目",
+        "topArtists": "热门艺术家",
+        "recentlyPlayed": "最近播放"
+      },
+      "player": {
+        "play": "播放",
+        "pause": "暂停",
+        "next": "下一首",
+        "previous": "上一首",
+        "noTrack": "未在播放",
+        "noDevice": "未找到设备"
+      },
+      "playlistTracks": {
+        "title": "播放列表曲目",
+        "noTracks": "此播放列表为空",
+        "loading": "加载曲目中..."
+      },
+      "savedTracks": {
+        "title": "收藏曲目",
+        "noTracks": "暂无收藏曲目",
+        "loading": "加载中..."
+      },
+      "topArtists": {
+        "title": "热门艺术家",
+        "noArtists": "暂无数据"
+      },
+      "login": {
+        "title": "登录 Spotify",
+        "description": "使用您的 Spotify 账户登录以访问音乐库。",
+        "loginButton": "登录 Spotify",
+        "loggingIn": "登录中...",
+        "error": "登录失败"
+      }
+    }
+  }
 }

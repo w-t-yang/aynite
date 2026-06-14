@@ -37,6 +37,8 @@ interface StatusBarProps {
   activeFileview?: string | null
   /** Called when user selects a fileview */
   onSelectFileview?: (view: string | null) => void
+  /** i18n translate function */
+  t?: (key: string) => string
 }
 
 export function StatusBar({
@@ -58,6 +60,7 @@ export function StatusBar({
   matchedFileviews = [],
   activeFileview = null,
   onSelectFileview,
+  t = (key: string) => key,
 }: StatusBarProps) {
   const wordCount = content ? content.trim().split(/\s+/).length : 0
   const lineCount = content ? content.split('\n').length : 0
@@ -141,7 +144,7 @@ export function StatusBar({
 
             {/* Diff mode */}
             {hasDiff && (
-              <Tooltip content="View git diff">
+              <Tooltip content={t('status.diff')}>
                 <button
                   type="button"
                   onClick={handleDiff}
@@ -159,7 +162,7 @@ export function StatusBar({
 
             {/* View mode */}
             {isText && (
-              <Tooltip content="View file (read-only)">
+              <Tooltip content={t('status.view')}>
                 <button
                   type="button"
                   onClick={handleView}
@@ -181,7 +184,7 @@ export function StatusBar({
 
             {/* Edit mode */}
             {isText && !isPdf && (
-              <Tooltip content="Edit file">
+              <Tooltip content={t('status.edit')}>
                 <button
                   type="button"
                   onClick={handleEdit}
@@ -201,7 +204,7 @@ export function StatusBar({
 
         {/* Save button — only shown in edit mode */}
         {isEditing && (
-          <Tooltip content="Save (Ctrl+S)">
+          <Tooltip content={t('status.save')}>
             <button
               type="button"
               onClick={onSave}
@@ -233,7 +236,10 @@ export function StatusBar({
             <div className="w-px h-3 bg-border/30" />
 
             <span className="px-2 py-0.5 text-muted-foreground/50">
-              {wordCount} {wordCount === 1 ? 'word' : 'words'}
+              {wordCount}{' '}
+              {wordCount === 1
+                ? t('status.word')
+                : t('status.words').replace('{count}', String(wordCount))}
             </span>
 
             <div className="w-px h-3 bg-border/30" />

@@ -1,5 +1,5 @@
 import { FileCode, Folder, MessageSquare, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ai as aiBridge } from '../../bridge/ai'
 import { config, configMutations } from '../../bridge/config'
 import { file as bridgeFile } from '../../bridge/file'
@@ -8,8 +8,12 @@ import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { GitDiffView } from '../../shared/featured/GitDiffView'
+import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
+import { useI18n } from '../../shared/i18n/useI18n'
 import { cn, normalizePath } from '../../shared/lib/utils'
 import { useViewEvent } from '../useViewEvents'
+import { useView } from '../ViewContext'
+import viewConfig from './config.json'
 
 interface Session {
   id: string
@@ -26,6 +30,13 @@ interface ArtifactFile {
 }
 
 export function WorkspaceView() {
+  const { locale } = useView()
+  const customTranslations = useMemo(
+    () => loadViewTranslations((viewConfig as any).i18n),
+    [],
+  )
+  const { t } = useI18n(locale, customTranslations)
+
   const [workspaceName, setWorkspaceName] = useState<string>('')
   const [folders, setFolders] = useState<string[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
@@ -57,9 +68,6 @@ export function WorkspaceView() {
         setArtifacts([])
         return
       }
-      // Derive the artifacts directory path from memory.md path.
-      // Normalize to forward slashes first so the regex works on Windows
-      // where path.join() returns backslashes.
       const normalizedPath = normalizePath(status.memory.path)
       const artifactsDir = normalizedPath.replace(/\/[^/]+$/, '')
       const files = await bridgeFile.list(artifactsDir)
@@ -88,12 +96,10 @@ export function WorkspaceView() {
     loadArtifacts()
   }, [loadData, loadArtifacts])
 
-  // Listen for session changes from other views (like AIChat creating a new one)
   useViewEvent('active-session-changed', (data: { id: string }) => {
     setActiveSessionId(data.id)
   })
 
-  // Listen for config changes
   useViewEvent('config-changed', () => {
     loadData()
     loadArtifacts()
@@ -127,7 +133,6 @@ export function WorkspaceView() {
     try {
       await configMutations.set('session-delete', sessionToDelete.id)
       setSessionToDelete(null)
-      // loadData will be called by the event listener
     } catch (e) {
       console.error('[WorkspaceView] Failed to delete session:', e)
     }
@@ -137,7 +142,7 @@ export function WorkspaceView() {
     <div className="flex flex-col h-full bg-background overflow-hidden">
       <ViewHeader
         icon={<MessageSquare size={16} />}
-        title={`Workspace - ${workspaceName || '...'}`}
+        title={t('header').replace('{name}', workspaceName || '...')}
       />
       <div className="flex-1 overflow-auto p-4 space-y-8">
         {/* Folders Group */}
@@ -145,13 +150,13 @@ export function WorkspaceView() {
           <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
             <div className="flex items-center gap-2">
               <Folder size={14} />
-              <span>Folders</span>
+              <span>{t('folders.title')}</span>
             </div>
             <button
               type="button"
               onClick={handleAddFolder}
               className="p-1 rounded hover:bg-accent text-muted-foreground/50 hover:text-foreground transition-colors"
-              title="Add Folder to Workspace"
+              title={t('folders.addTitle')}
             >
               <Plus size={14} />
             </button>
@@ -159,7 +164,7 @@ export function WorkspaceView() {
           <div className="space-y-1">
             {folders.length === 0 ? (
               <div className="text-xs text-muted-foreground/40 italic px-2">
-                No folders added
+                {t('folders.empty')}
               </div>
             ) : (
               <GitDiffView
@@ -170,16 +175,16 @@ export function WorkspaceView() {
           </div>
         </section>
 
-        {/* Workspace Artifacts Group */}
+        {/* Artifacts Group */}
         <section className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
             <FileCode size={14} />
-            <span>Artifacts</span>
+            <span>{t('artifacts.title')}</span>
           </div>
           <div className="space-y-1">
             {artifacts.length === 0 ? (
               <div className="text-xs text-muted-foreground/40 italic px-2">
-                No artifacts found
+                {t('artifacts.empty')}
               </div>
             ) : (
               artifacts.map((file) => (
@@ -196,7 +201,7 @@ export function WorkspaceView() {
                   />
                   <span className="truncate flex-1">{file.name}</span>
                   <span className="text-[10px] text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Open
+                    {t('artifacts.open')}
                   </span>
                 </Button>
               ))
@@ -209,7 +214,7 @@ export function WorkspaceView() {
           <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
             <div className="flex items-center gap-2">
               <MessageSquare size={14} />
-              <span>Sessions</span>
+              <span>{t('sessions.title')}</span>
             </div>
             <button
               type="button"
@@ -217,7 +222,7 @@ export function WorkspaceView() {
                 configMutations.set('activeSessionId', Date.now().toString())
               }
               className="p-1 rounded hover:bg-accent text-muted-foreground/50 hover:text-foreground transition-colors"
-              title="New Session"
+              title={t('sessions.newTitle')}
             >
               <Plus size={14} />
             </button>
@@ -225,7 +230,7 @@ export function WorkspaceView() {
           <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
             {sessions.length === 0 ? (
               <div className="text-xs text-muted-foreground/40 italic px-2">
-                No sessions found
+                {t('sessions.empty')}
               </div>
             ) : (
               sessions.map((session) => {
@@ -286,33 +291,32 @@ export function WorkspaceView() {
 
         {/* Footer hint */}
         <div className="pt-2 border-t border-border/30 text-[10px] text-muted-foreground/30 text-center">
-          Selecting a session updates the AI Chat view
+          {t('footer')}
         </div>
 
         <Modal
           isOpen={!!sessionToDelete}
           onClose={() => setSessionToDelete(null)}
-          title="Delete Session"
+          title={t('delete.title')}
           size="sm"
           footer={
             <>
               <Button variant="ghost" onClick={() => setSessionToDelete(null)}>
-                Cancel
+                {t('delete.cancel')}
               </Button>
               <Button
                 variant="primary"
                 className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border-none"
                 onClick={confirmDelete}
               >
-                Delete Session
+                {t('delete.confirm')}
               </Button>
             </>
           }
         >
           <div className="space-y-3">
             <p className="text-sm text-foreground/80 leading-relaxed">
-              Are you sure you want to delete this session? This action cannot
-              be undone.
+              {t('delete.body')}
             </p>
             {sessionToDelete && (
               <div className="p-3 rounded-lg bg-accent/10 border border-border/40 text-xs text-muted-foreground italic">

@@ -3,5 +3,34 @@
   "description": "Workspace overview with folders, artifacts, sessions, and git status",
   "author": "Aynite",
   "version": "1.0.0",
-  "key_bindings": {}
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "工作区视图",
+      "description": "工作区概览，包含文件夹、产物、会话和 Git 状态",
+      "header": "工作区 - {name}",
+      "folders": {
+        "title": "文件夹",
+        "addTitle": "添加文件夹到工作区",
+        "empty": "未添加文件夹"
+      },
+      "artifacts": {
+        "title": "项目文件",
+        "empty": "暂无项目文件",
+        "open": "打开"
+      },
+      "sessions": {
+        "title": "会话",
+        "newTitle": "新建会话",
+        "empty": "未找到会话"
+      },
+      "footer": "选择一个会话以更新 AI 聊天视图",
+      "delete": {
+        "title": "删除会话",
+        "cancel": "取消",
+        "confirm": "删除会话",
+        "body": "确定要删除此会话吗？此操作无法撤销。"
+      }
+    }
+  }
 }
