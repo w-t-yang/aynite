@@ -15,33 +15,20 @@ interface SkillsTabProps {
     setSkills: (skills: SettingsState['skills']) => void
     onPickSkillFolder: () => Promise<any>
     onRestore?: () => void
+    t: (key: string) => string
   }
 }
 
 export function SkillsTab({ state, actions }: SkillsTabProps) {
   return (
     <SettingsFolderTab
-      labels={{
-        title: 'Skills',
-        pageDescription:
-          "Extend the assistant's capabilities with custom scripts. You can add folders containing skill definitions that the assistant can execute.",
-        folderSectionTitle: 'Skill Source Folders',
-        folderSectionDescription:
-          'Directories where Aynite looks for skill implementations.',
-        detectedSectionTitle: 'Detected Skills',
-        detectedSectionDescription:
-          'A list of all skills found and parsed from your folders.',
-        addFolderLabel: 'Add Folder',
-        noFoldersLabel: 'No skill folders added.',
-        noItemsLabel: 'No skills detected.',
-        removeModalTitle: 'Remove Skill Folder',
-        removeModalBody: 'Are you sure you want to remove the folder',
-      }}
+      prefix="skills"
       folders={state.skills || { folders: [] }}
       setFolders={actions.setSkills}
       items={state.availableSkills}
       onAddFolder={actions.onPickSkillFolder}
       onRestore={actions.onRestore}
+      t={actions.t}
     />
   )
 }

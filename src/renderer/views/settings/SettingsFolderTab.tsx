@@ -18,38 +18,28 @@ interface SpellItem {
   error: string | null
 }
 
-interface LabelConfig {
-  title: string
-  pageDescription: string
-  folderSectionTitle: string
-  folderSectionDescription: string
-  detectedSectionTitle: string
-  detectedSectionDescription: string
-  addFolderLabel: string
-  noFoldersLabel: string
-  noItemsLabel: string
-  removeModalTitle: string
-  removeModalBody: string
-}
-
 interface SettingsFolderTabProps {
-  labels: LabelConfig
+  prefix: string
   folders: { folders?: string[] }
   setFolders: (state: { folders: string[] }) => void
   items: SpellItem[]
   onAddFolder: () => Promise<any>
   onRestore?: () => void
+  t: (key: string) => string
 }
 
 export function SettingsFolderTab({
-  labels,
+  prefix,
   folders,
   setFolders,
   items,
   onAddFolder,
   onRestore,
+  t: _t,
 }: SettingsFolderTabProps) {
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null)
+
+  const t = (key: string) => _t(`${prefix}.${key}`)
 
   const handleAddFolder = async () => {
     const res = await onAddFolder()
@@ -71,13 +61,13 @@ export function SettingsFolderTab({
 
   return (
     <SettingsPage
-      title={labels.title}
-      description={labels.pageDescription}
+      title={t('title')}
+      description={t('pageDescription')}
       onRestore={onRestore}
     >
       <Section
-        title={labels.folderSectionTitle}
-        description={labels.folderSectionDescription}
+        title={t('folderSectionTitle')}
+        description={t('folderSectionDescription')}
         action={
           <Button
             variant="ghost"
@@ -85,7 +75,7 @@ export function SettingsFolderTab({
             onClick={handleAddFolder}
             className={ADD_ITEM_BUTTON}
           >
-            <Plus size={14} /> {labels.addFolderLabel}
+            <Plus size={14} /> {t('addFolderLabel')}
           </Button>
         }
       >
@@ -115,15 +105,15 @@ export function SettingsFolderTab({
           ))}
           {(!folders?.folders || folders.folders.length === 0) && (
             <div className="py-8 text-center text-xs text-muted-foreground italic border border-dashed border-border rounded-lg">
-              {labels.noFoldersLabel}
+              {t('noFoldersLabel')}
             </div>
           )}
         </div>
       </Section>
 
       <Section
-        title={labels.detectedSectionTitle}
-        description={labels.detectedSectionDescription}
+        title={t('detectedSectionTitle')}
+        description={t('detectedSectionDescription')}
       >
         <div className={GRID_2_COL}>
           {items.map((item) => (
@@ -150,7 +140,7 @@ export function SettingsFolderTab({
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
-                {item.description || 'No description available.'}
+                {item.description || t('noDescription')}
               </p>
               {item.error && (
                 <div className="p-2 rounded bg-destructive/10 text-[9px] text-destructive font-mono leading-tight whitespace-pre-wrap border border-destructive/20">
@@ -166,7 +156,7 @@ export function SettingsFolderTab({
           ))}
           {items.length === 0 && (
             <div className="col-span-full py-8 text-center text-xs text-muted-foreground italic border border-dashed border-border rounded-lg opacity-50">
-              {labels.noItemsLabel}
+              {t('noItemsLabel')}
             </div>
           )}
         </div>
@@ -175,7 +165,7 @@ export function SettingsFolderTab({
       <Modal
         isOpen={!!folderToDelete}
         onClose={() => setFolderToDelete(null)}
-        title={labels.removeModalTitle}
+        title={t('removeModalTitle')}
         size="md"
         footer={
           <>
@@ -189,7 +179,7 @@ export function SettingsFolderTab({
         }
       >
         <p className="text-sm text-muted-foreground">
-          {labels.removeModalBody}{' '}
+          {t('removeModalBody')}{' '}
           <span className="font-bold text-foreground">
             "{folderToDelete?.split(/[/\\]/).pop()}"
           </span>

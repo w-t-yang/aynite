@@ -3,5 +3,208 @@
   "description": "Application settings and configuration panel",
   "author": "Aynite",
   "version": "1.0.0",
-  "key_bindings": {}
+  "key_bindings": {},
+  "i18n": {
+    "zh": {
+      "name": "设置",
+      "description": "应用程序设置和配置面板",
+      "sidebar": {
+        "basic": "基本",
+        "appearance": "外观",
+        "keybindings": "快捷键",
+        "ai": "AI",
+        "providers": "提供商",
+        "agents": "智能体",
+        "tools": "工具",
+        "skills": "技能",
+        "commands": "命令",
+        "app": "应用",
+        "about": "关于"
+      },
+      "loading": "正在加载设置...",
+      "restore": {
+        "title": "恢复 {tab} 为默认值",
+        "confirm": "确定恢复",
+        "cancel": "取消",
+        "body": "确定要将 <b>{tab}</b> 设置恢复为默认值吗？",
+        "warning": "这将覆盖该选项卡的所有当前配置。此操作无法撤销。"
+      },
+      "appearance": {
+        "title": "外观",
+        "description": "使用主题、自定义颜色和排版自定义您的工作区的外观和感觉。",
+        "presets": {
+          "title": "主题预设",
+          "description": "选择一个预定义主题以快速更改美学风格。"
+        },
+        "duplicateTheme": "复制主题",
+        "customization": {
+          "title": "活跃主题自定义",
+          "description": "微调 \"{name}\" 主题的颜色和字体。"
+        },
+        "font": {
+          "interface": "界面字体",
+          "monospace": "等宽字体",
+          "size": "字体大小",
+          "sizeSmall": "12px — 小",
+          "sizeDefault": "14px — 默认",
+          "sizeLarge": "16px — 大"
+        },
+        "duplicate": {
+          "title": "复制主题",
+          "label": "新主题名称",
+          "placeholder": "例如：我的深色主题",
+          "create": "创建主题",
+          "cancel": "取消",
+          "error": "已存在同名或同ID的主题。"
+        },
+        "delete": {
+          "title": "删除主题",
+          "cancel": "取消",
+          "confirm": "永久删除",
+          "body": "确定要删除 \"<b>{name}</b>\" 吗？",
+          "warning": "此操作无法撤销。该主题的所有自定义颜色和字体设置将被永久删除。"
+        }
+      },
+      "keybindings": {
+        "title": "快捷键",
+        "description": "配置导航、编辑和助手操作的键盘快捷键。快捷键会自动全局应用。",
+        "application": {
+          "title": "应用",
+          "description": "全局应用快捷键。"
+        },
+        "cycleTile": "循环面板",
+        "splitVertical": "垂直拆分",
+        "splitHorizontal": "水平拆分",
+        "closeTile": "关闭面板",
+        "refreshTile": "刷新面板"
+      },
+      "ai": {
+        "title": "AI 提供商",
+        "description": "管理多个 AI 提供商配置并选择活跃的提供商。",
+        "providers": "已配置的提供商",
+        "noProviders": "暂无 AI 提供商。点击上方添加。",
+        "addProvider": "添加提供商",
+        "providerName": "提供商名称",
+        "providerType": "提供商类型",
+        "apiUrl": "API URL",
+        "apiKey": "API 密钥",
+        "model": "模型",
+        "contextWindow": "上下文窗口",
+        "save": "保存",
+        "newProvider": "新提供商",
+        "cancel": "取消"
+      },
+      "agents": {
+        "title": "智能体",
+        "description": "使用自定义提示定义专门的助手角色。智能体可以拥有自己的指令文件集，这些文件扩展了全局行为。",
+        "globalPrompts": {
+          "title": "全局系统提示",
+          "description": "这些提示文件会被预置到每次助手交互中。",
+          "addPrompt": "添加提示文件",
+          "noPrompts": "未添加全局提示文件。",
+          "removeTitle": "移除全局提示",
+          "removeBody": "确定要从智能体移除文件吗？",
+          "removeConfirm": "移除",
+          "removeCancel": "取消"
+        },
+        "profiles": {
+          "title": "智能体角色",
+          "description": "为特定任务切换不同角色。",
+          "addAgent": "添加智能体",
+          "noAgents": "暂无智能体。点击上方添加。"
+        },
+        "promptPreview": "系统提示预览",
+        "noPreview": "无提示文件。"
+      },
+      "tools": {
+        "title": "工具",
+        "description": "启用或禁用 AI 与系统交互的内置工具。这些工具允许助手执行文件管理、网络搜索和终端执行等操作。",
+        "capabilities": "系统能力",
+        "capabilitiesDesc": "切换各个工具以控制助手可以执行的操作。",
+        "noTools": "未找到工具。"
+      },
+      "skills": {
+        "title": "技能",
+        "pageDescription": "通过自定义脚本扩展助手的能力。您可以添加包含技能定义的文件夹，助手可以执行这些技能。",
+        "folderSectionTitle": "技能源文件夹",
+        "folderSectionDescription": "Aynite 寻找技能实现的目录。",
+        "detectedSectionTitle": "检测到的技能",
+        "detectedSectionDescription": "从已配置文件夹加载的技能。",
+        "addFolderLabel": "添加文件夹",
+        "noFoldersLabel": "未添加技能文件夹。",
+        "noItemsLabel": "未检测到技能。",
+        "removeModalTitle": "移除技能文件夹",
+        "removeModalBody": "确定要移除文件夹吗",
+        "noDescription": "无可用描述。"
+      },
+      "commands": {
+        "title": "命令",
+        "pageDescription": "管理自定义 shell 命令和自动化任务。您可以添加包含命令定义的文件夹。",
+        "folderSectionTitle": "命令源文件夹",
+        "folderSectionDescription": "Aynite 寻找命令定义的目录。",
+        "detectedSectionTitle": "检测到的命令",
+        "detectedSectionDescription": "从已配置文件夹加载的命令。",
+        "addFolderLabel": "添加文件夹",
+        "noFoldersLabel": "未添加命令文件夹。",
+        "noItemsLabel": "未检测到命令。",
+        "removeModalTitle": "移除命令文件夹",
+        "removeModalBody": "确定要移除文件夹吗",
+        "noDescription": "无可用描述。"
+      },
+      "about": {
+        "title": "关于 Aynite",
+        "description": "关于 Aynite、系统更新和开发者资源的信息。",
+        "version": "版本",
+        "update": {
+          "title": "软件更新",
+          "description": "保持应用程序具有最新功能。",
+          "status": "状态",
+          "updateReady": "更新就绪",
+          "checkButton": "检查更新",
+          "checking": "检查中...",
+          "available": "有可用更新",
+          "downloading": "下载中...",
+          "downloaded": "已下载",
+          "modalTitle": "软件更新",
+          "checkingTitle": "正在检查更新...",
+          "availableTitle": "有可用更新",
+          "downloadingTitle": "正在下载更新...",
+          "downloadedTitle": "更新就绪",
+          "failedTitle": "更新失败",
+          "upToDateTitle": "已是最新版本",
+          "current": "当前版本：",
+          "new": "新版本：",
+          "downloadedMsg": "已下载完成。",
+          "saveWorkMsg": "保存您的工作，然后退出并安装更新。",
+          "errorMsg": "发生未知错误。请稍后重试。",
+          "upToDateMsg": "您的软件已是最新版本。",
+          "later": "稍后",
+          "quitInstall": "退出并安装",
+          "cancel": "取消",
+          "downloadUpdate": "下载并更新",
+          "close": "关闭",
+          "statusIdle": "软件已是最新。",
+          "statusChecking": "检查中...",
+          "statusReady": "准备安装。退出并安装更新。",
+          "statusFailed": "检查失败。"
+        },
+        "resources": {
+          "title": "资源",
+          "description": "加入社区并帮助改进项目。",
+          "github": "GitHub 项目",
+          "githubDesc": "在 GitHub 上查看源代码、提交问题和贡献。",
+          "reportIssue": "报告问题",
+          "reportIssueDesc": "在 GitHub 上提交错误报告或功能请求。"
+        },
+        "analytics": {
+          "title": "使用分析",
+          "description": "通过分享匿名使用数据帮助改进 Aynite。",
+          "enabled": "已启用",
+          "disabled": "已禁用",
+          "privacyNotice": "我们收集基本的使用指标，如功能使用频率和性能数据。不会发送任何个人身份信息或文件内容。"
+        },
+        "footer": "释放您的数据。释放您的界面。"
+      }
+    }
+  }
 }

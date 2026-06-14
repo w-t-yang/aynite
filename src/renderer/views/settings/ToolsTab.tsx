@@ -12,12 +12,13 @@ interface ToolsTabProps {
   actions: {
     setTools: (tools: SettingsState['aiTools']) => void
     onRestore?: () => void
+    t: (key: string) => string
   }
 }
 
 export function ToolsTab({ state, actions }: ToolsTabProps) {
   const { aiTools, availableTools } = state
-  const { setTools } = actions
+  const { setTools, t } = actions
 
   const handleToggleTool = (id: string) => {
     const newTools = { ...aiTools, [id]: !aiTools[id] }
@@ -26,13 +27,13 @@ export function ToolsTab({ state, actions }: ToolsTabProps) {
 
   return (
     <SettingsPage
-      title="Tools"
-      description="Enable or disable built-in tools for the AI to interact with your system. These tools allow the assistant to perform actions like file management, web search, and terminal execution."
+      title={t('tools.title')}
+      description={t('tools.description')}
       onRestore={actions.onRestore}
     >
       <Section
-        title="System Capabilities"
-        description="Toggle individual tools to control what the assistant can do."
+        title={t('tools.capabilities')}
+        description={t('tools.capabilitiesDesc')}
       >
         <div className={GRID_2_COL}>
           {availableTools.map((tool) => (
@@ -56,7 +57,7 @@ export function ToolsTab({ state, actions }: ToolsTabProps) {
           ))}
           {availableTools.length === 0 && (
             <div className="col-span-full py-12 text-center text-sm text-muted-foreground italic border border-dashed border-border rounded-xl opacity-50">
-              No tools available.
+              {t('tools.noTools')}
             </div>
           )}
         </div>

@@ -45,11 +45,13 @@ interface AppearanceTabProps {
   actions: {
     setThemes: (payload: { list: Theme[]; activeId: string }) => void
     onRestore?: () => void
+    t: (key: string) => string
   }
 }
 
 export function AppearanceTab({ state, actions }: AppearanceTabProps) {
   const { list, activeId, systemFonts } = state
+  const { t } = actions
 
   // Local state for immediate UI feedback
   const [localThemes, setLocalThemes] = useState(list)
@@ -111,7 +113,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
         (t) => t.id === id || t.name.toLowerCase() === name.toLowerCase(),
       )
       if (isDuplicate) {
-        setDuplicateError('A theme with this name or ID already exists.')
+        setDuplicateError(t('appearance.duplicate.error'))
         return
       }
 
@@ -137,21 +139,21 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
 
   return (
     <SettingsPage
-      title="Appearance"
-      description="Customize the look and feel of your workspace with themes, custom colors, and typography."
+      title={t('appearance.title')}
+      description={t('appearance.description')}
       onRestore={actions.onRestore}
     >
       {/* Theme Presets */}
       <Section
-        title="Theme Presets"
-        description="Select a predefined theme to quickly change the aesthetic."
+        title={t('appearance.presets.title')}
+        description={t('appearance.presets.description')}
         action={
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowDuplicateModal(true)}
           >
-            <Copy size={14} /> Duplicate Theme
+            <Copy size={14} /> {t('appearance.duplicateTheme')}
           </Button>
         }
       >
@@ -170,8 +172,11 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
       {/* Theme Customization */}
       {editingTheme && (
         <Section
-          title="Active Theme Customization"
-          description={`Fine-tune the "${editingTheme.name}" theme's colors and fonts.`}
+          title={t('appearance.customization.title')}
+          description={t('appearance.customization.description').replace(
+            '{name}',
+            editingTheme.name,
+          )}
           action={
             !editingTheme.isSystem && (
               <Button
@@ -189,7 +194,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
             {/* Fonts */}
             <div className="grid grid-cols-2 gap-x-12 gap-y-6 max-w-3xl">
               <SelectionMenu
-                label="Interface Font"
+                label={t('appearance.font.interface')}
                 searchable
                 activeId={editingTheme.fonts?.fontFamily || 'Inter'}
                 items={systemFonts.map((f) => ({ id: f, label: f }))}
@@ -201,7 +206,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
                 }
               />
               <SelectionMenu
-                label="Monospace Font"
+                label={t('appearance.font.monospace')}
                 searchable
                 activeId={editingTheme.fonts?.fontMono || 'JetBrains Mono'}
                 items={systemFonts.map((f) => ({ id: f, label: f }))}
@@ -213,14 +218,23 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
                 }
               />
               <SelectionMenu
-                label="Font Size"
+                label={t('appearance.font.size')}
                 activeId={editingTheme.fonts?.fontSize || '14px'}
                 items={[
-                  { id: '12px', label: '12px — Small' },
+                  {
+                    id: '12px',
+                    label: `12px — ${t('appearance.font.sizeSmall')}`,
+                  },
                   { id: '13px', label: '13px' },
-                  { id: '14px', label: '14px — Default' },
+                  {
+                    id: '14px',
+                    label: `14px — ${t('appearance.font.sizeDefault')}`,
+                  },
                   { id: '15px', label: '15px' },
-                  { id: '16px', label: '16px — Large' },
+                  {
+                    id: '16px',
+                    label: `16px — ${t('appearance.font.sizeLarge')}`,
+                  },
                   { id: '18px', label: '18px' },
                   { id: '20px', label: '20px' },
                 ]}
@@ -265,7 +279,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
           setShowDuplicateModal(false)
           setDuplicateError('')
         }}
-        title="Duplicate Theme"
+        title={t('appearance.duplicate.title')}
         size="md"
         footer={
           <>
@@ -273,10 +287,10 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
               variant="ghost"
               onClick={() => setShowDuplicateModal(false)}
             >
-              Cancel
+              {t('appearance.duplicate.cancel')}
             </Button>
             <Button variant="primary" onClick={handleDuplicate}>
-              Create Theme
+              {t('appearance.duplicate.create')}
             </Button>
           </>
         }
@@ -284,8 +298,8 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
         <div className="space-y-4">
           <Input
             autoFocus
-            label="New Theme Name"
-            placeholder="e.g. My Dark Theme"
+            label={t('appearance.duplicate.label')}
+            placeholder={t('appearance.duplicate.placeholder')}
             value={duplicateName}
             onChange={(e) => {
               setDuplicateName(e.target.value)
@@ -307,27 +321,28 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        title="Delete Theme"
+        title={t('appearance.delete.title')}
         size="md"
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
-              Cancel
+              {t('appearance.delete.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDeleteTheme}>
-              Delete Forever
+              {t('appearance.delete.confirm')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <p className="text-sm text-foreground leading-relaxed">
-            Are you sure you want to delete{' '}
-            <span className="font-bold">"{editingTheme?.name}"</span>?
+            {t('appearance.delete.body').replace(
+              '{name}',
+              editingTheme?.name || '',
+            )}
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed bg-destructive/5 p-3 rounded-lg border border-destructive/10">
-            This action cannot be undone. All custom colors and font settings
-            for this theme will be permanently removed.
+            {t('appearance.delete.warning')}
           </p>
         </div>
       </Modal>

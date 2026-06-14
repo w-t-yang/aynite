@@ -8,7 +8,7 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DEFAULT_AI_CONFIG, DEFAULT_AI_TOOLS } from '../../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../../lib/constants/keybindings'
 import type { Theme } from '../../../lib/constants/types'
@@ -19,6 +19,8 @@ import { system as bridgeSystem, systemMutations } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { TabButton } from '../../shared/basic/TabButton'
+import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
+import { useI18n } from '../../shared/i18n/useI18n'
 import type { SettingsState } from '../../shared/lib/types'
 import { useView } from '../ViewContext'
 import { AboutTab } from './AboutTab'
@@ -27,12 +29,23 @@ import { AITab } from './AITab'
 // Shared Tabs
 import { AppearanceTab } from './AppearanceTab'
 import { CommandsTab } from './CommandsTab'
+import viewConfig from './config.json'
 import { KeybindingsTab } from './KeybindingsTab'
 import { SkillsTab } from './SkillsTab'
 import { ToolsTab } from './ToolsTab'
 
+const _VIEW_NAME = 'settings'
+
 export function Settings() {
   const [activeTab, setActiveTab] = useState('appearance')
+  const { locale } = useView()
+
+  // Load view-specific translations from config.json
+  const customTranslations = useMemo(
+    () => loadViewTranslations((viewConfig as any).i18n),
+    [],
+  )
+  const { t } = useI18n(locale, customTranslations)
 
   // Broken down settings state
   const {
@@ -149,9 +162,6 @@ export function Settings() {
     }
   }, [loadVersion, loadSettings])
 
-  // Reload settings when theme changes externally (e.g. from title bar)
-  // useAppEvent(AppEvents.THEME_CHANGED, loadSettings)
-
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
   }
@@ -169,8 +179,6 @@ export function Settings() {
     if (newThemes.activeId) {
       await setContextTheme(newThemes.activeId)
     }
-    // Individual theme saving is handled via setThemes logic if needed,
-    // but usually themes are static unless customized.
     if (newThemes.list.length === 0) {
       await loadSettings()
     }
@@ -248,7 +256,7 @@ export function Settings() {
   ) {
     return (
       <div className="w-full h-full bg-background flex items-center justify-center text-muted-foreground">
-        Loading settings...
+        {t('loading')}
       </div>
     )
   }
@@ -259,63 +267,63 @@ export function Settings() {
         {/* Settings Sidebar */}
         <div className="w-52 border-r border-border bg-sidebar/50 p-4 space-y-1 shrink-0">
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mb-2 px-3">
-            Basic
+            {t('sidebar.basic')}
           </div>
           <TabButton
             active={activeTab === 'appearance'}
             onClick={() => handleTabChange('appearance')}
             icon={<Sun size={16} />}
-            label="Appearance"
+            label={t('sidebar.appearance')}
           />
           <TabButton
             active={activeTab === 'keybindings'}
             onClick={() => handleTabChange('keybindings')}
             icon={<Keyboard size={16} />}
-            label="Keybindings"
+            label={t('sidebar.keybindings')}
           />
 
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
-            AI
+            {t('sidebar.ai')}
           </div>
           <TabButton
             active={activeTab === 'ai'}
             onClick={() => handleTabChange('ai')}
             icon={<Bot size={16} />}
-            label="Providers"
+            label={t('sidebar.providers')}
           />
           <TabButton
             active={activeTab === 'agents'}
             onClick={() => handleTabChange('agents')}
             icon={<FileText size={16} />}
-            label="Agents"
+            label={t('sidebar.agents')}
           />
           <TabButton
             active={activeTab === 'tools'}
             onClick={() => handleTabChange('tools')}
             icon={<Wrench size={16} />}
-            label="Tools"
+            label={t('sidebar.tools')}
           />
           <TabButton
             active={activeTab === 'skills'}
             onClick={() => handleTabChange('skills')}
             icon={<Zap size={16} />}
-            label="Skills"
+            label={t('sidebar.skills')}
           />
           <TabButton
             active={activeTab === 'commands'}
             onClick={() => handleTabChange('commands')}
             icon={<Terminal size={16} />}
-            label="Commands"
+            label={t('sidebar.commands')}
           />
 
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
-            App
+            {t('sidebar.app')}
           </div>
           <TabButton
             active={activeTab === 'about'}
             onClick={() => handleTabChange('about')}
             icon={<Info size={16} />}
-            label="About"
+            label={t('sidebar.about')}
           />
         </div>
 
@@ -332,6 +340,7 @@ export function Settings() {
                 actions={{
                   setThemes: handleSetThemes,
                   onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -342,6 +351,7 @@ export function Settings() {
                 actions={{
                   setKeybindings: handleSetKeybindings,
                   onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -352,6 +362,7 @@ export function Settings() {
                 actions={{
                   setAI: handleSetAI,
                   onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -378,6 +389,7 @@ export function Settings() {
                   },
                   onPickPromptFile: handlePickPromptFile,
                   onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -396,6 +408,7 @@ export function Settings() {
                   },
                   onPickSkillFolder: handlePickSkillFolder,
                   onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -414,6 +427,7 @@ export function Settings() {
                   },
                   onPickCommandFolder: handlePickCommandFolder,
                   onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -424,6 +438,7 @@ export function Settings() {
                 actions={{
                   setTools: handleSetTools,
                   onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -435,6 +450,7 @@ export function Settings() {
                 }}
                 actions={{
                   onOpenExternal: (url) => systemMutations.openExternal(url),
+                  t: (key: string) => t(key),
                 }}
               />
             )}
@@ -446,17 +462,19 @@ export function Settings() {
       <Modal
         isOpen={showRestoreModal}
         onClose={() => setShowRestoreModal(false)}
-        title={`Restore ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} to Defaults`}
+        title={t('restore.title').replace(
+          '{tab}',
+          activeTab.charAt(0).toUpperCase() + activeTab.slice(1),
+        )}
         size="md"
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowRestoreModal(false)}>
-              Cancel
+              {t('restore.cancel')}
             </Button>
             <Button
               variant="primary"
               onClick={async () => {
-                // Execute standardized restore logic
                 if (activeTab === 'appearance') {
                   await setContextTheme('light')
                   await loadSettings()
@@ -467,7 +485,6 @@ export function Settings() {
                   } as any)
                   await loadSettings()
                 }
-
                 if (activeTab === 'ai') {
                   await configMutations.set('ai', {
                     activeId: DEFAULT_AI_CONFIG.activeId,
@@ -497,20 +514,17 @@ export function Settings() {
                 setShowRestoreModal(false)
               }}
             >
-              Confirm Restore
+              {t('restore.confirm')}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
           <p className="text-sm text-foreground">
-            Are you sure you want to restore{' '}
-            <span className="font-bold capitalize">{activeTab}</span> settings
-            to their default values?
+            {t('restore.body').replace('{tab}', activeTab)}
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            This will overwrite all your current configurations for this tab.
-            This action cannot be undone.
+            {t('restore.warning')}
           </p>
         </div>
       </Modal>

@@ -22,12 +22,13 @@ interface AgentsTabProps {
     }) => void
     onPickPromptFile: () => Promise<any>
     onRestore?: () => void
+    t: (key: string) => string
   }
 }
 
 export function AgentsTab({ state, actions }: AgentsTabProps) {
   const { agents, prompts, mergedPrompt } = state
-  const { setAgentsTab, onPickPromptFile } = actions
+  const { setAgentsTab, onPickPromptFile, t } = actions
 
   const [fileToDelete, setFileToDelete] = useState<string | null>(null)
 
@@ -62,14 +63,14 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
 
   return (
     <SettingsPage
-      title="Agents"
-      description="Define specialized assistant personas with custom prompts. Agents can have their own sets of instruction files that extend the global behavior."
+      title={t('agents.title')}
+      description={t('agents.description')}
       onRestore={actions.onRestore}
     >
       {/* Global System Prompts */}
       <Section
-        title="Global System Prompts"
-        description="These prompt files are prepended to every assistant interaction."
+        title={t('agents.globalPrompts.title')}
+        description={t('agents.globalPrompts.description')}
         action={
           <Button
             variant="ghost"
@@ -85,7 +86,7 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
             }}
             className={ADD_ITEM_BUTTON}
           >
-            <Plus size={14} /> Add File
+            <Plus size={14} /> {t('agents.globalPrompts.addPrompt')}
           </Button>
         }
       >
@@ -99,7 +100,7 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
           ))}
           {(!prompts.files || prompts.files.length === 0) && (
             <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
-              No global prompt files configured.
+              {t('agents.globalPrompts.noPrompts')}
             </p>
           )}
         </div>
@@ -107,8 +108,8 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
 
       {/* Agents List */}
       <Section
-        title="Agent Profiles"
-        description="Switch between different personas for specific tasks."
+        title={t('agents.profiles.title')}
+        description={t('agents.profiles.description')}
         action={
           <Button
             variant="ghost"
@@ -116,7 +117,7 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
             onClick={handleAddAgent}
             className={ADD_ITEM_BUTTON}
           >
-            <Plus size={14} /> Add Agent
+            <Plus size={14} /> {t('agents.profiles.addAgent')}
           </Button>
         }
       >
@@ -146,7 +147,7 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
             >
               <div className="pt-2">
                 <Collapsible
-                  title="System Prompt Preview"
+                  title={t('agents.promptPreview')}
                   icon={FileText}
                   colorClass="border-primary/20"
                   defaultExpanded={false}
@@ -156,7 +157,7 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
                       mergedPrompt
                     ) : (
                       <span className="text-muted-foreground italic">
-                        Switch to this agent to see the preview.
+                        {t('agents.noPreview')}
                       </span>
                     )}
                   </div>
@@ -171,25 +172,25 @@ export function AgentsTab({ state, actions }: AgentsTabProps) {
       <Modal
         isOpen={!!fileToDelete}
         onClose={() => setFileToDelete(null)}
-        title="Remove Global Prompt"
+        title={t('agents.globalPrompts.removeTitle')}
         size="md"
         footer={
           <>
             <Button variant="ghost" onClick={() => setFileToDelete(null)}>
-              Cancel
+              {t('agents.globalPrompts.removeCancel')}
             </Button>
             <Button variant="destructive" onClick={confirmDeleteGlobalFile}>
-              Remove File
+              {t('agents.globalPrompts.removeConfirm')}
             </Button>
           </>
         }
       >
         <p className="text-sm text-muted-foreground">
-          Are you sure you want to remove{' '}
+          {t('agents.globalPrompts.removeBody')}{' '}
           <span className="font-bold text-foreground">
             "{fileToDelete?.split(/[/\\]/).pop()}"
-          </span>{' '}
-          from the global prompt list?
+          </span>
+          ?
         </p>
       </Modal>
     </SettingsPage>

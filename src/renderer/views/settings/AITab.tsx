@@ -17,12 +17,13 @@ interface AITabProps {
   actions: {
     setAI: (ai: SettingsState['ai']) => void
     onRestore?: () => void
+    t: (key: string) => string
   }
 }
 
 export function AITab({ state, actions }: AITabProps) {
   const { ai } = state
-  const { setAI } = actions
+  const { setAI, t } = actions
 
   const handleUpdateProvider = (id: string, field: string, value: any) => {
     const providers = (ai.providers || []).map((p: AIProvider) => {
@@ -34,9 +35,7 @@ export function AITab({ state, actions }: AITabProps) {
           field === 'contextWindow' ? parseInt(value, 10) || 8192 : value,
       }
 
-      // Auto-update name if provider or model changes
       if (field === 'provider' || field === 'model') {
-        // If provider changed, also update the model and URL to its default
         if (field === 'provider') {
           updated.model = DEFAULT_PROVIDER_MODELS[value] || updated.model
           updated.baseUrl =
@@ -71,7 +70,7 @@ export function AITab({ state, actions }: AITabProps) {
     const id = `provider-${Date.now()}`
     const newProvider: AIProvider = {
       id,
-      name: 'New Provider',
+      name: t('ai.newProvider'),
       provider: 'openai',
       baseUrl: '',
       apiKey: '',
@@ -92,12 +91,12 @@ export function AITab({ state, actions }: AITabProps) {
 
   return (
     <SettingsPage
-      title="AI Providers"
-      description="Manage multiple AI provider configurations and select the active one for your assistant."
+      title={t('ai.title')}
+      description={t('ai.description')}
       onRestore={actions.onRestore}
     >
       <Section
-        title="Configured Providers"
+        title={t('ai.providers')}
         action={
           <Button
             variant="ghost"
@@ -105,7 +104,7 @@ export function AITab({ state, actions }: AITabProps) {
             onClick={handleAddProvider}
             className={ADD_ITEM_BUTTON}
           >
-            <Plus size={14} /> Add Provider
+            <Plus size={14} /> {t('ai.addProvider')}
           </Button>
         }
       >
@@ -124,9 +123,7 @@ export function AITab({ state, actions }: AITabProps) {
           {(!ai.providers || ai.providers.length === 0) && (
             <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border rounded-xl opacity-50">
               <Bot size={48} className="mb-4 text-muted-foreground" />
-              <p className="text-sm">
-                No AI providers configured. Add one to get started.
-              </p>
+              <p className="text-sm">{t('ai.noProviders')}</p>
             </div>
           )}
         </div>

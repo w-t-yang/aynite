@@ -11,12 +11,13 @@ interface KeybindingsTabProps {
   actions: {
     setKeybindings: (keybindings: SettingsState['keybindings']) => void
     onRestore?: () => void
+    t: (key: string) => string
   }
 }
 
 export function KeybindingsTab({ state, actions }: KeybindingsTabProps) {
   const { keybindings } = state
-  const { setKeybindings } = actions
+  const { setKeybindings, t } = actions
 
   const formatKeybinding = (kb?: Keybinding): string => {
     if (!kb) return ''
@@ -56,21 +57,24 @@ export function KeybindingsTab({ state, actions }: KeybindingsTabProps) {
 
   return (
     <SettingsPage
-      title="Keybindings"
-      description="Configure keyboard shortcuts for navigation, editing, and assistant actions. Shortcuts are automatically applied app-wide."
+      title={t('keybindings.title')}
+      description={t('keybindings.description')}
       onRestore={actions.onRestore}
     >
-      <Section title="Application" description="Global app-wide shortcuts.">
+      <Section
+        title={t('keybindings.application.title')}
+        description={t('keybindings.application.description')}
+      >
         <div className="grid grid-cols-2 gap-x-12 gap-y-1">
           <KeybindingRow
-            label="Cycle Tile"
+            label={t('keybindings.cycleTile')}
             value={formatKeybinding(keybindings.app[AppOperation.TILE_CYCLE])}
             onChange={(v) =>
               handleKeybindingChange('app', AppOperation.TILE_CYCLE, v)
             }
           />
           <KeybindingRow
-            label="Split Vertical"
+            label={t('keybindings.splitVertical')}
             value={formatKeybinding(
               keybindings.app[AppOperation.TILE_SPLIT_VERTICAL],
             )}
@@ -79,7 +83,7 @@ export function KeybindingsTab({ state, actions }: KeybindingsTabProps) {
             }
           />
           <KeybindingRow
-            label="Split Horizontal"
+            label={t('keybindings.splitHorizontal')}
             value={formatKeybinding(
               keybindings.app[AppOperation.TILE_SPLIT_HORIZONTAL],
             )}
@@ -92,14 +96,14 @@ export function KeybindingsTab({ state, actions }: KeybindingsTabProps) {
             }
           />
           <KeybindingRow
-            label="Close Tile"
+            label={t('keybindings.closeTile')}
             value={formatKeybinding(keybindings.app[AppOperation.TILE_CLOSE])}
             onChange={(v) =>
               handleKeybindingChange('app', AppOperation.TILE_CLOSE, v)
             }
           />
           <KeybindingRow
-            label="Refresh Tile"
+            label={t('keybindings.refreshTile')}
             value={formatKeybinding(keybindings.app[AppOperation.REFRESH_TILE])}
             onChange={(v) =>
               handleKeybindingChange('app', AppOperation.REFRESH_TILE, v)
