@@ -56,7 +56,7 @@ registry.register(
 )
 
 registry.register(
-  ['version', 'playbook-path', 'view-config', 'matching-views'],
+  ['version', 'playbook-path', 'view-config', 'matching-views', 'language'],
   staticHandlers,
 )
 

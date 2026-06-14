@@ -6,6 +6,7 @@ export type ConfigSchema = {
   activeWorkspace: string
   activeSessionId: string | null
   version: string
+  language: string
   ai: { activeId: string; providers?: any[] }
   agents: { activeId: string; list?: any[] }
   prompts: { files?: string[] }

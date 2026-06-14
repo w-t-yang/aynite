@@ -18,6 +18,15 @@ import {
 import type { ConfigHandler } from '../handler-registry'
 import { validateAgainstSchema } from '../schema-validator'
 
+/**
+ * Detect the user's preferred language from the Electron app locale.
+ * Returns 'zh' if the locale starts with 'zh', otherwise 'en'.
+ */
+function detectSystemLanguage(): string {
+  const locale = app.getLocale()
+  return locale.startsWith('zh') ? 'zh' : 'en'
+}
+
 export const staticHandlers: ConfigHandler = (() => ({
   get: async (key: string, payload: any) => {
     switch (key) {
@@ -25,6 +34,10 @@ export const staticHandlers: ConfigHandler = (() => ({
         return app.getVersion()
       case 'playbook-path':
         return getPlaybookPath()
+      case 'language': {
+        const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
+        return mainConfig.language || detectSystemLanguage()
+      }
       case 'view-config': {
         const viewName = payload?.view as string
         if (!viewName) return null
@@ -87,6 +100,12 @@ export const staticHandlers: ConfigHandler = (() => ({
       case 'activeTheme': {
         const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
         mainConfig.activeTheme = payload
+        await writeJson(getMainConfigPath(), mainConfig)
+        return true
+      }
+      case 'language': {
+        const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
+        mainConfig.language = payload
         await writeJson(getMainConfigPath(), mainConfig)
         return true
       }

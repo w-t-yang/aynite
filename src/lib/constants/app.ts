@@ -31,6 +31,9 @@ export const AppEvents = {
   // Theme
   THEME_CHANGED: 'theme-changed',
 
+  // Language / i18n
+  LANGUAGE_CHANGED: 'language-changed',
+
   // Filesystem
   FS_CHANGE: 'fs-change',
   FILE_RENAMED: 'file-renamed',

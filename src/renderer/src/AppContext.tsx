@@ -20,6 +20,8 @@ import type React from 'react'
 import { useEffect, useRef } from 'react'
 import { AppEvents } from '../../lib/constants/app'
 import { events } from '../bridge/events'
+import type { LanguageActions } from './contexts/LanguageContext'
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext'
 import type { LayoutActions } from './contexts/LayoutContext'
 import { LayoutProvider, useLayout } from './contexts/LayoutContext'
 import type { ThemeActions } from './contexts/ThemeContext'
@@ -41,6 +43,7 @@ import { useWorkspace, WorkspaceProvider } from './contexts/WorkspaceContext'
 
 function useEventRouter() {
   const themeRef = useRef<ThemeActions | null>(null)
+  const languageRef = useRef<LanguageActions | null>(null)
   const workspaceRef = useRef<WorkspaceActions | null>(null)
   const uiRef = useRef<UIActions | null>(null)
   const updateRef = useRef<UpdateActions | null>(null)
@@ -49,6 +52,7 @@ function useEventRouter() {
 
   // Sync refs from context providers
   const { actionsRef: themeActionsRef } = useTheme()
+  const { actionsRef: languageActionsRef } = useLanguage()
   const { actionsRef: workspaceActionsRef } = useWorkspace()
   const { actionsRef: uiActionsRef } = useUI()
   const { actionsRef: updateActionsRef } = useUpdate()
@@ -57,6 +61,7 @@ function useEventRouter() {
 
   // Keep synced on every render
   themeRef.current = themeActionsRef.current
+  languageRef.current = languageActionsRef.current
   workspaceRef.current = workspaceActionsRef.current
   uiRef.current = uiActionsRef.current
   updateRef.current = updateActionsRef.current
@@ -67,6 +72,14 @@ function useEventRouter() {
     const unbind = events.onAppEvent((event: { type: string; data: any }) => {
       // Step 1: Route to context providers
       switch (event.type) {
+        case AppEvents.LANGUAGE_CHANGED: {
+          const newLocale = (event.data as any)?.language
+          if (newLocale === 'zh' || newLocale === 'en') {
+            languageRef.current?.setLocale(newLocale)
+          }
+          break
+        }
+
         case AppEvents.THEME_CHANGED:
           themeRef.current?.refreshThemes()
           break
@@ -213,15 +226,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   return (
     <ThemeProvider>
-      <UpdateProvider>
-        <WindowProvider>
-          <WorkspaceProvider>
-            <LayoutProvider>
-              <InnerProviders>{children}</InnerProviders>
-            </LayoutProvider>
-          </WorkspaceProvider>
-        </WindowProvider>
-      </UpdateProvider>
+      <LanguageProvider>
+        <UpdateProvider>
+          <WindowProvider>
+            <WorkspaceProvider>
+              <LayoutProvider>
+                <InnerProviders>{children}</InnerProviders>
+              </LayoutProvider>
+            </WorkspaceProvider>
+          </WindowProvider>
+        </UpdateProvider>
+      </LanguageProvider>
     </ThemeProvider>
   )
 }
@@ -235,6 +250,7 @@ export const useApp = () => {
   const update = useUpdate()
   const windowState = useWindowState()
   const ui = useUI()
+  const language = useLanguage()
 
   return {
     // Workspace
@@ -252,6 +268,10 @@ export const useApp = () => {
     themes: theme.themes,
     activeTheme: theme.activeTheme,
     setTheme: theme.setTheme,
+
+    // Language / i18n
+    locale: language.locale,
+    setLocale: language.setLocale,
 
     // Layout
     activeTileId: layout.activeTileId,

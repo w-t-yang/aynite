@@ -41,7 +41,9 @@ export function setupConfigIpc() {
       const winId = getWinIdFromSender(event.sender)
       const result = await routeSetConfig(key, payload, winId)
       // Broadcast global changes to all windows
-      if (key === ConfigKey.ACTIVE_THEME || key === ConfigKey.THEME) {
+      if (key === 'language') {
+        broadcastAppEvent(AppEvents.LANGUAGE_CHANGED, { language: payload })
+      } else if (key === ConfigKey.ACTIVE_THEME || key === ConfigKey.THEME) {
         const themeId =
           key === ConfigKey.ACTIVE_THEME
             ? payload

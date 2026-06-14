@@ -1,6 +1,7 @@
 import {
   Bug,
   ExternalLink,
+  Languages,
   Minus,
   Moon,
   MoreHorizontal,
@@ -21,6 +22,7 @@ import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { FormModal } from '../../shared/featured/FormModal'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
+import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
 import { useApp } from '../AppContext'
 import { LayoutVibeModal } from './LayoutVibeModal'
@@ -41,12 +43,15 @@ const TitleBar: React.FC = () => {
     themes,
     activeTheme,
     setTheme,
+    locale,
+    setLocale,
     showTileControls,
     setShowTileControls,
     setShowSettings,
     isMaximized,
     isFullscreen,
   } = useApp()
+  const { t } = useI18n(locale)
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showVibeModal, setShowVibeModal] = useState(false)
@@ -74,6 +79,22 @@ const TitleBar: React.FC = () => {
         isActive: t.id === activeTheme?.id,
       })),
     [themes, activeTheme],
+  )
+
+  const languageOptions = useMemo(
+    () => [
+      {
+        id: 'en',
+        label: t('language.en'),
+        isActive: locale === 'en',
+      },
+      {
+        id: 'zh',
+        label: t('language.zh'),
+        isActive: locale === 'zh',
+      },
+    ],
+    [locale, t],
   )
 
   if (!workspaceConfig) return null
@@ -133,7 +154,7 @@ const TitleBar: React.FC = () => {
                 </svg>
               </Button>
             }
-            title="Workspaces"
+            title={t('titlebar.workspaces')}
             footer={
               <>
                 <Button
@@ -155,7 +176,7 @@ const TitleBar: React.FC = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  New Workspace
+                  {t('titlebar.newWorkspace')}
                 </Button>
                 {workspaces.length > 1 && (
                   <>
@@ -166,7 +187,7 @@ const TitleBar: React.FC = () => {
                       className="w-full justify-start px-3 py-2 text-xs text-destructive hover:bg-destructive/10 rounded-md gap-2 hover:text-destructive"
                     >
                       <Trash2 size={14} />
-                      Delete Workspace ({workspaceConfig.id})
+                      {t('titlebar.deleteWorkspace')} ({workspaceConfig.id})
                     </Button>
                   </>
                 )}
@@ -208,13 +229,13 @@ const TitleBar: React.FC = () => {
               items={[
                 {
                   id: 'add-vibe',
-                  label: 'Add Layout',
+                  label: t('titlebar.addLayout'),
                   icon: <Plus size={14} />,
                   disabled: workspaceConfig.layouts.length >= 9,
                 },
                 {
                   id: 'remove-vibe',
-                  label: 'Remove Current',
+                  label: t('titlebar.removeCurrent'),
                   icon: <Trash2 size={14} />,
                   disabled: workspaceConfig.layouts.length <= 1,
                   type: 'danger' as any,
@@ -234,7 +255,7 @@ const TitleBar: React.FC = () => {
                   <MoreHorizontal size={14} />
                 </Button>
               }
-              title="Layouts"
+              title={t('titlebar.layouts')}
             />
           </div>
         </div>
@@ -245,19 +266,19 @@ const TitleBar: React.FC = () => {
             items={[
               {
                 id: 'settings',
-                label: 'Settings',
+                label: t('titlebar.settings'),
                 icon: <Settings size={14} />,
               },
               { id: 'divider-0', type: 'divider' },
               {
                 id: 'new-window',
-                label: 'New Window',
+                label: t('titlebar.newWindow'),
                 icon: <ExternalLink size={14} />,
               },
               { id: 'divider-1', type: 'divider' },
               {
                 id: 'theme',
-                label: 'Theme',
+                label: t('theme.label'),
                 icon:
                   activeTheme?.type === 'light' ? (
                     <Sun size={14} />
@@ -266,10 +287,17 @@ const TitleBar: React.FC = () => {
                   ),
                 submenu: themeOptions,
               },
+              { id: 'divider-lang', type: 'divider' },
+              {
+                id: 'language',
+                label: t('language.label'),
+                icon: <Languages size={14} />,
+                submenu: languageOptions,
+              },
               { id: 'divider-2', type: 'divider' },
               {
                 id: 'toggle-controls',
-                label: 'Show Tile Controls',
+                label: t('titlebar.showTileControls'),
                 icon: <Palette size={14} />,
                 isActive: showTileControls,
               },
@@ -278,7 +306,7 @@ const TitleBar: React.FC = () => {
                     { id: 'divider-3', type: 'divider' },
                     {
                       id: 'inspector',
-                      label: 'Toggle Inspector',
+                      label: t('titlebar.toggleInspector'),
                       icon: <Bug size={14} />,
                     },
                   ]
@@ -293,10 +321,16 @@ const TitleBar: React.FC = () => {
             }}
             onSelectSubmenu={(parentId: string, childId: string) => {
               if (parentId === 'theme') setTheme(childId)
+              else if (parentId === 'language')
+                setLocale(childId as 'en' | 'zh')
             }}
             align="right"
             trigger={
-              <Button variant="ghost" size="icon" title="App Options">
+              <Button
+                variant="ghost"
+                size="icon"
+                title={t('titlebar.appOptions')}
+              >
                 <Palette size={16} />
               </Button>
             }
@@ -312,7 +346,7 @@ const TitleBar: React.FC = () => {
                   type="button"
                   onClick={() => handleWindowAction('minimize')}
                   className="w-10 h-7 flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors rounded-md"
-                  title="Minimize"
+                  title={t('titlebar.minimize')}
                 >
                   <Minus size={14} />
                 </button>
@@ -320,7 +354,9 @@ const TitleBar: React.FC = () => {
                   type="button"
                   onClick={() => handleWindowAction('maximize')}
                   className="w-10 h-7 flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors rounded-md"
-                  title={isMaximized ? 'Restore' : 'Maximize'}
+                  title={
+                    isMaximized ? t('titlebar.restore') : t('titlebar.maximize')
+                  }
                 >
                   <Square size={12} />
                 </button>
@@ -328,7 +364,7 @@ const TitleBar: React.FC = () => {
                   type="button"
                   onClick={() => handleWindowAction('close')}
                   className="w-10 h-7 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground text-muted-foreground transition-colors rounded-md"
-                  title="Close"
+                  title={t('titlebar.close')}
                 >
                   <X size={14} />
                 </button>
@@ -341,9 +377,9 @@ const TitleBar: React.FC = () => {
       {showAddWorkspaceModal && (
         <FormModal
           onClose={() => setShowAddWorkspaceModal(false)}
-          title="Create New Workspace"
-          label="Workspace Name"
-          placeholder="e.g. My Project"
+          title={t('workspace.createTitle')}
+          label={t('workspace.nameLabel')}
+          placeholder={t('workspace.namePlaceholder')}
           onSubmit={(name) => {
             addWorkspace(name)
           }}
@@ -354,16 +390,16 @@ const TitleBar: React.FC = () => {
         <Modal
           isOpen
           onClose={() => setShowDeleteConfirm(false)}
-          title="Delete Workspace"
+          title={t('workspace.deleteTitle')}
           size="sm"
         >
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete workspace{' '}
+              {t('workspace.deleteConfirm')}{' '}
               <span className="font-semibold text-foreground">
                 {workspaceConfig.id}
               </span>
-              ? This action cannot be undone.
+              ? {t('workspace.deleteUndo')}
             </p>
             <div className="flex gap-2 pt-2">
               <Button
@@ -371,7 +407,7 @@ const TitleBar: React.FC = () => {
                 className="flex-1"
                 onClick={() => setShowDeleteConfirm(false)}
               >
-                Cancel
+                {t('workspace.cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -381,7 +417,7 @@ const TitleBar: React.FC = () => {
                   await deleteWorkspace(workspaceConfig.id)
                 }}
               >
-                Delete
+                {t('workspace.delete')}
               </Button>
             </div>
           </div>

@@ -6,6 +6,16 @@ import {
 } from '../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import type { MainConfig, WorkspaceConfig } from '../../lib/constants/types'
+
+/**
+ * Detect the user's preferred language from the Electron app locale.
+ * Returns 'zh' if the locale starts with 'zh', otherwise 'en'.
+ */
+function detectSystemLanguage(): string {
+  const locale = app.getLocale()
+  return locale.startsWith('zh') ? 'zh' : 'en'
+}
+
 // View configs are bundled with each view as config.json and copied
 // to ~/.aynite/views/<view>/config.json during dist-views sync
 import {
@@ -67,10 +77,12 @@ export async function initAppFolders() {
   const aiDefault = DEFAULT_AI_CONFIG
   const keybindingsDefault = DEFAULT_KEYBINDINGS
 
+  const systemLanguage = detectSystemLanguage()
   const configDefault = {
     version: currentVersion,
     lastUsed: new Date().toISOString(),
     activeTheme: 'light',
+    language: systemLanguage,
     skills: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS)] },
     commands: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.COMMANDS)] },
     prompts: { files: getDefaultGlobalPrompts() },
@@ -268,6 +280,7 @@ export async function loadConfig() {
   const { ignore: _, ...restConfig } = mainConfig
   return {
     activeTheme: mainConfig.activeTheme || 'light',
+    language: mainConfig.language || detectSystemLanguage(),
     ignore: await getIgnorePatterns(),
     keybindings: keybindings,
     ai: ai,

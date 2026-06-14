@@ -11,6 +11,7 @@ import type { Theme } from '../../lib/constants/types'
 import { config, configMutations } from '../bridge/config'
 import { events, systemMutations } from '../bridge/index'
 import { theme as bridgeTheme } from '../bridge/theme'
+import type { Locale } from '../shared/i18n/useI18n'
 import { applyThemeColors } from '../shared/lib/utils'
 import '../shared/styles/index.css'
 
@@ -20,6 +21,7 @@ interface ViewContextType {
   themes: Theme[]
   activeThemeId: string
   setTheme: (themeId: string) => Promise<void>
+  locale: Locale
 }
 
 const ViewContext = createContext<ViewContextType | undefined>(undefined)
@@ -58,7 +60,7 @@ export {
 
 /**
  * Unified Provider for micro-app views.
- * Handles theme application.
+ * Handles theme application and i18n locale.
  * Has a single postMessage listener for relayed events.
  */
 export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -66,6 +68,7 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [themes, setThemes] = useState<Theme[]>([])
   const [activeThemeId, setActiveThemeId] = useState<string>('')
+  const [locale, setLocale] = useState<Locale>('en')
 
   const loadTheme = useCallback(async (themeId?: string) => {
     try {
@@ -85,17 +88,36 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [])
 
+  // Load locale from config on mount
+  const loadLocale = useCallback(async () => {
+    try {
+      const lang = await config.get('language')
+      if (lang === 'zh' || lang === 'en') {
+        setLocale(lang)
+      }
+    } catch (e) {
+      console.error('[ViewContext] Failed to load locale:', e)
+    }
+  }, [])
+
   useEffect(() => {
     loadTheme()
-  }, [loadTheme])
+    loadLocale()
+  }, [loadTheme, loadLocale])
 
-  // Listen for relayed theme changes via single message listener
+  // Listen for relayed theme and language changes via single message listener
   // (This is the ONE allowed postMessage listener per the architecture)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data
       if (message?.type === 'aynite:theme-changed') {
         loadTheme()
+      }
+      if (message?.type === 'aynite:language-changed') {
+        const newLocale = message?.data?.language
+        if (newLocale === 'zh' || newLocale === 'en') {
+          setLocale(newLocale)
+        }
       }
       if (message?.type === 'aynite:refresh-tile') {
         window.location.reload()
@@ -130,7 +152,7 @@ export const ViewProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [])
 
   return (
-    <ViewContext.Provider value={{ themes, activeThemeId, setTheme }}>
+    <ViewContext.Provider value={{ themes, activeThemeId, setTheme, locale }}>
       <div className={VIEW_CONTAINER}>{children}</div>
     </ViewContext.Provider>
   )

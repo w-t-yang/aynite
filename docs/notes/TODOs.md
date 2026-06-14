@@ -13,7 +13,7 @@ Prioritized by importance. Done items are at the bottom.
 - [x] Track usage
 - [-] Collect feedback
 - [x] Logo
-- [ ] Update
+- [x] Update
 - [x] Domain name
 
 ## Promotion
