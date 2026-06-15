@@ -2,5 +2,11 @@
   "name": "AI Browser",
   "description": "Hybrid view that switches between AI chat and file browser",
   "author": "Aynite",
-  "key_bindings": {}
+  "key_bindings": {},
+  "i18n": {
+    "en": {
+      "name": "AI Browser",
+      "description": "Hybrid view that switches between AI chat and file browser"
+    }
+  }
 }

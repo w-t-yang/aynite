@@ -15,6 +15,10 @@
   ],
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Image Viewer",
+      "description": "Image file viewer with zoom and pan support"
+    },
     "zh": {
       "name": "图片查看器",
       "description": "图片文件查看器，支持缩放和平移"

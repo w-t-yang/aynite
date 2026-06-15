@@ -5,6 +5,10 @@
   "file_extensions": ["html", "htm"],
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "HTML Preview",
+      "description": "HTML file viewer with rendered preview"
+    },
     "zh": {
       "name": "HTML 预览",
       "description": "HTML 文件查看器，支持渲染预览"

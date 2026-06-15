@@ -31,6 +31,10 @@
   },
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Theme Studio",
+      "description": "Live color theme editor with real-time preview"
+    },
     "zh": {
       "name": "主题工作室",
       "description": "实时颜色主题编辑器，支持即时预览"

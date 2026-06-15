@@ -64,6 +64,10 @@
   },
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Stock Chart",
+      "description": "Financial candlestick chart with technical indicators"
+    },
     "zh": {
       "name": "股票图表",
       "description": "金融 K 线图，包含技术指标"

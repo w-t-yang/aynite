@@ -5,6 +5,10 @@
   "file_extensions": ["mp4", "webm", "mov", "avi", "mkv", "ogg"],
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Video Player",
+      "description": "Video file player with playback controls"
+    },
     "zh": {
       "name": "视频播放器",
       "description": "视频文件播放器，支持播放控制"

@@ -49,6 +49,10 @@
   },
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Graph",
+      "description": "Force-directed graph visualization for network and relationship data"
+    },
     "zh": {
       "name": "关系图",
       "description": "力导向图可视化，适用于网络和关系数据"

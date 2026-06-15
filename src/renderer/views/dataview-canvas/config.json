@@ -28,6 +28,10 @@
   },
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Canvas",
+      "description": "Infinite canvas for diagrams, sketches, and visual thinking"
+    },
     "zh": {
       "name": "画布",
       "description": "用于图表、草图和视觉思维的无限画布"

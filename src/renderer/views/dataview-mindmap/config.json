@@ -31,6 +31,10 @@
   },
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Mind Map",
+      "description": "Interactive mind map viewer with collapsible nodes"
+    },
     "zh": {
       "name": "思维导图",
       "description": "交互式思维导图查看器，支持可折叠节点"

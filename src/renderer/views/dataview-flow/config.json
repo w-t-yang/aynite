@@ -63,6 +63,10 @@
   },
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Flow",
+      "description": "Node-based flow editor for workflows and process diagrams"
+    },
     "zh": {
       "name": "流程图",
       "description": "基于节点的流程编辑器，用于工作流和流程图表"

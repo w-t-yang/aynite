@@ -20,6 +20,39 @@
     }
   },
   "i18n": {
+    "en": {
+      "name": "RSS Reader",
+      "description": "RSS/Atom feed reader with bookmarking and group management",
+      "header": "RSS Reader",
+      "sidebar": {
+        "today": "Today",
+        "allFeeds": "All Feeds",
+        "bookmarks": "Bookmarks",
+        "groups": "Groups",
+        "addGroup": "Add Group",
+        "addSource": "Add Source",
+        "editSource": "Edit Source",
+        "deleteSource": "Delete Source"
+      },
+      "articleList": {
+        "noArticles": "No articles",
+        "loading": "Loading..."
+      },
+      "articleDetail": {
+        "openInBrowser": "Open in browser",
+        "bookmark": "Bookmark",
+        "summary": "Summary",
+        "noContent": "Unable to load article content"
+      },
+      "keyboard": {
+        "title": "Keyboard Shortcuts",
+        "moveLeft": "Move Left",
+        "moveRight": "Move Right",
+        "moveUp": "Move Up",
+        "moveDown": "Move Down",
+        "openInBrowser": "Open in Browser"
+      }
+    },
     "zh": {
       "name": "RSS 阅读器",
       "description": "RSS/Atom 订阅源阅读器，支持书签和分组管理",

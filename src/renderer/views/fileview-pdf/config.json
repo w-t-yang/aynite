@@ -5,6 +5,10 @@
   "file_extensions": ["pdf"],
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "PDF Viewer",
+      "description": "PDF document viewer with page navigation"
+    },
     "zh": {
       "name": "PDF 查看器",
       "description": "PDF 文档查看器，支持页面导航"

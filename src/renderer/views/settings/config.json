@@ -4,6 +4,207 @@
   "author": "Aynite",
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Settings",
+      "description": "Application settings and configuration panel",
+      "sidebar": {
+        "basic": "Basic",
+        "appearance": "Appearance",
+        "keybindings": "Keybindings",
+        "ai": "AI",
+        "providers": "Providers",
+        "agents": "Agents",
+        "tools": "Tools",
+        "skills": "Skills",
+        "commands": "Commands",
+        "app": "App",
+        "about": "About"
+      },
+      "loading": "Loading settings...",
+      "restore": {
+        "title": "Restore {tab} to Defaults",
+        "confirm": "Confirm Restore",
+        "cancel": "Cancel",
+        "body": "Are you sure you want to restore the <b>{tab}</b> settings to defaults?",
+        "warning": "This will overwrite all current configuration in this tab. This action cannot be undone."
+      },
+      "appearance": {
+        "title": "Appearance",
+        "description": "Customize the look and feel of your workspace using themes, colors, and typography.",
+        "presets": {
+          "title": "Theme Presets",
+          "description": "Select a predefined theme for a quick aesthetic change."
+        },
+        "duplicateTheme": "Duplicate Theme",
+        "customization": {
+          "title": "Active Theme Customization",
+          "description": "Fine-tune colors and fonts for the \"{name}\" theme."
+        },
+        "font": {
+          "interface": "Interface Font",
+          "monospace": "Monospace Font",
+          "size": "Font Size",
+          "sizeSmall": "12px — Small",
+          "sizeDefault": "14px — Default",
+          "sizeLarge": "16px — Large"
+        },
+        "duplicate": {
+          "title": "Duplicate Theme",
+          "label": "New Theme Name",
+          "placeholder": "e.g. My Dark Theme",
+          "create": "Create Theme",
+          "cancel": "Cancel",
+          "error": "A theme with this name or ID already exists."
+        },
+        "delete": {
+          "title": "Delete Theme",
+          "cancel": "Cancel",
+          "confirm": "Permanently Delete",
+          "body": "Are you sure you want to delete \"<b>{name}</b>\"?",
+          "warning": "This action cannot be undone. All custom color and font settings for this theme will be permanently deleted."
+        }
+      },
+      "keybindings": {
+        "title": "Keybindings",
+        "description": "Configure keyboard shortcuts for navigation, editing, and assistant actions. Shortcuts are automatically applied globally.",
+        "application": {
+          "title": "Application",
+          "description": "Global application shortcuts."
+        },
+        "cycleTile": "Cycle Tile",
+        "splitVertical": "Split Vertical",
+        "splitHorizontal": "Split Horizontal",
+        "closeTile": "Close Tile",
+        "refreshTile": "Refresh Tile"
+      },
+      "ai": {
+        "title": "AI Providers",
+        "description": "Manage multiple AI provider configurations and select the active provider.",
+        "providers": "Configured Providers",
+        "noProviders": "No AI providers yet. Add one above.",
+        "addProvider": "Add Provider",
+        "providerName": "Provider Name",
+        "providerType": "Provider Type",
+        "apiUrl": "API URL",
+        "apiKey": "API Key",
+        "model": "Model",
+        "contextWindow": "Context Window",
+        "save": "Save",
+        "newProvider": "New Provider",
+        "cancel": "Cancel"
+      },
+      "agents": {
+        "title": "Agents",
+        "description": "Define specialized assistant personas with custom prompts. Agents can have their own set of instruction files that extend global behavior.",
+        "globalPrompts": {
+          "title": "Global System Prompts",
+          "description": "These prompt files are prepended to every assistant interaction.",
+          "addPrompt": "Add Prompt File",
+          "noPrompts": "No global prompt files added.",
+          "removeTitle": "Remove Global Prompt",
+          "removeBody": "Are you sure you want to remove this file from the agent?",
+          "removeConfirm": "Remove",
+          "removeCancel": "Cancel"
+        },
+        "profiles": {
+          "title": "Agent Profiles",
+          "description": "Switch between different personas for specific tasks.",
+          "addAgent": "Add Agent",
+          "noAgents": "No agents yet. Add one above."
+        },
+        "promptPreview": "System Prompt Preview",
+        "noPreview": "No prompt file."
+      },
+      "tools": {
+        "title": "Tools",
+        "description": "Enable or disable built-in tools that allow the AI to interact with your system. These tools enable the assistant to perform file management, web search, terminal execution, and more.",
+        "capabilities": "System Capabilities",
+        "capabilitiesDesc": "Toggle individual tools to control what the assistant can do.",
+        "noTools": "No tools found."
+      },
+      "skills": {
+        "title": "Skills",
+        "pageDescription": "Extend the assistant's capabilities with custom scripts. You can add folders containing skill definitions that the assistant can execute.",
+        "folderSectionTitle": "Skill Source Folders",
+        "folderSectionDescription": "Directories where Aynite looks for skill implementations.",
+        "detectedSectionTitle": "Detected Skills",
+        "detectedSectionDescription": "Skills loaded from configured folders.",
+        "addFolderLabel": "Add Folder",
+        "noFoldersLabel": "No skill folders added.",
+        "noItemsLabel": "No skills detected.",
+        "removeModalTitle": "Remove Skill Folder",
+        "removeModalBody": "Are you sure you want to remove the folder",
+        "noDescription": "No description available."
+      },
+      "commands": {
+        "title": "Commands",
+        "pageDescription": "Manage custom shell commands and automation tasks. You can add folders containing command definitions.",
+        "folderSectionTitle": "Command Source Folders",
+        "folderSectionDescription": "Directories where Aynite looks for command definitions.",
+        "detectedSectionTitle": "Detected Commands",
+        "detectedSectionDescription": "Commands loaded from configured folders.",
+        "addFolderLabel": "Add Folder",
+        "noFoldersLabel": "No command folders added.",
+        "noItemsLabel": "No commands detected.",
+        "removeModalTitle": "Remove Command Folder",
+        "removeModalBody": "Are you sure you want to remove the folder",
+        "noDescription": "No description available."
+      },
+      "about": {
+        "title": "About Aynite",
+        "description": "Information about Aynite, system updates, and developer resources.",
+        "version": "Version",
+        "update": {
+          "title": "Software Updates",
+          "description": "Keep the app up to date with the latest features.",
+          "status": "Status",
+          "updateReady": "Update Ready",
+          "checkButton": "Check for Updates",
+          "checking": "Checking...",
+          "available": "Update available",
+          "downloading": "Downloading...",
+          "downloaded": "Downloaded",
+          "modalTitle": "Software Update",
+          "checkingTitle": "Checking for Updates...",
+          "availableTitle": "Update Available",
+          "downloadingTitle": "Downloading Update...",
+          "downloadedTitle": "Update Ready",
+          "failedTitle": "Update Failed",
+          "upToDateTitle": "Up to Date",
+          "current": "Current version:",
+          "new": "New version:",
+          "downloadedMsg": "The download has completed.",
+          "saveWorkMsg": "Save your work, then quit and install the update.",
+          "errorMsg": "An unknown error occurred. Please try again later.",
+          "upToDateMsg": "Your software is up to date.",
+          "later": "Later",
+          "quitInstall": "Quit & Install",
+          "cancel": "Cancel",
+          "downloadUpdate": "Download & Update",
+          "close": "Close",
+          "statusIdle": "Software is up to date.",
+          "statusChecking": "Checking...",
+          "statusReady": "Ready to install. Quit & install the update.",
+          "statusFailed": "Check failed."
+        },
+        "resources": {
+          "title": "Resources",
+          "description": "Join the community and help improve the project.",
+          "github": "GitHub Project",
+          "githubDesc": "View source code, submit issues, and contribute on GitHub.",
+          "reportIssue": "Report Issue",
+          "reportIssueDesc": "Submit a bug report or feature request on GitHub."
+        },
+        "analytics": {
+          "title": "Usage Analytics",
+          "description": "Help improve Aynite by sharing anonymous usage data.",
+          "enabled": "Enabled",
+          "disabled": "Disabled",
+          "privacyNotice": "We collect basic usage metrics like feature usage frequency and performance data. No personally identifiable information or file contents are ever sent."
+        },
+        "footer": "Free your data. Free your interface."
+      }
+    },
     "zh": {
       "name": "设置",
       "description": "应用程序设置和配置面板",

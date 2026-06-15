@@ -29,6 +29,10 @@
   },
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Chart",
+      "description": "Interactive bar, line, area, pie, and radar charts"
+    },
     "zh": {
       "name": "图表",
       "description": "交互式柱状图、折线图、面积图、饼图和雷达图"

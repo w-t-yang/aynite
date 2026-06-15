@@ -5,6 +5,10 @@
   "file_extensions": ["mp3", "wav", "flac", "aac", "m4a", "ogg", "opus", "wma"],
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Audio Player",
+      "description": "Audio file player with playback controls"
+    },
     "zh": {
       "name": "音频播放器",
       "description": "音频文件播放器，支持播放控制"

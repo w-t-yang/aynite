@@ -4,6 +4,45 @@
   "author": "Aynite",
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Spotify",
+      "description": "Spotify music player with playlists, saved tracks, and top artists",
+      "sidebar": {
+        "playlists": "Playlists",
+        "savedTracks": "Saved Tracks",
+        "topArtists": "Top Artists",
+        "recentlyPlayed": "Recently Played"
+      },
+      "player": {
+        "play": "Play",
+        "pause": "Pause",
+        "next": "Next",
+        "previous": "Previous",
+        "noTrack": "No track playing",
+        "noDevice": "No device found"
+      },
+      "playlistTracks": {
+        "title": "Playlist Tracks",
+        "noTracks": "This playlist is empty",
+        "loading": "Loading tracks..."
+      },
+      "savedTracks": {
+        "title": "Saved Tracks",
+        "noTracks": "No saved tracks",
+        "loading": "Loading..."
+      },
+      "topArtists": {
+        "title": "Top Artists",
+        "noArtists": "No data"
+      },
+      "login": {
+        "title": "Log in to Spotify",
+        "description": "Sign in with your Spotify account to access your music library.",
+        "loginButton": "Log in to Spotify",
+        "loggingIn": "Logging in...",
+        "error": "Login failed"
+      }
+    },
     "zh": {
       "name": "Spotify",
       "description": "Spotify 音乐播放器，支持播放列表、收藏曲目和热门艺术家",

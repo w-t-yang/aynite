@@ -4,6 +4,33 @@
   "author": "Aynite",
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Workspace View",
+      "description": "Workspace overview with folders, artifacts, sessions, and git status",
+      "header": "Workspace - {name}",
+      "folders": {
+        "title": "Folders",
+        "addTitle": "Add folder to workspace",
+        "empty": "No folders added"
+      },
+      "artifacts": {
+        "title": "Artifacts",
+        "empty": "No artifacts yet",
+        "open": "Open"
+      },
+      "sessions": {
+        "title": "Sessions",
+        "newTitle": "New Session",
+        "empty": "No sessions found"
+      },
+      "footer": "Select a session to update the AI chat view",
+      "delete": {
+        "title": "Delete Session",
+        "cancel": "Cancel",
+        "confirm": "Delete Session",
+        "body": "Are you sure you want to delete this session? This action cannot be undone."
+      }
+    },
     "zh": {
       "name": "工作区视图",
       "description": "工作区概览，包含文件夹、产物、会话和 Git 状态",

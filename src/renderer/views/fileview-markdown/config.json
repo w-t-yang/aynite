@@ -5,6 +5,10 @@
   "file_extensions": ["md", "markdown", "mdx"],
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "Markdown",
+      "description": "Markdown file viewer with syntax highlighting and rendering"
+    },
     "zh": {
       "name": "Markdown",
       "description": "Markdown 文件查看器，支持语法高亮和渲染"

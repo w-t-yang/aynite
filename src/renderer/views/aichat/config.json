@@ -4,6 +4,60 @@
   "author": "Aynite",
   "key_bindings": {},
   "i18n": {
+    "en": {
+      "name": "AI Chat",
+      "description": "AI assistant chat interface with session management",
+      "header": {
+        "switchAgent": "Switch Agent",
+        "switchModel": "Switch Model",
+        "newSession": "New Session",
+        "loadSession": "Load Session",
+        "copySession": "Copy Session"
+      },
+      "input": {
+        "placeholder": "Type a message or use / for skills...",
+        "artifacts": "Artifacts",
+        "contextTokens": "Context tokens",
+        "send": "Send message (Ctrl+Enter)",
+        "stop": "Stop (Esc)"
+      },
+      "tokens": {
+        "info": "Estimated context usage based on message content size.",
+        "hint": "Start a new session if the context is too large."
+      },
+      "error": {
+        "tool": "Tool execution error",
+        "system": "System error",
+        "stream": "AI stream error",
+        "updateSettings": "Update AI provider settings"
+      },
+      "message": {
+        "system": "System",
+        "revertToHere": "Revert to here",
+        "thinking": "Thinking",
+        "copyResponse": "Copy response"
+      },
+      "sessions": {
+        "title": "Session History",
+        "searchPlaceholder": "Search sessions...",
+        "noResults": "No matching sessions",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "earlier": "Earlier",
+        "empty": "No session history",
+        "deleteConfirm": "Are you sure you want to delete this session?"
+      },
+      "approval": {
+        "title": "Awaiting Approval",
+        "approve": "Approve",
+        "reject": "Reject",
+        "command": "Command",
+        "workingDir": "Working directory"
+      },
+      "noProviders": "No AI Providers Configured",
+      "noProvidersDesc": "To start using the AI assistant, you need to configure at least one provider (Ollama, OpenAI, Anthropic, etc.) in Settings.",
+      "setupProviders": "Set Up AI Provider"
+    },
     "zh": {
       "name": "AI 聊天",
       "description": "AI 助手聊天界面，支持会话管理",

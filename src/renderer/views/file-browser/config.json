@@ -25,6 +25,39 @@
     }
   },
   "i18n": {
+    "en": {
+      "name": "File Browser",
+      "description": "Multi-tab file editor with syntax highlighting",
+      "empty": {
+        "title": "Aynite",
+        "subtitle": "No file open",
+        "selectFile": "Select a file"
+      },
+      "error": {
+        "title": "Error"
+      },
+      "search": {
+        "placeholder": "Find in file\u2026",
+        "matchCount": "{current} / {total} matches",
+        "noMatches": "No matches",
+        "prevTitle": "Previous match (Ctrl+P)",
+        "nextTitle": "Next match (Ctrl+N)"
+      },
+      "tab": {
+        "options": "Tab Options",
+        "prevTab": "Previous tab",
+        "nextTab": "Next tab",
+        "closeAll": "Close all tabs"
+      },
+      "status": {
+        "diff": "Viewing Git diff",
+        "view": "Viewing file (read-only)",
+        "edit": "Editing file",
+        "save": "Save (Ctrl+S)",
+        "words": "{count} words",
+        "word": "words"
+      }
+    },
     "zh": {
       "name": "文件浏览器",
       "description": "多标签文件编辑器，支持语法高亮",
