@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
@@ -46,6 +46,7 @@ function copyViewConfigs(): Plugin {
         config['aynite-version'] = appVersion
 
         const destDir = join(viewsOutDir, entry.name)
+        mkdirSync(destDir, { recursive: true })
         const destConfig = join(destDir, 'config.json')
         writeFileSync(destConfig, JSON.stringify(config, null, 2) + '\n')
       }
