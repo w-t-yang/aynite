@@ -2,16 +2,21 @@
   "name": "Diagram",
   "description": "Mermaid diagram renderer for flowcharts, sequence diagrams, and more",
   "author": "Aynite",
-  "version": "1.0.0",
   "expected_file_type": {
     "ext": "json",
     "schema": {
       "type": "object",
       "required": ["definition"],
       "properties": {
-        "title": { "type": "string" },
-        "type": { "type": "string" },
-        "definition": { "type": "string" }
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "definition": {
+          "type": "string"
+        }
       }
     }
   },

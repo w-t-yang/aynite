@@ -2,7 +2,6 @@
   "name": "Stock Chart",
   "description": "Financial candlestick chart with technical indicators",
   "author": "Aynite",
-  "version": "1.0.0",
   "expected_file_type": {
     "ext": "json",
     "schema": {
@@ -11,18 +10,30 @@
           "type": "object",
           "required": ["symbol", "data"],
           "properties": {
-            "symbol": { "type": "string" },
+            "symbol": {
+              "type": "string"
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
                 "required": ["open", "high", "low", "close", "volume"],
                 "properties": {
-                  "open": { "type": "number" },
-                  "high": { "type": "number" },
-                  "low": { "type": "number" },
-                  "close": { "type": "number" },
-                  "volume": { "type": "number" }
+                  "open": {
+                    "type": "number"
+                  },
+                  "high": {
+                    "type": "number"
+                  },
+                  "low": {
+                    "type": "number"
+                  },
+                  "close": {
+                    "type": "number"
+                  },
+                  "volume": {
+                    "type": "number"
+                  }
                 }
               }
             }
@@ -32,12 +43,16 @@
           "type": "object",
           "required": ["symbol", "data"],
           "properties": {
-            "symbol": { "type": "string" },
+            "symbol": {
+              "type": "string"
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "array",
-                "items": { "type": "number" },
+                "items": {
+                  "type": "number"
+                },
                 "minItems": 5,
                 "maxItems": 5
               }

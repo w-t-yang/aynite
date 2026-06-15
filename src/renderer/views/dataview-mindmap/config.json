@@ -2,7 +2,6 @@
   "name": "Mind Map",
   "description": "Interactive mind map viewer with collapsible nodes",
   "author": "Aynite",
-  "version": "1.0.0",
   "expected_file_type": {
     "ext": "json",
     "schema": {
@@ -13,11 +12,17 @@
           "type": "object",
           "required": ["id", "label"],
           "properties": {
-            "id": { "type": "string" },
-            "label": { "type": "string" },
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
             "children": {
               "type": "array",
-              "items": { "type": "object" }
+              "items": {
+                "type": "object"
+              }
             }
           }
         }

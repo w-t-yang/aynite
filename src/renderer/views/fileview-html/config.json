@@ -2,7 +2,6 @@
   "name": "HTML Preview",
   "description": "HTML file viewer with rendered preview",
   "author": "Aynite",
-  "version": "1.0.0",
   "file_extensions": ["html", "htm"],
   "key_bindings": {},
   "i18n": {

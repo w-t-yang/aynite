@@ -2,7 +2,6 @@
   "name": "Flow",
   "description": "Node-based flow editor for workflows and process diagrams",
   "author": "Aynite",
-  "version": "1.0.0",
   "expected_file_type": {
     "ext": "json",
     "schema": {
@@ -15,19 +14,27 @@
             "type": "object",
             "required": ["position", "data"],
             "properties": {
-              "id": { "type": "string" },
+              "id": {
+                "type": "string"
+              },
               "position": {
                 "type": "object",
                 "required": ["x", "y"],
                 "properties": {
-                  "x": { "type": "number" },
-                  "y": { "type": "number" }
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
                 }
               },
               "data": {
                 "type": "object",
                 "properties": {
-                  "label": { "type": "string" }
+                  "label": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -39,9 +46,15 @@
             "type": "object",
             "required": ["source", "target"],
             "properties": {
-              "source": { "type": "string" },
-              "target": { "type": "string" },
-              "label": { "type": "string" }
+              "source": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
             }
           }
         }

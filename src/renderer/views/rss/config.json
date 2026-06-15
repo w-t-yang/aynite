@@ -2,13 +2,22 @@
   "name": "RSS Reader",
   "description": "RSS/Atom feed reader with bookmarking and group management",
   "author": "Aynite",
-  "version": "1.0.0",
   "key_bindings": {
-    "move_left": { "key": "a" },
-    "move_right": { "key": "d" },
-    "move_up": { "key": "w" },
-    "move_down": { "key": "s" },
-    "open_in_browser": { "key": " " }
+    "move_left": {
+      "key": "a"
+    },
+    "move_right": {
+      "key": "d"
+    },
+    "move_up": {
+      "key": "w"
+    },
+    "move_down": {
+      "key": "s"
+    },
+    "open_in_browser": {
+      "key": " "
+    }
   },
   "i18n": {
     "zh": {

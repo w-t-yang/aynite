@@ -2,22 +2,27 @@
   "name": "Chart",
   "description": "Interactive bar, line, area, pie, and radar charts",
   "author": "Aynite",
-  "version": "1.0.0",
   "expected_file_type": {
     "ext": "json",
     "schema": {
       "type": "object",
       "required": ["keys", "data"],
       "properties": {
-        "title": { "type": "string" },
+        "title": {
+          "type": "string"
+        },
         "keys": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1
         },
         "data": {
           "type": "array",
-          "items": { "type": "object" }
+          "items": {
+            "type": "object"
+          }
         }
       }
     }

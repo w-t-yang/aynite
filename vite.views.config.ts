@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readdirSync } from 'node:fs'
+import { cpSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
@@ -9,11 +9,23 @@ const isDev = process.env.VITE_VIEWS_DEV === 'true'
 const ayniteDir = resolve(homedir(), '.aynite')
 
 /**
+ * Reads the app version from package.json at the project root.
+ */
+function getAppVersion(): string {
+  const pkg = JSON.parse(
+    readFileSync(resolve(__dirname, 'package.json'), 'utf-8'),
+  )
+  return pkg.version
+}
+
+/**
  * Copies config.json from each view's source directory into the build output.
- * This ensures view configs ship together with the built views.
+ * Strips the deprecated `version` field and injects `aynite-version` matching
+ * the app's current version from package.json.
  */
 function copyViewConfigs(): Plugin {
   const viewsSrcDir = resolve(__dirname, 'src/renderer/views')
+  const appVersion = getAppVersion()
   return {
     name: 'copy-view-configs',
     closeBundle() {
@@ -28,9 +40,14 @@ function copyViewConfigs(): Plugin {
         const srcConfig = join(viewsSrcDir, entry.name, 'config.json')
         if (!existsSync(srcConfig)) continue
 
+        // Read, remove deprecated `version`, inject `aynite-version`, write
+        const config = JSON.parse(readFileSync(srcConfig, 'utf-8'))
+        delete config.version
+        config['aynite-version'] = appVersion
+
         const destDir = join(viewsOutDir, entry.name)
         const destConfig = join(destDir, 'config.json')
-        cpSync(srcConfig, destConfig)
+        writeFileSync(destConfig, JSON.stringify(config, null, 2) + '\n')
       }
     },
   }

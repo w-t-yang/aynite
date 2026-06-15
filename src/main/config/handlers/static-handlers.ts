@@ -15,6 +15,7 @@ import {
   readText,
   writeJson,
 } from '../../../lib/path'
+import { isVersionLowerThan, restoreViewFromBundle } from '../../system/logic'
 import type { ConfigHandler } from '../handler-registry'
 import { validateAgainstSchema } from '../schema-validator'
 
@@ -41,7 +42,32 @@ export const staticHandlers: ConfigHandler = (() => ({
       case 'view-config': {
         const viewName = payload?.view as string
         if (!viewName) return null
-        return await readJson(getViewConfigPath(viewName), null)
+
+        // Check and restore if outdated
+        const configPath = getViewConfigPath(viewName)
+        const config = await readJson<Record<string, unknown> | null>(
+          configPath,
+          null,
+        )
+        if (!config) return null
+
+        const ayniteVersion = config?.['aynite-version']
+        const appVersion = app.getVersion()
+
+        if (!ayniteVersion || typeof ayniteVersion !== 'string') {
+          return null
+        }
+
+        if (isVersionLowerThan(ayniteVersion, appVersion)) {
+          console.log(
+            `[Views] view-config: view "${viewName}" version ${ayniteVersion} < app ${appVersion}, restoring from bundle`,
+          )
+          await restoreViewFromBundle(viewName)
+          // Re-read after restore
+          return await readJson(configPath, null)
+        }
+
+        return config
       }
       case 'matching-views': {
         const filePath = payload?.filePath as string
@@ -68,6 +94,27 @@ export const staticHandlers: ConfigHandler = (() => ({
             if (!(await exists(configPath))) continue
 
             const config = await readJson<any>(configPath, null)
+            if (!config) continue
+
+            // Skip views without aynite-version (unmanaged)
+            const ayniteVersion = config?.['aynite-version']
+            if (!ayniteVersion || typeof ayniteVersion !== 'string') continue
+
+            // Restore if outdated
+            const appVersion = app.getVersion()
+            if (isVersionLowerThan(ayniteVersion, appVersion)) {
+              console.log(
+                `[Views] matching-views: view "${entry.name}" version ${ayniteVersion} < app ${appVersion}, restoring from bundle`,
+              )
+              await restoreViewFromBundle(entry.name)
+              // Re-read config after restore
+              const restoredConfig = await readJson<any>(configPath, null)
+              if (!restoredConfig) continue
+              config.name = restoredConfig.name
+              config.description = restoredConfig.description
+              config.expected_file_type = restoredConfig.expected_file_type
+            }
+
             if (!config?.expected_file_type?.schema) continue
 
             const ext = config.expected_file_type.ext

@@ -1,11 +1,15 @@
 import { exec, execSync } from 'node:child_process'
 import { promisify } from 'node:util'
+import { app } from 'electron'
 import {
   AYNITE_SUBDIRS,
+  copy,
   exists,
   getAyniteDir,
   joinPaths,
   readdir,
+  readJson,
+  remove,
 } from '../../lib/path'
 import type { ShellConfig } from '../../lib/types/system'
 
@@ -182,6 +186,105 @@ export async function getSystemFonts(): Promise<string[]> {
   }
 }
 
+/**
+ * Returns the path to the bundled dist-views directory.
+ * In dev (unpackaged): <project_root>/resources/dist-views
+ * In production (packaged): <resourcesPath>/dist-views
+ */
+function getBundledViewsDir(): string {
+  const base = app.isPackaged
+    ? process.resourcesPath
+    : joinPaths(process.cwd(), 'resources')
+  return joinPaths(base, 'dist-views')
+}
+
+/**
+ * Compare two version strings (e.g. "0.1.5" and "0.2.0").
+ * Returns true if versionA < versionB.
+ * Handles semver-like strings with numeric dot-separated parts.
+ */
+function isVersionLowerThan(versionA: string, versionB: string): boolean {
+  const aParts = versionA.split(/[.-]/).map(Number)
+  const bParts = versionB.split(/[.-]/).map(Number)
+
+  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+    const aVal = aParts[i] ?? (i >= 3 ? -1 : 0)
+    const bVal = bParts[i] ?? (i >= 3 ? -1 : 0)
+    if (aVal !== bVal) return aVal < bVal
+  }
+  return false
+}
+
+/**
+ * Replace a view in the runtime views directory with the bundled version.
+ * This ensures outdated views (those with an older `aynite-version`) get
+ * updated HTML/assets and config.json from the app bundle.
+ */
+async function restoreViewFromBundle(viewName: string): Promise<boolean> {
+  const runtimeViewDir = joinPaths(
+    getAyniteDir(),
+    AYNITE_SUBDIRS.VIEWS,
+    viewName,
+  )
+  const bundledViewDir = joinPaths(getBundledViewsDir(), 'views', viewName)
+
+  if (!(await exists(bundledViewDir))) return false
+
+  try {
+    // Remove the runtime view directory entirely, then copy the bundled one
+    await remove(runtimeViewDir, { recursive: true, force: true })
+    await copy(bundledViewDir, runtimeViewDir, { recursive: true })
+    return true
+  } catch (e) {
+    console.error(
+      `[Views] Failed to restore view "${viewName}" from bundle:`,
+      e,
+    )
+    return false
+  }
+}
+
+/**
+ * Check a view's config.json for `aynite-version` and determine if it should
+ * be loaded or replaced with the bundled version.
+ *
+ * Returns true if the view is valid and should be included, false if it should
+ * be skipped (no aynite-version) or has been restored from bundle.
+ */
+async function validateAndMaybeRestoreView(viewName: string): Promise<boolean> {
+  const configPath = joinPaths(
+    getAyniteDir(),
+    AYNITE_SUBDIRS.VIEWS,
+    viewName,
+    'config.json',
+  )
+
+  if (!(await exists(configPath))) {
+    // Views without a config.json are skipped (likely user-created or incomplete)
+    return false
+  }
+
+  const config = await readJson<Record<string, unknown>>(configPath, {})
+
+  // No aynite-version → skip this view entirely (it's not managed by the app)
+  const ayniteVersion = config?.['aynite-version']
+  if (!ayniteVersion || typeof ayniteVersion !== 'string') {
+    return false
+  }
+
+  const appVersion = app.getVersion()
+
+  // If the view's version is lower than the app version, restore from bundle
+  if (isVersionLowerThan(ayniteVersion, appVersion)) {
+    console.log(
+      `[Views] View "${viewName}" version ${ayniteVersion} < app ${appVersion}, restoring from bundle`,
+    )
+    return await restoreViewFromBundle(viewName)
+  }
+
+  return true
+}
+
 export async function getAvailableViews(): Promise<
   { id: string; name: string }[]
 > {
@@ -194,21 +297,31 @@ export async function getAvailableViews(): Promise<
   for (const entry of entries) {
     if (entry.isDirectory()) {
       const indexPath = joinPaths(viewsDir, entry.name, 'index.html')
-      if (await exists(indexPath)) {
-        // Simple name transformation: aichat -> AI Chat
-        const name = entry.name
-          .split('-')
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ')
-          .replace('Aichat', 'AI Chat')
-          .replace('Treeview', 'File Explorer')
+      if (!(await exists(indexPath))) continue
 
-        views.push({
-          id: entry.name,
-          name,
-        })
-      }
+      // Validate version and potentially restore from bundle
+      const valid = await validateAndMaybeRestoreView(entry.name)
+      if (!valid) continue
+
+      // Simple name transformation: aichat -> AI Chat
+      const name = entry.name
+        .split('-')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+        .replace('Aichat', 'AI Chat')
+        .replace('Treeview', 'File Explorer')
+
+      views.push({
+        id: entry.name,
+        name,
+      })
     }
   }
   return views
+}
+
+export {
+  isVersionLowerThan,
+  restoreViewFromBundle,
+  validateAndMaybeRestoreView,
 }

@@ -2,7 +2,6 @@
   "name": "Workspace View",
   "description": "Workspace overview with folders, artifacts, sessions, and git status",
   "author": "Aynite",
-  "version": "1.0.0",
   "key_bindings": {},
   "i18n": {
     "zh": {

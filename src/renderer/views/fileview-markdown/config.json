@@ -2,7 +2,6 @@
   "name": "Markdown",
   "description": "Markdown file viewer with syntax highlighting and rendering",
   "author": "Aynite",
-  "version": "1.0.0",
   "file_extensions": ["md", "markdown", "mdx"],
   "key_bindings": {},
   "i18n": {

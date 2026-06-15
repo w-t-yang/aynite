@@ -2,7 +2,6 @@
   "name": "Graph",
   "description": "Force-directed graph visualization for network and relationship data",
   "author": "Aynite",
-  "version": "1.0.0",
   "expected_file_type": {
     "ext": "json",
     "schema": {
@@ -15,9 +14,15 @@
             "type": "object",
             "required": ["id", "label"],
             "properties": {
-              "id": { "type": "string" },
-              "label": { "type": "string" },
-              "group": { "type": "number" }
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "group": {
+                "type": "number"
+              }
             }
           }
         },
@@ -27,9 +32,15 @@
             "type": "object",
             "required": ["source", "target"],
             "properties": {
-              "source": { "type": "string" },
-              "target": { "type": "string" },
-              "value": { "type": "number" }
+              "source": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "value": {
+                "type": "number"
+              }
             }
           }
         }
