@@ -119,15 +119,21 @@ export function Settings() {
       config.get('messengers'),
     ])
 
-    if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.providers })
-    const normalizedGlobalPrompts = resPrompts?.files || resPrompts?.list || []
+    if (resAI)
+      setAI({
+        activeId: resAI.activeId,
+        providers: (resAI as any).providers || [],
+      })
+    const normalizedGlobalPrompts =
+      resPrompts?.files || (resPrompts as any)?.list || []
     if (resAgents) {
-      setAgents({ activeId: resAgents.activeId, list: resAgents.list })
+      const agentsData = resAgents as any
+      setAgents({ activeId: agentsData.activeId, list: agentsData.list || [] })
 
       // Load merged prompt for active agent
       const merged = await aiBridge.getMergedSystemPrompt(
         normalizedGlobalPrompts,
-        resAgents.list.find((a: any) => a.id === resAgents.activeId)
+        (agentsData.list || []).find((a: any) => a.id === agentsData.activeId)
           ?.promptFiles || [],
       )
       setMergedPrompt(merged || '')
@@ -145,8 +151,9 @@ export function Settings() {
     })
 
     if (resTools) {
-      setAiTools(resTools.active)
-      setAvailableTools(resTools.list)
+      const toolsData = resTools as any
+      setAiTools(toolsData.active || {})
+      setAvailableTools(toolsData.list || [])
     }
 
     if (resMessengers) {

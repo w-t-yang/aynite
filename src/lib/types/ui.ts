@@ -39,7 +39,7 @@ export interface InputEditorProps {
   >
 }
 
-export type VibeType = 'chat' | 'file' | 'code' | 'empty'
+export type VibeType = 'chat' | 'file' | 'code' | 'empty' | 'surprise'
 
 export interface SelectionItem {
   id: string

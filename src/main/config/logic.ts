@@ -218,7 +218,7 @@ export async function loadConfig() {
 
   // Normalize provider URLs: fill in defaults for known providers that have no URL set
   if (ai.providers) {
-    for (const p of ai.providers) {
+    for (const p of ai.providers as any[]) {
       if (!p.baseUrl && DEFAULT_PROVIDER_URLS[p.provider]) {
         p.baseUrl = DEFAULT_PROVIDER_URLS[p.provider]
       }

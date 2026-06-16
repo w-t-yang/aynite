@@ -114,7 +114,7 @@ async function runMessengerAgent(
   const systemMessage = messages.find((m) => m.role === 'system')
   const chatMessages = messages.filter((m) => m.role !== 'system')
   const modelMessages = await convertToModelMessages(chatMessages, {
-    tools: enabledTools,
+    tools: enabledTools as any,
     ignoreIncompleteToolCalls: true,
   })
 
@@ -228,7 +228,7 @@ async function runMessengerAgent(
         }
         break
       }
-      case 'command-output': {
+      case 'command-output' as any: {
         const cmdText = (part as any).text
         console.log(`[Messenger] command-output: ${cmdText.slice(0, 100)}`)
         if (cmdText && loopMessages.length > 0) {
@@ -740,7 +740,7 @@ async function handleChatMessage(
     let replyText = 'Done.'
     if (lastAssistant) {
       const textPart = lastAssistant.parts.find((p: any) => p.type === 'text')
-      if (textPart) replyText = textPart.text
+      if (textPart) replyText = (textPart as any).text
     }
 
     console.log(`[Messenger] replying with ${replyText.length} chars`)

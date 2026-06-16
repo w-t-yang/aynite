@@ -106,10 +106,10 @@ export function useAIChat() {
       ])
       setSettings((prev) => ({
         ...prev,
-        ai: resAI || prev.ai,
-        agents: resAgents || prev.agents,
-        aiTools: resTools?.active || prev.aiTools,
-        prompts: resPrompts || prev.prompts,
+        ai: (resAI as SettingsState['ai']) || prev.ai,
+        agents: (resAgents as SettingsState['agents']) || prev.agents,
+        aiTools: (resTools as any)?.active || prev.aiTools,
+        prompts: (resPrompts as SettingsState['prompts']) || prev.prompts,
       }))
     } catch (_e) {}
   }, [])

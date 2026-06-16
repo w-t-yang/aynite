@@ -45,6 +45,25 @@ jobs:
       - name: Run tests
         run: npm test
 
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run typecheck
+
   audit:
     name: Architecture Audit
     runs-on: ubuntu-latest

@@ -33,7 +33,9 @@ export function FileViewAudio({ file }: FileViewAudioProps) {
       try {
         const data = await bridgeFile.readBinary(file.path)
         if (cancelled) return
-        const blob = new Blob([data], { type: mimeType(file.extension) })
+        const blob = new Blob([data as BlobPart], {
+          type: mimeType(file.extension),
+        })
         const url = URL.createObjectURL(blob)
         urlRef.current = url
         setSrc(url)

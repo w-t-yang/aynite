@@ -48,7 +48,6 @@ export function FileContent({
   loading,
   error,
   isEditing = false,
-  _isViewOnly = false,
   onContentChange,
   activeView = null,
   activeFileview = null,

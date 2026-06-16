@@ -56,7 +56,9 @@ export function FileViewVideo({ file }: FileViewVideoProps) {
       try {
         const data = await bridgeFile.readBinary(file.path)
         if (cancelled) return
-        const blob = new Blob([data], { type: mimeType(file.extension) })
+        const blob = new Blob([data as BlobPart], {
+          type: mimeType(file.extension),
+        })
         const url = URL.createObjectURL(blob)
         urlRef.current = url
         setSrc(url)
@@ -226,7 +228,7 @@ export function FileViewVideo({ file }: FileViewVideoProps) {
             ref={videoRef}
             controls
             className="shadow-xl rounded-lg bg-black"
-            src={src}
+            src={src ?? undefined}
             onLoadedMetadata={handleLoadedMetadata}
             onError={handleError}
             style={

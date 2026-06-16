@@ -256,7 +256,8 @@ export async function aiChat(params: {
 
     Object.keys(cachedTools).forEach((toolName) => {
       if (toolSettings[toolName] !== false) {
-        enabledTools[toolName] = cachedTools[toolName]
+        enabledTools[toolName] =
+          cachedTools[toolName as keyof typeof cachedTools]
       }
     })
 

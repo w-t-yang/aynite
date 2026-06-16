@@ -40,7 +40,7 @@ const AppContent: React.FC = () => {
       focusContent: () => {},
       closeFileSwitcher: () => setShowFileSwitcher(false),
       isFileSwitcherOpen: () => showFileSwitcher,
-      toggleFileSwitcher: () => setShowFileSwitcher((prev: boolean) => !prev),
+      toggleFileSwitcher: () => setShowFileSwitcher(!showFileSwitcher),
     }
     // Load keybindings from defaults; in the future this can be
     // fetched from config and deep-merged over the defaults.

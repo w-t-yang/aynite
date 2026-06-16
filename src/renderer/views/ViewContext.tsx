@@ -8,10 +8,10 @@ import React, {
 import ReactDOM from 'react-dom/client'
 import { VIEW_CONTAINER } from '../../lib/constants/renderer/styles'
 import type { Theme } from '../../lib/constants/types'
+import type { Locale } from '../../lib/types/ui'
 import { config, configMutations } from '../bridge/config'
 import { events, systemMutations } from '../bridge/index'
 import { theme as bridgeTheme } from '../bridge/theme'
-import type { Locale } from '../shared/i18n/useI18n'
 import { applyThemeColors } from '../shared/lib/utils'
 import '../shared/styles/index.css'
 

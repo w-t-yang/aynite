@@ -8,4 +8,9 @@
  *   `import { useAppEvent, useAppEventSubscriber } from '../ViewContext'`
  */
 
-export { useAppEvent, useAppEventSubscriber } from './ViewContext'
+export {
+  useAppEvent,
+  useAppEvent as useViewEvent,
+  useAppEventSubscriber,
+  useAppEventSubscriber as useViewEventSubscriber,
+} from './ViewContext'

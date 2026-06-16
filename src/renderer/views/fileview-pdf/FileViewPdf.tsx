@@ -130,7 +130,7 @@ export function FileViewPdf({ file }: FileViewPdfProps) {
   useEffect(() => {
     return () => {
       pdfDoc?.cleanup()
-      pdfDoc?.destroy()
+      ;(pdfDoc as any)?.destroy()
     }
   }, [pdfDoc])
 

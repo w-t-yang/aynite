@@ -88,7 +88,7 @@ export async function generateCommitMessage(
     }
 
     const activeId = aiConfig.activeId
-    const activeProvider =
+    const activeProvider: any =
       aiConfig.providers.find((p: any) => p.id === activeId) ||
       aiConfig.providers[0]
 

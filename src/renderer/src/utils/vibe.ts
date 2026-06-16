@@ -46,6 +46,12 @@ const VIBE_LAYOUTS: Record<VibeType, LayoutNode> = {
     size: 100,
     // no `name` property — renders as an empty tile with no view configured
   },
+  surprise: {
+    id: 'vibe-surprise',
+    type: 'leaf',
+    size: 100,
+    // surprise: show a random view
+  },
 }
 
 function cloneWithNewIds(node: LayoutNode): LayoutNode {

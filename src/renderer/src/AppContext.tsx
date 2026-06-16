@@ -19,20 +19,22 @@
 import type React from 'react'
 import { useEffect, useRef } from 'react'
 import { AppEvents } from '../../lib/constants/app'
+import type { UpdateActions } from '../../lib/types/app'
+import type {
+  LanguageActions,
+  LayoutActions,
+  ThemeActions,
+  UIActions,
+} from '../../lib/types/ui'
+import type { WindowActions } from '../../lib/types/window'
+import type { WorkspaceActions } from '../../lib/types/workspace'
 import { events } from '../bridge/events'
-import type { LanguageActions } from './contexts/LanguageContext'
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext'
-import type { LayoutActions } from './contexts/LayoutContext'
 import { LayoutProvider, useLayout } from './contexts/LayoutContext'
-import type { ThemeActions } from './contexts/ThemeContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
-import type { UIActions } from './contexts/UIContext'
 import { UIProvider, useUI } from './contexts/UIContext'
-import type { UpdateActions } from './contexts/UpdateContext'
 import { UpdateProvider, useUpdate } from './contexts/UpdateContext'
-import type { WindowActions } from './contexts/WindowContext'
 import { useWindowState, WindowProvider } from './contexts/WindowContext'
-import type { WorkspaceActions } from './contexts/WorkspaceContext'
 import { useWorkspace, WorkspaceProvider } from './contexts/WorkspaceContext'
 
 // ─── Event Router ──────────────────────────────────────────────────────

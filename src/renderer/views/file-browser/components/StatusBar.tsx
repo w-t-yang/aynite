@@ -99,7 +99,7 @@ export function StatusBar({
           <div className="flex items-center gap-0.5">
             {/* Dataview preview buttons */}
             {matchingViews.map((view) => (
-              <Tooltip key={view.name} content={view.config.description}>
+              <Tooltip key={view.name} content={view.config.description ?? ''}>
                 <button
                   type="button"
                   onClick={() => {

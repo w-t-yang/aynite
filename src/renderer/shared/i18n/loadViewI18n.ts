@@ -15,7 +15,7 @@
  * that useI18n expects: Record<string, { en: string; zh: string }>
  */
 
-import type { Locale } from './useI18n'
+import type { Locale } from '../../../lib/types/ui'
 
 type TranslationValue = string | Record<string, unknown>
 
