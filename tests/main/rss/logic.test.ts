@@ -70,11 +70,13 @@ import {
   createGroup,
   deleteGroup,
   deleteSource,
+  fetchAll,
   fetchSource,
   getAllContents,
   getBookmarks,
   getConfig,
   getContent,
+  initRss,
   markAllRead,
   markRead,
   saveConfig,
@@ -92,8 +94,9 @@ beforeEach(() => {
   mockWriteJson.mockReset()
   mockEnsureDir.mockReset()
   mockUnlink.mockReset()
-  // Default mockReaddir to return empty array so listDateDirs doesn't crash
+  // Default mocks
   mockReaddir.mockResolvedValue([])
+  mockUnlink.mockResolvedValue(undefined)
 })
 
 function dirent(name: string, isDir: boolean) {
@@ -431,5 +434,69 @@ describe('bookmarks', () => {
       })
       expect(result['item-1']).toBeUndefined()
     })
+  })
+})
+
+// ─── initRss ────────────────────────────────────────────────────────────
+
+describe('initRss', () => {
+  it('creates directories without default config when config exists', async () => {
+    mockEnsureDir.mockResolvedValue(undefined)
+    mockExists.mockResolvedValue(true) // config exists
+    mockReaddir.mockResolvedValue([])
+
+    await initRss()
+    expect(mockEnsureDir).toHaveBeenCalled()
+    expect(mockWriteJson).not.toHaveBeenCalled()
+  })
+
+  it('creates default config when config missing', async () => {
+    mockEnsureDir.mockResolvedValue(undefined)
+    mockExists.mockResolvedValue(false) // config missing
+    mockWriteJson.mockResolvedValue(undefined)
+
+    await initRss()
+    expect(mockWriteJson).toHaveBeenCalledWith(
+      '/mock/.aynite/rss/config.json',
+      expect.objectContaining({
+        groups: expect.arrayContaining([
+          expect.objectContaining({ name: 'Technology' }),
+        ]),
+      }),
+    )
+  })
+})
+
+// ─── fetchAll ───────────────────────────────────────────────────────────
+
+describe('fetchAll', () => {
+  it('fetches all sources and returns results', async () => {
+    const config = makeConfig()
+    // For fetchSource: getContent returns null, no existing files
+    mockReadJson.mockResolvedValue(null)
+    mockExists.mockResolvedValue(false)
+    mockReaddir.mockResolvedValue([])
+
+    const result = await fetchAll(config)
+    expect(result.results).toHaveLength(1)
+    expect(result.results[0].sourceId).toBe('s-1')
+  })
+})
+
+// ─── deleteContent ──────────────────────────────────────────────────────
+
+describe('deleteContent (via deleteSource which calls deleteAllSourceFiles)', () => {
+  it('deletes content files across dates', async () => {
+    mockReaddir.mockResolvedValue([
+      dirent('2026-06-14', true),
+      dirent('2026-06-15', true),
+    ])
+    mockExists.mockResolvedValue(true)
+
+    const config = makeConfig()
+    await deleteSource(config, 's-1')
+
+    // deleteAllSourceFiles should unlink both dates
+    expect(mockUnlink).toHaveBeenCalledTimes(2)
   })
 })

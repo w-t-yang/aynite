@@ -99,4 +99,94 @@ describe('createGitWatcher', () => {
       gitWatcher.teardownWatcher('/unknown')
     })
   })
+
+  describe('refreshWatchers', () => {
+    it('tears down watchers for roots not in folders list', async () => {
+      mockExists.mockResolvedValue(true)
+      const closeMock = vi.fn()
+      mockFsWatch.mockReturnValue({ close: closeMock })
+
+      // Set up two watchers
+      await gitWatcher.setupWatcher('/repo-a')
+      await gitWatcher.setupWatcher('/repo-b')
+
+      // Refresh with only repo-a in the list
+      gitWatcher.refreshWatchers(['/repo-a'])
+
+      // repo-b's watcher should be closed
+      expect(closeMock).toHaveBeenCalled()
+    })
+
+    it('keeps watchers for roots in the folders list', async () => {
+      mockExists.mockResolvedValue(true)
+      const closeMock = vi.fn()
+      mockFsWatch.mockReturnValue({ close: closeMock })
+
+      await gitWatcher.setupWatcher('/repo-a')
+      await gitWatcher.setupWatcher('/repo-b')
+
+      gitWatcher.refreshWatchers(['/repo-a', '/repo-b'])
+
+      // Neither watcher should be closed
+      expect(closeMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('refreshWatchersAsync', () => {
+    it('sets up watchers for git roots found via findGitRoot', async () => {
+      mockExists.mockResolvedValue(true)
+      const closeMock = vi.fn()
+      mockFsWatch.mockReturnValue({ close: closeMock })
+      const findGitRoot = vi.fn((path: string) => {
+        if (path === '/project/src') return Promise.resolve('/project')
+        return Promise.resolve(null)
+      })
+
+      await gitWatcher.refreshWatchersAsync(
+        ['/project/src', '/no-git'],
+        findGitRoot,
+      )
+
+      expect(mockFsWatch).toHaveBeenCalledWith(
+        '/project/.git/HEAD',
+        expect.any(Function),
+      )
+    })
+
+    it('tears down watchers for roots not in folders', async () => {
+      mockExists.mockResolvedValue(true)
+      const closeMock = vi.fn()
+      mockFsWatch.mockReturnValue({ close: closeMock })
+      const findGitRoot = vi.fn(() => Promise.resolve(null))
+
+      // Set up a watcher first
+      await gitWatcher.setupWatcher('/old-repo')
+
+      // Refresh with different folders
+      await gitWatcher.refreshWatchersAsync(['/new-project'], findGitRoot)
+
+      // Old watcher should be closed
+      expect(closeMock).toHaveBeenCalled()
+    })
+
+    it('handles HEAD watch error gracefully', async () => {
+      mockExists.mockResolvedValue(true)
+      // First call (HEAD) throws
+      mockFsWatch
+        .mockImplementationOnce(() => {
+          throw new Error('permission denied')
+        })
+        // Second call (index) succeeds
+        .mockReturnValueOnce({ close: vi.fn() })
+      const findGitRoot = vi.fn(() => Promise.resolve('/project'))
+
+      // Should not throw
+      await gitWatcher.refreshWatchersAsync(['/project'], findGitRoot)
+      // Index watcher should still be set up
+      expect(mockFsWatch).toHaveBeenCalledWith(
+        '/project/.git/index',
+        expect.any(Function),
+      )
+    })
+  })
 })

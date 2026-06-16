@@ -77,7 +77,8 @@ describe('saveSession', () => {
   })
 
   it('writes metadata file when metadata provided and does not exist', async () => {
-    mockStat.mockRejectedValueOnce(new Error('ENOENT')) // metadata doesn't exist
+    // The new saveSession uses readJson(...).catch(() => null) instead of stat
+    mockReadJson.mockRejectedValueOnce(new Error('ENOENT'))
 
     await saveSession(
       'Dev',
@@ -93,18 +94,25 @@ describe('saveSession', () => {
     )
   })
 
-  it('does not overwrite existing metadata', async () => {
-    mockStat.mockResolvedValue(true) // metadata exists
+  it('merges with existing metadata when present', async () => {
+    // Simulate existing metadata on disk
+    mockReadJson.mockResolvedValueOnce({
+      agentName: 'Old Agent',
+      modelName: 'old-model',
+    })
 
     await saveSession(
       'Dev',
       'session-1',
       [{ role: 'user', content: 'hello' }] as any,
-      { agentName: 'Aynite', modelName: 'gpt-4o' } as any,
+      { modelName: 'new-model' } as any,
     )
 
-    // Only messages file should be written
-    expect(mockWriteJson).toHaveBeenCalledTimes(1)
+    // Should merge old + new, with new properties winning
+    expect(mockWriteJson).toHaveBeenCalledWith(
+      expect.stringContaining('session-1-metadata.json'),
+      { agentName: 'Old Agent', modelName: 'new-model' },
+    )
   })
 
   it('saves empty messages array', async () => {
