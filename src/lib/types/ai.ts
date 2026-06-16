@@ -35,6 +35,8 @@ export interface ToolContext {
   workspaceName?: string
   /** Callback to stream real-time command output during run_command tool execution */
   onCommandProgress?: (text: string) => void
+  /** If true, command execution is auto-approved without renderer approval dialog */
+  autoApproveCommands?: boolean
 }
 
 export interface MessengerConfig {

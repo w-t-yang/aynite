@@ -105,6 +105,10 @@ async function runMessengerAgent(
 
   if (!activeProvider) throw new Error('No active AI provider configured')
 
+  console.log(
+    `[Messenger] runMessengerAgent: starting with ${messages.length} messages, provider=${activeProvider?.provider} model=${activeProvider?.model}`,
+  )
+
   const { streamText, convertToModelMessages, stepCountIs } = await import('ai')
   const model = getAIModel(activeProvider)
 
@@ -123,14 +127,19 @@ async function runMessengerAgent(
         .join('\n')
     : undefined
 
-  // Create tools with command progress callback for streaming output
+  // Create tools with command progress callback and auto-approve for messenger
   const toolContext = {
     workspaceFolders,
     activeFile,
     workspaceName,
     onCommandProgress: (text: string) => onProgress(text),
+    autoApproveCommands: true,
   }
   const tools = createTools(toolContext)
+
+  console.log(
+    `[Messenger] calling streamText with ${Object.keys(tools).length} tools`,
+  )
 
   const result = streamText({
     model,
@@ -147,6 +156,7 @@ async function runMessengerAgent(
   let reasoningAccum = ''
   const allToolCalls = new Map<string, any>()
   let currentStepToolCalls: any[] = []
+  let stepCount = 0
 
   const flushAssistant = () => {
     if (textAccum || reasoningAccum || currentStepToolCalls.length > 0) {
@@ -175,6 +185,9 @@ async function runMessengerAgent(
 
   for await (const part of result.fullStream) {
     switch (part.type) {
+      case 'start':
+        console.log(`[Messenger] streamText step ${++stepCount} started`)
+        break
       case 'text-delta':
         textAccum += part.text
         break
@@ -182,6 +195,9 @@ async function runMessengerAgent(
         reasoningAccum += part.text
         break
       case 'tool-call': {
+        console.log(
+          `[Messenger] tool-call: ${part.toolName} (id: ${part.toolCallId})`,
+        )
         allToolCalls.set(part.toolCallId, part)
         const idx = currentStepToolCalls.findIndex(
           (tc) => tc.toolCallId === part.toolCallId,
@@ -191,6 +207,9 @@ async function runMessengerAgent(
         break
       }
       case 'tool-result': {
+        console.log(
+          `[Messenger] tool-result: ${part.toolName} (output: ${String(part.output).slice(0, 100)})`,
+        )
         flushAssistant()
         // Update the matching tool part in the last assistant message
         if (loopMessages.length > 0) {
@@ -212,8 +231,9 @@ async function runMessengerAgent(
         break
       }
       case 'command-output': {
-        const text = (part as any).text
-        if (text && loopMessages.length > 0) {
+        const cmdText = (part as any).text
+        console.log(`[Messenger] command-output: ${cmdText.slice(0, 100)}`)
+        if (cmdText && loopMessages.length > 0) {
           const last = loopMessages[loopMessages.length - 1]
           const parts = [...last.parts]
           for (let i = parts.length - 1; i >= 0; i--) {
@@ -226,7 +246,7 @@ async function runMessengerAgent(
               parts[i] = {
                 ...p,
                 state: 'executing',
-                output: (p.output || '') + text,
+                output: (p.output || '') + cmdText,
               } as any
               loopMessages[loopMessages.length - 1] = { ...last, parts }
               break
@@ -235,16 +255,33 @@ async function runMessengerAgent(
         }
         break
       }
+      case 'finish-step':
+        console.log(
+          `[Messenger] finish-step: textAccum=${textAccum.length} chars, toolCalls=${currentStepToolCalls.length}`,
+        )
+        break
       case 'error':
+        console.log(`[Messenger] error: ${part.error}`)
         flushAssistant()
         throw new Error(String(part.error))
       case 'finish':
+        console.log(
+          `[Messenger] finish: total steps=${stepCount}, loopMessages=${loopMessages.length}`,
+        )
         flushAssistant()
         break
     }
   }
 
-  return [...messages, ...loopMessages]
+  const resultMessages = [...messages, ...loopMessages]
+  const lastAssistant = [...loopMessages]
+    .reverse()
+    .find((m) => m.role === 'assistant')
+  console.log(
+    `[Messenger] agent loop returning ${resultMessages.length} messages, last assistant has ${lastAssistant?.parts?.length || 0} parts`,
+  )
+
+  return resultMessages
 }
 
 // ─── Command Handlers ────────────────────────────────────────────────────
@@ -259,7 +296,8 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
       return
     }
 
-    const { activeSessionId, activeAgentId, folders } = workspaceConfig
+    const { activeSessionId, activeSessionIdForBot, activeAgentId, folders } =
+      workspaceConfig
 
     const lines: string[] = []
     lines.push(`*Workspace:* ${escapeMarkdown(config.workspace)}`)
@@ -273,12 +311,13 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
       lines.push('  _(none)_')
     }
 
-    if (activeSessionId) {
+    const botSessionId = activeSessionIdForBot || activeSessionId
+    if (botSessionId) {
       lines.push('')
-      lines.push(`*Active Session:* \`${activeSessionId}\``)
+      lines.push(`*Bot Session:* \`${botSessionId}\``)
 
       const { metadata: foundMetadata } = await findMetadata(
-        activeSessionId,
+        botSessionId,
         config.workspace,
       )
 
@@ -294,7 +333,7 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
           )
         } else {
           const sessionContent = await findSessionFile(
-            activeSessionId,
+            botSessionId,
             config.workspace,
           )
           const firstUser = sessionContent?.find((m: any) => m.role === 'user')
@@ -307,7 +346,7 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
           lines.push(`*Description:* ${escapeMarkdown(preview)}`)
         }
       } else {
-        lines.push(`*Session:* \`${activeSessionId}\` _(no metadata)_`)
+        lines.push(`*Session:* \`${botSessionId}\` _(no metadata)_`)
       }
     } else {
       lines.push('')
@@ -340,13 +379,14 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       return
     }
 
-    const { activeSessionId } = workspaceConfig
-    if (!activeSessionId) {
+    const botSessionId =
+      workspaceConfig.activeSessionIdForBot || workspaceConfig.activeSessionId
+    if (!botSessionId) {
       await ctx.reply('No active session.')
       return
     }
 
-    const messages = await findSessionFile(activeSessionId, config.workspace)
+    const messages = await findSessionFile(botSessionId, config.workspace)
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       await ctx.reply('Active session is empty.')
       return
@@ -355,8 +395,9 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
     await ctx.reply('Summarizing session...')
 
     const chatMessages = messages.filter((m: any) => m.role !== 'system')
+    // Ask for a meaningful title and then the summary body
     const summaryPrompt =
-      'Please summarize the above conversation concisely, preserving all key information, decisions, and context. Focus on the essential points that would be needed to continue the conversation.'
+      'Start with a concise, meaningful title (max 10 words, no markdown, no "Summary of" prefix) on the first line. Then provide a detailed summary of the conversation below, preserving all key information, decisions, and context.'
 
     const summaryMessages = [
       ...chatMessages,
@@ -395,31 +436,33 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       }
     }
 
-    const lines = summaryText.split('\n').filter((l: string) => l.trim())
+    // First line is the title, the rest is the summary body
+    const lines = summaryText.split('\n')
     const firstLine = lines[0]?.trim() || ''
     const title =
-      firstLine.replace(/^#+\s*/, '').slice(0, 100) || 'Conversation Summary'
+      firstLine.replace(/^#+\s*/, '').slice(0, 100) || 'Conversation'
+    const body = lines.slice(1).join('\n').trim() || summaryText
 
     const { metadata: existingMeta, dateDir } = await findMetadata(
-      activeSessionId,
+      botSessionId,
       config.workspace,
     )
     if (dateDir) {
       const metaPath = getSessionMetadataPath(
-        activeSessionId,
+        botSessionId,
         dateDir,
         config.workspace,
       )
       await writeJson(metaPath, {
         ...(existingMeta || {}),
         title,
-        description: summaryText,
+        description: body,
         updatedAt: new Date().toISOString(),
       })
     }
 
     await ctx.replyWithMarkdown(
-      `*Session summarized*\n\n*Title:* ${escapeMarkdown(title)}\n*Description:* ${escapeMarkdown(summaryText.slice(0, 200))}...`,
+      `*Session summarized*\n\n*Title:* ${escapeMarkdown(title)}\n*Description:* ${escapeMarkdown(body.slice(0, 200))}...`,
     )
   } catch (err) {
     console.error(`[Messenger] Summarize error for "${config.name}":`, err)
@@ -440,10 +483,10 @@ async function handleNewSession(config: MessengerConfig, ctx: any) {
     const newId = Date.now().toString()
     const sessionPath = getSessionPath(newId, undefined, config.workspace)
     await writeJson(sessionPath, [])
-    workspaceConfig.activeSessionId = newId
+    workspaceConfig.activeSessionIdForBot = newId
     await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
 
-    await ctx.replyWithMarkdown(`*New session created*\n\nID: \`${newId}\``)
+    await ctx.replyWithMarkdown(`*New bot session created*\n\nID: \`${newId}\``)
   } catch (err) {
     console.error(`[Messenger] New session error for "${config.name}":`, err)
     await ctx.reply('Failed to create new session.')
@@ -516,12 +559,12 @@ async function handleSwitchSession(
       return
     }
 
-    workspaceConfig.activeSessionId = target.id
+    workspaceConfig.activeSessionIdForBot = target.id
     await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
 
     const title = target.title || `Session ${target.id.slice(-6)}`
     await ctx.replyWithMarkdown(
-      `*Switched to session*\n\n*Title:* ${escapeMarkdown(title)}\n*ID:* \`${target.id}\``,
+      `*Switched bot to session*\n\n*Title:* ${escapeMarkdown(title)}\n*ID:* \`${target.id}\``,
     )
   } catch (err) {
     console.error(`[Messenger] Switch session error for "${config.name}":`, err)
@@ -536,17 +579,48 @@ async function handleChatMessage(
 ) {
   const lockKey = `${config.id}:${config.workspace}`
 
-  // If the agent is already processing a message for this bot, reject
+  // If the agent is already processing a message for this bot, reject and show latest progress
   if (processing.has(lockKey)) {
     await ctx.reply(
       'The agent is currently processing a request. Please wait before sending another message.',
     )
+    // Send the last assistant text message from the session as a status update
+    try {
+      const wsConfig = await readJson<WorkspaceConfig>(
+        getWorkspaceDataPath(config.workspace),
+      )
+      const botId = wsConfig.activeSessionIdForBot || wsConfig.activeSessionId
+      if (botId) {
+        const msgs = await findSessionFile(botId, config.workspace)
+        if (msgs && Array.isArray(msgs)) {
+          const lastText = [...msgs]
+            .reverse()
+            .find(
+              (m: any) =>
+                m.role === 'assistant' &&
+                m.parts?.some((p: any) => p.type === 'text'),
+            )
+          if (lastText) {
+            const textPart = lastText.parts.find((p: any) => p.type === 'text')
+            if (textPart?.text) {
+              await ctx.reply(textPart.text.slice(0, 2000))
+            }
+          }
+        }
+      }
+    } catch {
+      // Best effort
+    }
     return
   }
 
   processing.add(lockKey)
 
   try {
+    console.log(
+      `[Messenger] handleChatMessage: bot="${config.name}" session="${config.workspace}" text="${text.slice(0, 100)}"`,
+    )
+
     const workspaceConfig = await readJson<WorkspaceConfig>(
       getWorkspaceDataPath(config.workspace),
     )
@@ -555,30 +629,37 @@ async function handleChatMessage(
       return
     }
 
-    let {
+    const {
       activeSessionId,
+      activeSessionIdForBot,
       activeAgentId,
       folders: workspaceFolders,
     } = workspaceConfig
-    if (!activeSessionId) {
+    const botSessionId = activeSessionIdForBot || activeSessionId
+    console.log(
+      `[Messenger] workspace: activeSessionId="${activeSessionId}" activeSessionIdForBot="${activeSessionIdForBot}" botSessionId="${botSessionId}" activeAgentId="${activeAgentId}" folders=${workspaceFolders?.length}`,
+    )
+
+    let sessionId: string
+    if (!botSessionId) {
       // Create a new session
-      activeSessionId = Date.now().toString()
-      const sessionPath = getSessionPath(
-        activeSessionId,
-        undefined,
-        config.workspace,
-      )
+      sessionId = Date.now().toString()
+      const sessionPath = getSessionPath(sessionId, undefined, config.workspace)
       await writeJson(sessionPath, [])
-      // Update workspace config with the new session ID
-      workspaceConfig.activeSessionId = activeSessionId
+      // Update workspace config with the new bot session ID
+      workspaceConfig.activeSessionIdForBot = sessionId
       await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
+      console.log(`[Messenger] created new bot session: ${sessionId}`)
+    } else {
+      sessionId = botSessionId
     }
 
     // Load existing session messages
-    let messages = await findSessionFile(activeSessionId, config.workspace)
+    let messages = await findSessionFile(sessionId, config.workspace)
     if (!messages || !Array.isArray(messages)) {
       messages = []
     }
+    console.log(`[Messenger] loaded ${messages.length} existing messages`)
 
     // Load configs
     const [_aiConfig, mainConfig] = await Promise.all([
@@ -611,6 +692,9 @@ async function handleChatMessage(
           role: 'system',
           parts: [{ type: 'text', text: systemPrompt }],
         })
+        console.log(
+          `[Messenger] added system prompt (${systemPrompt.length} chars)`,
+        )
       }
     }
 
@@ -621,10 +705,13 @@ async function handleChatMessage(
       parts: [{ type: 'text', text }],
     }
     updatedMessages.push(userMsg)
+    console.log(
+      `[Messenger] total messages before agent loop: ${updatedMessages.length}`,
+    )
 
     await ctx.reply('Processing your request...')
 
-    // Run the agent loop (no approval prompts)
+    // Run the agent loop (no approval prompts, no intermediate streaming)
     const activeFile = workspaceConfig.activeFile || ''
     const finalMessages = await runMessengerAgent(
       updatedMessages,
@@ -632,19 +719,17 @@ async function handleChatMessage(
       workspaceFolders,
       activeFile,
       toolsConfig,
-      (progressText: string) => {
-        // Stream command output — send as a status update
-        ctx.reply(`\`\`\`\n${progressText}\n\`\`\``).catch(() => {})
-      },
+      () => {}, // No-op progress — we only reply when the full loop finishes
+    )
+
+    console.log(
+      `[Messenger] agent loop finished, total messages: ${finalMessages.length}`,
     )
 
     // Save the session — write to today's date directory
-    const sessionPath = getSessionPath(
-      activeSessionId,
-      undefined,
-      config.workspace,
-    )
+    const sessionPath = getSessionPath(sessionId, undefined, config.workspace)
     await writeJson(sessionPath, finalMessages)
+    console.log(`[Messenger] session saved to ${sessionPath}`)
 
     // Extract the last assistant text message for the reply
     const lastAssistant = [...finalMessages]
@@ -660,12 +745,14 @@ async function handleChatMessage(
       if (textPart) replyText = textPart.text
     }
 
+    console.log(`[Messenger] replying with ${replyText.length} chars`)
     await ctx.reply(replyText)
   } catch (err) {
     console.error(`[Messenger] Chat error for "${config.name}":`, err)
     await ctx.reply('An error occurred while processing your request.')
   } finally {
     processing.delete(lockKey)
+    console.log(`[Messenger] processing lock released for "${config.name}"`)
   }
 }
 

@@ -23,12 +23,14 @@ export function createRunCommand(
       execute: async ({ command, cwd }: { command: string; cwd?: string }) => {
         const runCwd = cwd || workspaceFolders[0] || '.'
 
-        const approved = await requestAiApproval({
-          command,
-          cwd: runCwd,
-        })
-
-        if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED
+        // Auto-approve when the tool context says so (e.g. messenger bot)
+        if (!context.autoApproveCommands) {
+          const approved = await requestAiApproval({
+            command,
+            cwd: runCwd,
+          })
+          if (!approved) return ERROR_MESSAGES.COMMAND_REJECTED
+        }
 
         try {
           return await new Promise<string>((resolve, reject) => {

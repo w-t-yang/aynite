@@ -37,6 +37,7 @@ export interface WorkspaceConfig {
   activeLayoutId: string
   activeAgentId: string
   activeSessionId: string | null
+  activeSessionIdForBot?: string | null
   folders: string[]
   files: string[]
   activeFile?: string
