@@ -5,6 +5,8 @@ export interface SessionMetadata {
   modelName: string
   createdAt: string
   updatedAt: string
+  title?: string
+  description?: string
 }
 
 export type ErrorType = 'provider' | 'tool' | 'system'

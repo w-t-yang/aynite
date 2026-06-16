@@ -184,13 +184,21 @@ export async function compactContext(sessionId: string) {
     // Messages after (and including) the last user message
     const afterLastUser = allMessages.slice(lastUserIdx)
 
-    // Step 2: Save backup of the full pre-compacted messages
+    // Step 2: Save backup of the full pre-compacted messages with title & description
     const timestamp = Date.now()
-    await aiMutations.saveSession(
-      `${sessionId}-${timestamp}`,
-      allMessages,
-      undefined,
-    )
+    const backupId = `${sessionId}-${timestamp}`
+    const firstUserMsg = allMessages.find((m) => m.role === 'user')
+    const firstUserText =
+      firstUserMsg?.parts
+        ?.filter((p) => p.type === 'text')
+        .map((p: any) => p.text)
+        .join('')
+        ?.slice(0, 80) || ''
+
+    await aiMutations.saveSession(backupId, allMessages, {
+      title: `Compact backup - ${new Date(timestamp).toLocaleString()}`,
+      description: firstUserText + (firstUserText.length >= 80 ? '...' : ''),
+    })
 
     // Also save to localStorage so the metadata agent/model is preserved
     // The backup file is already saved above

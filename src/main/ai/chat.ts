@@ -88,10 +88,8 @@ export async function saveSession(
 
   if (metadata) {
     const metaPath = getSessionMetadataPath(id, undefined, workspace)
-    const exists = await stat(metaPath).catch(() => null)
-    if (!exists) {
-      await writeJson(metaPath, metadata)
-    }
+    const existing = await readJson<SessionMetadata>(metaPath).catch(() => null)
+    await writeJson(metaPath, { ...(existing || {}), ...metadata })
   }
 
   // Session saved notification is no longer sent globally.
@@ -157,6 +155,11 @@ export async function listSessions(workspace: string) {
         !f.name.endsWith('-metadata.json')
       ) {
         const id = f.name.replace('.json', '')
+
+        // Skip backup sessions (created by compact context — <session-id>-<timestamp>)
+        // Match: the id ends with `-` followed by a 13-digit timestamp
+        if (/-\d{13}$/.test(id)) continue
+
         const sessionPath = getSessionPath(id, date, workspace)
         const metaPath = getSessionMetadataPath(id, date, workspace)
 
@@ -167,24 +170,38 @@ export async function listSessions(workspace: string) {
         ])
 
         if (content && Array.isArray(content)) {
-          const firstUser = content.find((m: any) => m.role === 'user')
-          const preview =
-            (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') ||
-            'No content'
+          // Use metadata title/description when available (e.g. compact backup summary)
+          if (metadata?.title && metadata?.description) {
+            all.push({
+              id,
+              date,
+              title: metadata.title,
+              preview: metadata.description,
+              lastModified:
+                stats?.mtime.toISOString() || new Date().toISOString(),
+              messageCount: content.length,
+            })
+          } else {
+            const firstUser = content.find((m: any) => m.role === 'user')
+            const preview =
+              (firstUser as any)?.parts
+                ?.map((p: any) => p.text || '')
+                .join('') || 'No content'
 
-          const title = metadata
-            ? `${metadata.agentName} - ${metadata.modelName}`
-            : `Session ${id.slice(-6)}`
+            const title = metadata
+              ? `${metadata.agentName} - ${metadata.modelName}`
+              : `Session ${id.slice(-6)}`
 
-          all.push({
-            id,
-            date,
-            title,
-            preview,
-            lastModified:
-              stats?.mtime.toISOString() || new Date().toISOString(),
-            messageCount: content.length,
-          })
+            all.push({
+              id,
+              date,
+              title,
+              preview,
+              lastModified:
+                stats?.mtime.toISOString() || new Date().toISOString(),
+              messageCount: content.length,
+            })
+          }
         }
       }
     }
