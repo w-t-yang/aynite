@@ -5,6 +5,7 @@
 
 import { getMessengersConfigPath, readJson, writeJson } from '../../../lib/path'
 import type { MessengerConfig } from '../../../lib/types/ai'
+import { reloadMessengers } from '../../messengers'
 import type { ConfigHandler } from '../handler-registry'
 
 export const messengerHandlers: ConfigHandler = (() => ({
@@ -26,6 +27,10 @@ export const messengerHandlers: ConfigHandler = (() => ({
       case 'messengers': {
         const dataPath = getMessengersConfigPath()
         await writeJson(dataPath, payload)
+        // Reload bots in the background (start enabled, stop disabled)
+        reloadMessengers().catch((err) =>
+          console.error('[Messenger] Failed to reload bots:', err),
+        )
         return true
       }
       default:

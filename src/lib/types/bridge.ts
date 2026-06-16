@@ -29,6 +29,8 @@ export type ConfigSchema = {
   'tile-data': any
   'playbook-path': string
   telemetry: { enabled: boolean; clientId?: string }
+  autoCompactThreshold: number
+  messengers: import('./ai').MessengerConfig[]
 }
 
 export interface GlobalAPI {

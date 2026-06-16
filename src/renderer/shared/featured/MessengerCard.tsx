@@ -1,13 +1,12 @@
+import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { DESCRIPTION_TEXT } from '../../../lib/constants/renderer/styles'
 import type { MessengerConfig } from '../../../lib/types/ai'
+import { Button } from '../basic/Button'
 import { Input } from '../basic/Input'
 import { Switch } from '../basic/Switch'
-import {
-  DeleteItemModal,
-  EditableCardFrame,
-  EditableCardHeader,
-} from './EditableCard'
+import { cn } from '../lib/utils'
+import { DeleteItemModal } from './EditableCard'
 import { SelectionMenu } from './SelectionMenu'
 
 interface MessengerCardProps {
@@ -25,18 +24,44 @@ export function MessengerCard({
 }: MessengerCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
+  const isConfigured =
+    messenger.name.trim() &&
+    messenger.apiKey.trim() &&
+    messenger.workspace.trim()
+
+  const handleToggle = (enabled: boolean) => {
+    if (enabled && !isConfigured) return // Cannot enable if not configured
+    onUpdate(messenger.id, 'enabled', enabled)
+  }
+
   return (
     <>
-      <EditableCardFrame isActive={true}>
-        <EditableCardHeader
-          radioName="messenger-item"
-          isActive={true}
-          onSetActive={() => {}}
-          itemName={messenger.name}
-          onNameChange={(v) => onUpdate(messenger.id, 'name', v)}
-          placeholder="Messenger Name"
-          onDeleteRequest={() => setShowDeleteModal(true)}
-        />
+      <div
+        className={cn(
+          'p-5 rounded-xl border transition-all space-y-4',
+          messenger.enabled
+            ? 'border-primary bg-accent/5'
+            : 'border-border bg-accent/5',
+        )}
+      >
+        {/* Header without radio */}
+        <div className="flex items-center justify-between">
+          <Input
+            unstyled
+            className="font-bold w-64"
+            value={messenger.name}
+            onChange={(e) => onUpdate(messenger.id, 'name', e.target.value)}
+            placeholder="Messenger Name"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowDeleteModal(true)}
+            className="hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 size={16} />
+          </Button>
+        </div>
 
         <div className="grid grid-cols-2 gap-4 ml-7">
           <div className="col-span-2">
@@ -62,14 +87,18 @@ export function MessengerCard({
           <div className="col-span-2 flex items-center gap-3 pt-1">
             <Switch
               checked={messenger.enabled}
-              onCheckedChange={(v) => onUpdate(messenger.id, 'enabled', v)}
+              onCheckedChange={handleToggle}
             />
             <span className="text-xs font-medium text-muted-foreground">
-              {messenger.enabled ? 'Enabled' : 'Disabled'}
+              {messenger.enabled
+                ? 'Enabled'
+                : !isConfigured
+                  ? 'Complete name, API key, and workspace to enable'
+                  : 'Disabled'}
             </span>
           </div>
         </div>
-      </EditableCardFrame>
+      </div>
 
       <DeleteItemModal
         isOpen={showDeleteModal}
