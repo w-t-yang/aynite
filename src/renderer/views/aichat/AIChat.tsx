@@ -25,6 +25,7 @@ export function AIChat() {
     settings,
     messages,
     loading,
+    compacting,
     currentStep,
     pendingApproval,
     workspaceFolders,
@@ -34,6 +35,7 @@ export function AIChat() {
     handleReject,
     sendMessage,
     clearChat,
+    compactContext,
     loadSessions,
     copyToClipboard,
     revertToMessage,
@@ -169,6 +171,7 @@ export function AIChat() {
             ref={scrollRef}
             messages={messages}
             loading={loading}
+            compacting={compacting}
             currentStep={currentStep}
             pendingApproval={pendingApproval}
             onApprove={handleApprove}
@@ -187,9 +190,11 @@ export function AIChat() {
             ref={inputRef}
             workspaceFolders={workspaceFolders}
             loading={loading}
+            compacting={compacting}
             onSend={sendMessage}
             onAbort={() => abortRef.current?.abort()}
             onClear={clearChat}
+            onCompact={compactContext}
             getAllFiles={getAllFiles}
             getAvailableSkills={getAvailableSkills}
             getAvailableCommands={getAvailableCommands}

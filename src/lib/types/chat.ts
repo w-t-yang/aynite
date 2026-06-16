@@ -13,6 +13,7 @@ export interface SessionState {
   sessionId: string | null
   messages: UIMessage[]
   loading: boolean
+  compacting: boolean
   error: { message: string; redacted: string; type: ErrorType } | null
   currentStep: TextStreamPart<any> | null
   pendingApproval: { command: string; cwd: string } | null

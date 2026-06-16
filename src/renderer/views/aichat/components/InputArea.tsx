@@ -16,9 +16,11 @@ import { type ChatInputHandle, InputEditor } from './InputEditor'
 
 interface InputAreaProps {
   loading: boolean
+  compacting: boolean
   onSend: (text: string) => void
   onAbort: () => void
   onClear: () => void
+  onCompact: () => void
   workspaceFolders: string[]
   getAllFiles: () => Promise<any>
   getAvailableSkills: () => Promise<any>
@@ -40,9 +42,11 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
   (
     {
       loading,
+      compacting,
       onSend,
       onAbort,
       onClear,
+      onCompact,
       workspaceFolders,
       getAllFiles,
       getAvailableSkills,
@@ -118,51 +122,49 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
               />
             </div>
 
-            {tokenCount > 0 && (
+            {(tokenCount > 0 || compacting) && (
               <SelectionMenu
                 items={[
                   {
-                    id: 'context-info',
-                    label: '',
-                    subtitle: '',
-                    disabled: true,
+                    id: 'compact-context',
+                    label: t('compact.button'),
+                    subtitle: t('tokens.info'),
+                    disabled: compacting || loading,
                   },
                 ]}
-                onSelect={() => {}}
+                onSelect={(id) => {
+                  if (id === 'compact-context') onCompact()
+                }}
                 side="top"
                 align="right"
-                footer={
-                  <div className="px-3 py-2.5 max-w-[220px]">
-                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                      {t('tokens.info')}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed mt-2">
-                      {t('tokens.hint')}
-                    </p>
-                  </div>
-                }
                 trigger={
                   <div
                     className={cn(
                       'flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all select-none',
-                      tokenCount >= 800_000
-                        ? 'bg-destructive/10 border-destructive/20 text-destructive/80 hover:bg-destructive/15'
-                        : tokenCount >= 500_000
-                          ? 'bg-warning/10 border-warning/20 text-warning/80 hover:bg-warning/15'
-                          : 'bg-foreground/[0.02] border-border/5 text-muted-foreground/40 hover:bg-foreground/[0.04] hover:text-muted-foreground/60',
+                      compacting
+                        ? 'bg-primary/10 border-primary/20 text-primary/60'
+                        : tokenCount >= 800_000
+                          ? 'bg-destructive/10 border-destructive/20 text-destructive/80 hover:bg-destructive/15'
+                          : tokenCount >= 500_000
+                            ? 'bg-warning/10 border-warning/20 text-warning/80 hover:bg-warning/15'
+                            : 'bg-foreground/[0.02] border-border/5 text-muted-foreground/40 hover:bg-foreground/[0.04] hover:text-muted-foreground/60',
                     )}
                   >
                     <div
                       className={cn(
                         'w-1 h-1 rounded-full animate-pulse',
-                        tokenCount >= 800_000
-                          ? 'bg-destructive/60'
-                          : tokenCount >= 500_000
-                            ? 'bg-warning/60'
-                            : 'bg-primary/30',
+                        compacting
+                          ? 'bg-primary/60'
+                          : tokenCount >= 800_000
+                            ? 'bg-destructive/60'
+                            : tokenCount >= 500_000
+                              ? 'bg-warning/60'
+                              : 'bg-primary/30',
                       )}
                     />
-                    {formatNumber(tokenCount)} tokens
+                    {compacting
+                      ? t('compact.compacting')
+                      : `${formatNumber(tokenCount)} tokens`}
                   </div>
                 }
                 title={t('input.contextTokens')}
@@ -206,9 +208,13 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
           )}
           <InputEditor
             ref={ref}
-            placeholder="Type your message or use / for skills..."
+            placeholder={
+              compacting
+                ? 'Compacting context...'
+                : 'Type your message or use / for skills...'
+            }
             onSend={onSend}
-            loading={loading}
+            loading={loading || compacting}
             onAbort={onAbort}
             onClear={onClear}
             workspaceFolders={workspaceFolders}

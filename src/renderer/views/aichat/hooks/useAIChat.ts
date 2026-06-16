@@ -44,6 +44,7 @@ export function useAIChat() {
     sessionId: null,
     messages: [],
     loading: false,
+    compacting: false,
     error: null,
     currentStep: null,
     pendingApproval: null,
@@ -170,6 +171,12 @@ export function useAIChat() {
     // first message in the new session (see sendMessage's fire-and-forget write).
   }, [activeSessionId])
 
+  const compactContext = useCallback(async () => {
+    if (activeSessionId) {
+      await ChatService.compactContext(activeSessionId)
+    }
+  }, [activeSessionId])
+
   const handleApprove = useCallback(() => {
     if (activeSessionId) ChatService.handleApprove(activeSessionId)
   }, [activeSessionId])
@@ -264,6 +271,7 @@ export function useAIChat() {
     // From ChatService (session state)
     messages: sessionState.messages,
     loading: sessionState.loading,
+    compacting: sessionState.compacting,
     currentStep: sessionState.currentStep,
     pendingApproval: sessionState.pendingApproval,
     error: sessionState.error,
@@ -284,6 +292,7 @@ export function useAIChat() {
     // Actions
     sendMessage,
     clearChat,
+    compactContext,
     handleApprove,
     handleReject,
     loadSessions,

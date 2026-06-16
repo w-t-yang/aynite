@@ -1,4 +1,5 @@
 import type { TextStreamPart, UIMessage } from 'ai'
+import { Shrink } from 'lucide-react'
 import { forwardRef } from 'react'
 import { FLEX_CENTER_GAP_3 } from '../../../../lib/constants/renderer/styles'
 import { ApprovalModal } from './ApprovalModal'
@@ -8,6 +9,7 @@ import { StreamingIndicator } from './StreamingIndicator'
 interface ListProps {
   messages: UIMessage[]
   loading: boolean
+  compacting: boolean
   currentStep: TextStreamPart<any> | null
   pendingApproval: { command: string; cwd: string } | null
   onApprove: () => void
@@ -23,6 +25,7 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
     {
       messages,
       loading,
+      compacting,
       currentStep,
       pendingApproval,
       onApprove,
@@ -97,7 +100,23 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
             />
           )}
 
-          {loading && <StreamingIndicator step={currentStep} />}
+          {loading && !compacting && <StreamingIndicator step={currentStep} />}
+
+          {compacting && (
+            <div className="mb-3 px-6 py-2">
+              <div className="flex items-center gap-2.5 text-primary/60">
+                <Shrink size={14} className="animate-pulse" />
+                <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">
+                  Compacting context...
+                </span>
+                <div className="flex gap-1 ml-1 opacity-40">
+                  <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1 h-1 rounded-full bg-current animate-bounce" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )

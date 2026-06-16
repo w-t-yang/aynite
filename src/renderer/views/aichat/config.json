@@ -22,8 +22,12 @@
         "stop": "Stop (Esc)"
       },
       "tokens": {
-        "info": "Estimated context usage based on message content size.",
-        "hint": "Start a new session if the context is too large."
+        "info": "Estimation of the context window."
+      },
+      "compact": {
+        "button": "Compact context",
+        "compacting": "Compacting context...",
+        "prompt": "Please summarize the above conversation concisely, preserving all key information, decisions, and context."
       },
       "error": {
         "tool": "Tool execution error",
@@ -76,8 +80,12 @@
         "stop": "停止 (Esc)"
       },
       "tokens": {
-        "info": "基于消息内容大小估算的上下文使用量。",
-        "hint": "如果上下文过大，请开始新会话。"
+        "info": "上下文窗口的估算。"
+      },
+      "compact": {
+        "button": "压缩上下文",
+        "compacting": "正在压缩上下文...",
+        "prompt": "请将以上对话内容进行简洁总结，保留所有关键信息、决策和上下文。"
       },
       "error": {
         "tool": "工具执行错误",

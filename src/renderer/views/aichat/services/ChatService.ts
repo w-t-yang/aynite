@@ -134,6 +134,182 @@ export function unregisterStreamHandler(requestId: string): void {
   activeStreams.delete(requestId)
 }
 
+// ─── Compact Context ─────────────────────────────────────────────────────
+
+/**
+ * Compact a session's context by summarizing older messages.
+ *
+ * Algorithm:
+ * 1. Find the last user message in the list. Everything before it (including
+ *    the system message) will be summarized.
+ * 2. Save the full pre-compacted messages to a backup file:
+ *    `<session-id>-<timestamp>.json`
+ * 3. Build a temporary messages array: (system message, all pre-last-user
+ *    messages, a "please summarize" user message)
+ * 4. Send this to the AI (no tools) to get a concise summary
+ * 5. Replace the old messages with: (system message, summary as assistant msg,
+ *    last user message, its subsequent messages)
+ * 6. Save the compacted messages back to the original session file
+ */
+export async function compactContext(sessionId: string) {
+  const session = sessions.get(sessionId)
+  if (!session || session.state.messages.length === 0) return
+
+  // Prevent concurrent operations
+  if (session.state.loading || session.state.compacting) return
+
+  // Set compacting state
+  updateState(session, { compacting: true })
+
+  try {
+    const allMessages = session.state.messages
+
+    // Step 1: Find the last user message
+    let lastUserIdx = -1
+    for (let i = allMessages.length - 1; i >= 0; i--) {
+      if (allMessages[i].role === 'user') {
+        lastUserIdx = i
+        break
+      }
+    }
+    if (lastUserIdx < 0) {
+      // No user message found — nothing to compact
+      updateState(session, { compacting: false })
+      return
+    }
+
+    // Messages to summarize: everything before lastUserIdx
+    const toSummarize = allMessages.slice(0, lastUserIdx)
+    // Messages after (and including) the last user message
+    const afterLastUser = allMessages.slice(lastUserIdx)
+
+    // Step 2: Save backup of the full pre-compacted messages
+    const timestamp = Date.now()
+    await aiMutations.saveSession(
+      `${sessionId}-${timestamp}`,
+      allMessages,
+      undefined,
+    )
+
+    // Also save to localStorage so the metadata agent/model is preserved
+    // The backup file is already saved above
+
+    // Step 3: Build summary messages
+    // Find the system message
+    const systemMsg = toSummarize.find((m) => m.role === 'system')
+    const nonSystemToSummarize = toSummarize.filter((m) => m.role !== 'system')
+
+    // Get the summary prompt from the config or use default
+    const summaryPrompt =
+      'Please summarize the above conversation concisely, preserving all key information, decisions, and context. Focus on the essential points that would be needed to continue the conversation.'
+
+    const summaryMessages: UIMessage[] = systemMsg
+      ? [systemMsg, ...nonSystemToSummarize]
+      : nonSystemToSummarize
+
+    // Add a user message asking for summary
+    const summaryRequestMsg: UIMessage = {
+      id: genId(),
+      role: 'user',
+      parts: [{ type: 'text', text: summaryPrompt }],
+    }
+    summaryMessages.push(summaryRequestMsg)
+
+    // Step 4: Send to AI for summarization (no tools)
+    // Fetch AI config
+    const aiConfig = await config.get('ai')
+    const activeProvider =
+      aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
+      aiConfig?.providers?.[0]
+
+    if (!activeProvider) {
+      updateState(session, { compacting: false })
+      return
+    }
+
+    // We need to make a direct AI call. Use aiMutations.chat with no tools.
+    const result = await new Promise<string>((resolve, reject) => {
+      aiMutations
+        .chat({
+          messages: summaryMessages,
+          config: {
+            id: 'temp',
+            name: 'Temp',
+            provider: activeProvider.provider || 'ollama',
+            baseUrl: activeProvider.baseUrl || '',
+            apiKey: activeProvider.apiKey || '',
+            model: activeProvider.model || '',
+            compatibility: activeProvider.compatibility,
+            enabledTools: {}, // No tools for summarization
+          },
+          workspaceFolders: [],
+        })
+        .then((res: { requestId?: string }) => {
+          const requestId = res.requestId
+          if (!requestId) {
+            resolve('')
+            return
+          }
+
+          let summaryText = ''
+          const _unsub = registerStreamHandler(requestId, (part: any) => {
+            if (part.type === 'text-delta') {
+              summaryText += part.text
+            }
+            if (part.type === 'finish') {
+              unregisterStreamHandler(requestId)
+              resolve(summaryText)
+            }
+            if (part.type === 'error') {
+              unregisterStreamHandler(requestId)
+              reject(new Error(String(part.error)))
+            }
+          })
+
+          // Safety timeout
+          setTimeout(() => {
+            unregisterStreamHandler(requestId)
+            resolve(summaryText)
+          }, 60000)
+        })
+        .catch(reject)
+    })
+
+    // Step 5: Build the compacted message list
+    const systemOnly = systemMsg ? [systemMsg] : []
+
+    // Create the summary as an assistant message
+    const summaryAssistantMsg: UIMessage = {
+      id: genId(),
+      role: 'assistant',
+      parts: [{ type: 'text', text: result, state: 'done' }],
+    }
+
+    const compactedMessages: UIMessage[] = [
+      ...systemOnly,
+      summaryAssistantMsg,
+      ...afterLastUser,
+    ]
+
+    // Step 6: Update state and save
+    session.state = {
+      ...session.state,
+      messages: compactedMessages,
+    }
+    session.lastSavedSnapshot = ''
+
+    // Force save immediately
+    await aiMutations.saveSession(sessionId, compactedMessages, undefined)
+
+    // Notify listeners
+    notify(session)
+  } catch (err) {
+    console.error('[ChatService] Compact context failed:', err)
+  } finally {
+    updateState(session, { compacting: false })
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────
 
 /**
@@ -201,6 +377,7 @@ export function getOrCreateSession(sessionId: string): InternalSession {
         sessionId,
         messages: [],
         loading: false,
+        compacting: false,
         error: null,
         currentStep: null,
         pendingApproval: null,

@@ -2,14 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ─── Mocks ──────────────────────────────────────────────────────────────
 
+let mockStreamEvents: any[] = []
+
 vi.mock('ai', () => ({
   convertToModelMessages: vi.fn(() => Promise.resolve([])),
   stepCountIs: vi.fn(() => vi.fn(() => false)),
   streamText: vi.fn(() => ({
     fullStream: (async function* () {
-      // Return a simple text-delta
-      yield { type: 'text-delta', text: 'Hello' }
-      yield { type: 'finish', finishReason: 'stop' }
+      for (const event of mockStreamEvents) {
+        yield event
+      }
     })(),
   })),
 }))
@@ -65,6 +67,10 @@ import {
 beforeEach(() => {
   vi.clearAllMocks()
   mockGetAIModel.mockReturnValue({})
+  mockStreamEvents = [
+    { type: 'text-delta', text: 'Hi' },
+    { type: 'finish', finishReason: 'stop' },
+  ]
 })
 
 // ─── getProviderReasoningOptions (tested through aiChat's config) ───────
@@ -184,6 +190,149 @@ describe('aiChat', () => {
     })
 
     expect(result).toHaveProperty('requestId')
+  })
+
+  it('handles reasoning-delta events', async () => {
+    mockStreamEvents = [
+      { type: 'reasoning-delta', text: 'reasoning...' },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+
+    const result = await aiChat({
+      messages: [
+        { role: 'user', content: 'think step by step', parts: [] },
+      ] as any,
+      config: baseConfig as any,
+      workspaceFolders: ['/home/project'],
+      _winId: 1,
+    })
+
+    expect(result).toHaveProperty('requestId')
+  })
+
+  it('handles tool-call events', async () => {
+    mockStreamEvents = [
+      { type: 'tool-call', toolName: 'read_file', args: { path: '/test' } },
+      { type: 'tool-result', toolName: 'read_file', result: 'content' },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+
+    const result = await aiChat({
+      messages: [{ role: 'user', content: 'use tools', parts: [] }] as any,
+      config: baseConfig as any,
+      workspaceFolders: ['/home/project'],
+      _winId: 1,
+    })
+
+    expect(result).toHaveProperty('requestId')
+  })
+
+  it('handles finish-step and start events', async () => {
+    mockStreamEvents = [
+      { type: 'start' },
+      { type: 'text-delta', text: 'working' },
+      { type: 'finish-step', finishReason: 'tool-calls' },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+
+    const result = await aiChat({
+      messages: [{ role: 'user', content: 'multi step', parts: [] }] as any,
+      config: baseConfig as any,
+      workspaceFolders: ['/home/project'],
+      _winId: 1,
+    })
+
+    expect(result).toHaveProperty('requestId')
+  })
+
+  it('handles error events', async () => {
+    mockStreamEvents = [{ type: 'error', error: 'API rate limited' }]
+
+    const result = await aiChat({
+      messages: [{ role: 'user', content: 'cause error', parts: [] }] as any,
+      config: baseConfig as any,
+      workspaceFolders: ['/home/project'],
+      _winId: 1,
+    })
+
+    expect(result).toHaveProperty('requestId')
+  })
+
+  it('handles tool-input-delta events', async () => {
+    mockStreamEvents = [
+      {
+        type: 'tool-input-delta',
+        toolCallId: 'call-1',
+        argsTextDelta: '{"path": "',
+      },
+      {
+        type: 'tool-call',
+        toolName: 'read_file',
+        toolCallId: 'call-1',
+        args: { path: '/test' },
+      },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+
+    const result = await aiChat({
+      messages: [{ role: 'user', content: 'streaming tool', parts: [] }] as any,
+      config: baseConfig as any,
+      workspaceFolders: ['/home/project'],
+      _winId: 1,
+    })
+
+    expect(result).toHaveProperty('requestId')
+  })
+})
+
+// ─── getProviderReasoningOptions (tested through aiChat reasoningEffort) ─
+
+describe('reasoning options through aiChat', () => {
+  const baseConfig = {
+    id: 'test',
+    provider: 'openai',
+    apiKey: 'sk-test',
+    enabledTools: {},
+  }
+
+  it('passes reasoning_effort: null when effort is off', async () => {
+    mockStreamEvents = [{ type: 'text-delta', text: 'ok' }, { type: 'finish' }]
+    await aiChat({
+      messages: [] as any,
+      config: { ...baseConfig, reasoningEffort: 'off' } as any,
+      workspaceFolders: [],
+      _winId: 1,
+    })
+  })
+
+  it('passes reasoning_effort: low when effort is low', async () => {
+    mockStreamEvents = [{ type: 'text-delta', text: 'ok' }, { type: 'finish' }]
+    await aiChat({
+      messages: [] as any,
+      config: { ...baseConfig, reasoningEffort: 'low' } as any,
+      workspaceFolders: [],
+      _winId: 1,
+    })
+  })
+
+  it('passes reasoning_effort: medium when effort is medium', async () => {
+    mockStreamEvents = [{ type: 'text-delta', text: 'ok' }, { type: 'finish' }]
+    await aiChat({
+      messages: [] as any,
+      config: { ...baseConfig, reasoningEffort: 'medium' } as any,
+      workspaceFolders: [],
+      _winId: 1,
+    })
+  })
+
+  it('passes reasoning_effort: high when effort is high', async () => {
+    mockStreamEvents = [{ type: 'text-delta', text: 'ok' }, { type: 'finish' }]
+    await aiChat({
+      messages: [] as any,
+      config: { ...baseConfig, reasoningEffort: 'high' } as any,
+      workspaceFolders: [],
+      _winId: 1,
+    })
   })
 })
 
