@@ -24,9 +24,11 @@ import {
   getWorkspaceState,
   getWorkspacesList,
   removeWorkspaceFolder,
+  renameWorkspaceFolder,
   reorderWorkspaceFolders,
   saveWorkspaceState,
   switchWorkspace,
+  updateTileData,
 } from '../../../src/main/workspace/logic'
 
 describe('workspace/logic', () => {
@@ -300,6 +302,193 @@ describe('workspace/logic', () => {
       await expect(deleteWorkspace('only')).rejects.toThrow(
         'Cannot delete the last workspace',
       )
+    })
+  })
+
+  // ── renameWorkspaceFolder ──────────────────────────────────────────────
+
+  describe('renameWorkspaceFolder', () => {
+    it('updates exact match folder path', async () => {
+      mockReaddir.mockResolvedValue([{ name: 'Dev', isDirectory: () => true }])
+      mockReadJson.mockResolvedValue({
+        id: 'Dev',
+        folders: ['/old/path', '/other/path'],
+      })
+      mockWriteJson.mockResolvedValue(undefined)
+
+      await renameWorkspaceFolder('/old/path', '/new/path')
+
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        '/mock/.aynite/workspaces/Dev/config.json',
+        expect.objectContaining({
+          folders: ['/new/path', '/other/path'],
+        }),
+      )
+    })
+
+    it('updates subpath when parent folder is renamed', async () => {
+      mockReaddir.mockResolvedValue([{ name: 'Dev', isDirectory: () => true }])
+      mockReadJson.mockResolvedValue({
+        id: 'Dev',
+        folders: ['/old/path/subfolder', '/other/path'],
+      })
+
+      await renameWorkspaceFolder('/old/path', '/new/path')
+
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          folders: ['/new/path/subfolder', '/other/path'],
+        }),
+      )
+    })
+
+    it('does nothing when folder not found in any workspace', async () => {
+      mockReaddir.mockResolvedValue([{ name: 'Dev', isDirectory: () => true }])
+      mockReadJson.mockResolvedValue({
+        id: 'Dev',
+        folders: ['/unrelated/path'],
+      })
+
+      await renameWorkspaceFolder('/nonexistent', '/new')
+
+      expect(mockWriteJson).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── updateTileData ────────────────────────────────────────────────────
+
+  describe('updateTileData', () => {
+    it('updates leaf node data by tile ID', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'Dev',
+        list: ['Dev'],
+      })
+      mockReadJson.mockResolvedValueOnce({
+        id: 'Dev',
+        layouts: [
+          {
+            id: 'default',
+            layout: {
+              id: 'canvas-leaf',
+              type: 'leaf',
+              name: 'canvas',
+              size: 100,
+            },
+          },
+        ],
+        activeLayoutId: 'default',
+        folders: [],
+        files: [],
+      })
+      mockWriteJson.mockResolvedValue(undefined)
+
+      await updateTileData('canvas-leaf', {
+        file: '/playbook/canvas-example.json',
+      })
+
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        '/mock/.aynite/workspaces/Dev/config.json',
+        expect.objectContaining({
+          layouts: [
+            expect.objectContaining({
+              layout: expect.objectContaining({
+                data: { file: '/playbook/canvas-example.json' },
+              }),
+            }),
+          ],
+        }),
+      )
+    })
+
+    it('does not write when tile ID not found', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'Dev',
+        list: ['Dev'],
+      })
+      mockReadJson.mockResolvedValueOnce({
+        id: 'Dev',
+        layouts: [
+          {
+            id: 'default',
+            layout: { id: 'leaf-1', type: 'leaf', size: 100 },
+          },
+        ],
+        activeLayoutId: 'default',
+        folders: [],
+        files: [],
+      })
+
+      await updateTileData('nonexistent-tile', { file: '/data.json' })
+
+      expect(mockWriteJson).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── addWorkspaceFolder edge cases ──────────────────────────────────────
+
+  describe('addWorkspaceFolder edge cases', () => {
+    it('replaces parent when adding a parent of existing folders', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'Dev',
+        list: ['Dev'],
+      })
+      mockReadJson.mockResolvedValueOnce({
+        id: 'Dev',
+        folders: ['/project/src', '/project/docs'],
+        files: [],
+      })
+      mockWriteJson.mockResolvedValue(undefined)
+
+      const result = await addWorkspaceFolder('/project')
+
+      expect(result).toMatchObject({
+        success: true,
+        reason: 'is_parent_of_existing',
+        removed: ['/project/src', '/project/docs'],
+      })
+      expect(mockWriteJson).toHaveBeenCalled()
+    })
+
+    it('returns child-of-existing when new path is under existing', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'Dev',
+        list: ['Dev'],
+      })
+      mockReadJson.mockResolvedValueOnce({
+        id: 'Dev',
+        folders: ['/project/src'],
+        files: [],
+      })
+
+      const result = await addWorkspaceFolder('/project/src/components')
+
+      expect(result).toMatchObject({
+        success: true,
+        reason: 'is_child_of_existing',
+        parentPath: '/project/src',
+      })
+      expect(mockWriteJson).not.toHaveBeenCalled()
+    })
+
+    it('returns already_exists for duplicate path', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        active: 'Dev',
+        list: ['Dev'],
+      })
+      mockReadJson.mockResolvedValueOnce({
+        id: 'Dev',
+        folders: ['/project/src'],
+        files: [],
+      })
+
+      const result = await addWorkspaceFolder('/project/src')
+
+      expect(result).toMatchObject({
+        success: true,
+        reason: 'already_exists',
+      })
+      expect(mockWriteJson).not.toHaveBeenCalled()
     })
   })
 })
