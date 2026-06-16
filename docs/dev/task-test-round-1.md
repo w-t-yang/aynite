@@ -39,3 +39,24 @@ Goal: Build test coverage for the highest-risk areas.
 | Passing tests | 37 | **167** |
 | Failing tests | 16 | **0** |
 | Source extractions | — | `porcelain.ts`, `schema-validator.ts` |
+
+## Bonus: Additional tests completed alongside Round 1
+
+These tasks were originally planned for Round 2 but were completed as part of the initial test push:
+
+| Task | Test file | Tests | What it covers |
+|------|-----------|-------|----------------|
+| ~~T-007~~ | `tests/main/git/root-finder.test.ts` | 7 | Cached directory walker, boundary checks |
+| ~~T-009~~ | `tests/lib/operations.test.ts` | 16 | secureReadText, secureWriteText, secureEditFile, secureListDir, secureGrepSearch, secureGlobSearch, isPathWithinDomain |
+| ~~T-012~~ | `tests/main/workspace/logic.test.ts` | 18 | Workspace CRUD, folder management, state merge, deletion edge cases |
+| (new) | `tests/main/git/status-manager.test.ts` | 10 | Git status caching, refresh debounce |
+| (new) | `tests/main/git/git-watcher.test.ts` | 6 | File system watcher |
+| (new) | `tests/main/git/commit-gen.test.ts` | 3 | Commit message generation |
+
+## Current Suite (expanded to include all subsequent work)
+
+The test suite grew beyond Round 1's scope. As of the latest count:
+- **19 test files**
+- **307 passing tests**
+- **0 failing tests**
+- Covers: git (6 files), config/router (4 files), AI (1 file), workspace (1 file), path/utils (3 files), renderer (4 files)
