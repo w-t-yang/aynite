@@ -319,6 +319,9 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
     lines.push('*Commands:*')
     lines.push('`?` — Show workspace info')
     lines.push('`/summarize` — Summarize active session')
+    lines.push('`/new-session` — Create a new empty session')
+    lines.push('`/list-sessions` — List last 10 sessions')
+    lines.push('`/switch-session <index>` — Switch to a session by index')
 
     await ctx.replyWithMarkdown(lines.join('\n'))
   } catch (err) {
@@ -421,6 +424,108 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
   } catch (err) {
     console.error(`[Messenger] Summarize error for "${config.name}":`, err)
     await ctx.reply('Failed to summarize session.')
+  }
+}
+
+async function handleNewSession(config: MessengerConfig, ctx: any) {
+  try {
+    const workspaceConfig = await readJson<WorkspaceConfig>(
+      getWorkspaceDataPath(config.workspace),
+    )
+    if (!workspaceConfig) {
+      await ctx.reply(`Workspace "${config.workspace}" not found.`)
+      return
+    }
+
+    const newId = Date.now().toString()
+    const sessionPath = getSessionPath(newId, undefined, config.workspace)
+    await writeJson(sessionPath, [])
+    workspaceConfig.activeSessionId = newId
+    await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
+
+    await ctx.replyWithMarkdown(`*New session created*\n\nID: \`${newId}\``)
+  } catch (err) {
+    console.error(`[Messenger] New session error for "${config.name}":`, err)
+    await ctx.reply('Failed to create new session.')
+  }
+}
+
+async function handleListSessions(config: MessengerConfig, ctx: any) {
+  try {
+    const { listSessions } = await import('../ai/chat')
+    const sessions = await listSessions(config.workspace)
+
+    if (!sessions || sessions.length === 0) {
+      await ctx.reply('No sessions found.')
+      return
+    }
+
+    const top = sessions.slice(0, 10)
+    const lines: string[] = ['*Last 10 sessions:*', '']
+    top.forEach((s: any, i: number) => {
+      const title = s.title || `Session ${s.id.slice(-6)}`
+      const desc = s.preview
+        ? escapeMarkdown(s.preview.slice(0, 60))
+        : '_(no description)_'
+      lines.push(`*${i + 1}.* ${escapeMarkdown(title)}`)
+      lines.push(`   ${desc}`)
+    })
+
+    await ctx.replyWithMarkdown(lines.join('\n'))
+  } catch (err) {
+    console.error(`[Messenger] List sessions error for "${config.name}":`, err)
+    await ctx.reply('Failed to list sessions.')
+  }
+}
+
+async function handleSwitchSession(
+  config: MessengerConfig,
+  ctx: any,
+  args: string,
+) {
+  try {
+    const index = parseInt(args, 10)
+    if (Number.isNaN(index) || index < 1) {
+      await ctx.reply(
+        'Please provide a valid session index (e.g. `/switch-session 2`).',
+      )
+      return
+    }
+
+    const { listSessions } = await import('../ai/chat')
+    const sessions = await listSessions(config.workspace)
+
+    if (!sessions || sessions.length === 0) {
+      await ctx.reply('No sessions found.')
+      return
+    }
+
+    const target = sessions[index - 1]
+    if (!target) {
+      await ctx.reply(
+        `Session index ${index} not found. Use /list-sessions to see available sessions.`,
+      )
+      return
+    }
+
+    const workspaceConfig = await readJson<WorkspaceConfig>(
+      getWorkspaceDataPath(config.workspace),
+    )
+    if (!workspaceConfig) {
+      await ctx.reply(`Workspace "${config.workspace}" not found.`)
+      return
+    }
+
+    workspaceConfig.activeSessionId = target.id
+    await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
+
+    const title = target.title || `Session ${target.id.slice(-6)}`
+    await ctx.replyWithMarkdown(
+      `*Switched to session*\n\n*Title:* ${escapeMarkdown(title)}\n*ID:* \`${target.id}\``,
+    )
+  } catch (err) {
+    console.error(`[Messenger] Switch session error for "${config.name}":`, err)
+    await ctx.reply('Failed to switch session.')
   }
 }
 
@@ -604,6 +709,13 @@ export async function reloadMessengers() {
           handleWorkspaceInfo(c, ctx)
         } else if (text === '/summarize') {
           handleSummarize(c, ctx)
+        } else if (text === '/new-session') {
+          handleNewSession(c, ctx)
+        } else if (text === '/list-sessions') {
+          handleListSessions(c, ctx)
+        } else if (text.startsWith('/switch-session')) {
+          const args = text.slice('/switch-session'.length).trim()
+          handleSwitchSession(c, ctx, args)
         } else {
           handleChatMessage(c, ctx, text)
         }
