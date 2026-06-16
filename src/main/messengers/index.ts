@@ -4,12 +4,14 @@
  * Each bot reads its own config (workspace binding) and handles commands:
  * - "?" → replies with workspace information (name, folders, active session details, available commands)
  * - "/summarize" → summarizes the active session and updates metadata title/description
- * - other text → replies with "WIP" (placeholder for future AI integration)
+ * - any other text → sends the message to the AI agent loop and replies with the result
  */
 
+import type { UIMessage } from 'ai'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import {
   getAIConfigPath,
+  getMainConfigPath,
   getMessengersConfigPath,
   getSessionMetadataPath,
   getSessionPath,
@@ -21,9 +23,13 @@ import {
 } from '../../lib/path'
 import type { MessengerConfig } from '../../lib/types/ai'
 import type { SessionMetadata } from '../../lib/types/chat'
+import { getProviderReasoningOptions } from '../ai/chat'
 import { getAIModel } from '../ai/factory'
+import { createTools } from '../ai/tools'
 
 const bots = new Map<string, import('telegraf').Telegraf>()
+// Track which bot sessions are currently processing a message
+const processing = new Set<string>()
 
 function loadConfigs(): Promise<MessengerConfig[]> {
   return readJson<MessengerConfig[]>(getMessengersConfigPath(), [])
@@ -33,20 +39,15 @@ function loadAiConfig() {
   return readJson<any>(getAIConfigPath())
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
-
-/**
- * Escape Telegram MarkdownV2 reserved characters in a string.
- * This ensures dynamic text (titles, descriptions, file paths) doesn't
- * break Telegram's markdown parser.
- */
-function escapeMarkdown(text: string): string {
-  // Escape characters that break Telegram Markdown (legacy mode):
-  // _ (italic), * (bold), ` (code), [ (link text)
-  return text.replace(/[_*`[]/g, '\\$&')
+function loadMainConfig() {
+  return readJson<any>(getMainConfigPath())
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
+
+function escapeMarkdown(text: string): string {
+  return text.replace(/[_*`[]/g, '\\$&')
+}
 
 async function findMetadata(
   sessionId: string,
@@ -75,6 +76,177 @@ async function findSessionFile(sessionId: string, workspace: string) {
   return null
 }
 
+function genId(): string {
+  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+// ─── Agent Loop (main process version) ──────────────────────────────────
+
+/**
+ * Run the full agent loop for a given set of messages, using the active
+ * AI provider and enabled tools. Collects all assistant messages and tool
+ * results, saves the updated session, and returns the last assistant text.
+ *
+ * Tools run without approval prompts (auto-approved for messenger use).
+ * The `onCommandProgress` callback streams command output back to the user.
+ */
+async function runMessengerAgent(
+  messages: UIMessage[],
+  workspaceName: string,
+  workspaceFolders: string[],
+  activeFile: string,
+  enabledTools: Record<string, boolean>,
+  onProgress: (text: string) => void,
+): Promise<UIMessage[]> {
+  const aiConfig = await loadAiConfig()
+  const activeProvider =
+    aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
+    aiConfig?.providers?.[0]
+
+  if (!activeProvider) throw new Error('No active AI provider configured')
+
+  const { streamText, convertToModelMessages, stepCountIs } = await import('ai')
+  const model = getAIModel(activeProvider)
+
+  // Separate system message
+  const systemMessage = messages.find((m) => m.role === 'system')
+  const chatMessages = messages.filter((m) => m.role !== 'system')
+  const modelMessages = await convertToModelMessages(chatMessages, {
+    tools: enabledTools,
+    ignoreIncompleteToolCalls: true,
+  })
+
+  const system = systemMessage
+    ? systemMessage.parts
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map((p) => p.text)
+        .join('\n')
+    : undefined
+
+  // Create tools with command progress callback for streaming output
+  const toolContext = {
+    workspaceFolders,
+    activeFile,
+    workspaceName,
+    onCommandProgress: (text: string) => onProgress(text),
+  }
+  const tools = createTools(toolContext)
+
+  const result = streamText({
+    model,
+    system,
+    messages: modelMessages,
+    tools,
+    // Allow up to 100 steps (tool call rounds) — prevents infinite loops
+    stopWhen: stepCountIs(100),
+    providerOptions: getProviderReasoningOptions(activeProvider) as any,
+  })
+
+  const loopMessages: UIMessage[] = []
+  let textAccum = ''
+  let reasoningAccum = ''
+  const allToolCalls = new Map<string, any>()
+  let currentStepToolCalls: any[] = []
+
+  const flushAssistant = () => {
+    if (textAccum || reasoningAccum || currentStepToolCalls.length > 0) {
+      const parts: any[] = []
+      if (reasoningAccum) {
+        parts.push({ type: 'reasoning', text: reasoningAccum, state: 'done' })
+      }
+      if (textAccum) {
+        parts.push({ type: 'text', text: textAccum, state: 'done' })
+      }
+      for (const tc of currentStepToolCalls) {
+        parts.push({
+          type: 'dynamic-tool',
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          state: 'input-available',
+          input: tc.input || tc.args,
+        } as any)
+      }
+      loopMessages.push({ id: genId(), role: 'assistant', parts })
+      textAccum = ''
+      reasoningAccum = ''
+      currentStepToolCalls = []
+    }
+  }
+
+  for await (const part of result.fullStream) {
+    switch (part.type) {
+      case 'text-delta':
+        textAccum += part.text
+        break
+      case 'reasoning-delta':
+        reasoningAccum += part.text
+        break
+      case 'tool-call': {
+        allToolCalls.set(part.toolCallId, part)
+        const idx = currentStepToolCalls.findIndex(
+          (tc) => tc.toolCallId === part.toolCallId,
+        )
+        if (idx !== -1) currentStepToolCalls[idx] = part
+        else currentStepToolCalls.push(part)
+        break
+      }
+      case 'tool-result': {
+        flushAssistant()
+        // Update the matching tool part in the last assistant message
+        if (loopMessages.length > 0) {
+          const last = loopMessages[loopMessages.length - 1]
+          const parts = [...last.parts]
+          const idx = parts.findIndex(
+            (p: any) =>
+              p.type === 'dynamic-tool' && p.toolCallId === part.toolCallId,
+          )
+          if (idx !== -1) {
+            parts[idx] = {
+              ...parts[idx],
+              state: 'output-available',
+              output: part.output,
+            } as any
+            loopMessages[loopMessages.length - 1] = { ...last, parts }
+          }
+        }
+        break
+      }
+      case 'command-output': {
+        const text = (part as any).text
+        if (text && loopMessages.length > 0) {
+          const last = loopMessages[loopMessages.length - 1]
+          const parts = [...last.parts]
+          for (let i = parts.length - 1; i >= 0; i--) {
+            const p = parts[i] as any
+            if (
+              p.type === 'dynamic-tool' &&
+              p.toolName === 'run_command' &&
+              (p.state === 'input-available' || p.state === 'executing')
+            ) {
+              parts[i] = {
+                ...p,
+                state: 'executing',
+                output: (p.output || '') + text,
+              } as any
+              loopMessages[loopMessages.length - 1] = { ...last, parts }
+              break
+            }
+          }
+        }
+        break
+      }
+      case 'error':
+        flushAssistant()
+        throw new Error(String(part.error))
+      case 'finish':
+        flushAssistant()
+        break
+    }
+  }
+
+  return [...messages, ...loopMessages]
+}
+
 // ─── Command Handlers ────────────────────────────────────────────────────
 
 async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
@@ -96,9 +268,7 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
 
     lines.push(`*Folders (${folders?.length || 0}):*`)
     if (folders && folders.length > 0) {
-      for (const f of folders) {
-        lines.push(`  ${escapeMarkdown(f)}`)
-      }
+      for (const f of folders) lines.push(`  ${escapeMarkdown(f)}`)
     } else {
       lines.push('  _(none)_')
     }
@@ -144,7 +314,6 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
       lines.push('*Active Session:* _(none)_')
     }
 
-    // Available commands
     lines.push('')
     lines.push('---')
     lines.push('*Commands:*')
@@ -174,7 +343,6 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       return
     }
 
-    // Load the session messages
     const messages = await findSessionFile(activeSessionId, config.workspace)
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       await ctx.reply('Active session is empty.')
@@ -183,7 +351,6 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
 
     await ctx.reply('Summarizing session...')
 
-    // Build summary prompt — exclude system messages, keep user + assistant
     const chatMessages = messages.filter((m: any) => m.role !== 'system')
     const summaryPrompt =
       'Please summarize the above conversation concisely, preserving all key information, decisions, and context. Focus on the essential points that would be needed to continue the conversation.'
@@ -197,7 +364,6 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       },
     ]
 
-    // Load AI config
     const aiConfig = await loadAiConfig()
     const activeProvider =
       aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
@@ -208,7 +374,6 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       return
     }
 
-    // Call AI for summarization using streamText directly
     const { streamText, convertToModelMessages } = await import('ai')
     const model = getAIModel(activeProvider)
     const modelMessages = await convertToModelMessages(summaryMessages, {
@@ -217,32 +382,21 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
     })
 
     let summaryText = ''
-    const result = streamText({
-      model,
-      messages: modelMessages,
-      tools: {},
-    })
+    const result = streamText({ model, messages: modelMessages, tools: {} })
 
     for await (const part of result.fullStream) {
-      if (part.type === 'text-delta') {
-        summaryText += part.text
-      }
+      if (part.type === 'text-delta') summaryText += part.text
       if (part.type === 'error') {
         await ctx.reply(`Summarization failed: ${part.error}`)
         return
       }
     }
 
-    // Generate title from first meaningful line of the summary
     const lines = summaryText.split('\n').filter((l: string) => l.trim())
     const firstLine = lines[0]?.trim() || ''
-    // Remove markdown-style heading markers for cleaner title
     const title =
       firstLine.replace(/^#+\s*/, '').slice(0, 100) || 'Conversation Summary'
-    // Store full summary as description
-    const description = summaryText
 
-    // Update the metadata
     const { metadata: existingMeta, dateDir } = await findMetadata(
       activeSessionId,
       config.workspace,
@@ -256,17 +410,157 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       await writeJson(metaPath, {
         ...(existingMeta || {}),
         title,
-        description,
+        description: summaryText,
         updatedAt: new Date().toISOString(),
       })
     }
 
     await ctx.replyWithMarkdown(
-      `*Session summarized*\n\n*Title:* ${escapeMarkdown(title)}\n*Description:* ${escapeMarkdown(description)}`,
+      `*Session summarized*\n\n*Title:* ${escapeMarkdown(title)}\n*Description:* ${escapeMarkdown(summaryText.slice(0, 200))}...`,
     )
   } catch (err) {
     console.error(`[Messenger] Summarize error for "${config.name}":`, err)
     await ctx.reply('Failed to summarize session.')
+  }
+}
+
+async function handleChatMessage(
+  config: MessengerConfig,
+  ctx: any,
+  text: string,
+) {
+  const lockKey = `${config.id}:${config.workspace}`
+
+  // If the agent is already processing a message for this bot, reject
+  if (processing.has(lockKey)) {
+    await ctx.reply(
+      'The agent is currently processing a request. Please wait before sending another message.',
+    )
+    return
+  }
+
+  processing.add(lockKey)
+
+  try {
+    const workspaceConfig = await readJson<WorkspaceConfig>(
+      getWorkspaceDataPath(config.workspace),
+    )
+    if (!workspaceConfig) {
+      await ctx.reply(`Workspace "${config.workspace}" not found.`)
+      return
+    }
+
+    let {
+      activeSessionId,
+      activeAgentId,
+      folders: workspaceFolders,
+    } = workspaceConfig
+    if (!activeSessionId) {
+      // Create a new session
+      activeSessionId = Date.now().toString()
+      const sessionPath = getSessionPath(
+        activeSessionId,
+        undefined,
+        config.workspace,
+      )
+      await writeJson(sessionPath, [])
+      // Update workspace config with the new session ID
+      workspaceConfig.activeSessionId = activeSessionId
+      await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
+    }
+
+    // Load existing session messages
+    let messages = await findSessionFile(activeSessionId, config.workspace)
+    if (!messages || !Array.isArray(messages)) {
+      messages = []
+    }
+
+    // Load configs
+    const [_aiConfig, mainConfig] = await Promise.all([
+      loadAiConfig(),
+      loadMainConfig(),
+    ])
+
+    const toolsConfig = mainConfig?.aiTools || {}
+    const promptsConfig = mainConfig?.prompts || { files: [] }
+    const agentsConfig = mainConfig?.agents || { list: [] }
+    const activeAgent = agentsConfig.list?.find(
+      (a: any) => a.id === activeAgentId,
+    )
+
+    // Ensure system prompt exists
+    const updatedMessages: UIMessage[] = [...messages]
+    if (
+      updatedMessages.length === 0 ||
+      !updatedMessages.some((m: any) => m.role === 'system')
+    ) {
+      // Get merged system prompt
+      const { getMergedSystemPrompt } = await import('../ai/prompts')
+      const systemPrompt = await getMergedSystemPrompt(
+        promptsConfig.files || [],
+        activeAgent?.promptFiles || [],
+      )
+      if (systemPrompt) {
+        updatedMessages.unshift({
+          id: genId(),
+          role: 'system',
+          parts: [{ type: 'text', text: systemPrompt }],
+        })
+      }
+    }
+
+    // Add user message
+    const userMsg: UIMessage = {
+      id: genId(),
+      role: 'user',
+      parts: [{ type: 'text', text }],
+    }
+    updatedMessages.push(userMsg)
+
+    await ctx.reply('Processing your request...')
+
+    // Run the agent loop (no approval prompts)
+    const activeFile = workspaceConfig.activeFile || ''
+    const finalMessages = await runMessengerAgent(
+      updatedMessages,
+      config.workspace,
+      workspaceFolders,
+      activeFile,
+      toolsConfig,
+      (progressText: string) => {
+        // Stream command output — send as a status update
+        ctx.reply(`\`\`\`\n${progressText}\n\`\`\``).catch(() => {})
+      },
+    )
+
+    // Save the session — write to today's date directory
+    const sessionPath = getSessionPath(
+      activeSessionId,
+      undefined,
+      config.workspace,
+    )
+    await writeJson(sessionPath, finalMessages)
+
+    // Extract the last assistant text message for the reply
+    const lastAssistant = [...finalMessages]
+      .reverse()
+      .find(
+        (m: any) =>
+          m.role === 'assistant' &&
+          m.parts?.some((p: any) => p.type === 'text'),
+      )
+    let replyText = 'Done.'
+    if (lastAssistant) {
+      const textPart = lastAssistant.parts.find((p: any) => p.type === 'text')
+      if (textPart) replyText = textPart.text
+    }
+
+    await ctx.reply(replyText)
+  } catch (err) {
+    console.error(`[Messenger] Chat error for "${config.name}":`, err)
+    await ctx.reply('An error occurred while processing your request.')
+  } finally {
+    processing.delete(lockKey)
   }
 }
 
@@ -279,7 +573,6 @@ export async function reloadMessengers() {
 
   const next = new Map(configs.map((c) => [c.id, c]))
 
-  // Stop removed or disabled bots
   for (const [id, bot] of bots) {
     const cfg = next.get(id)
     if (!cfg?.enabled) {
@@ -289,7 +582,6 @@ export async function reloadMessengers() {
     }
   }
 
-  // Start new bots
   for (const c of configs) {
     if (!c.enabled || !c.apiKey || !c.name || !c.workspace) {
       console.log(`[Messenger] ${c.name} skipped`)
@@ -306,7 +598,6 @@ export async function reloadMessengers() {
       bot.catch((err) => console.error(`[Messenger] ${c.name} error:`, err))
       bot.start((ctx) => ctx.reply('Connected to Aynite.'))
 
-      // Handle text messages
       bot.on('text', (ctx) => {
         const text = ctx.message.text.trim()
         if (text === '?') {
@@ -314,7 +605,7 @@ export async function reloadMessengers() {
         } else if (text === '/summarize') {
           handleSummarize(c, ctx)
         } else {
-          ctx.reply('WIP')
+          handleChatMessage(c, ctx, text)
         }
       })
 

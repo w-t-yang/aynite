@@ -147,6 +147,7 @@ export function setupAiIpc() {
 
 export {
   deleteSession,
+  getProviderReasoningOptions,
   initWorkspaceFolders,
   listSessions,
   loadSession,

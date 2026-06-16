@@ -24,7 +24,7 @@ import { createTools } from './tools'
  * This lets users control reasoning/thinking behavior from a single dropdown,
  * regardless of which AI provider they use.
  */
-function getProviderReasoningOptions(
+export function getProviderReasoningOptions(
   config: AIProvider,
 ): Record<string, any> | undefined {
   const effort = config.reasoningEffort
