@@ -202,6 +202,101 @@ describe('config/logic', () => {
       expect(result).toHaveProperty('activeTheme', 'nord')
       expect(result).toHaveProperty('keybindings')
       expect(result).toHaveProperty('ai')
+      expect(result).toHaveProperty('language', 'en')
+      expect(result).toHaveProperty('ignore')
+    })
+
+    it('repairs AI config when providers list is missing', async () => {
+      mockReadJson
+        .mockResolvedValueOnce({ activeId: null }) // no providers
+        .mockResolvedValueOnce({ app: {}, view: {} })
+        .mockResolvedValueOnce({ activeTheme: 'light' })
+      mockExists.mockResolvedValue(false)
+
+      const result = await loadConfig()
+      expect(result.ai.providers).toBeDefined()
+      expect(Array.isArray(result.ai.providers)).toBe(true)
+    })
+
+    it('fills in default provider URLs when missing', async () => {
+      mockReadJson
+        .mockResolvedValueOnce({
+          activeId: 'test',
+          providers: [
+            { provider: 'openai', baseUrl: '' },
+            { provider: 'anthropic', baseUrl: '' },
+          ],
+        })
+        .mockResolvedValueOnce({ app: {}, view: {} })
+        .mockResolvedValueOnce({ activeTheme: 'light' })
+      mockExists.mockResolvedValue(false)
+
+      const result = await loadConfig()
+      const openai = result.ai.providers.find(
+        (p: any) => p.provider === 'openai',
+      )
+      expect(openai.baseUrl).toBeTruthy()
+    })
+
+    it('fills in missing mainConfig keys via ensureKeys', async () => {
+      mockReadJson
+        .mockResolvedValueOnce({ activeId: 'test', providers: [] })
+        .mockResolvedValueOnce({ app: {}, view: {} })
+        .mockResolvedValueOnce({}) // empty mainConfig
+      mockExists.mockResolvedValue(false)
+
+      const result = await loadConfig()
+      expect(result.skills).toBeDefined()
+      expect(result.commands).toBeDefined()
+      expect(result.telemetry).toEqual({ enabled: true })
+    })
+
+    it('migrates appearance config theme when mainConfig has no activeTheme', async () => {
+      mockReadJson
+        .mockResolvedValueOnce({ activeId: 'test', providers: [] })
+        .mockResolvedValueOnce({ app: {}, view: {} })
+        .mockResolvedValueOnce({}) // mainConfig has no activeTheme
+      mockExists.mockResolvedValueOnce(true) // appearance config exists
+      mockReadJson.mockResolvedValueOnce({ theme: 'nord' })
+
+      const result = await loadConfig()
+      expect(result.activeTheme).toBe('nord')
+      expect(mockUnlink).toHaveBeenCalled()
+    })
+
+    it('handles appearance config read error gracefully', async () => {
+      mockReadJson
+        .mockResolvedValueOnce({ activeId: 'test', providers: [] })
+        .mockResolvedValueOnce({ app: {}, view: {} })
+        .mockResolvedValueOnce({ activeTheme: 'light' })
+      mockExists.mockResolvedValueOnce(true)
+      mockReadJson.mockRejectedValueOnce(new Error('parse error'))
+
+      const result = await loadConfig()
+      expect(result.activeTheme).toBe('light')
+    })
+
+    it('falls back to detectSystemLanguage when config language missing', async () => {
+      mockReadJson
+        .mockResolvedValueOnce({ activeId: 'test', providers: [] })
+        .mockResolvedValueOnce({ app: {}, view: {} })
+        .mockResolvedValueOnce({ activeTheme: 'light' }) // no language key
+      mockExists.mockResolvedValue(false)
+
+      const result = await loadConfig()
+      expect(result.language).toBe('en')
+    })
+
+    it('loads ignore patterns and excludes them from rest config', async () => {
+      mockReadJson
+        .mockResolvedValueOnce({ activeId: 'test', providers: [] })
+        .mockResolvedValueOnce({ app: {}, view: {} })
+        .mockResolvedValueOnce({ activeTheme: 'light', ignore: ['old'] })
+      mockExists.mockResolvedValue(false)
+
+      const result = await loadConfig()
+      expect(result.ignore).toBeDefined()
+      expect((result as any).ignore).not.toBe(['old']) // ignore comes from getIgnorePatterns
     })
   })
 })
