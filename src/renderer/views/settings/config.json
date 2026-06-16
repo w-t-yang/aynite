@@ -17,6 +17,7 @@
         "tools": "Tools",
         "skills": "Skills",
         "commands": "Commands",
+        "messengers": "Messengers",
         "app": "App",
         "about": "About"
       },
@@ -150,6 +151,13 @@
         "removeModalBody": "Are you sure you want to remove the folder",
         "noDescription": "No description available."
       },
+      "messengers": {
+        "title": "Messengers",
+        "description": "Connect messenger bots to Aynite. You can chat with your Telegram bot and Aynite will use the configured AI to work on tasks in the specified workspace.",
+        "bots": "Connected Bots",
+        "noBots": "No messenger bots configured. Add one above.",
+        "addBot": "Add Bot"
+      },
       "about": {
         "title": "About Aynite",
         "description": "Information about Aynite, system updates, and developer resources.",
@@ -218,6 +226,7 @@
         "tools": "工具",
         "skills": "技能",
         "commands": "命令",
+        "messengers": "消息推送",
         "app": "应用",
         "about": "关于"
       },
@@ -350,6 +359,13 @@
         "removeModalTitle": "移除命令文件夹",
         "removeModalBody": "确定要移除文件夹吗",
         "noDescription": "无可用描述。"
+      },
+      "messengers": {
+        "title": "消息推送",
+        "description": "将消息机器人连接到 Aynite。您可以通过 Telegram 机器人与 Aynite 对话，Aynite 会使用配置好的 AI 在指定的工作区中处理任务。",
+        "bots": "已连接的机器人",
+        "noBots": "未配置消息机器人。点击上方添加。",
+        "addBot": "添加机器人"
       },
       "about": {
         "title": "关于 Aynite",

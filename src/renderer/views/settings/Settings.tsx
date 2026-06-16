@@ -3,6 +3,7 @@ import {
   FileText,
   Info,
   Keyboard,
+  MessageCircle,
   Sun,
   Terminal,
   Wrench,
@@ -12,10 +13,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DEFAULT_AI_CONFIG, DEFAULT_AI_TOOLS } from '../../../lib/constants/ai'
 import { DEFAULT_KEYBINDINGS } from '../../../lib/constants/keybindings'
 import type { Theme } from '../../../lib/constants/types'
+import type { MessengerConfig } from '../../../lib/types/ai'
 import { ai as aiBridge, aiMutations } from '../../bridge/ai'
 import { config, configMutations } from '../../bridge/config'
 import { spells, spellsMutations } from '../../bridge/spells'
 import { system as bridgeSystem, systemMutations } from '../../bridge/system'
+import { workspace } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { TabButton } from '../../shared/basic/TabButton'
@@ -31,6 +34,7 @@ import { AppearanceTab } from './AppearanceTab'
 import { CommandsTab } from './CommandsTab'
 import viewConfig from './config.json'
 import { KeybindingsTab } from './KeybindingsTab'
+import { MessengersTab } from './MessengersTab'
 import { SkillsTab } from './SkillsTab'
 import { ToolsTab } from './ToolsTab'
 
@@ -73,6 +77,8 @@ export function Settings() {
     systemFonts: string[]
   } | null>(null)
   const [aiTools, setAiTools] = useState<SettingsState['aiTools'] | null>(null)
+  const [messengers, setMessengers] = useState<MessengerConfig[]>([])
+  const [workspaceList, setWorkspaceList] = useState<string[]>([])
   const [mergedPrompt, setMergedPrompt] = useState<string>('')
 
   // Other shared state
@@ -83,6 +89,11 @@ export function Settings() {
   const [showRestoreModal, setShowRestoreModal] = useState(false)
 
   const loadSettings = useCallback(async () => {
+    // Load workspaces list for messenger binding
+    const wsConfig = await workspace.list()
+    const wsList = wsConfig?.list || []
+    setWorkspaceList(wsList)
+
     // Parallel load all decoupled resources
     const [
       resAI,
@@ -94,6 +105,7 @@ export function Settings() {
       resCmdsCfg,
       resCmdsItems,
       resTools,
+      resMessengers,
     ] = await Promise.all([
       config.get('ai'),
       config.get('agents'),
@@ -104,6 +116,7 @@ export function Settings() {
       config.get('commands'),
       spells.getAvailableCommands(),
       config.get('tools'),
+      config.get('messengers'),
     ])
 
     if (resAI) setAI({ activeId: resAI.activeId, providers: resAI.providers })
@@ -134,6 +147,10 @@ export function Settings() {
     if (resTools) {
       setAiTools(resTools.active)
       setAvailableTools(resTools.list)
+    }
+
+    if (resMessengers) {
+      setMessengers(resMessengers)
     }
 
     // Initialize themes state
@@ -215,6 +232,23 @@ export function Settings() {
     } as any)
   }
 
+  const handleSetMessengers = async (newMessengers: MessengerConfig[]) => {
+    // Validate uniqueness: no duplicate API keys
+    const apiKeys = new Set<string>()
+    for (const m of newMessengers) {
+      if (m.apiKey && apiKeys.has(m.apiKey)) {
+        console.warn(
+          '[Settings] Duplicate messenger API key rejected:',
+          m.apiKey,
+        )
+        return
+      }
+      if (m.apiKey) apiKeys.add(m.apiKey)
+    }
+    setMessengers(newMessengers)
+    await configMutations.set('messengers', newMessengers)
+  }
+
   const handlePickSkillFolder = async () => {
     const folder = await spellsMutations.pickSkillFolder()
     if (folder) {
@@ -252,7 +286,8 @@ export function Settings() {
     !keybindings ||
     !aiTools ||
     !skills ||
-    !commands
+    !commands ||
+    !workspaceList
   ) {
     return (
       <div className="w-full h-full bg-background flex items-center justify-center text-muted-foreground">
@@ -314,6 +349,12 @@ export function Settings() {
             onClick={() => handleTabChange('commands')}
             icon={<Terminal size={16} />}
             label={t('sidebar.commands')}
+          />
+          <TabButton
+            active={activeTab === 'messengers'}
+            onClick={() => handleTabChange('messengers')}
+            icon={<MessageCircle size={16} />}
+            label={t('sidebar.messengers')}
           />
 
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
@@ -437,6 +478,17 @@ export function Settings() {
                 state={{ aiTools, availableTools }}
                 actions={{
                   setTools: handleSetTools,
+                  onRestore: () => setShowRestoreModal(true),
+                  t: (key: string) => t(key),
+                }}
+              />
+            )}
+
+            {activeTab === 'messengers' && (
+              <MessengersTab
+                state={{ messengers, workspaces: workspaceList }}
+                actions={{
+                  setMessengers: handleSetMessengers,
                   onRestore: () => setShowRestoreModal(true),
                   t: (key: string) => t(key),
                 }}

@@ -12,6 +12,7 @@
 import { ConfigHandlerRegistry, HANDLER_NOT_FOUND } from './handler-registry'
 import { aiHandlers } from './handlers/ai-handlers'
 import { configFileHandlers } from './handlers/config-file-handlers'
+import { messengerHandlers } from './handlers/messenger-handlers'
 import { staticHandlers } from './handlers/static-handlers'
 import { telemetryHandlers } from './handlers/telemetry-handlers'
 import { themeHandlers } from './handlers/theme-handlers'
@@ -66,6 +67,8 @@ registry.register(
   ],
   staticHandlers,
 )
+
+registry.register(['messengers'], messengerHandlers)
 
 registry.register(['telemetry'], telemetryHandlers)
 

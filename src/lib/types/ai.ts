@@ -37,6 +37,15 @@ export interface ToolContext {
   onCommandProgress?: (text: string) => void
 }
 
+export interface MessengerConfig {
+  id: string
+  name: string
+  type: 'telegram'
+  apiKey: string
+  workspace: string
+  enabled: boolean
+}
+
 export interface AgentLoopConfig extends AIProvider {
   enabledTools?: Record<string, boolean>
   agentPromptFiles?: string[]

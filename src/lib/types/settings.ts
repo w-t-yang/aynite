@@ -1,5 +1,5 @@
 import type { KeybindingConfig } from '../constants/types'
-import type { Agent, AIProvider } from './ai'
+import type { Agent, AIProvider, MessengerConfig } from './ai'
 
 export interface SettingsState {
   activeTheme: string
@@ -22,4 +22,5 @@ export interface SettingsState {
     files: string[]
   }
   aiTools: { [key: string]: boolean }
+  messengers?: MessengerConfig[]
 }

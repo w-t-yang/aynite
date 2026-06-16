@@ -115,6 +115,10 @@ export function getAIConfigPath() {
   return path.join(getAyniteConfigDir(), 'ai.json')
 }
 
+export function getMessengersConfigPath() {
+  return path.join(getAyniteConfigDir(), 'messengers.json')
+}
+
 export function getKeybindingsConfigPath() {
   return path.join(getAyniteConfigDir(), 'keybindings.json')
 }
