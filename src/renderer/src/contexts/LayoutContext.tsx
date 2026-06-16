@@ -128,25 +128,6 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   const executeAppOperation = useCallback(
     (operation: string, _payload?: unknown) => {
       switch (operation) {
-        case 'REFRESH_TILE': {
-          const activeTile = document.querySelector('.tile.border-primary')
-          if (activeTile) {
-            const iframe = activeTile.querySelector(
-              'iframe',
-            ) as HTMLIFrameElement | null
-            if (iframe?.contentWindow) {
-              try {
-                iframe.contentWindow.location.reload()
-              } catch {
-                iframe.contentWindow.postMessage(
-                  { type: 'aynite:refresh-tile' },
-                  '*',
-                )
-              }
-            }
-          }
-          return
-        }
         case 'TOGGLE_LEFT_PANEL':
           console.log('[App] Toggle Left Panel')
           return

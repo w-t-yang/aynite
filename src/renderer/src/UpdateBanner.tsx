@@ -1,29 +1,25 @@
 import { CloudDownload, RefreshCw, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { AppEvents } from '../../lib/constants/app'
-import type { UpdateStatus } from '../../lib/types/app'
 import { config } from '../bridge/config'
-import { events } from '../bridge/events'
-import { updateMutations } from '../bridge/update'
 import { Button } from '../shared/basic/Button'
 import { Modal } from '../shared/basic/Modal'
 import { useI18n } from '../shared/i18n/useI18n'
+import { useApp } from './AppContext'
 
 /**
  * Global update notification.
- * Listens for update events from the main process and notifies the user.
+ * Reads update state from UpdateContext (routed by the Hub from main process events).
+ * Keeps only local UI state (showModal, dismissed).
  */
 export function UpdateBanner() {
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
-  const [updateInfo, setUpdateInfo] = useState<any>(null)
-  const [downloadProgress, setDownloadProgress] = useState(0)
+  const { updateStatus, updateInfo, updateProgress, installUpdate, locale } =
+    useApp()
   const [showModal, setShowModal] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [appVersion, setAppVersion] = useState('')
-  const [locale, setLocale] = useState<'en' | 'zh'>('en')
   const { t } = useI18n(locale)
 
-  // Listen for update events and locale
+  // Load app version on mount
   useEffect(() => {
     config
       .get('version')
@@ -31,64 +27,24 @@ export function UpdateBanner() {
         setAppVersion(v || '0.0.0')
       })
       .catch(() => {})
-
-    config
-      .get('language')
-      .then((lang: string) => {
-        if (lang === 'zh' || lang === 'en') setLocale(lang)
-      })
-      .catch(() => {})
-
-    const unbind = events.onAppEvent((event: { type: string; data: any }) => {
-      switch (event.type) {
-        case AppEvents.UPDATE_AVAILABLE:
-          setUpdateStatus('available')
-          setUpdateInfo(event.data)
-          setShowModal(true)
-          break
-        case AppEvents.UPDATE_NOT_AVAILABLE:
-          setUpdateStatus('idle')
-          setUpdateInfo(null)
-          setDownloadProgress(0)
-          break
-        case AppEvents.UPDATE_DOWNLOADING:
-          setUpdateStatus('downloading')
-          setDownloadProgress(0)
-          break
-        case AppEvents.UPDATE_PROGRESS:
-          setUpdateStatus('downloading')
-          setDownloadProgress(event.data?.percent ?? 0)
-          break
-        case AppEvents.UPDATE_DOWNLOADED:
-          setUpdateStatus('downloaded')
-          setDownloadProgress(100)
-          setUpdateInfo(event.data)
-          setDismissed(false)
-          setShowModal(true)
-          break
-        case AppEvents.UPDATE_ERROR:
-          setUpdateStatus('error')
-          break
-        case AppEvents.LANGUAGE_CHANGED: {
-          const newLocale = (event.data as any)?.language
-          if (newLocale === 'zh' || newLocale === 'en') setLocale(newLocale)
-          break
-        }
-      }
-    })
-    return unbind
   }, [])
 
+  // Show modal when update becomes available or downloaded
+  useEffect(() => {
+    if (updateStatus === 'available' || updateStatus === 'downloaded') {
+      setShowModal(true)
+    }
+  }, [updateStatus])
+
   const handleDownloadUpdate = useCallback(async () => {
-    setUpdateStatus('downloading')
-    setDownloadProgress(0)
+    const { updateMutations } = await import('../bridge/update')
     setShowModal(true)
     await updateMutations.download()
   }, [])
 
   const handleInstallUpdate = useCallback(async () => {
-    await updateMutations.install()
-  }, [])
+    await installUpdate()
+  }, [installUpdate])
 
   const handleClose = useCallback(() => {
     setShowModal(false)
@@ -103,7 +59,7 @@ export function UpdateBanner() {
     setShowModal(true)
   }, [])
 
-  // Fully hidden if dismissed (no badge, no modal)
+  // Fully hidden if dismissed or idle (with no modal open)
   if (dismissed || (updateStatus === 'idle' && !showModal)) return null
 
   const modalContent = () => {
@@ -124,6 +80,7 @@ export function UpdateBanner() {
             </div>
           </div>
         )
+      case 'checking':
       case 'downloading':
         return (
           <div className="flex flex-col items-center text-center space-y-6 py-8">
@@ -138,11 +95,11 @@ export function UpdateBanner() {
               <div className="w-full h-2 bg-accent/30 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${downloadProgress}%` }}
+                  style={{ width: `${updateProgress}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                {downloadProgress.toFixed(0)}%
+                {updateProgress.toFixed(0)}%
               </p>
             </div>
           </div>
@@ -203,7 +160,7 @@ export function UpdateBanner() {
         </>
       )
     }
-    if (updateStatus === 'downloading') {
+    if (updateStatus === 'checking' || updateStatus === 'downloading') {
       return null
     }
     return (
@@ -218,24 +175,25 @@ export function UpdateBanner() {
       {/* Floating badge — only shows when downloaded and not dismissed */}
       {updateStatus === 'downloaded' && !showModal && !dismissed && (
         <div className="fixed bottom-4 right-4 z-modal flex items-center gap-2">
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={handleBadgeClick}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all animate-in slide-in-from-bottom-4"
+            className="rounded-full shadow-lg shadow-primary/30 animate-in slide-in-from-bottom-4"
           >
             <CloudDownload size={16} />
             <span className="text-sm font-medium">
               {t('update.badgeReady')}
             </span>
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleDismiss}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-accent/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            className="rounded-full bg-accent/50"
             aria-label={t('update.dismiss')}
           >
             <X size={14} />
-          </button>
+          </Button>
         </div>
       )}
 

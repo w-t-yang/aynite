@@ -32,7 +32,7 @@ export function FileViewHtml({ file, content }: FileViewHtmlProps) {
     .join('')
 
   // ── Safe-history polyfill ────────────────────────────────────────────────
-  // srcdoc iframes have origin 'aynite://file-browser' and URL 'about:srcdoc'.
+  // srcdoc iframes have a custom origin and URL 'about:srcdoc'.
   // The <base> tag points to aynite-resource://, so any JS that calls
   // history.replaceState/pushState with a URL derived from <base> will throw
   // a SecurityError (cross-origin navigation). We silently catch these errors

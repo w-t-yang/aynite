@@ -37,7 +37,8 @@ const UIContext = createContext<UIContextType | undefined>(undefined)
 export const UIProvider: React.FC<{
   children: ReactNode
   layoutExecuteAppOperation: (operation: string, payload?: unknown) => void
-}> = ({ children, layoutExecuteAppOperation }) => {
+  refreshTile: () => void
+}> = ({ children, layoutExecuteAppOperation, refreshTile }) => {
   const [showTileControls, setShowTileControls] = useState(false)
   const [showFileSwitcher, setShowFileSwitcher] = useState(false)
   const [activeFile, setActiveFile] = useState<string | null>(null)
@@ -62,6 +63,9 @@ export const UIProvider: React.FC<{
   const executeAppOperation = useCallback(
     (operation: string, payload?: unknown) => {
       switch (operation) {
+        case 'REFRESH_TILE':
+          refreshTile()
+          return
         case 'SWITCH_FILE':
           setShowFileSwitcher((prev) => !prev)
           return
@@ -86,7 +90,7 @@ export const UIProvider: React.FC<{
           layoutExecuteAppOperation(operation, payload)
       }
     },
-    [layoutExecuteAppOperation],
+    [layoutExecuteAppOperation, refreshTile],
   )
 
   // Keep actions ref in sync so AppContext can call it

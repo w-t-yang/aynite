@@ -47,14 +47,51 @@ export const useAppOperation = () => {
 }
 
 /**
- * @deprecated Import from './useViewEvents' instead.
- * Re-exported for backward compatibility.
- * Use `import { useViewEvent } from '../useViewEvents'` instead.
+ * Subscribe to a single relayed app event type by name.
+ * (Defined in the Spoke file per hub-and-spoke architecture rules)
+ *
+ * @param type - Event type string (without the 'aynite:' prefix)
+ * @param callback - Called with event data when a matching event arrives
+ * @param deps - Additional dependency array items
  */
-export {
-  useViewEvent as useAppEvent,
-  useViewEventSubscriber as useAppEventSubscriber,
-} from './useViewEvents'
+export function useAppEvent(
+  type: string,
+  callback: (data: any) => void,
+  deps: any[] = [],
+) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data
+      if (message?.type === `aynite:${type}`) {
+        callback(message.data)
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, ...deps, callback])
+}
+
+/**
+ * Subscribe to ALL relayed app events from a single callback.
+ * (Defined in the Spoke file per hub-and-spoke architecture rules)
+ *
+ * Returns an unsubscribe function for cleanup.
+ */
+export function useAppEventSubscriber() {
+  return React.useCallback((callback: (event: any) => void) => {
+    const handler = (e: MessageEvent) => {
+      const msg = e.data
+      if (msg?.type?.startsWith('aynite:')) {
+        callback({ type: msg.type.replace('aynite:', ''), data: msg.data })
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
+}
 
 // ─── View Provider ─────────────────────────────────────────────────────────
 

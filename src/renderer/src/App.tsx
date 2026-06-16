@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import { FileSwitcher } from '../shared/featured/FileSwitcher'
 import { SettingsModal } from '../shared/featured/SettingsModal'
@@ -18,29 +18,17 @@ const AppContent: React.FC = () => {
     setShowFileSwitcher,
     showSettings,
     locale,
+    executeAppOperation,
   } = useApp()
   const { t } = useI18n(locale)
+  const execRef = useRef(executeAppOperation)
+  execRef.current = executeAppOperation
 
   useEffect(() => {
     const api = {
       saveActiveTab: () => {}, // TODO
       reload: () => {
-        const activeTile = document.querySelector('.tile.border-primary')
-        if (activeTile) {
-          const iframe = activeTile.querySelector(
-            'iframe',
-          ) as HTMLIFrameElement | null
-          if (iframe?.contentWindow) {
-            try {
-              iframe.contentWindow.location.reload()
-            } catch {
-              iframe.contentWindow.postMessage(
-                { type: 'aynite:refresh-tile' },
-                '*',
-              )
-            }
-          }
-        }
+        execRef.current('REFRESH_TILE')
       },
       toggleLeftPanel: () => {},
       toggleRightPanel: () => {},

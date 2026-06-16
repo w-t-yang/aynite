@@ -186,6 +186,24 @@ function useAppOperations() {
   }, [executeAppOperation])
 }
 
+// ─── Refresh Tile (Hub-level, satisfies postMessage audit rule) ─────────
+// The Hub is the only place allowed to call postMessage to iframes.
+// This function is injected into UIProvider so REFRESH_TILE operations
+// are handled here rather than in LayoutContext.
+
+function refreshActiveTile() {
+  const activeTile = document.querySelector('.tile.border-primary')
+  if (!activeTile) return
+  const iframe = activeTile.querySelector('iframe') as HTMLIFrameElement | null
+  if (iframe?.contentWindow) {
+    try {
+      iframe.contentWindow.location.reload()
+    } catch {
+      iframe.contentWindow.postMessage({ type: 'aynite:refresh-tile' }, '*')
+    }
+  }
+}
+
 // ─── Inner Providers ────────────────────────────────────────────────────
 // Nested inside LayoutProvider, provides UI context and event routing.
 
@@ -195,7 +213,10 @@ const InnerProviders: React.FC<{ children: React.ReactNode }> = ({
   const { executeAppOperation: layoutExecOp } = useLayout()
 
   return (
-    <UIProvider layoutExecuteAppOperation={layoutExecOp}>
+    <UIProvider
+      layoutExecuteAppOperation={layoutExecOp}
+      refreshTile={refreshActiveTile}
+    >
       <EventRouterWrapper />
       <AppOperationsListener />
       {children}
