@@ -211,6 +211,32 @@ describe('staticHandlers', () => {
       const result = await staticHandlers.get?.('matching-views', {})
       expect(result).toEqual([])
     })
+
+    it('returns empty array for matching-views when file read fails', async () => {
+      mockReadText.mockRejectedValue(new Error('ENOENT'))
+      const result = await staticHandlers.get?.('matching-views', {
+        filePath: '/file.json',
+      })
+      expect(result).toEqual([])
+    })
+
+    it('returns empty array for matching-views when file is not JSON', async () => {
+      mockReadText.mockResolvedValue('not valid json')
+      const result = await staticHandlers.get?.('matching-views', {
+        filePath: '/file.json',
+      })
+      expect(result).toEqual([])
+    })
+
+    it('returns empty array for matching-views when views dir missing', async () => {
+      mockReadText.mockResolvedValue(JSON.stringify({ type: 'chart' }))
+      mockExists.mockResolvedValue(false)
+
+      const result = await staticHandlers.get?.('matching-views', {
+        filePath: '/file.json',
+      })
+      expect(result).toEqual([])
+    })
   })
 
   describe('set', () => {

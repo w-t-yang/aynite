@@ -8,7 +8,12 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       include: ['src/lib/**', 'src/main/**', 'src/renderer/shared/**'],
-      exclude: ['src/main/**/index.ts', 'src/main/**/ipc.ts'],
+      exclude: [
+        'src/main/**/index.ts',
+        'src/main/**/ipc.ts',
+        '**/*.deps.md',
+        '**/*.md',
+      ],
     },
   },
 })

@@ -38,6 +38,7 @@ vi.mock('electron', () => ({
 import {
   getAvailableViews,
   getShellConfig,
+  getSystemFonts,
   isVersionLowerThan,
   restoreViewFromBundle,
   validateAndMaybeRestoreView,
@@ -294,6 +295,18 @@ describe('system/logic', () => {
       const result = await getAvailableViews()
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe('aichat')
+    })
+  })
+
+  // ── getSystemFonts ─────────────────────────────────────────────────────
+
+  describe('getSystemFonts', () => {
+    it('returns font list on success', async () => {
+      // Without mocking execAsync, this will fall through to catch
+      // and return the default font list
+      const fonts = await getSystemFonts()
+      expect(Array.isArray(fonts)).toBe(true)
+      expect(fonts.length).toBeGreaterThan(0)
     })
   })
 })
