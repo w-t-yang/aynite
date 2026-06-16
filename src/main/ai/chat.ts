@@ -249,7 +249,11 @@ export async function aiChat(params: {
       },
     }
     const cachedTools = createTools(toolContext)
-    console.log('[AI Chat] Context initialized:', toolContext)
+    // Dev log: context initialized silently (visible in ai-chat.log)
+    appendText(
+      getLogPath(),
+      `[${new Date().toISOString()}] AI Chat: context initialized for ${workspaceName || 'unknown'}\n`,
+    ).catch(() => {})
 
     const enabledTools: Record<string, any> = {}
     const toolSettings = config.enabledTools || {}
@@ -330,21 +334,13 @@ export async function aiChat(params: {
           }
         }
 
-        console.log(
-          `[AI] Full Response [${requestId}]:`,
-          JSON.stringify(
-            {
-              text: fullResponseText,
-              reasoning: reasoningText,
-              toolCalls: fullToolCalls,
-            },
-            null,
-            2,
-          ),
-        )
-
+        // Write response summary to dev log instead of console
         const logPath = getLogPath()
-        const logEntry = `[${new Date().toISOString()}] AI Response: ${fullResponseText.slice(0, 100)}...\n`
+        const logEntry =
+          `[${new Date().toISOString()}] AI Response [${requestId}]: ` +
+          `text=${fullResponseText.length} chars, ` +
+          `reasoning=${reasoningText.length} chars, ` +
+          `toolCalls=${fullToolCalls.length}\n`
         await appendText(logPath, logEntry).catch(() => {})
       } catch (err: any) {
         console.error('[AI Chat Stream Error]', err)

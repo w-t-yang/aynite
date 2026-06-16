@@ -189,7 +189,7 @@ export function FileViewImage({ file }: FileViewImageProps) {
             src={`aynite-resource://${normalizePath(file.path)}`}
             alt={file.name}
             className="shadow-xl rounded-sm bg-white h-auto"
-            style={{ width: intrinsic?.w * scale }}
+            style={{ width: (intrinsic?.w ?? 0) * scale }}
           />
           <div className="flex flex-col items-center gap-1 text-muted-foreground bg-sidebar/50 px-4 py-2 rounded-full border border-border/30">
             <span className="text-sm font-medium text-foreground">
