@@ -6,7 +6,7 @@ import { initAppFolders, setupConfigIpc } from './config/index'
 import { setupFileIpc } from './file/index'
 import { setupGitIpc } from './git/index'
 import { setupKeybindings } from './keybindings'
-import { initMessengers } from './messengers'
+import { reloadMessengers } from './messengers'
 import { setupRssIpc } from './rss/index'
 import { setupSpellsIpc } from './spells/index'
 import { setupSpotifyIpc } from './spotify/index'
@@ -128,7 +128,7 @@ app.whenReady().then(async () => {
     setupSpellsIpc()
 
     // 6. Start messenger bots (Telegram, etc.)
-    initMessengers().catch((err) =>
+    reloadMessengers().catch((err) =>
       console.error('[Messenger] Failed to initialize:', err),
     )
     setupRssIpc()
