@@ -23,9 +23,7 @@ import {
 } from '../../lib/path'
 import type { MessengerConfig } from '../../lib/types/ai'
 import type { SessionMetadata } from '../../lib/types/chat'
-import { getProviderReasoningOptions } from '../ai/chat'
-import { getAIModel } from '../ai/factory'
-import { createTools } from '../ai/tools'
+import { createTools, getAIModel, getProviderReasoningOptions } from '../ai'
 
 const bots = new Map<string, import('telegraf').Telegraf>()
 // Track which bot sessions are currently processing a message
@@ -495,7 +493,7 @@ async function handleNewSession(config: MessengerConfig, ctx: any) {
 
 async function handleListSessions(config: MessengerConfig, ctx: any) {
   try {
-    const { listSessions } = await import('../ai/chat')
+    const { listSessions } = await import('../ai')
     const sessions = await listSessions(config.workspace)
 
     if (!sessions || sessions.length === 0) {
@@ -535,7 +533,7 @@ async function handleSwitchSession(
       return
     }
 
-    const { listSessions } = await import('../ai/chat')
+    const { listSessions } = await import('../ai')
     const sessions = await listSessions(config.workspace)
 
     if (!sessions || sessions.length === 0) {
@@ -681,7 +679,7 @@ async function handleChatMessage(
       !updatedMessages.some((m: any) => m.role === 'system')
     ) {
       // Get merged system prompt
-      const { getMergedSystemPrompt } = await import('../ai/prompts')
+      const { getMergedSystemPrompt } = await import('../ai')
       const systemPrompt = await getMergedSystemPrompt(
         promptsConfig.files || [],
         activeAgent?.promptFiles || [],

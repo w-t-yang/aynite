@@ -17,12 +17,8 @@ import {
   useRef,
   useState,
 } from 'react'
+import type { LanguageActions, Locale } from '../../../lib/types/ui'
 import { config, configMutations } from '../../bridge/config'
-import type { Locale } from '../../shared/i18n/useI18n'
-
-export interface LanguageActions {
-  setLocale: (locale: Locale) => Promise<void>
-}
 
 interface LanguageContextType {
   locale: Locale

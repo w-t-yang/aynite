@@ -1,4 +1,7 @@
 import type React from 'react'
+import type { Keybinding } from '../constants/types'
+
+export type Locale = 'en' | 'zh'
 
 export interface LayoutActions {
   setActiveTileId: (id: string | null) => void
@@ -10,6 +13,30 @@ export interface UIActions {
 
 export interface ThemeActions {
   refreshThemes: () => Promise<void>
+}
+
+export interface LanguageActions {
+  setLocale: (locale: Locale) => Promise<void>
+}
+
+export interface InputEditorProps {
+  onSend: (text: string) => void
+  placeholder?: string
+  loading?: boolean
+  onAbort?: () => void
+  onClear?: () => void
+  disabled?: boolean
+  workspaceFolders?: string[]
+  focusKeybinding?: Keybinding
+  getAllFiles: () => Promise<
+    { path: string; name: string; isDirectory: boolean }[]
+  >
+  getAvailableSkills: () => Promise<
+    { name: string; path: string; error?: string }[]
+  >
+  getAvailableCommands: () => Promise<
+    { name: string; path: string; error?: string }[]
+  >
 }
 
 export type VibeType = 'chat' | 'file' | 'code' | 'empty'

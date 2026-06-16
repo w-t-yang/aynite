@@ -12,33 +12,15 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import type { ChatInputHandle } from '../../../../lib/types/ui'
+import type {
+  ChatInputHandle,
+  InputEditorProps,
+} from '../../../../lib/types/ui'
 import { Button } from '../../../shared/basic/Button'
-import type { Keybinding } from '../../../shared/lib/types'
 import type { SuggestionItem } from '../utils/input'
 import { createSuggestion, serializeTiptapToText } from '../utils/input'
 
 export type { ChatInputHandle }
-
-export interface InputEditorProps {
-  onSend: (text: string) => void
-  placeholder?: string
-  loading?: boolean
-  onAbort?: () => void
-  onClear?: () => void
-  disabled?: boolean
-  workspaceFolders?: string[]
-  focusKeybinding?: Keybinding
-  getAllFiles: () => Promise<
-    { path: string; name: string; isDirectory: boolean }[]
-  >
-  getAvailableSkills: () => Promise<
-    { name: string; path: string; error?: string }[]
-  >
-  getAvailableCommands: () => Promise<
-    { name: string; path: string; error?: string }[]
-  >
-}
 
 const EMPTY_ARRAY: any[] = []
 

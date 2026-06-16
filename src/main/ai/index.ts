@@ -160,4 +160,4 @@ export {
   getMergedSystemPrompt,
   restoreDefaultPrompts,
 } from './prompts'
-export { getToolsMetadata } from './tools'
+export { createTools, getToolsMetadata } from './tools'

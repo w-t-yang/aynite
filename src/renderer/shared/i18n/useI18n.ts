@@ -10,9 +10,8 @@
  */
 
 import { useCallback } from 'react'
+import type { Locale } from '../../../lib/types/ui'
 import { translations } from './translations'
-
-export type Locale = 'en' | 'zh'
 
 const FALLBACK_LOCALE: Locale = 'en'
 
