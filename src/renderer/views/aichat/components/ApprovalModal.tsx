@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, Folder, Terminal, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '../../../shared/basic/Button'
+import { Switch } from '../../../shared/basic/Switch'
 
 export function ApprovalModal({
   command,
@@ -55,30 +56,16 @@ export function ApprovalModal({
         </div>
 
         {/* Auto-approve toggle */}
-        <label className="flex items-center gap-2.5 cursor-pointer group/auto select-none py-1">
-          <div className="relative flex items-center">
-            <input
-              type="checkbox"
-              checked={autoApprove}
-              onChange={(e) => setAutoApprove(e.target.checked)}
-              className="sr-only"
-            />
-            <div
-              className={`w-9 h-5 rounded-full transition-colors duration-200 flex items-center ${
-                autoApprove ? 'bg-warning' : 'bg-muted/50'
-              }`}
-            >
-              <div
-                className={`w-3.5 h-3.5 rounded-full bg-background shadow-sm transition-transform duration-200 mx-0.5 ${
-                  autoApprove ? 'translate-x-[18px]' : 'translate-x-0'
-                }`}
-              />
-            </div>
-          </div>
+        <div className="flex items-center gap-2.5 cursor-pointer group/auto select-none py-1">
+          <Switch
+            checked={autoApprove}
+            onCheckedChange={setAutoApprove}
+            className={autoApprove ? 'bg-warning' : ''}
+          />
           <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider group-hover/auto:text-foreground transition-colors leading-tight">
             Auto-approve commands for this session
           </span>
-        </label>
+        </div>
 
         <div className="flex gap-2 pt-1">
           <Button

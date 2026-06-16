@@ -10,6 +10,7 @@ import {
 import { forwardRef, useEffect, useState } from 'react'
 import { configMutations } from '../../../bridge/config'
 import { Button } from '../../../shared/basic/Button'
+import { Input } from '../../../shared/basic/Input'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
 import { cn } from '../../../shared/lib/utils'
 import { useAppOperation } from '../../ViewContext'
@@ -171,8 +172,9 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <input
+                        <Input
                           type="range"
+                          unstyled
                           min={MIN_THRESHOLD}
                           max={MAX_THRESHOLD}
                           step={STEP}
