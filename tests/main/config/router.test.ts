@@ -156,6 +156,7 @@ describe('routeGetConfig', () => {
       mockReadJson.mockResolvedValue({
         name: 'Chart',
         description: 'Chart view',
+        'aynite-version': '1.0.0-test',
       })
       const result = await routeGetConfig('view-config', {
         view: 'dataview-chart',

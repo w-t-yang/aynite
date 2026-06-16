@@ -6,6 +6,7 @@ vi.mock('electron', () => ({
       return mockIsPackaged.value
     },
     getVersion: () => '1.0.0-beta.15',
+    getLocale: () => 'en-US',
   },
 }))
 
