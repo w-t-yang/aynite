@@ -3,10 +3,11 @@ import {
   Brain,
   ClipboardList,
   FileCode,
+  Gauge,
   Layers,
   X,
 } from 'lucide-react'
-import { forwardRef } from 'react'
+import { forwardRef, useEffect, useState } from 'react'
 import { configMutations } from '../../../bridge/config'
 import { Button } from '../../../shared/basic/Button'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
@@ -21,6 +22,8 @@ interface InputAreaProps {
   onAbort: () => void
   onClear: () => void
   onCompact: () => void
+  autoCompactThreshold: number
+  onAutoCompactThresholdChange: (value: number) => void
   workspaceFolders: string[]
   getAllFiles: () => Promise<any>
   getAvailableSkills: () => Promise<any>
@@ -47,6 +50,8 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       onAbort,
       onClear,
       onCompact,
+      autoCompactThreshold,
+      onAutoCompactThresholdChange,
       workspaceFolders,
       getAllFiles,
       getAvailableSkills,
@@ -60,6 +65,28 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
     ref,
   ) => {
     const executeOperation = useAppOperation()
+
+    const [localThreshold, setLocalThreshold] = useState(
+      typeof autoCompactThreshold === 'number' &&
+        autoCompactThreshold >= 200_000
+        ? autoCompactThreshold
+        : 500_000,
+    )
+
+    // Sync local threshold when prop changes
+    useEffect(() => {
+      const valid =
+        typeof autoCompactThreshold === 'number' &&
+        autoCompactThreshold >= 200_000
+      setLocalThreshold(valid ? autoCompactThreshold : 500_000)
+    }, [autoCompactThreshold])
+
+    const thresholdK = Number.isFinite(localThreshold)
+      ? Math.round(localThreshold / 1000)
+      : 500
+    const MIN_THRESHOLD = 200_000
+    const MAX_THRESHOLD = 800_000
+    const STEP = 100_000
 
     const artifactItems = [
       {
@@ -124,19 +151,72 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
 
             {(tokenCount > 0 || compacting) && (
               <SelectionMenu
-                items={[
-                  {
-                    id: 'compact-context',
-                    label: t('compact.button'),
-                    subtitle: t('tokens.info'),
-                    disabled: compacting || loading,
-                  },
-                ]}
-                onSelect={(id) => {
-                  if (id === 'compact-context') onCompact()
-                }}
+                items={[]}
+                onSelect={() => {}}
                 side="top"
                 align="right"
+                footer={
+                  <div className="px-3 py-2.5 w-[240px] space-y-3">
+                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+                      {t('tokens.info')}
+                    </p>
+                    <div className="border-t border-border/10 pt-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Gauge
+                          size={12}
+                          className="text-muted-foreground/40 shrink-0"
+                        />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
+                          {t('compact.autoThreshold')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min={MIN_THRESHOLD}
+                          max={MAX_THRESHOLD}
+                          step={STEP}
+                          value={localThreshold}
+                          onChange={(e) => {
+                            const val = Number(e.target.value)
+                            if (
+                              Number.isFinite(val) &&
+                              val >= MIN_THRESHOLD &&
+                              val <= MAX_THRESHOLD
+                            ) {
+                              setLocalThreshold(val)
+                              onAutoCompactThresholdChange(val)
+                            }
+                          }}
+                          className="flex-1 h-1.5 appearance-none bg-border/40 rounded-full cursor-pointer accent-primary
+                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-md
+                            [&::-webkit-slider-thumb]:cursor-grab active:[&::-webkit-slider-thumb]:cursor-grabbing"
+                        />
+                        <span className="text-[10px] font-mono font-bold text-muted-foreground/60 w-[52px] text-right shrink-0">
+                          {thresholdK}K
+                        </span>
+                      </div>
+                    </div>
+                    <div className="border-t border-border/10 pt-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
+                          {t('compact.manualCompact')}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        disabled={compacting || loading}
+                        onClick={onCompact}
+                        className="w-full text-[10px] font-bold uppercase tracking-wider h-7 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary/70 hover:text-primary transition-all"
+                      >
+                        {compacting
+                          ? t('compact.compacting')
+                          : t('compact.buttonNow')}
+                      </Button>
+                    </div>
+                  </div>
+                }
                 trigger={
                   <div
                     className={cn(

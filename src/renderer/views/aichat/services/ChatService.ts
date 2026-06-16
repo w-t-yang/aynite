@@ -27,6 +27,7 @@ import {
   appendReasoningToAssistant,
   appendToAssistant,
   appendToolInputDeltaToAssistant,
+  estimateTokenCount,
   genId,
   updateToolResult,
 } from '../utils/message'
@@ -735,6 +736,28 @@ export async function sendMessage(
   } finally {
     updateState(session, { loading: false, currentStep: null })
     session.abortController = null
+
+    // Check if auto-compact is needed
+    const sessionIdForCompact = session.state.sessionId
+    if (sessionIdForCompact && session.state.messages.length > 0) {
+      try {
+        // Load threshold from main config (config.json)
+        const savedThreshold = await config.get('autoCompactThreshold')
+        const tokenThreshold =
+          typeof savedThreshold === 'number' && savedThreshold >= 200_000
+            ? savedThreshold
+            : 500_000 // default: 500K
+        const estimatedTokens = estimateTokenCount(session.state.messages)
+        if (estimatedTokens > tokenThreshold) {
+          // Fire-and-forget auto-compact (don't block the UI)
+          compactContext(sessionIdForCompact).catch((err) =>
+            console.error('[ChatService] Auto-compact failed:', err),
+          )
+        }
+      } catch {
+        // Silent fail on config read
+      }
+    }
   }
 }
 

@@ -235,15 +235,17 @@ export function SelectionMenu({
               </div>
             )}
 
-            <SelectionList
-              items={filteredItems}
-              selectedIndex={selectedIndex}
-              onSelect={(item: SelectionItem) => handleSelect(item.id)}
-              onSelectSubmenu={onSelectSubmenu}
-              size={size}
-              divided={divided}
-              className="max-h-64 scrollbar-thin"
-            />
+            {filteredItems.length > 0 && (
+              <SelectionList
+                items={filteredItems}
+                selectedIndex={selectedIndex}
+                onSelect={(item: SelectionItem) => handleSelect(item.id)}
+                onSelectSubmenu={onSelectSubmenu}
+                size={size}
+                divided={divided}
+                className="max-h-64 scrollbar-thin"
+              />
+            )}
 
             {footer && (
               <div className="border-t border-border/50 shrink-0 mt-auto">

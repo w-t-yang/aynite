@@ -26,8 +26,11 @@
       },
       "compact": {
         "button": "Compact context",
+        "buttonNow": "Compact context now",
         "compacting": "Compacting context...",
-        "prompt": "Please summarize the above conversation concisely, preserving all key information, decisions, and context."
+        "prompt": "Please summarize the above conversation concisely, preserving all key information, decisions, and context.",
+        "autoThreshold": "Auto Compact Threshold",
+        "manualCompact": "Manual Compact"
       },
       "error": {
         "tool": "Tool execution error",
@@ -84,8 +87,11 @@
       },
       "compact": {
         "button": "压缩上下文",
+        "buttonNow": "立即压缩上下文",
         "compacting": "正在压缩上下文...",
-        "prompt": "请将以上对话内容进行简洁总结，保留所有关键信息、决策和上下文。"
+        "prompt": "请将以上对话内容进行简洁总结，保留所有关键信息、决策和上下文。",
+        "autoThreshold": "自动压缩阈值",
+        "manualCompact": "手动压缩"
       },
       "error": {
         "tool": "工具执行错误",

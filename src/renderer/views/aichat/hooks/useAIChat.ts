@@ -18,6 +18,7 @@ import type { SettingsState } from '../../../shared/lib/types'
 import { useViewEventSubscriber } from '../../useViewEvents'
 import type { ChatInputHandle } from '../components/InputEditor'
 import * as ChatService from '../services/ChatService'
+import { estimateTokenCount } from '../utils/message'
 
 export function useAIChat() {
   const subscribeToAppEvents = useViewEventSubscriber()
@@ -35,6 +36,20 @@ export function useAIChat() {
     task: { exists: boolean; path: string }
     plan: { exists: boolean; path: string }
   } | null>(null)
+
+  // ── Auto-compact threshold ──
+  const [autoCompactThreshold, setAutoCompactThresholdState] =
+    useState<number>(500_000)
+
+  const setAutoCompactThreshold = useCallback((value: number) => {
+    const valid =
+      Number.isFinite(value) && value >= 200_000 && value <= 800_000
+        ? value
+        : 500_000
+    setAutoCompactThresholdState(valid)
+    // Save to main config (config.json) via static handler
+    configMutations.set('autoCompactThreshold', valid).catch(() => {})
+  }, [])
 
   // ── Session tracking ──
   // Which sessionId is this component currently showing
@@ -63,13 +78,18 @@ export function useAIChat() {
     })
   }, [activeSessionId])
 
-  // ── Load initial session on mount ──
+  // ── Load initial session & threshold on mount ──
   useEffect(() => {
     const loadInitial = async () => {
       const id = await config.get('activeSessionId')
       if (id) {
         setActiveSessionId(id)
         await ChatService.loadSessionById(id)
+      }
+      // Load threshold from main config (config.json)
+      const savedThreshold = await config.get('autoCompactThreshold')
+      if (typeof savedThreshold === 'number' && savedThreshold >= 200_000) {
+        setAutoCompactThresholdState(savedThreshold)
       }
     }
     loadInitial()
@@ -236,32 +256,7 @@ export function useAIChat() {
     [activeSessionId],
   )
 
-  /**
-   * Estimate token count by measuring the full serialized message payload.
-   *
-   * The most reliable proxy available without a real tokenizer is the
-   * byte-length of the JSON-serialized messages, since that captures ALL
-   * structural overhead (role, ID, toolCallId, nested objects, quotes,
-   * braces, commas) that the per-part character count misses.
-   *
-   * Token density varies by provider, but a conservative estimate is
-   * ~1 token per 2.5 bytes of serialized JSON (0.4 tokens/byte).
-   * This is based on typical Claude/GPT tokenization of structured text.
-   *
-   * For reference: English text ~1 token/4 chars, JSON ~1 token/2 chars,
-   * and serialized UIMessage adds ~30-50% overhead from structural keys.
-   * The 0.4 tokens/byte ratio empirically lands within ~20% of actual
-   * provider counts for mixed code/text conversations.
-   */
-  const tokenCount = (() => {
-    if (sessionState.messages.length === 0) return 0
-    try {
-      const serialized = JSON.stringify(sessionState.messages)
-      return Math.ceil(serialized.length * 0.4)
-    } catch {
-      return 0
-    }
-  })()
+  const tokenCount = estimateTokenCount(sessionState.messages)
 
   return {
     // From settings
@@ -288,6 +283,9 @@ export function useAIChat() {
     artifactStatus,
     loadArtifactStatus,
     tokenCount,
+
+    autoCompactThreshold,
+    setAutoCompactThreshold,
 
     // Actions
     sendMessage,

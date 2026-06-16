@@ -6,6 +6,7 @@ import { AYNITE_SUBDIRS } from '../../../lib/constants/path'
 import type { MainConfig } from '../../../lib/constants/types'
 import {
   exists,
+  getAIConfigPath,
   getAynitePath,
   getMainConfigPath,
   getPlaybookPath,
@@ -68,6 +69,13 @@ export const staticHandlers: ConfigHandler = (() => ({
         }
 
         return config
+      }
+      case 'autoCompactThreshold': {
+        const aiConfig = await readJson<Record<string, unknown>>(
+          getAIConfigPath(),
+          {},
+        )
+        return (aiConfig.autoCompactThreshold as number) ?? null
       }
       case 'matching-views': {
         const filePath = payload?.filePath as string
@@ -160,6 +168,15 @@ export const staticHandlers: ConfigHandler = (() => ({
         const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
         mainConfig.aiTools = payload.active
         await writeJson(getMainConfigPath(), mainConfig)
+        return true
+      }
+      case 'autoCompactThreshold': {
+        const dataPath = getAIConfigPath()
+        const existing = await readJson<Record<string, unknown>>(dataPath, {})
+        await writeJson(dataPath, {
+          ...existing,
+          autoCompactThreshold: payload,
+        })
         return true
       }
       default:

@@ -46,6 +46,8 @@ export function AIChat() {
     artifactStatus,
     tokenCount,
     activeSessionId,
+    autoCompactThreshold,
+    setAutoCompactThreshold,
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -195,6 +197,8 @@ export function AIChat() {
             onAbort={() => abortRef.current?.abort()}
             onClear={clearChat}
             onCompact={compactContext}
+            autoCompactThreshold={autoCompactThreshold}
+            onAutoCompactThresholdChange={setAutoCompactThreshold}
             getAllFiles={getAllFiles}
             getAvailableSkills={getAvailableSkills}
             getAvailableCommands={getAvailableCommands}
