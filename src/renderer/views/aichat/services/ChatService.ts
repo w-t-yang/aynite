@@ -184,9 +184,14 @@ export async function compactContext(sessionId: string) {
     // Messages after (and including) the last user message
     const afterLastUser = allMessages.slice(lastUserIdx)
 
-    // Step 2: Save backup of the full pre-compacted messages with title & description
+    // Step 2: Save backup of the full pre-compacted messages (no metadata — backup is just raw data)
     const timestamp = Date.now()
     const backupId = `${sessionId}-${timestamp}`
+
+    // Save the backup messages without metadata (backups are filtered from session list)
+    await aiMutations.saveSession(backupId, allMessages, undefined)
+
+    // Compute title/description from the conversation to store on the original session's metadata
     const firstUserMsg = allMessages.find((m) => m.role === 'user')
     const firstUserText =
       firstUserMsg?.parts
@@ -194,14 +199,8 @@ export async function compactContext(sessionId: string) {
         .map((p: any) => p.text)
         .join('')
         ?.slice(0, 80) || ''
-
-    await aiMutations.saveSession(backupId, allMessages, {
-      title: `Compact backup - ${new Date(timestamp).toLocaleString()}`,
-      description: firstUserText + (firstUserText.length >= 80 ? '...' : ''),
-    })
-
-    // Also save to localStorage so the metadata agent/model is preserved
-    // The backup file is already saved above
+    const sessionDescription =
+      firstUserText + (firstUserText.length >= 80 ? '...' : '')
 
     // Step 3: Build summary messages
     // Find the system message
@@ -307,8 +306,11 @@ export async function compactContext(sessionId: string) {
     }
     session.lastSavedSnapshot = ''
 
-    // Force save immediately
-    await aiMutations.saveSession(sessionId, compactedMessages, undefined)
+    // Force save immediately — pass title/description to update the original session's metadata file
+    await aiMutations.saveSession(sessionId, compactedMessages, {
+      title: `Compact backup - ${new Date(timestamp).toLocaleString()}`,
+      description: sessionDescription,
+    })
 
     // Notify listeners
     notify(session)
