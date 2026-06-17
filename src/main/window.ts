@@ -182,7 +182,16 @@ export function sendOperationToWindow(
  * @deprecated Use sendToWindow() or broadcastAppEvent() instead.
  */
 export function sendAppEvent(type: string, data: any) {
-  if (!mainWindow) return
+  if (!mainWindow) {
+    console.log('[approval] mainWindow is null, cannot send event:', type)
+    return
+  }
+  console.log(
+    '[approval] sending event:',
+    type,
+    'data:',
+    JSON.stringify(data)?.slice(0, 200),
+  )
   mainWindow.webContents.send(AppEventChannel, { type, data })
 }
 
@@ -260,11 +269,27 @@ export function createNewWindow() {
  * Processes the next queued approval request if there is one and no request is currently active.
  */
 function processApprovalQueue() {
-  if (isProcessingApproval || approvalQueue.length === 0 || !mainWindow) return
+  if (isProcessingApproval || approvalQueue.length === 0 || !mainWindow) {
+    console.log(
+      '[approval] SKIP — isProcessingApproval:',
+      isProcessingApproval,
+      'queue length:',
+      approvalQueue.length,
+      'mainWindow:',
+      !!mainWindow,
+    )
+    return
+  }
 
   isProcessingApproval = true
   const next = approvalQueue.shift()
   if (!next) return
+  console.log(
+    '[approval] SENDING approval for command:',
+    next.data.command?.slice(0, 100),
+    'id:',
+    next.id,
+  )
   pendingApprovals.set(next.id, next.resolve)
   sendAppEvent(AppEvents.AI_APPROVAL_REQUEST, {
     id: next.id,

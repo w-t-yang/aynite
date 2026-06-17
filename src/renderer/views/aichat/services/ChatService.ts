@@ -334,7 +334,9 @@ export async function compactContext(sessionId: string) {
  * Safe to call multiple times (second call is a no-op).
  */
 export function init(subscribe: SubscribeFn) {
-  if (initCalled) return
+  if (initCalled) {
+    return
+  }
   initCalled = true
   _subscribeToEvents = subscribe
 
@@ -373,10 +375,8 @@ export function init(subscribe: SubscribeFn) {
       const { id, command, cwd } = event.data as any
       for (const [, session] of sessions) {
         if (session.state.loading) {
-          // Check localStorage for auto-approve on this session
           const sid = session.state.sessionId
           if (sid && localStorage.getItem(`autoApprove:${sid}`) === 'true') {
-            // Auto-approve: respond immediately without showing modal
             aiMutations.respondToAiApproval(id, true)
             return
           }
