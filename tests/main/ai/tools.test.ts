@@ -203,10 +203,12 @@ describe('createTools', () => {
         configDir: '/mock/.aynite',
         activeFile: '/home/project/src/main.ts',
         workspaceName: 'Dev',
-        shell: expect.objectContaining({
+        shell: {
           platform: process.platform,
           shell: '/bin/zsh',
-        }),
+          isPowershell: false,
+          runCommandHint: 'Use POSIX shell syntax. Commands run via: <shell> -l -c <command>',
+        },
       })
     })
   })
