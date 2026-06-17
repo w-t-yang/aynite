@@ -86,6 +86,26 @@ function genId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+// Pool of randomised "processing" replies — picked at random each time
+const PROCESSING_REPLIES = [
+  'Gotcha, working on it',
+  'Diving into it, will get back to you soon',
+  'On it! Let me look into that for you',
+  'Alright, give me a moment to figure this out',
+  'Let me work through that, hang tight',
+  'One sec, let me dig into that',
+  "Sure thing, I'll get right on it",
+  'Lemme take a look and get back to you',
+  'Processing your request, stay tuned',
+  'Working through it now, will let you know',
+]
+
+function randomProcessingReply(): string {
+  return PROCESSING_REPLIES[
+    Math.floor(Math.random() * PROCESSING_REPLIES.length)
+  ]
+}
+
 // ─── Agent Loop (main process version) ──────────────────────────────────
 
 /**
@@ -590,12 +610,10 @@ async function handleChatMessage(
 ) {
   const lockKey = `${config.id}:${config.workspace}`
 
-  // If the agent is already processing a message for this bot, reject and show latest progress
+  // If the agent is already processing a message for this bot, reply with a
+  // single merged message explaining the situation and showing the last reply.
   if (processing.has(lockKey)) {
-    await ctx.reply(
-      'The agent is currently processing a request. Please wait before sending another message.',
-    )
-    // Send the last assistant text message from the session as a status update
+    let lastReply = ''
     try {
       const wsConfig = await readJson<WorkspaceConfig>(
         getWorkspaceDataPath(config.workspace),
@@ -614,7 +632,7 @@ async function handleChatMessage(
           if (lastText) {
             const textPart = lastText.parts.find((p: any) => p.type === 'text')
             if (textPart?.text) {
-              await ctx.reply(textPart.text.slice(0, 2000))
+              lastReply = textPart.text.slice(0, 2000)
             }
           }
         }
@@ -622,6 +640,12 @@ async function handleChatMessage(
     } catch {
       // Best effort
     }
+
+    const message = lastReply
+      ? `The agent is busy with the last request.\n\nHere is the latest message from the session:\n\n${escapeMarkdown(lastReply)}`
+      : 'The agent is currently processing a request. Please wait before sending another message.'
+
+    await ctx.reply(message)
     return
   }
 
@@ -728,7 +752,7 @@ async function handleChatMessage(
       `[Messenger] total messages before agent loop: ${updatedMessages.length}`,
     )
 
-    await ctx.reply('Processing your request...')
+    await ctx.reply(randomProcessingReply())
 
     // Run the agent loop (no approval prompts, no intermediate streaming)
     const activeFile = workspaceConfig.activeFile || ''
