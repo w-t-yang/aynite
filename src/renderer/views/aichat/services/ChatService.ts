@@ -348,15 +348,22 @@ export function init(subscribe: SubscribeFn) {
       return
     }
 
-    // Session changes — load from disk only if not already in memory.
-    // The sessions.has() guard prevents overwriting in-memory state
+    // Session changes — load from disk if not already in memory, or if the
+    // in-memory session was cleared (empty messages) and needs reloading.
+    // The sessions.has() guard normally prevents overwriting in-memory state
     // that may have been modified by sendMessage before this async event
-    // was processed. The file always exists because createNewSession
-    // writes it before setting the config.
+    // was processed. However, after clearChat(), the session remains in the
+    // Map with empty messages, so subsequent switches back to it would show
+    // stale data. We detect this by checking if the in-memory session has
+    // no messages (was cleared).
     if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
       const { id } = event.data as { id: string }
-      if (id && !sessions.has(id)) {
-        loadSessionById(id).catch(() => {})
+      if (id) {
+        const existing = sessions.get(id)
+        const isEmpty = existing && existing.state.messages.length === 0
+        if (!existing || isEmpty) {
+          loadSessionById(id).catch(() => {})
+        }
       }
       return
     }

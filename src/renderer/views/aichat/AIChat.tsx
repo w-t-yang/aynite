@@ -235,6 +235,11 @@ export function AIChat() {
           onSelect={(id, date) => {
             ChatService.setPendingSessionDate(id, date)
             configMutations.set('activeSessionId', id)
+            // Also force-load from disk to handle the case where the session
+            // is already in the in-memory Map (e.g., after clearChat) but
+            // has stale/empty messages. The ACTIVE_SESSION_CHANGED event
+            // handler in ChatService skips sessions already in memory.
+            ChatService.loadSessionById(id)
           }}
           onClose={() => setShowHistory(false)}
         />

@@ -218,9 +218,19 @@ export function WorkspaceView() {
             </div>
             <button
               type="button"
-              onClick={() =>
-                configMutations.set('activeSessionId', Date.now().toString())
-              }
+              onClick={async () => {
+                // Create a new empty session file first, then set it as active.
+                // This ensures loadSessionById on the renderer side finds the file.
+                const newId = Date.now().toString()
+                try {
+                  // We need to import aiMutations to save the session
+                  const { aiMutations } = await import('../../bridge/ai')
+                  await aiMutations.saveSession(newId, [])
+                } catch (e) {
+                  console.error('[WorkspaceView] Failed to create session:', e)
+                }
+                configMutations.set('activeSessionId', newId)
+              }}
               className="p-1 rounded hover:bg-accent text-muted-foreground/50 hover:text-foreground transition-colors"
               title={t('sessions.newTitle')}
             >
