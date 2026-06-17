@@ -383,9 +383,14 @@ export function GitDiffView({
                     disabled={commitState?.generating}
                     className="text-[10px] px-2.5 py-1 rounded-md font-medium transition-all bg-primary/15 text-primary hover:bg-primary/25 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
                   >
-                    {commitState?.generating && commitState?.root === path
-                      ? 'Generating...'
-                      : `Commit (${folderName})`}
+                    {commitState?.generating && commitState?.root === path ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />
+                        Generating...
+                      </span>
+                    ) : (
+                      `Commit (${folderName})`
+                    )}
                   </Button>
                 </div>
               </div>
