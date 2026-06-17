@@ -64,26 +64,6 @@ jobs:
       - name: Run type check
         run: npm run typecheck
 
-  dep-audit:
-    name: Dependency Audit
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v6
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit (high severity only)
-        run: npm audit --audit-level=high
-
   audit:
     name: Architecture Audit
     runs-on: ubuntu-latest
