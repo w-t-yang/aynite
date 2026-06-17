@@ -157,6 +157,10 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       [BaseMention, placeholder, loading],
     )
 
+    // Ref to hold the rebuild function so it can be called from
+    // both the mount effect and the config-changed event listener.
+    const rebuildRef = useRef<() => void>(() => {})
+
     // Unified effect for indexing workspace files, skills, and commands
     useEffect(() => {
       let isMounted = true
@@ -242,6 +246,7 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
         }
       }
 
+      rebuildRef.current = rebuild
       rebuild()
 
       return () => {
@@ -253,6 +258,23 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       getAllFiles,
       getAvailableSkills,
     ])
+
+    // Listen for config-changed events relayed from the parent window.
+    // When skills or commands config changes (e.g., a new skill folder is added),
+    // re-index skills and commands so they appear immediately in the / mention popup.
+    useEffect(() => {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'aynite:config-changed') {
+          const key = event.data?.data?.key
+          // Re-index when skills or commands config changes
+          if (key === 'skills' || key === 'commands') {
+            rebuildRef.current()
+          }
+        }
+      }
+      window.addEventListener('message', handleMessage)
+      return () => window.removeEventListener('message', handleMessage)
+    }, [])
 
     const editor = useEditor(
       {
