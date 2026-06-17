@@ -1,7 +1,8 @@
 import { Copy, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Theme } from '../../../lib/constants/types'
-import { configMutations } from '../../bridge/config'
+import { config, configMutations } from '../../bridge/config'
+import { system } from '../../bridge/system'
 import { themeMutations } from '../../bridge/theme'
 import { Button } from '../../shared/basic/Button'
 import { Input } from '../../shared/basic/Input'
@@ -11,6 +12,7 @@ import { ColorInput } from '../../shared/featured/ColorInput'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import { ThemePreview } from '../../shared/featured/ThemePreview'
+import { useView } from '../ViewContext'
 
 const COLOR_LABELS: Record<string, string> = {
   background: 'Background',
@@ -37,44 +39,49 @@ const COLOR_LABELS: Record<string, string> = {
 }
 
 interface AppearanceTabProps {
-  state: {
-    list: Theme[]
-    activeId: string
-    systemFonts: string[]
-  }
-  actions: {
-    setThemes: (payload: { list: Theme[]; activeId: string }) => void
-    onRestore?: () => void
-    t: (key: string) => string
-  }
+  onRestore?: () => void
+  t: (key: string) => string
 }
 
-export function AppearanceTab({ state, actions }: AppearanceTabProps) {
-  const { list, activeId, systemFonts } = state
-  const { t } = actions
-
-  // Local state for immediate UI feedback
-  const [localThemes, setLocalThemes] = useState(list)
-  const [localActiveId, setLocalActiveId] = useState(activeId)
+export function AppearanceTab({ onRestore, t }: AppearanceTabProps) {
+  const { setTheme: setContextTheme } = useView()
+  const [localThemes, setLocalThemes] = useState<Theme[]>([])
+  const [localActiveId, setLocalActiveId] = useState('')
+  const [systemFonts, setSystemFonts] = useState<string[]>([])
+  const [_loading, setLoading] = useState(true)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateName, setDuplicateName] = useState('')
   const [duplicateError, setDuplicateError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
-  // Sync from props if they change externally
+  // Load themes, fonts, and active theme on mount
   useEffect(() => {
-    setLocalThemes(list)
-    setLocalActiveId(activeId)
-  }, [list, activeId])
+    const load = async () => {
+      const [themesList, fonts, activeIdVal] = await Promise.all([
+        config.get('themes'),
+        system.getSystemFonts(),
+        config.get('activeTheme'),
+      ])
+      if (themesList) setLocalThemes(themesList as Theme[])
+      if (fonts) setSystemFonts(fonts as string[])
+      if (activeIdVal) setLocalActiveId(activeIdVal as string)
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   const editingTheme = localThemes.find((t) => t.id === localActiveId)
 
-  const persist = (list: any[], activeId: string) => {
-    actions.setThemes({ list, activeId })
-  }
+  const persist = useCallback(
+    (themeList: Theme[], activeId: string) => {
+      setLocalThemes(themeList)
+      setLocalActiveId(activeId)
+      if (activeId) setContextTheme(activeId)
+    },
+    [setContextTheme],
+  )
 
   const handleSelectTheme = (id: string) => {
-    setLocalActiveId(id)
     persist(localThemes, id)
   }
 
@@ -84,7 +91,6 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
     )
     setLocalThemes(newThemes)
     persist(newThemes, localActiveId)
-    // Persist theme data to disk so iframes can load it
     await configMutations.set('theme', {
       id: updatedTheme.id,
       theme: updatedTheme,
@@ -141,7 +147,7 @@ export function AppearanceTab({ state, actions }: AppearanceTabProps) {
     <SettingsPage
       title={t('appearance.title')}
       description={t('appearance.description')}
-      onRestore={actions.onRestore}
+      onRestore={onRestore}
     >
       {/* Theme Presets */}
       <Section

@@ -1,35 +1,60 @@
+import { useEffect, useState } from 'react'
 import { GRID_2_COL } from '../../../lib/constants/renderer/styles'
+import { config, configMutations } from '../../bridge/config'
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import type { SettingsState } from '../../shared/lib/types'
 
 interface ToolsTabProps {
-  state: {
-    aiTools: SettingsState['aiTools']
-    availableTools: { id: string; name: string; description: string }[]
-  }
-  actions: {
-    setTools: (tools: SettingsState['aiTools']) => void
-    onRestore?: () => void
-    t: (key: string) => string
-  }
+  onRestore?: () => void
+  t: (key: string) => string
 }
 
-export function ToolsTab({ state, actions }: ToolsTabProps) {
-  const { aiTools, availableTools } = state
-  const { setTools, t } = actions
+export function ToolsTab({ onRestore, t }: ToolsTabProps) {
+  const [aiTools, setAiTools] = useState<SettingsState['aiTools']>({})
+  const [availableTools, setAvailableTools] = useState<
+    { id: string; name: string; description: string }[]
+  >([])
+  const [loading, setLoading] = useState(true)
 
-  const handleToggleTool = (id: string) => {
+  useEffect(() => {
+    config.get('tools').then((resTools: any) => {
+      if (resTools) {
+        setAiTools(resTools.active || {})
+        setAvailableTools(resTools.list || [])
+      }
+      setLoading(false)
+    })
+  }, [])
+
+  const handleToggleTool = async (id: string) => {
     const newTools = { ...aiTools, [id]: !aiTools[id] }
-    setTools(newTools)
+    setAiTools(newTools)
+    await configMutations.set('tools', {
+      active: newTools,
+      list: availableTools,
+    } as any)
+  }
+
+  if (loading) {
+    return (
+      <SettingsPage
+        title={t('tools.title')}
+        description={t('tools.description')}
+      >
+        <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
+          Loading...
+        </div>
+      </SettingsPage>
+    )
   }
 
   return (
     <SettingsPage
       title={t('tools.title')}
       description={t('tools.description')}
-      onRestore={actions.onRestore}
+      onRestore={onRestore}
     >
       <Section
         title={t('tools.capabilities')}

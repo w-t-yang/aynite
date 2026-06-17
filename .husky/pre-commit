@@ -1,4 +1,15 @@
-npx lint-staged
+#!/bin/sh
+# Git hooks have a minimal PATH — add common Node.js/npm locations.
+# This ensures `npx` and `npm` are found even when the hook's PATH
+# only includes node_modules/.bin and system directories.
+if command -v node >/dev/null 2>&1; then
+  export PATH="$PATH:$(dirname "$(command -v node)")"
+fi
+if command -v npm >/dev/null 2>&1; then
+  export PATH="$PATH:$(dirname "$(command -v npm)")"
+fi
+
+npx --no-install lint-staged
 npm run typecheck
 npm test
 npm run audit:window

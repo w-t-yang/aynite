@@ -11,23 +11,23 @@ import { SettingsPage } from '../../shared/featured/SettingsPage'
 import { useViewEvent } from '../useViewEvents'
 
 interface AboutTabProps {
-  state: {
-    appVersion: string
-  }
-  actions: {
-    onOpenExternal: (url: string) => void
-    t: (key: string) => string
-  }
+  onOpenExternal: (url: string) => void
+  t: (key: string) => string
 }
 
-export function AboutTab({ state, actions }: AboutTabProps) {
-  const { appVersion } = state
-  const { onOpenExternal, t } = actions
+export function AboutTab({ onOpenExternal, t }: AboutTabProps) {
+  const [appVersion, setAppVersion] = useState('')
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
   const [updateInfo, setUpdateInfo] = useState<any>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [telemetryEnabled, setTelemetryEnabled] = useState(false)
+
+  useEffect(() => {
+    config.get('version').then((v: any) => {
+      if (v) setAppVersion(v)
+    })
+  }, [])
 
   useEffect(() => {
     config.get('telemetry').then((t: any) => {

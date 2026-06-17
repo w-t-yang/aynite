@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Review #3 — Aynite (June 2026)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap');
+body { font-family: 'Inter', sans-serif; }
+.badge-strong { background: #059669; color: white; }
+.badge-worthy { background: #d97706; color: white; }
+.badge-speculative { background: #6b7280; color: white; }
+.status-fixed { background: #d1fae5; color: #065f46; }
+.card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; background: white; }
+.card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
+.diagram-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.diagram-box { background: #f9fafb; border-radius: 8px; padding: 1rem; border: 1px solid #e5e7eb; }
+.diagram-box h4 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 0.5rem; }
+.file-list { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; background: #f3f4f6; padding: 0.75rem; border-radius: 6px; line-height: 1.6; }
+.file-list span.code { color: #6366f1; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<div class="max-w-5xl mx-auto px-6 py-12">
+
+<div class="mb-10">
+  <h1 class="text-3xl font-bold tracking-tight">Aynite Architecture Review #3</h1>
+  <p class="text-gray-500 mt-2 text-sm">Deepening candidates found after two rounds of refactoring &middot; June 2026</p>
+</div>
+
+<!-- PREVIOUS STATUS -->
+<div class="mb-12 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+  <h2 class="text-lg font-semibold mb-4">Previous Review Recap — All 12 Candidates Resolved</h2>
+  <div class="grid grid-cols-2 gap-2">
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#1 Config Router</span>
+        <p class="text-[11px] text-green-700">God switch replaced with handler-registry</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#2 path.ts</span>
+        <p class="text-[11px] text-green-700">560 lines split into resolve.ts + operations.ts</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#3 GitService</span>
+        <p class="text-[11px] text-green-700">585 lines into 5 modules + thin coordinator</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#4 AppContext</span>
+        <p class="text-[11px] text-green-700">610 lines into 6 focused contexts</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#5 AI Tools</span>
+        <p class="text-[11px] text-green-700">512 lines into 4 extracted modules</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#6 FileBrowserPage</span>
+        <p class="text-[11px] text-green-700">726 lines into 4 hooks + component</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#7 Spells Module</span>
+        <p class="text-[11px] text-green-700">Renamed/split across skills, commands, resources</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#8 RSS/Spotify Hooks</span>
+        <p class="text-[11px] text-green-700">350-line god hooks split into focused hooks</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#9 RSSApp duplications</span>
+        <p class="text-[11px] text-green-700">Duplicated resize handlers extracted</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#10 Session Operations</span>
+        <p class="text-[11px] text-green-700">SessionService centralizes date-scanning</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#11 Preload Bridge</span>
+        <p class="text-[11px] text-green-700">Namespaced by domain</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+      <span class="text-lg shrink-0">&#x2705;</span>
+      <div>
+        <span class="font-medium text-green-800 text-sm">#12 Stale Data Hook</span>
+        <p class="text-[11px] text-green-700">Shared useStaleData extracted</p>
+      </div>
+    </div>
+  </div>
+  <div class="mt-4 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+    <strong>Overall:</strong> 12/12 candidates resolved across two rounds. The codebase has undergone significant architectural improvement.
+  </div>
+</div>
+
+<!-- CANDIDATE 1 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">1. Settings.tsx: God Component with 10+ Concerns</h2>
+    <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full">Strong</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/renderer/views/settings/Settings.tsx</span> — ~450 lines<br>
+      11 useState calls &bull; 10 tab callback handlers &bull; 9 data domains in one Promise.all<br>
+      Monolithic restore modal with 7-branch if-else chain &bull; 10 conditional tab renders
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">After FileBrowserPage was extracted, Settings.tsx has become the next god component. Every tab handler (<code>handleSetThemes</code>, <code>handleSetAI</code>, <code>handleSetSkills</code>, <code>handleSetMessengers</code>, etc.) lives in the parent, not delegated to the tab. The <code>loadSettings</code> function loads <strong>9 different domains</strong> in a single Promise.all — AI config, agents, prompts, keybindings, skills config, skills items, commands config, commands items, tools, and messengers. The restore modal has a 7-case if-else chain for different tab types.</p>
+    <p class="text-sm mt-2"><strong>Deletion test:</strong> Delete Settings.tsx — complexity doesn't concentrate. It scatters across all tab components (AITab, AgentsTab, SkillsTab, etc.) which currently receive pre-loaded data and would need their own loading logic. The component is <strong>shallow</strong>: its orchestration interface is nearly as complex as the implementation.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Adopt a <strong>tab-level data loading</strong> pattern. Each tab (AITab, AgentsTab, etc.) loads its own data and manages its own saves. Settings.tsx becomes a thin orchestrator handling only tab routing, the sidebar, and the shared restore modal. Tabs receive a lightweight <code>tabApi</code> object with <code>onRestore()</code> and <code>t()</code> rather than pre-loaded state and callback handlers.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Benefits</h3>
+    <ul class="text-sm list-disc list-inside space-y-1">
+      <li><strong>Locality</strong>: "How does tools saving work?" — answer is in <code>ToolsTab.tsx</code>, not a handler in Settings.tsx</li>
+      <li><strong>Leverage</strong>: Settings.tsx's interface shrinks from 10+ handler props to ~3 (routing + restore)</li>
+      <li><strong>Performance</strong>: Tab switching no longer re-runs loadSettings (9 parallel IPC calls)</li>
+      <li><strong>Dead code savings</strong>: Tabs that aren't mounted don't make IPC calls at all</li>
+    </ul>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — God Settings (450 lines)</h4>
+      <div class="mermaid">
+flowchart TD
+    ST["Settings.tsx (450 lines)"] --> LS["loadSettings: 9 domains in Promise.all"]
+    ST --> HA["handleSetAI()"]
+    ST --> HK["handleSetKeybindings()"]
+    ST --> HS["handleSetSkills()"]
+    ST --> HT["handleSetTools()"]
+    ST --> HM["handleSetMessengers()"]
+    ST --> RM["RestoreModal (7-branch if-else)"]
+    ST --> CR["10 conditional tab renders"]
+    style ST fill:#fee2e2,stroke:#dc2626
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Thin orchestrator (~120 lines)</h4>
+      <div class="mermaid">
+flowchart TD
+    ST2["Settings.tsx (thin)"] --> TB["Tab routing"]
+    ST2 --> SB["Sidebar"]
+    ST2 --> RM2["RestoreModal (generic)"]
+    ST2 --> AT["AITab (loads own data)"]
+    ST2 --> AGT["AgentsTab (loads own data)"]
+    ST2 --> SKT["SkillsTab (loads own data)"]
+    ST2 --> MT["MessengersTab (loads own data)"]
+    AT --> IPC["config.get('ai')"]
+    AGT --> IPC2["config.get('agents')"]
+    style ST2 fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 2 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">2. ChatService: 400-Line Singleton with 7 Fused Concerns</h2>
+    <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full">Strong</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/renderer/views/aichat/services/ChatService.ts</span> — 400+ lines<br>
+      Session state map &bull; Auto-save with 1s timer &bull; Stream dispatch management<br>
+      Context compaction (AI summarization) &bull; Approval handling &bull; Message send orchestration<br>
+      Auto-compact threshold checking &bull; Event subscription wiring
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">ChatService was extracted from earlier god-module refactoring but has grown to be a monolith in its own right. The <code>compactContext()</code> method alone is <strong>100+ lines</strong> containing inline AI summarization — it builds summary messages, makes an AI chat call via the bridge, manages a stream handler with 60-second timeout, writes backup files, and updates metadata. The <code>sendMessage()</code> method is also 100+ lines with embedded command execution, system prompt building, agent loop orchestration, and auto-compact threshold checks.</p>
+    <p class="text-sm mt-2"><strong>Duplication:</strong> <code>sendMessage()</code> fetches AI config, agent config, tools config, prompts config, workspace folders, active file, and workspace name in a <code>Promise.all</code> — the same data that <code>useAIChat.ts</code> loads independently via <code>loadSettings()</code>. Two callers fetch the same 5+ config keys.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract three seams from ChatService:</p>
+    <ul class="text-sm list-disc list-inside space-y-1">
+      <li><strong>SessionStore</strong> — state Map, subscription management, getOrCreateSession, notify pattern</li>
+      <li><strong>AutoSaver</strong> — 1s debounced save, snapshot comparison, metadata building, timer lifecycle</li>
+      <li><strong>CompactService</strong> — context compaction algorithm, backup creation, AI summarization call</li>
+    </ul>
+    <p class="text-sm mt-1">ChatService stays as the public facade importing and composing the above services, with sendMessage staying as the orchestration entry point.</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — Monolithic ChatService</h4>
+      <div class="mermaid">
+flowchart TD
+    CS["ChatService.ts (400+ lines)"] --> SS["Session state Map"]
+    CS --> AS["Auto-save (1s timer + snapshot)"]
+    CS --> SD["Stream dispatch (activeStreams Map)"]
+    CS --> CC["compactContext() (100 lines)"]
+    CS --> AH["Approval (approvalId tracking)"]
+    CS --> SM["sendMessage() (100+ lines)"]
+    CS --> AC["Auto-compact threshold check"]
+    CS --> ES["Event subscription wiring"]
+    style CS fill:#fee2e2,stroke:#dc2626
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Composed services</h4>
+      <div class="mermaid">
+flowchart TD
+    CS2["ChatService (facade)"] --> SS2["SessionStore"]
+    CS2 --> AV["AutoSaver"]
+    CS2 --> CO["CompactService"]
+    CS2 --> SD2["StreamDispatcher"]
+    CS2 --> SM2["sendMessage (orchestration)"]
+    style CS2 fill:#d1fae5,stroke:#059669
+    style SS2 fill:#e0e7ff,stroke:#6366f1
+    style AV fill:#e0e7ff,stroke:#6366f1
+    style CO fill:#e0e7ff,stroke:#6366f1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 3 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">3. window.ts: Main Process God Module</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/main/window.ts</span> — 300+ lines<br>
+      <span class="code">src/main/window-state.ts</span> — per-window state registry<br>
+      5 distinct concerns fused: window lifecycle &bull; approval queue &bull; IPC routing &bull; dialogs &bull; permissions
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">window.ts has accumulated responsibilities beyond "create and manage windows":</p>
+    <ol class="text-sm list-decimal list-inside mt-1 space-y-1">
+      <li><strong>Window lifecycle</strong> — createMainWindow, createNewWindow, minimize/maximize/close, onBeforeInputEvent (15+ functions)</li>
+      <li><strong>Approval queue</strong> — requestAiApproval, pendingApprovals Map, approvalQueue, processApprovalQueue, setupAiListeners with ipcMain.on(AiEventChannels.APPROVAL_RESPONSE) (50+ lines of AI-domain logic)</li>
+      <li><strong>IPC routing</strong> — sendToWindow (scoped), broadcastAppEvent (global), sendAppEvent (deprecated), sendAppOperation, sendOperationToWindow, getWinIdFromSender, toggleDevToolsForSender (10+ functions)</li>
+      <li><strong>Dialogs</strong> — showOpenDialog, showSaveDialog</li>
+    </ol>
+    <p class="text-sm mt-2">The approval queue is the most intrusive — AI approval logic with queuing, pending map, and event listeners lives in window.ts because it needs <code>BrowserWindow.webContents</code> to send events. But the discipline of "only window.ts touches BrowserWindow" has pushed AI-domain code into window.ts rather than into a separate module that imports a send function.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract two seams:</p>
+    <ul class="text-sm list-disc list-inside space-y-1">
+      <li><strong>src/main/approval-queue.ts</strong> — approval request queue, pendingApprovals Map, processApprovalQueue, AiEventChannels listener setup. Imports sendToWindow from window.ts.</li>
+      <li><strong>src/main/ipc-utils.ts</strong> — sendToWindow, broadcastAppEvent, sendOperationToWindow, getWinIdFromSender, toggleDevToolsForSender. This becomes the "only touches BrowserWindow" module.</li>
+    </ul>
+    <p class="text-sm mt-1">window.ts retains: createMainWindow, createNewWindow, window state helpers, permission handling, window event listeners.</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — God window.ts</h4>
+      <div class="mermaid">
+flowchart TD
+    WT["window.ts (300+ lines)"] --> WL["Window lifecycle (15 fns)"]
+    WT --> AQ["Approval queue + AI listeners"]
+    WT --> IPC["IPC routing (10+ fns)"]
+    WT --> DL["Dialogs"]
+    WT --> PH["Permission handling"]
+    WT --> DE["Legacy sendAppEvent"]
+    style WT fill:#fee2e2,stroke:#dc2626
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Focused window.ts</h4>
+      <div class="mermaid">
+flowchart TD
+    WT2["window.ts (~120 lines)"] --> WL2["Window lifecycle"]
+    WT2 --> PH2["Permission handling"]
+    WT2 --> IU["ipc-utils.ts (sendToWindow etc.)"]
+    WT2 --> AQ2["approval-queue.ts"]
+    style WT2 fill:#d1fae5,stroke:#059669
+    style IU fill:#e0e7ff,stroke:#6366f1
+    style AQ2 fill:#e0e7ff,stroke:#6366f1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 4 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">4. Telemetry Module: Singleton with 4 Concerns</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/main/telemetry/index.ts</span> — 250+ lines<br>
+      GA4 protocol client &bull; Buffer management &bull; Timer lifecycle (flush + heartbeat) &bull; Config persistence
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">The telemetry module owns four distinct concerns in one file:</p>
+    <ol class="text-sm list-decimal list-inside mt-1 space-y-1">
+      <li><strong>GA4 protocol client</strong> — GA_URL, GA_API_SECRET, fetch calls, event serialization, user_properties</li>
+      <li><strong>Buffer management</strong> — in-memory event buffer, flush-on-25-items, forced flush on quit</li>
+      <li><strong>Timer lifecycle</strong> — flush timer (60s), engagement heartbeat (30s), start/stop for each. The start/stop timer pattern is duplicated between both timers.</li>
+      <li><strong>Config persistence</strong> — loadTelemetryConfig, saveTelemetryValue, first_open tracking</li>
+    </ol>
+    <p class="text-sm mt-2"><strong>Duplicated timer pattern:</strong> The flush timer and heartbeat timer share the same lifecycle (start &rarr; stop &rarr; cleanup), but implemented independently. A shared <code>PeriodicRunner</code> utility would eliminate ~15 lines of duplicated interval management.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Extract a shared <strong>PeriodicRunner</strong> utility class for the main process (wraps setInterval with start/stop/cleanup). Then split telemetry into: <strong>ga4-client.ts</strong> (GA4 protocol, fetch, event serialization) and <strong>index.ts</strong> (session lifecycle, config persistence, event tracking API).</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before (250 lines)</h4>
+      <div class="mermaid">
+flowchart TD
+    TM["telemetry/index.ts"] --> GA["GA4 URL + fetch + secrets"]
+    TM --> BF["Buffer management"]
+    TM --> TF["Flush timer (60s)"]
+    TM --> HB["Heartbeat timer (30s)"]
+    TM --> CP["Config persistence"]
+    TM --> SL["Session lifecycle"]
+    style TM fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After</h4>
+      <div class="mermaid">
+flowchart TD
+    TM2["telemetry/index.ts"] --> GA2["ga4-client.ts"]
+    TM2 --> CFG["Config persistence"]
+    TM2 --> SL["Session lifecycle"]
+    TM2 --> PR["PeriodicRunner (shared utility)"]
+    style TM2 fill:#d1fae5,stroke:#059669
+    style GA2 fill:#e0e7ff,stroke:#6366f1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 5 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">5. agent.ts: Core Orchestrator Living in utils/</h2>
+    <span class="badge-worthy text-xs font-bold px-3 py-1 rounded-full">Worth exploring</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">src/renderer/views/aichat/utils/agent.ts</span> — 100+ lines, core agent loop<br>
+      <span class="code">src/renderer/views/aichat/utils/message.ts</span> — pure message helpers<br>
+      <span class="code">src/renderer/views/aichat/utils/commands.ts</span> — command execution<br>
+      <span class="code">src/renderer/views/aichat/utils/input.ts</span> — input serialization
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm"><code>runAgentLoop()</code> is the <strong>core AI agent orchestrator</strong> — it manages message accumulation, tool call tracking, assistant message flushing, real-time command output streaming, and the full lifecycle of an agent interaction. But it lives in a <code>utils/</code> directory alongside <code>message.ts</code> (pure message helpers) and <code>input.ts</code> (input serialization).</p>
+    <p class="text-sm mt-2"><strong>Apply the naming test:</strong> Does "utils" tell a developer what's inside? No. It's a miscellany — four files with four fundamentally different responsibilities (orchestration, message manipulation, command execution, input parsing) bundled under one label.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">Promote <code>agent.ts</code> to a first-class module at <code>src/renderer/views/aichat/agent-loop/index.ts</code>. The <code>utils/</code> directory keeps message.ts, commands.ts, input.ts — actual utilities. No code changes needed, only a directory rename and import path update.</p>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Before — Misleading structure</h4>
+      <div class="mermaid">
+flowchart TD
+    subgraph U["aichat/utils/"]
+        AG["agent.ts (core orchestrator)"]
+        MS["message.ts (pure helpers)"]
+        CM["commands.ts"]
+        IN["input.ts"]
+    end
+    U --> CS["ChatService.sendMessage()"]
+    style U fill:#fef3c7,stroke:#d97706
+    style AG fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>After — Honest structure</h4>
+      <div class="mermaid">
+flowchart TD
+    AG2["aichat/agent-loop/index.ts"] --> CS["ChatService"]
+    subgraph U2["aichat/utils/"]
+        MS2["message.ts"]
+        CM2["commands.ts"]
+        IN2["input.ts"]
+    end
+    U2 --> CS
+    style AG2 fill:#d1fae5,stroke:#059669
+    style U2 fill:#e0e7ff,stroke:#6366f1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANDIDATE 6 -->
+<div class="card card-shadow">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-xl font-semibold">6. Duplicated Header Toolbar Pattern Across Views</h2>
+    <span class="badge-speculative text-xs font-bold px-3 py-1 rounded-full">Speculative</span>
+  </div>
+  <div class="mb-4">
+    <div class="file-list">
+      <span class="code">RSSApp.tsx</span> — header with icon + title + RefreshCw + tooltip (~30 lines)<br>
+      <span class="code">SpotifyApp.tsx</span> — header with icon + title + RefreshCw + LogOut (~35 lines)<br>
+      <span class="code">AIChat.tsx</span> — Header component with history, clear, copy (~40 lines)<br>
+      <span class="code">FileBrowserPage.tsx</span> — TabBar + StatusBar (different pattern)
+    </div>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Problem</h3>
+    <p class="text-sm">Every view has a header toolbar with common interaction patterns — icon + title on the left, action buttons with tooltips on the right, loading spinners on refresh buttons. RSS, Spotify, and AI Chat all implement slightly different versions. The common structure:</p>
+    <ul class="text-sm list-disc list-inside space-y-1">
+      <li>Left section: icon + view title</li>
+      <li>Right section: action buttons with tooltips</li>
+      <li>Consistent hover/disabled/loading states</li>
+    </ul>
+    <p class="text-sm mt-2">This is <strong>speculative</strong> because the duplication is small (~30 lines each) and a generic ViewToolbar component might end up with too many props. Worth raising but not a priority.</p>
+  </div>
+  <div class="mb-4">
+    <h3 class="font-medium text-sm text-gray-500 uppercase tracking-wide mb-1">Solution</h3>
+    <p class="text-sm">A small <strong>ViewToolbar</strong> component at <code>src/renderer/shared/basic/ViewToolbar.tsx</code> with a simple slot-based API:</p>
+    <div class="text-xs bg-gray-100 p-3 rounded-lg mt-1 font-mono leading-relaxed">
+&lt;ViewToolbar icon={&lt;Rss size={14} /&gt;} title="RSS Reader"&gt;<br>
+&nbsp;&nbsp;&lt;button onClick={rss.fetchAll} title="Refresh"&gt;&lt;RefreshCw /&gt;&lt;/button&gt;<br>
+&lt;/ViewToolbar&gt;
+    </div>
+  </div>
+  <div class="diagram-container">
+    <div class="diagram-box">
+      <h4>Duplicated across 3+ views</h4>
+      <div class="mermaid">
+flowchart LR
+    RSS["RSSApp header (~30 lines)"] --> PT["icon + title + actions"]
+    SPOT["SpotifyApp header (~35 lines)"] --> PT
+    CHAT["AIChat Header (~40 lines)"] --> PT
+    style RSS fill:#fef3c7,stroke:#d97706
+    style SPOT fill:#fef3c7,stroke:#d97706
+    style CHAT fill:#fef3c7,stroke:#d97706
+      </div>
+    </div>
+    <div class="diagram-box">
+      <h4>Shared component</h4>
+      <div class="mermaid">
+flowchart LR
+    VT["ViewToolbar (shared)"] --> RSS2["RSSApp"]
+    VT --> SPOT2["SpotifyApp"]
+    VT --> CHAT2["AIChat"]
+    style VT fill:#d1fae5,stroke:#059669
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOP RECOMMENDATION -->
+<div class="mt-12 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+  <h2 class="text-xl font-bold text-emerald-800 mb-3">Top Recommendation</h2>
+  <p class="text-emerald-700"><strong>Start with Candidate #1: Settings.tsx — push data loading into tab components.</strong></p>
+  <ul class="text-emerald-700 text-sm mt-2 list-disc list-inside space-y-1">
+    <li><strong>Highest impact on navigability</strong> — Settings is the first place any developer goes to understand how config works. Moving data loading into each tab makes it immediately clear which tab owns which config domain.</li>
+    <li><strong>Lowest risk</strong> — Each tab component already exists and already has access to the bridge. The change is purely about moving the config.get/set calls from the parent into the child. Each tab can be migrated independently.</li>
+    <li><strong>Enables #5 naturally</strong> — Once tabs are self-loading, the restore modal can be simplified (each tab exposes its own restore handler instead of a 7-branch if-else).</li>
+    <li><strong>Immediate performance win</strong> — The monolithic loadSettings fires 9 parallel IPC calls on every tab switch. Tab-level loading fires only the calls needed for that tab.</li>
+  </ul>
+  <p class="text-emerald-700 text-sm mt-3">After that, Candidate #2 (ChatService extraction) has the highest return on testability — the extracted AutoSaver, SessionStore, and CompactService would each be independently testable. Candidate #3 (window.ts extraction) is a good follow-up that cleans up the main process boundary.</p>
+</div>
+
+</div>
+</body>
+</html>

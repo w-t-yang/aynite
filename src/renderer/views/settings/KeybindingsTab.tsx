@@ -1,23 +1,34 @@
+import { useEffect, useState } from 'react'
 import { AppOperation } from '../../../lib/constants/app'
+import { config, configMutations } from '../../bridge/config'
 import { Section } from '../../shared/basic/Section'
 import { KeybindingRow } from '../../shared/featured/KeybindingRow'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import type { Keybinding, SettingsState } from '../../shared/lib/types'
 
 interface KeybindingsTabProps {
-  state: {
-    keybindings: SettingsState['keybindings']
-  }
-  actions: {
-    setKeybindings: (keybindings: SettingsState['keybindings']) => void
-    onRestore?: () => void
-    t: (key: string) => string
-  }
+  onRestore?: () => void
+  t: (key: string) => string
 }
 
-export function KeybindingsTab({ state, actions }: KeybindingsTabProps) {
-  const { keybindings } = state
-  const { setKeybindings, t } = actions
+export function KeybindingsTab({ onRestore, t }: KeybindingsTabProps) {
+  const [keybindings, setKeybindings] = useState<SettingsState['keybindings']>({
+    app: {},
+    view: {},
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    config.get('keybindings').then((resKb: any) => {
+      if (resKb) setKeybindings(resKb as SettingsState['keybindings'])
+      setLoading(false)
+    })
+  }, [])
+
+  const persistKeybindings = async (kb: SettingsState['keybindings']) => {
+    setKeybindings(kb)
+    await configMutations.set('keybindings', { list: kb } as any)
+  }
 
   const formatKeybinding = (kb?: Keybinding): string => {
     if (!kb) return ''
@@ -52,14 +63,27 @@ export function KeybindingsTab({ state, actions }: KeybindingsTabProps) {
       ...newKeybindings[group],
       [type]: parseKeybinding(value),
     }
-    setKeybindings(newKeybindings)
+    persistKeybindings(newKeybindings)
+  }
+
+  if (loading) {
+    return (
+      <SettingsPage
+        title={t('keybindings.title')}
+        description={t('keybindings.description')}
+      >
+        <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
+          Loading...
+        </div>
+      </SettingsPage>
+    )
   }
 
   return (
     <SettingsPage
       title={t('keybindings.title')}
       description={t('keybindings.description')}
-      onRestore={actions.onRestore}
+      onRestore={onRestore}
     >
       <Section
         title={t('keybindings.application.title')}
