@@ -459,23 +459,21 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       firstLine.replace(/^#+\s*/, '').slice(0, 100) || 'Conversation'
     const body = lines.slice(1).join('\n').trim() || summaryText
 
-    const { metadata: existingMeta, dateDir } = await findMetadata(
+    // Write metadata to today's date directory (consistent with saveSession)
+    const metaPath = getSessionMetadataPath(
       botSessionId,
+      undefined,
       config.workspace,
     )
-    if (dateDir) {
-      const metaPath = getSessionMetadataPath(
-        botSessionId,
-        dateDir,
-        config.workspace,
-      )
-      await writeJson(metaPath, {
-        ...(existingMeta || {}),
-        title,
-        description: body,
-        updatedAt: new Date().toISOString(),
-      })
-    }
+    const existingMeta = await readJson<SessionMetadata>(metaPath).catch(
+      () => null,
+    )
+    await writeJson(metaPath, {
+      ...(existingMeta || {}),
+      title,
+      description: body,
+      updatedAt: new Date().toISOString(),
+    })
 
     await ctx.replyWithMarkdown(
       `*Session summarized*\n\n*Title:* ${escapeMarkdown(title)}\n*Description:* ${escapeMarkdown(body.slice(0, 200))}...`,
