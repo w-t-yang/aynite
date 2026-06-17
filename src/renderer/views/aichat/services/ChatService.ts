@@ -1,21 +1,20 @@
 /**
- * ChatService — Module-level singleton for AI Chat sessions.
+ * ChatService — Facade for AI Chat session management.
  *
- * Owns all session state (messages, loading, error, approvals) and the agent loop lifecycle.
- * Survives React component mounts/unmounts — state persists across view switches.
+ * Composes extracted services:
+ *   - SessionStore: state Map, subscriptions, getOrCreate
+ *   - AutoSaver: debounced save with 1s timer
+ *   - CompactService: context compaction algorithm
+ *   - StreamDispatcher: stream event routing
  *
- * React components subscribe to session changes and delegate actions here.
- * The service uses `useViewEventSubscriber` from `../../useViewEvents`
- * to listen to main process events, avoiding direct window.message usage.
- *
- * For streaming: maintains a map of requestId → handler so the single permanent
- * listener can dispatch ai-chat-delta events to the correct active stream.
+ * Owns the orchestration: sendMessage, init, event wiring, and
+ * simple pass-through operations (clearChat, handleApprove, etc.).
  */
 
 import type { UIMessage } from 'ai'
 import { AppEvents } from '../../../../lib/constants/app'
 import type { AgentLoopConfig } from '../../../../lib/types/ai'
-import type { SessionState } from '../../../../lib/types/chat'
+import type { InternalSession, SessionState } from '../../../../lib/types/chat'
 import { ai as aiBridge, aiMutations } from '../../../bridge/ai'
 import { config } from '../../../bridge/config'
 import { workspace } from '../../../bridge/workspace'
@@ -27,341 +26,101 @@ import {
   appendReasoningToAssistant,
   appendToAssistant,
   appendToolInputDeltaToAssistant,
-  estimateTokenCount,
   genId,
   updateToolResult,
 } from '../utils/message'
+import { scheduleSave } from './auto-saver'
+import {
+  compactContext as compactContextInner,
+  shouldAutoCompact,
+} from './compact-service'
+import {
+  getOrCreateSession,
+  getSession,
+  getState,
+  hasSession,
+  listAllSessions,
+  notify,
+  subscribe,
+  updateState,
+} from './session-store'
+import {
+  dispatchStreamEvent,
+  registerStreamHandler,
+  unregisterStreamHandler,
+} from './stream-dispatcher'
 
 // ─── Types ────────────────────────────────────────────────────────────────
-
-interface InternalSession {
-  state: SessionState
-  abortController: AbortController | null
-  approvalId: string | null
-  lastSavedSnapshot: string
-  listeners: Set<(state: SessionState) => void>
-  saveTimer: ReturnType<typeof setTimeout> | null
-}
 
 type SubscribeFn = (cb: (event: any) => void) => () => void
 
 // ─── Module-level state ───────────────────────────────────────────────────
 
-const sessions = new Map<string, InternalSession>()
-const activeStreams = new Map<string, (part: any) => void>()
 let _subscribeToEvents: SubscribeFn | null = null
 let initCalled = false
 
 // Map of session IDs to their known date directories.
-// Populated by AIChat.tsx when a user selects a session from SessionsModal,
-// so loadSessionById can avoid scanning all date directories.
 const sessionDates = new Map<string, string>()
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+// ─── Wrapper: updateState with auto-save ──────────────────────────────────
 
-function notify(session: InternalSession) {
-  const state = { ...session.state }
-  for (const listener of session.listeners) {
-    try {
-      listener(state)
-    } catch {
-      // ignore stale listeners
-    }
-  }
+function updateStateAndSave(
+  session: InternalSession,
+  patch: Partial<SessionState>,
+) {
+  updateState(session, patch, scheduleSave)
 }
 
-function updateState(session: InternalSession, patch: Partial<SessionState>) {
-  session.state = { ...session.state, ...patch }
-  scheduleSave(session)
-  notify(session)
-}
+// ─── Stream dispatch (wires event listener to StreamDispatcher) ───────────
 
-// ─── Auto-save ────────────────────────────────────────────────────────────
-
-function scheduleSave(session: InternalSession) {
-  const sid = session.state.sessionId
-  if (!sid || session.state.messages.length === 0) return
-
-  // Skip save if messages haven't changed since last save
-  const snapshot = JSON.stringify(session.state.messages)
-  if (snapshot === session.lastSavedSnapshot) return
-
-  if (session.saveTimer) clearTimeout(session.saveTimer)
-  session.saveTimer = setTimeout(async () => {
-    try {
-      // Guard: messages may have been cleared by clearChat() while the timer
-      // callback was queued or during an await below. Don't overwrite disk
-      // data with an empty array.
-      if (session.state.messages.length === 0) return
-
-      const aiConfig = await config.get('ai')
-      const agentsConfig = await config.get('agents')
-
-      // Guard again after async IPC — clearChat() may have run during the await
-      if (session.state.messages.length === 0) return
-
-      const activeProvider =
-        aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
-        aiConfig?.providers?.[0]
-      const activeAgent = agentsConfig?.list?.find(
-        (a: any) => a.id === agentsConfig?.activeId,
-      )
-      const metadata = {
-        agentName: activeAgent?.name || 'Chat',
-        modelName: activeProvider?.name || activeProvider?.model || 'AI',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      await aiMutations.saveSession(sid, session.state.messages, metadata)
-      session.lastSavedSnapshot = snapshot
-    } catch {
-      // silent
-    }
-  }, 1000)
-}
-
-// ─── Stream dispatch ──────────────────────────────────────────────────────
-
-/**
- * Register a handler for a specific stream requestId.
- * Used by runAgentLoop instead of creating per-call window.message listeners.
- */
-export function registerStreamHandler(
-  requestId: string,
-  handler: (part: any) => void,
-): void {
-  activeStreams.set(requestId, handler)
-}
-
-/**
- * Unregister a stream handler when the stream finishes/aborts.
- */
-export function unregisterStreamHandler(requestId: string): void {
-  activeStreams.delete(requestId)
-}
-
-// ─── Compact Context ─────────────────────────────────────────────────────
-
-/**
- * Compact a session's context by summarizing older messages.
- *
- * Algorithm:
- * 1. Find the last user message in the list. Everything before it (including
- *    the system message) will be summarized.
- * 2. Save the full pre-compacted messages to a backup file:
- *    `<session-id>-<timestamp>.json`
- * 3. Build a temporary messages array: (system message, all pre-last-user
- *    messages, a "please summarize" user message)
- * 4. Send this to the AI (no tools) to get a concise summary
- * 5. Replace the old messages with: (system message, summary as assistant msg,
- *    last user message, its subsequent messages)
- * 6. Save the compacted messages back to the original session file
- */
-export async function compactContext(sessionId: string) {
-  const session = sessions.get(sessionId)
-  if (!session || session.state.messages.length === 0) return
-
-  // Prevent concurrent operations
-  if (session.state.loading || session.state.compacting) return
-
-  // Set compacting state
-  updateState(session, { compacting: true })
-
-  try {
-    const allMessages = session.state.messages
-
-    // Step 1: Find the last user message
-    let lastUserIdx = -1
-    for (let i = allMessages.length - 1; i >= 0; i--) {
-      if (allMessages[i].role === 'user') {
-        lastUserIdx = i
-        break
-      }
-    }
-    if (lastUserIdx < 0) {
-      // No user message found — nothing to compact
-      updateState(session, { compacting: false })
-      return
-    }
-
-    // Messages to summarize: everything before lastUserIdx
-    const toSummarize = allMessages.slice(0, lastUserIdx)
-    // Messages after (and including) the last user message
-    const afterLastUser = allMessages.slice(lastUserIdx)
-
-    // Step 2: Save backup of the full pre-compacted messages (no metadata — backup is just raw data)
-    const timestamp = Date.now()
-    const backupId = `${sessionId}-${timestamp}`
-
-    // Save the backup messages without metadata (backups are filtered from session list)
-    await aiMutations.saveSession(backupId, allMessages, undefined)
-
-    // Compute title/description from the conversation to store on the original session's metadata
-    const firstUserMsg = allMessages.find((m) => m.role === 'user')
-    const firstUserText =
-      firstUserMsg?.parts
-        ?.filter((p) => p.type === 'text')
-        .map((p: any) => p.text)
-        .join('')
-        ?.slice(0, 80) || ''
-    const sessionDescription =
-      firstUserText + (firstUserText.length >= 80 ? '...' : '')
-
-    // Step 3: Build summary messages
-    // Find the system message
-    const systemMsg = toSummarize.find((m) => m.role === 'system')
-    const nonSystemToSummarize = toSummarize.filter((m) => m.role !== 'system')
-
-    // Get the summary prompt from the config or use default
-    const summaryPrompt =
-      'Please summarize the above conversation concisely, preserving all key information, decisions, and context. Focus on the essential points that would be needed to continue the conversation.'
-
-    const summaryMessages: UIMessage[] = systemMsg
-      ? [systemMsg, ...nonSystemToSummarize]
-      : nonSystemToSummarize
-
-    // Add a user message asking for summary
-    const summaryRequestMsg: UIMessage = {
-      id: genId(),
-      role: 'user',
-      parts: [{ type: 'text', text: summaryPrompt }],
-    }
-    summaryMessages.push(summaryRequestMsg)
-
-    // Step 4: Send to AI for summarization (no tools)
-    // Fetch AI config
-    const aiConfig = await config.get('ai')
-    const activeProvider =
-      aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
-      aiConfig?.providers?.[0]
-
-    if (!activeProvider) {
-      updateState(session, { compacting: false })
-      return
-    }
-
-    // We need to make a direct AI call. Use aiMutations.chat with no tools.
-    const result = await new Promise<string>((resolve, reject) => {
-      aiMutations
-        .chat({
-          messages: summaryMessages,
-          config: {
-            id: 'temp',
-            name: 'Temp',
-            provider: activeProvider.provider || 'ollama',
-            baseUrl: activeProvider.baseUrl || '',
-            apiKey: activeProvider.apiKey || '',
-            model: activeProvider.model || '',
-            compatibility: activeProvider.compatibility,
-            enabledTools: {}, // No tools for summarization
-          },
-          workspaceFolders: [],
-        })
-        .then((res: { requestId?: string }) => {
-          const requestId = res.requestId
-          if (!requestId) {
-            resolve('')
-            return
-          }
-
-          let summaryText = ''
-          const _unsub = registerStreamHandler(requestId, (part: any) => {
-            if (part.type === 'text-delta') {
-              summaryText += part.text
-            }
-            if (part.type === 'finish') {
-              unregisterStreamHandler(requestId)
-              resolve(summaryText)
-            }
-            if (part.type === 'error') {
-              unregisterStreamHandler(requestId)
-              reject(new Error(String(part.error)))
-            }
-          })
-
-          // Safety timeout
-          setTimeout(() => {
-            unregisterStreamHandler(requestId)
-            resolve(summaryText)
-          }, 60000)
-        })
-        .catch(reject)
-    })
-
-    // Step 5: Build the compacted message list
-    const systemOnly = systemMsg ? [systemMsg] : []
-
-    // Create the summary as an assistant message
-    const summaryAssistantMsg: UIMessage = {
-      id: genId(),
-      role: 'assistant',
-      parts: [{ type: 'text', text: result, state: 'done' }],
-    }
-
-    const compactedMessages: UIMessage[] = [
-      ...systemOnly,
-      summaryAssistantMsg,
-      ...afterLastUser,
-    ]
-
-    // Step 6: Update state and save
-    session.state = {
-      ...session.state,
-      messages: compactedMessages,
-    }
-    session.lastSavedSnapshot = ''
-
-    // Force save immediately — pass title/description to update the original session's metadata file
-    await aiMutations.saveSession(sessionId, compactedMessages, {
-      title: `Compact backup - ${new Date(timestamp).toLocaleString()}`,
-      description: sessionDescription,
-    })
-
-    // Notify listeners
-    notify(session)
-  } catch (err) {
-    console.error('[ChatService] Compact context failed:', err)
-  } finally {
-    updateState(session, { compacting: false })
-  }
+function handleStreamDelta(requestId: string, part: any): void {
+  dispatchStreamEvent(requestId, part)
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────
+
+// Re-exported from extracted services for backward compatibility
+export {
+  registerStreamHandler,
+  unregisterStreamHandler,
+} from './stream-dispatcher'
+export { getState, hasSession, subscribe }
+
+/**
+ * Compact context for a session (legacy API — looks up session internally).
+ * Kept for backward compatibility with useAIChat.ts.
+ */
+export async function compactContext(sessionId: string): Promise<void> {
+  const session = getSession(sessionId)
+  if (!session) return
+  await compactContextInner(session, (patch) =>
+    updateStateAndSave(session, patch as Partial<SessionState>),
+  )
+}
 
 /**
  * Initialize the service with the event subscriber function.
  * Called once on first React mount — the listener persists for the app lifetime.
  * Safe to call multiple times (second call is a no-op).
  */
-export function init(subscribe: SubscribeFn) {
-  if (initCalled) {
-    return
-  }
+export function init(subscribeToApp: SubscribeFn) {
+  if (initCalled) return
   initCalled = true
-  _subscribeToEvents = subscribe
+  _subscribeToEvents = subscribeToApp
 
-  // ── Permanent single listener for all app events ──
-  subscribe((event: any) => {
+  subscribeToApp((event: any) => {
     // Dispatch ai-chat-delta events to the correct active stream
     if (event.type === 'ai-chat-delta') {
       const { requestId, part } = event.data || {}
-      const handler = requestId ? activeStreams.get(requestId) : null
-      if (handler) handler(part)
+      if (requestId) handleStreamDelta(requestId, part)
       return
     }
 
-    // Session changes — load from disk if not already in memory, or if the
-    // in-memory session was cleared (empty messages) and needs reloading.
-    // The sessions.has() guard normally prevents overwriting in-memory state
-    // that may have been modified by sendMessage before this async event
-    // was processed. However, after clearChat(), the session remains in the
-    // Map with empty messages, so subsequent switches back to it would show
-    // stale data. We detect this by checking if the in-memory session has
-    // no messages (was cleared).
+    // Session changes — load from disk if not already in memory
     if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
       const { id } = event.data as { id: string }
       if (id) {
-        const existing = sessions.get(id)
+        const existing = getSession(id)
         const isEmpty = existing && existing.state.messages.length === 0
         if (!existing || isEmpty) {
           loadSessionById(id).catch(() => {})
@@ -370,73 +129,42 @@ export function init(subscribe: SubscribeFn) {
       return
     }
 
-    // Approval requests — find the loading session and set pending state
+    // Approval requests
     if (event.type === AppEvents.AI_APPROVAL_REQUEST) {
       const { id, command, cwd } = event.data as any
-      for (const [, session] of sessions) {
-        if (session.state.loading) {
-          const sid = session.state.sessionId
-          if (sid && localStorage.getItem(`autoApprove:${sid}`) === 'true') {
-            aiMutations.respondToAiApproval(id, true)
-            return
-          }
-          session.approvalId = id
-          updateState(session, { pendingApproval: { command, cwd } })
-          break
+      // Scan all active sessions for one in loading state
+      const session = findLoadingSession()
+      if (session) {
+        const sid = session.state.sessionId
+        if (
+          sid &&
+          typeof localStorage !== 'undefined' &&
+          localStorage.getItem(`autoApprove:${sid}`) === 'true'
+        ) {
+          aiMutations.respondToAiApproval(id, true)
+          return
         }
+        session.approvalId = id
+        updateStateAndSave(session, { pendingApproval: { command, cwd } })
       }
     }
   })
 }
 
 /**
- * Get or create a session state container.
+ * Find the first session that is currently in loading state.
+ * Used by the AI_APPROVAL_REQUEST event handler.
  */
-export function getOrCreateSession(sessionId: string): InternalSession {
-  let session = sessions.get(sessionId)
-  if (!session) {
-    session = {
-      state: {
-        sessionId,
-        messages: [],
-        loading: false,
-        compacting: false,
-        error: null,
-        currentStep: null,
-        pendingApproval: null,
-      },
-      abortController: null,
-      approvalId: null,
-      lastSavedSnapshot: '',
-      listeners: new Set(),
-      saveTimer: null,
-    }
-    sessions.set(sessionId, session)
+function findLoadingSession(): InternalSession | undefined {
+  for (const session of listAllSessions()) {
+    if (session.state.loading) return session
   }
-  return session
-}
-
-/**
- * Subscribe to state changes for a given session.
- * Returns an unsubscribe function.
- */
-export function subscribe(
-  sessionId: string,
-  callback: (state: SessionState) => void,
-): () => void {
-  const session = getOrCreateSession(sessionId)
-  session.listeners.add(callback)
-  // Immediately call with current state
-  callback({ ...session.state })
-  return () => {
-    session.listeners.delete(callback)
-  }
+  return undefined
 }
 
 /**
  * Record the date directory for a session ID so subsequent loadSessionById
- * can avoid scanning all date directories. Called by AIChat.tsx when the
- * user selects a session from SessionsModal.
+ * can avoid scanning all date directories.
  */
 export function setPendingSessionDate(sessionId: string, date: string): void {
   sessionDates.set(sessionId, date)
@@ -444,8 +172,6 @@ export function setPendingSessionDate(sessionId: string, date: string): void {
 
 /**
  * Load a session from disk into the service state.
- * Uses a known date if available (set via setPendingSessionDate) to avoid
- * scanning all directories. Falls back to scanning if no date is known.
  */
 export async function loadSessionById(sessionId: string) {
   const date = sessionDates.get(sessionId)
@@ -471,12 +197,6 @@ export async function loadSessionById(sessionId: string) {
 
 /**
  * Create a new session file on disk and return its ID.
- * Does NOT write to global config — the caller (useAIChat) is responsible
- * for managing the session ID locally. This makes ChatService tile-agnostic:
- * each AI Chat tile can create sessions independently without conflicting.
- *
- * To persist the session for the next app start, the caller should save
- * the session ID to config (or tile data) separately.
  */
 export async function createNewSession(): Promise<string> {
   const newId = Date.now().toString()
@@ -486,7 +206,6 @@ export async function createNewSession(): Promise<string> {
 
 /**
  * Send a message in a session, starting/continuing the agent loop.
- * Sessions are created lazily on first message.
  */
 export async function sendMessage(
   sessionId: string,
@@ -496,7 +215,6 @@ export async function sendMessage(
   const session = getOrCreateSession(sessionId)
   if (!text.trim() || session.state.loading) return
 
-  // Fetch config directly via IPC — no React dependency.
   const [
     aiConfig,
     agentsConfig,
@@ -546,8 +264,8 @@ export async function sendMessage(
       text,
       activeFilePath || '',
       session.state.messages,
-      (msgs) => updateState(session, { messages: msgs }),
-      (loading) => updateState(session, { loading }),
+      (msgs) => updateStateAndSave(session, { messages: msgs }),
+      (loading) => updateStateAndSave(session, { loading }),
     )
   )
     return
@@ -562,7 +280,7 @@ export async function sendMessage(
   }[] = []
 
   if (commandMatches.length > 0) {
-    updateState(session, { loading: true })
+    updateStateAndSave(session, { loading: true })
     for (const match of commandMatches) {
       const [_full, name, path] = match
       try {
@@ -586,7 +304,7 @@ export async function sendMessage(
         })
       }
     }
-    updateState(session, { loading: false })
+    updateStateAndSave(session, { loading: false })
   }
 
   // Build command results text
@@ -615,7 +333,6 @@ export async function sendMessage(
     }
   }
 
-  // Create user message
   const userText = resultsText
     ? `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`
     : text
@@ -627,7 +344,7 @@ export async function sendMessage(
   }
 
   const updatedMessages = [...initialMessages, userMsg]
-  updateState(session, {
+  updateStateAndSave(session, {
     messages: updatedMessages,
     loading: true,
     error: null,
@@ -639,7 +356,7 @@ export async function sendMessage(
     .trim()
 
   if (!cleanText && commandMatches.length > 0) {
-    updateState(session, { loading: false })
+    updateStateAndSave(session, { loading: false })
     return
   }
 
@@ -652,15 +369,15 @@ export async function sendMessage(
       agentConfig,
       workspaceFolders,
       (event: any) => {
-        updateState(session, { currentStep: event })
+        updateStateAndSave(session, { currentStep: event })
         switch (event.type) {
           case 'text-delta':
-            updateState(session, {
+            updateStateAndSave(session, {
               messages: appendToAssistant(session.state.messages, event.text),
             })
             break
           case 'reasoning-delta':
-            updateState(session, {
+            updateStateAndSave(session, {
               messages: appendReasoningToAssistant(
                 session.state.messages,
                 event.text,
@@ -668,7 +385,7 @@ export async function sendMessage(
             })
             break
           case 'tool-input-delta':
-            updateState(session, {
+            updateStateAndSave(session, {
               messages: appendToolInputDeltaToAssistant(
                 session.state.messages,
                 event.id,
@@ -677,7 +394,7 @@ export async function sendMessage(
             })
             break
           case 'tool-call':
-            updateState(session, {
+            updateStateAndSave(session, {
               messages: appendPartToAssistant(session.state.messages, {
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
@@ -686,7 +403,7 @@ export async function sendMessage(
             })
             break
           case 'tool-result':
-            updateState(session, {
+            updateStateAndSave(session, {
               messages: updateToolResult(session.state.messages, {
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
@@ -695,7 +412,7 @@ export async function sendMessage(
             })
             break
           case 'command-output':
-            updateState(session, {
+            updateStateAndSave(session, {
               messages: appendCommandOutput(
                 session.state.messages,
                 (event as any).text,
@@ -713,7 +430,7 @@ export async function sendMessage(
               errMsg.includes('aborted') ||
               errMsg.includes('ECONNREFUSED') ||
               errMsg.includes('ENOTFOUND')
-            updateState(session, {
+            updateStateAndSave(session, {
               error: {
                 message: errMsg,
                 redacted: isProviderError
@@ -733,7 +450,7 @@ export async function sendMessage(
             break
           }
           case 'finish':
-            updateState(session, { currentStep: null })
+            updateStateAndSave(session, { currentStep: null })
             break
         }
       },
@@ -745,7 +462,7 @@ export async function sendMessage(
       },
       workspaceName,
     )
-    updateState(session, { messages: resultHistory })
+    updateStateAndSave(session, { messages: resultHistory })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     const isProviderError =
@@ -757,7 +474,7 @@ export async function sendMessage(
       msg.includes('aborted') ||
       msg.includes('ECONNREFUSED') ||
       msg.includes('ENOTFOUND')
-    updateState(session, {
+    updateStateAndSave(session, {
       error: {
         message: msg,
         redacted: isProviderError
@@ -775,28 +492,18 @@ export async function sendMessage(
       },
     })
   } finally {
-    updateState(session, { loading: false, currentStep: null })
+    updateStateAndSave(session, { loading: false, currentStep: null })
     session.abortController = null
 
     // Check if auto-compact is needed
-    const sessionIdForCompact = session.state.sessionId
-    if (sessionIdForCompact && session.state.messages.length > 0) {
-      try {
-        // Load threshold from main config (config.json)
-        const savedThreshold = await config.get('autoCompactThreshold')
-        const tokenThreshold =
-          typeof savedThreshold === 'number' && savedThreshold >= 200_000
-            ? savedThreshold
-            : 500_000 // default: 500K
-        const estimatedTokens = estimateTokenCount(session.state.messages)
-        if (estimatedTokens > tokenThreshold) {
-          // Fire-and-forget auto-compact (don't block the UI)
-          compactContext(sessionIdForCompact).catch((err) =>
-            console.error('[ChatService] Auto-compact failed:', err),
-          )
-        }
-      } catch {
-        // Silent fail on config read
+    if (session.state.sessionId && session.state.messages.length > 0) {
+      const shouldCompact = await shouldAutoCompact(session)
+      if (shouldCompact) {
+        compactContextInner(session, (patch) =>
+          updateStateAndSave(session, patch as Partial<SessionState>),
+        ).catch((err) =>
+          console.error('[ChatService] Auto-compact failed:', err),
+        )
       }
     }
   }
@@ -806,7 +513,7 @@ export async function sendMessage(
  * Clear chat for a session — resets state and aborts any running agent.
  */
 export function clearChat(sessionId: string) {
-  const session = sessions.get(sessionId)
+  const session = getSession(sessionId)
   if (session) {
     session.abortController?.abort()
     session.abortController = null
@@ -814,13 +521,13 @@ export function clearChat(sessionId: string) {
     session.lastSavedSnapshot = ''
     if (session.saveTimer) clearTimeout(session.saveTimer)
     session.saveTimer = null
-    updateState(session, {
+    updateStateAndSave(session, {
       messages: [],
       loading: false,
       error: null,
       currentStep: null,
       pendingApproval: null,
-      sessionId: session.state.sessionId, // preserve session ID for metadata
+      sessionId: session.state.sessionId,
     })
   }
 }
@@ -829,13 +536,13 @@ export function clearChat(sessionId: string) {
  * Handle approve action for pending approval.
  */
 export function handleApprove(sessionId: string) {
-  const session = sessions.get(sessionId)
+  const session = getSession(sessionId)
   if (session?.approvalId) {
     aiMutations.respondToAiApproval(session.approvalId, true)
     session.approvalId = null
   }
   if (session) {
-    updateState(session, { pendingApproval: null })
+    updateStateAndSave(session, { pendingApproval: null })
   }
 }
 
@@ -843,13 +550,13 @@ export function handleApprove(sessionId: string) {
  * Handle reject action for pending approval.
  */
 export function handleReject(sessionId: string) {
-  const session = sessions.get(sessionId)
+  const session = getSession(sessionId)
   if (session?.approvalId) {
     aiMutations.respondToAiApproval(session.approvalId, false)
     session.approvalId = null
   }
   if (session) {
-    updateState(session, { pendingApproval: null })
+    updateStateAndSave(session, { pendingApproval: null })
   }
 }
 
@@ -857,18 +564,18 @@ export function handleReject(sessionId: string) {
  * Revert messages to a specific index.
  */
 export function revertToMessage(sessionId: string, index: number) {
-  const session = sessions.get(sessionId)
+  const session = getSession(sessionId)
   if (!session) return
   const prev = session.state.messages
   if (index < 0 || index >= prev.length) return
-  updateState(session, { messages: prev.slice(0, index + 1) })
+  updateStateAndSave(session, { messages: prev.slice(0, index + 1) })
 }
 
 /**
  * Abort the currently running message in a session.
  */
 export function abortMessage(sessionId: string) {
-  const session = sessions.get(sessionId)
+  const session = getSession(sessionId)
   session?.abortController?.abort()
 }
 
@@ -876,20 +583,6 @@ export function abortMessage(sessionId: string) {
  * Clear the error state for a session.
  */
 export function clearError(sessionId: string) {
-  const session = sessions.get(sessionId)
-  if (session) updateState(session, { error: null })
-}
-
-/**
- * Get the current state for a session (synchronous, for React renders).
- */
-export function getState(sessionId: string): SessionState | undefined {
-  return sessions.get(sessionId)?.state
-}
-
-/**
- * Check if a session exists.
- */
-export function hasSession(sessionId: string): boolean {
-  return sessions.has(sessionId)
+  const session = getSession(sessionId)
+  if (session) updateStateAndSave(session, { error: null })
 }

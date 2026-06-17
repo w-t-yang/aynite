@@ -20,3 +20,16 @@ export interface SessionState {
   currentStep: TextStreamPart<any> | null
   pendingApproval: { command: string; cwd: string } | null
 }
+
+/**
+ * Internal session container used by ChatService and its extracted services.
+ * Wraps SessionState with runtime management fields (abort, approval, save, listeners).
+ */
+export interface InternalSession {
+  state: SessionState
+  abortController: AbortController | null
+  approvalId: string | null
+  lastSavedSnapshot: string
+  listeners: Set<(state: SessionState) => void>
+  saveTimer: ReturnType<typeof setTimeout> | null
+}
