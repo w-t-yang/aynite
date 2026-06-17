@@ -11,6 +11,7 @@ import { useView } from '../ViewContext'
 import { Header, InputArea, List, SessionsModal } from './components'
 import viewConfig from './config.json'
 import { useAIChat } from './hooks/useAIChat'
+import * as ChatService from './services/ChatService'
 import { getMessageText } from './utils/message'
 
 export function AIChat() {
@@ -231,7 +232,10 @@ export function AIChat() {
       {showHistory && (
         <SessionsModal
           sessions={sessions}
-          onSelect={(id) => configMutations.set('activeSessionId', id)}
+          onSelect={(id, date) => {
+            ChatService.setPendingSessionDate(id, date)
+            configMutations.set('activeSessionId', id)
+          }}
           onClose={() => setShowHistory(false)}
         />
       )}

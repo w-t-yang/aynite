@@ -52,6 +52,11 @@ const activeStreams = new Map<string, (part: any) => void>()
 let _subscribeToEvents: SubscribeFn | null = null
 let initCalled = false
 
+// Map of session IDs to their known date directories.
+// Populated by AIChat.tsx when a user selects a session from SessionsModal,
+// so loadSessionById can avoid scanning all date directories.
+const sessionDates = new Map<string, string>()
+
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function notify(session: InternalSession) {
@@ -422,11 +427,30 @@ export function subscribe(
 }
 
 /**
+ * Record the date directory for a session ID so subsequent loadSessionById
+ * can avoid scanning all date directories. Called by AIChat.tsx when the
+ * user selects a session from SessionsModal.
+ */
+export function setPendingSessionDate(sessionId: string, date: string): void {
+  sessionDates.set(sessionId, date)
+}
+
+/**
  * Load a session from disk into the service state.
+ * Uses a known date if available (set via setPendingSessionDate) to avoid
+ * scanning all directories. Falls back to scanning if no date is known.
  */
 export async function loadSessionById(sessionId: string) {
-  const res = await aiBridge.loadSession(sessionId)
-  if (!res) return
+  const date = sessionDates.get(sessionId)
+  sessionDates.delete(sessionId)
+
+  const res = await aiBridge.loadSession(sessionId, date)
+  if (!res) {
+    console.warn(
+      `[ChatService] Session "${sessionId}" not found on disk${date ? ` (date: ${date})` : ''}.`,
+    )
+    return
+  }
 
   const session = getOrCreateSession(sessionId)
   session.state = {

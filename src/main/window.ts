@@ -87,31 +87,33 @@ export function createMainWindow(dirname: string): void {
   // Register window in the per-window state registry
   registerWindow(mainWindow.id)
 
+  const winId = mainWindow.id
+
   // Unregister on close (triggers cleanup callbacks like file watcher teardown)
   mainWindow.on('closed', () => {
-    unregisterWindow(mainWindow?.id)
+    unregisterWindow(winId)
     mainWindow = null
   })
 
   // Broadcast window state changes to this window only
   mainWindow.on('maximize', () => {
-    sendToWindow(mainWindow?.id, AppEvents.WINDOW_MAXIMIZED_CHANGED, {
+    sendToWindow(winId, AppEvents.WINDOW_MAXIMIZED_CHANGED, {
       isMaximized: true,
     })
   })
   mainWindow.on('unmaximize', () => {
-    sendToWindow(mainWindow?.id, AppEvents.WINDOW_MAXIMIZED_CHANGED, {
+    sendToWindow(winId, AppEvents.WINDOW_MAXIMIZED_CHANGED, {
       isMaximized: false,
     })
   })
   // Track fullscreen state changes
   mainWindow.on('enter-full-screen', () => {
-    sendToWindow(mainWindow?.id, AppEvents.FULLSCREEN_CHANGED, {
+    sendToWindow(winId, AppEvents.FULLSCREEN_CHANGED, {
       isFullscreen: true,
     })
   })
   mainWindow.on('leave-full-screen', () => {
-    sendToWindow(mainWindow?.id, AppEvents.FULLSCREEN_CHANGED, {
+    sendToWindow(winId, AppEvents.FULLSCREEN_CHANGED, {
       isFullscreen: false,
     })
   })

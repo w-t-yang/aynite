@@ -136,17 +136,12 @@ export function useAIChat() {
       if (event.type === 'config-changed') loadSettings()
       if (event.type === 'workspace-changed') loadWorkspaceFolders()
       if (event.type === 'active-tab-changed') setActiveTabPath(event.data.path)
+      // ACTIVE_SESSION_CHANGED is handled by ChatService (loads from disk).
+      // This hook only updates the local activeSessionId for subscription.
       if (event.type === AppEvents.ACTIVE_SESSION_CHANGED) {
         const { id } = event.data as { id: string }
         if (id) {
           setActiveSessionId(id)
-          // Only load from disk if not already in memory — otherwise the
-          // disk data might be stale (empty for a newly created session,
-          // or outdated for a session that was modified in-memory).
-          // This mirrors ChatService's own !sessions.has(id) guard.
-          if (!ChatService.hasSession(id)) {
-            ChatService.loadSessionById(id).catch(() => {})
-          }
         }
       }
     })
