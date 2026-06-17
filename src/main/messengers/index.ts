@@ -8,6 +8,7 @@
  */
 
 import type { UIMessage } from 'ai'
+import { AppEvents } from '../../lib/constants/app'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import {
   getAIConfigPath,
@@ -29,6 +30,8 @@ import {
   getProviderReasoningOptions,
   saveSession,
 } from '../ai'
+import { broadcastAppEvent } from '../window'
+import { saveWorkspaceState } from '../workspace'
 
 const bots = new Map<string, import('telegraf').Telegraf>()
 // Track which bot sessions are currently processing a message
@@ -486,19 +489,16 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
 
 async function handleNewSession(config: MessengerConfig, ctx: any) {
   try {
-    const workspaceConfig = await readJson<WorkspaceConfig>(
-      getWorkspaceDataPath(config.workspace),
-    )
-    if (!workspaceConfig) {
-      await ctx.reply(`Workspace "${config.workspace}" not found.`)
-      return
-    }
-
     const newId = Date.now().toString()
     // Use saveSession (consistent with ChatService) — no metadata for empty session
     await saveSession(config.workspace, newId, [], undefined)
-    workspaceConfig.activeSessionIdForBot = newId
-    await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
+    // Use saveWorkspaceState for atomic field update — avoids stale read race conditions
+    await saveWorkspaceState(config.workspace, {
+      activeSessionIdForBot: newId,
+    })
+    broadcastAppEvent(AppEvents.CONFIG_CHANGED, {
+      key: 'activeSessionIdForBot',
+    })
 
     await ctx.replyWithMarkdown(`*New bot session created*\n\nID: \`${newId}\``)
   } catch (err) {
@@ -565,16 +565,13 @@ async function handleSwitchSession(
       return
     }
 
-    const workspaceConfig = await readJson<WorkspaceConfig>(
-      getWorkspaceDataPath(config.workspace),
-    )
-    if (!workspaceConfig) {
-      await ctx.reply(`Workspace "${config.workspace}" not found.`)
-      return
-    }
-
-    workspaceConfig.activeSessionIdForBot = target.id
-    await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
+    // Use saveWorkspaceState for atomic field update — avoids stale read race conditions
+    await saveWorkspaceState(config.workspace, {
+      activeSessionIdForBot: target.id,
+    })
+    broadcastAppEvent(AppEvents.CONFIG_CHANGED, {
+      key: 'activeSessionIdForBot',
+    })
 
     const title = target.title || `Session ${target.id.slice(-6)}`
     await ctx.replyWithMarkdown(
@@ -659,9 +656,13 @@ async function handleChatMessage(
       // Create a new session using saveSession (consistent with ChatService)
       sessionId = Date.now().toString()
       await saveSession(config.workspace, sessionId, [], undefined)
-      // Update workspace config with the new bot session ID
-      workspaceConfig.activeSessionIdForBot = sessionId
-      await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
+      // Use saveWorkspaceState for atomic field update — avoids stale read race conditions
+      await saveWorkspaceState(config.workspace, {
+        activeSessionIdForBot: sessionId,
+      })
+      broadcastAppEvent(AppEvents.CONFIG_CHANGED, {
+        key: 'activeSessionIdForBot',
+      })
       console.log(`[Messenger] created new bot session: ${sessionId}`)
     } else {
       sessionId = botSessionId
