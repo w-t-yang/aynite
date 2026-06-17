@@ -80,6 +80,7 @@ export function setupWorkspaceIpc(): void {
     const result = await addWorkspaceFolder(folderPath, workspaceName)
 
     if (result.success) {
+      trackEvent('workspace_folder_added')
       const folders = await getWorkspaceFolders(workspaceName)
       notifyChanged(winId, folders)
 

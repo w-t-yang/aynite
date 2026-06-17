@@ -99,6 +99,9 @@ export function setupFileIpc() {
   })
 
   ipcMain.handle(FileChannels.READ, async (_event, filePath: string) => {
+    trackEvent('file_opened', {
+      extension: getExtname(filePath).toLowerCase().slice(1) || 'none',
+    })
     return await readText(filePath)
   })
 

@@ -8,6 +8,7 @@ import {
   readJson,
   writeJson,
 } from '../../../lib/path'
+import { trackEvent } from '../../telemetry/index'
 import { getWindowWorkspace } from '../../window-state'
 import {
   getWorkspaceState,
@@ -53,6 +54,22 @@ export const aiHandlers: ConfigHandler = (() => ({
         const dataPath = getAIConfigPath()
         const existing = await readJson<Record<string, unknown>>(dataPath, {})
         await writeJson(dataPath, { ...existing, ...payload })
+        // Track AI provider configuration changes
+        if (payload?.activeId || payload?.providers) {
+          const existingAny = existing as any
+          const payloadProviders = Array.isArray(payload?.providers)
+            ? payload.providers
+            : []
+          const existingProviders = Array.isArray(existingAny?.providers)
+            ? existingAny.providers
+            : []
+          const providerCount =
+            payloadProviders.length || existingProviders.length || 0
+          trackEvent('ai_provider_configured', {
+            provider_count: providerCount,
+            has_active: payload?.activeId ? 1 : 0,
+          })
+        }
         return true
       }
       case 'agents': {
