@@ -54,7 +54,7 @@ const mockGetShellConfig = vi.hoisted(() =>
     isPowershell: false,
   })),
 )
-vi.mock('../../system', () => ({
+vi.mock('../../../src/main/system', () => ({
   getShellConfig: (...args: unknown[]) => mockGetShellConfig(...args),
 }))
 
