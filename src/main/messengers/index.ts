@@ -23,7 +23,12 @@ import {
 } from '../../lib/path'
 import type { MessengerConfig } from '../../lib/types/ai'
 import type { SessionMetadata } from '../../lib/types/chat'
-import { createTools, getAIModel, getProviderReasoningOptions } from '../ai'
+import {
+  createTools,
+  getAIModel,
+  getProviderReasoningOptions,
+  saveSession,
+} from '../ai'
 
 const bots = new Map<string, import('telegraf').Telegraf>()
 // Track which bot sessions are currently processing a message
@@ -95,6 +100,7 @@ async function runMessengerAgent(
   activeFile: string,
   enabledTools: Record<string, boolean>,
   onProgress: (text: string) => void,
+  sessionId: string,
 ): Promise<UIMessage[]> {
   const aiConfig = await loadAiConfig()
   const activeProvider =
@@ -253,11 +259,23 @@ async function runMessengerAgent(
         }
         break
       }
-      case 'finish-step':
+      case 'finish-step': {
         console.log(
           `[Messenger] finish-step: textAccum=${textAccum.length} chars, toolCalls=${currentStepToolCalls.length}`,
         )
+        // Incremental save: flush accumulated assistant message and persist to disk
+        flushAssistant()
+        const incrementalMessages = [...messages, ...loopMessages]
+        await saveSession(
+          workspaceName,
+          sessionId,
+          incrementalMessages,
+          undefined,
+        ).catch((err: any) =>
+          console.error('[Messenger] incremental save failed:', err),
+        )
         break
+      }
       case 'error':
         console.log(`[Messenger] error: ${part.error}`)
         flushAssistant()
@@ -479,8 +497,8 @@ async function handleNewSession(config: MessengerConfig, ctx: any) {
     }
 
     const newId = Date.now().toString()
-    const sessionPath = getSessionPath(newId, undefined, config.workspace)
-    await writeJson(sessionPath, [])
+    // Use saveSession (consistent with ChatService) — no metadata for empty session
+    await saveSession(config.workspace, newId, [], undefined)
     workspaceConfig.activeSessionIdForBot = newId
     await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
 
@@ -640,10 +658,9 @@ async function handleChatMessage(
 
     let sessionId: string
     if (!botSessionId) {
-      // Create a new session
+      // Create a new session using saveSession (consistent with ChatService)
       sessionId = Date.now().toString()
-      const sessionPath = getSessionPath(sessionId, undefined, config.workspace)
-      await writeJson(sessionPath, [])
+      await saveSession(config.workspace, sessionId, [], undefined)
       // Update workspace config with the new bot session ID
       workspaceConfig.activeSessionIdForBot = sessionId
       await writeJson(getWorkspaceDataPath(config.workspace), workspaceConfig)
@@ -660,7 +677,7 @@ async function handleChatMessage(
     console.log(`[Messenger] loaded ${messages.length} existing messages`)
 
     // Load configs
-    const [_aiConfig, mainConfig] = await Promise.all([
+    const [aiConfig, mainConfig] = await Promise.all([
       loadAiConfig(),
       loadMainConfig(),
     ])
@@ -671,6 +688,11 @@ async function handleChatMessage(
     const activeAgent = agentsConfig.list?.find(
       (a: any) => a.id === activeAgentId,
     )
+
+    // Extract provider info for metadata (consistent with ChatService)
+    const activeProvider =
+      aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
+      aiConfig?.providers?.[0]
 
     // Ensure system prompt exists
     const updatedMessages: UIMessage[] = [...messages]
@@ -718,16 +740,26 @@ async function handleChatMessage(
       activeFile,
       toolsConfig,
       () => {}, // No-op progress — we only reply when the full loop finishes
+      sessionId,
     )
 
     console.log(
       `[Messenger] agent loop finished, total messages: ${finalMessages.length}`,
     )
 
-    // Save the session — write to today's date directory
-    const sessionPath = getSessionPath(sessionId, undefined, config.workspace)
-    await writeJson(sessionPath, finalMessages)
-    console.log(`[Messenger] session saved to ${sessionPath}`)
+    // Build metadata consistent with ChatService's scheduleSave()
+    const agentName = activeAgent?.name || 'Chat'
+    const modelName = activeProvider?.name || activeProvider?.model || 'AI'
+    const metadata: SessionMetadata = {
+      agentName,
+      modelName,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    // Save the session with metadata (consistent with ChatService via saveSession)
+    await saveSession(config.workspace, sessionId, finalMessages, metadata)
+    console.log(`[Messenger] session saved (with metadata): ${sessionId}`)
 
     // Extract the last assistant text message for the reply
     const lastAssistant = [...finalMessages]
