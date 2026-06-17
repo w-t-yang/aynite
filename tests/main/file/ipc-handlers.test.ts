@@ -55,6 +55,12 @@ vi.mock('../../../src/main/window', () => ({
   getWinIdFromSender: (...args: unknown[]) => mockGetWinIdFromSender(...args),
 }))
 
+vi.mock('../../../src/main/ipc-utils', () => ({
+  broadcastAppEvent: (...args: unknown[]) => mockBroadcastAppEvent(...args),
+  sendToWindow: (...args: unknown[]) => mockSendToWindow(...args),
+  getWinIdFromSender: (...args: unknown[]) => mockGetWinIdFromSender(...args),
+}))
+
 const mockOnWindowClose = vi.hoisted(() => vi.fn())
 vi.mock('../../../src/main/window-state', () => ({
   onWindowClose: (...args: unknown[]) => mockOnWindowClose(...args),

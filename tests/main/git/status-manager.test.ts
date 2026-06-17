@@ -23,6 +23,10 @@ vi.mock('../../../src/main/window', () => ({
   broadcastAppEvent: (...args: unknown[]) => mockBroadcastAppEvent(...args),
 }))
 
+vi.mock('../../../src/main/ipc-utils', () => ({
+  broadcastAppEvent: (...args: unknown[]) => mockBroadcastAppEvent(...args),
+}))
+
 const mockRootFinder = {
   findGitRoot: vi.fn(async (path: string) => {
     if (path.startsWith('/repo')) return '/repo'

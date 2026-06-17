@@ -18,7 +18,7 @@ import type { InternalSession, SessionState } from '../../../../lib/types/chat'
 import { ai as aiBridge, aiMutations } from '../../../bridge/ai'
 import { config } from '../../../bridge/config'
 import { workspace } from '../../../bridge/workspace'
-import { runAgentLoop } from '../utils/agent'
+import { runAgentLoop } from '../agent-loop'
 import { executeCommandOnly } from '../utils/commands'
 import {
   appendCommandOutput,

@@ -9,8 +9,8 @@ import { jsonSchema } from '@ai-sdk/provider-utils'
 import { TOOL_METADATA } from '../../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../../lib/constants/messages'
 import type { ToolContext } from '../../../lib/types/ai'
+import { requestAiApproval } from '../../approval-queue'
 import { getShellConfig } from '../../system/logic'
-import { requestAiApproval } from '../../window'
 
 export function createRunCommand(
   workspaceFolders: string[],

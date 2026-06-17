@@ -20,6 +20,10 @@ vi.mock('../../../src/main/window', () => ({
   requestAiApproval: () => Promise.resolve(true),
 }))
 
+vi.mock('../../../src/main/approval-queue', () => ({
+  requestAiApproval: () => Promise.resolve(true),
+}))
+
 import { createRunCommand } from '../../../src/main/ai/tools/run-command'
 
 beforeEach(() => {

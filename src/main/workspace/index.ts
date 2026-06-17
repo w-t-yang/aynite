@@ -4,14 +4,14 @@ import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
 import { gitService } from '../git/index'
-import { trackEvent } from '../telemetry/index'
 import {
   broadcastAppEvent,
   getWinIdFromSender,
   sendOperationToWindow,
   sendToWindow,
-  showOpenDialog,
-} from '../window'
+} from '../ipc-utils'
+import { trackEvent } from '../telemetry/index'
+import { showOpenDialog } from '../window'
 import { getWindowWorkspace, setWindowWorkspace } from '../window-state'
 import {
   addWorkspaceFolder,

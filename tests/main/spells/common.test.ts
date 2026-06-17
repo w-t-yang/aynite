@@ -15,6 +15,10 @@ vi.mock('../../../src/main/window', () => ({
   broadcastAppEvent: (...args: unknown[]) => mockBroadcastAppEvent(...args),
 }))
 
+vi.mock('../../../src/main/ipc-utils', () => ({
+  broadcastAppEvent: (...args: unknown[]) => mockBroadcastAppEvent(...args),
+}))
+
 vi.mock('../../../src/lib/path', () => ({
   readdir: (...args: unknown[]) => mockReaddir(...args),
   getAbsolutePath: (...args: unknown[]) => mockGetAbsolutePath(...args),

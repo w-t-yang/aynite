@@ -4,7 +4,7 @@ import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { AppEvents } from '../../lib/constants/app'
 import { UpdateChannels } from '../../lib/constants/ipc-channels'
-import { broadcastAppEvent } from '../window'
+import { broadcastAppEvent } from '../ipc-utils'
 
 // ── Logger ────────────────────────────────────────────────────────────
 

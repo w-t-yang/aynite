@@ -2,6 +2,7 @@ import { app, BrowserWindow, protocol } from 'electron'
 
 // IPC & Logic Modules
 import { setupAiIpc } from './ai/index'
+import { setupApprovalListeners } from './approval-queue'
 import { initAppFolders, setupConfigIpc } from './config/index'
 import { setupFileIpc } from './file/index'
 import { setupGitIpc } from './git/index'
@@ -111,7 +112,10 @@ app.whenReady().then(async () => {
   createMainWindow(__dirname)
 
   if (isWindowActive()) {
-    // 3. Core IPC & Configuration
+    // 3. Approval listeners (AI approval queue)
+    setupApprovalListeners()
+
+    // 4. Core IPC & Configuration
     setupConfigIpc()
     setupThemeIpc()
     setupKeybindings()

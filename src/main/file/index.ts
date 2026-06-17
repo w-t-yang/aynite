@@ -21,8 +21,12 @@ import {
 } from '../../lib/path'
 import { getIgnorePatterns } from '../config'
 import { gitService } from '../git/index'
+import {
+  broadcastAppEvent,
+  getWinIdFromSender,
+  sendToWindow,
+} from '../ipc-utils'
 import { trackEvent } from '../telemetry/index'
-import { broadcastAppEvent, getWinIdFromSender, sendToWindow } from '../window'
 import { onWindowClose } from '../window-state'
 
 // Per-window active file watchers: windowId → { path, watcher }

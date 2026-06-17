@@ -9,15 +9,13 @@ import {
 } from '../../lib/path'
 import {
   closeWindowBySender,
-  createNewWindow,
   getWinIdFromSender,
   minimizeWindowBySender,
   sendToWindow,
-  showOpenDialog,
-  showSaveDialog,
   toggleDevToolsForSender,
   toggleMaximizeBySender,
-} from '../window'
+} from '../ipc-utils'
+import { createNewWindow, showOpenDialog, showSaveDialog } from '../window'
 import { getAvailableViews, getSystemFonts } from './logic'
 
 let clipboardPath: string | null = null

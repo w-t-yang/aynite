@@ -2,6 +2,7 @@ import { Keyboard, Loader2, RefreshCw, Rss } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { systemMutations } from '../../bridge/system'
 import { Tooltip } from '../../shared/basic/Tooltip'
+import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { useViewEvent } from '../useViewEvents'
 import { AddGroupModal } from './components/AddGroupModal'
 import { AddSourceModal } from './components/AddSourceModal'
@@ -457,36 +458,23 @@ export function RSSApp() {
       className="flex flex-col h-full bg-background text-foreground outline-none"
     >
       {/* Header */}
-      <div className="h-10 border-b border-border flex items-center px-4 gap-3 bg-muted/30 justify-between shrink-0 relative z-popover">
-        <div className="flex items-center gap-2 min-w-0">
-          <Tooltip position="bottom" content="RSS Reader">
-            <Rss size={14} className="text-primary" />
-          </Tooltip>
-          <span className="text-[10px] font-bold uppercase tracking-widest truncate text-muted-foreground">
-            RSS Reader
-          </span>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <Tooltip position="bottom" align="right" content={keybindingsTooltip}>
-            <Keyboard
-              size={13}
-              className="text-muted-foreground/50 cursor-help"
-            />
-          </Tooltip>
-          <button
-            type="button"
-            onClick={rss.fetchAll}
-            disabled={rss.fetching}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors disabled:opacity-30"
-            title="Refresh all feeds"
-          >
-            <RefreshCw
-              size={14}
-              className={rss.fetching ? 'animate-spin' : ''}
-            />
-          </button>
-        </div>
-      </div>
+      <ViewHeader icon={<Rss size={14} />} title="RSS Reader">
+        <Tooltip position="bottom" align="right" content={keybindingsTooltip}>
+          <Keyboard
+            size={13}
+            className="text-muted-foreground/50 cursor-help"
+          />
+        </Tooltip>
+        <button
+          type="button"
+          onClick={rss.fetchAll}
+          disabled={rss.fetching}
+          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors disabled:opacity-30"
+          title="Refresh all feeds"
+        >
+          <RefreshCw size={14} className={rss.fetching ? 'animate-spin' : ''} />
+        </button>
+      </ViewHeader>
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">

@@ -2,13 +2,13 @@ import type { UIMessage } from 'ai'
 import { ipcMain } from 'electron'
 import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { AiChannels } from '../../lib/constants/ipc-channels'
-import { trackEvent } from '../telemetry/index'
 import {
   getWinIdFromSender,
   sendOperationToWindow,
   sendToWindow,
-  showOpenDialog,
-} from '../window'
+} from '../ipc-utils'
+import { trackEvent } from '../telemetry/index'
+import { showOpenDialog } from '../window'
 import { getWindowWorkspace } from '../window-state'
 import { aiChat, listSessions, loadSession, saveSession } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'

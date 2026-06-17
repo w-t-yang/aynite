@@ -1,7 +1,8 @@
 import type { Input } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { loadConfig } from '../config'
-import { onBeforeInputEvent, sendAppEvent, sendAppOperation } from '../window'
+import { sendAppEvent, sendAppOperation } from '../ipc-utils'
+import { onBeforeInputEvent } from '../window'
 
 interface KeyBinding {
   ctrl?: boolean

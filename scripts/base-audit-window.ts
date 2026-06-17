@@ -5,6 +5,8 @@ import { ROOT_DIR, report, walk } from './audit-utils'
 const checkMode = process.argv.includes('--check')
 const MAIN_DIR = path.join(ROOT_DIR, 'src/main')
 const WINDOW_FILE = 'window.ts'
+const IPC_UTILS_FILE = 'ipc-utils.ts'
+const APPROVAL_QUEUE_FILE = 'approval-queue.ts'
 const violations: any[] = []
 
 walk(MAIN_DIR, (fullPath) => {
@@ -12,7 +14,10 @@ walk(MAIN_DIR, (fullPath) => {
   const fileName = path.basename(fullPath)
   const content = fs.readFileSync(fullPath, 'utf-8')
 
+  // Skip the whitelisted window-management files
   if (fileName === WINDOW_FILE) return
+  if (fileName === IPC_UTILS_FILE) return
+  if (fileName === APPROVAL_QUEUE_FILE) return
 
   // 1. Check for direct BrowserWindow usage
   if (

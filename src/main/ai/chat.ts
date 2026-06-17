@@ -14,7 +14,7 @@ import {
   writeJson,
 } from '../../lib/path'
 import type { SessionMetadata } from '../../lib/types/chat'
-import { sendToWindow } from '../window'
+import { sendToWindow } from '../ipc-utils'
 import type { AIProvider } from './factory'
 import { getAIModel } from './factory'
 import { createTools } from './tools'

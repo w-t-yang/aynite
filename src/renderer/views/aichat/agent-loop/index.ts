@@ -4,7 +4,7 @@ export type { AgentLoopConfig }
 
 import type { TextStreamPart, UIMessage } from 'ai'
 import { aiMutations } from '../../../bridge/ai'
-import { genId } from './message'
+import { genId } from '../utils/message'
 
 export async function runAgentLoop(
   messages: UIMessage[],

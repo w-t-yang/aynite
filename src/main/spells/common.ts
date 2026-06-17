@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { reportedErrors } from '../../lib/constants/spells'
 import { getAbsolutePath, joinPaths, readdir } from '../../lib/path'
-import { broadcastAppEvent } from '../window'
+import { broadcastAppEvent } from '../ipc-utils'
 
 export { reportedErrors }
 

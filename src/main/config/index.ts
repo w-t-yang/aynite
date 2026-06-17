@@ -2,8 +2,12 @@ import { ipcMain } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import { ConfigKey } from '../../lib/constants/config'
 import { ConfigChannels } from '../../lib/constants/ipc-channels'
+import {
+  broadcastAppEvent,
+  getWinIdFromSender,
+  sendToWindow,
+} from '../ipc-utils'
 import { setTelemetryEnabled, trackEvent } from '../telemetry/index'
-import { broadcastAppEvent, getWinIdFromSender, sendToWindow } from '../window'
 import { loadConfig, saveConfig } from './logic'
 import { routeGetConfig, routeSetConfig } from './router'
 

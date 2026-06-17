@@ -35,6 +35,10 @@ vi.mock('../../../src/main/window', () => ({
   requestAiApproval: (...args: unknown[]) => mockRequestAiApproval(...args),
 }))
 
+vi.mock('../../../src/main/approval-queue', () => ({
+  requestAiApproval: (...args: unknown[]) => mockRequestAiApproval(...args),
+}))
+
 // ─── Test setup ─────────────────────────────────────────────────────────
 
 const defaultContext: ToolContext = {

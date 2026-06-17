@@ -30,7 +30,7 @@ import {
   getProviderReasoningOptions,
   saveSession,
 } from '../ai'
-import { broadcastAppEvent } from '../window'
+import { broadcastAppEvent } from '../ipc-utils'
 import { saveWorkspaceState } from '../workspace'
 
 const bots = new Map<string, import('telegraf').Telegraf>()

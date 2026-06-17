@@ -10,7 +10,7 @@ import {
   loadSession,
   saveSession,
 } from '../../ai'
-import { sendToWindow } from '../../window'
+import { sendToWindow } from '../../ipc-utils'
 import { getWindowWorkspace } from '../../window-state'
 import {
   getWorkspaceState,

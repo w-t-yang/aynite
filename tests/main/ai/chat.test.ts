@@ -21,6 +21,10 @@ vi.mock('../../../src/main/window', () => ({
   sendToWindow: (...args: unknown[]) => mockSendToWindow(...args),
 }))
 
+vi.mock('../../../src/main/ipc-utils', () => ({
+  sendToWindow: (...args: unknown[]) => mockSendToWindow(...args),
+}))
+
 const mockGetAIModel = vi.hoisted(() => vi.fn(() => ({})))
 vi.mock('../../../src/main/ai/factory', () => ({
   getAIModel: (...args: unknown[]) => mockGetAIModel(...args),
