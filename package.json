@@ -60,7 +60,8 @@
     "build:mac": "npm run build:views && electron-vite build && electron-builder --mac",
     "build:win": "npm run build:views && electron-vite build && electron-builder --win",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ci:check": "npm run lint && npm run typecheck && npm test && echo '---' && npm audit --audit-level=high || true && echo '---' && npm run audit:base || true"
   },
   "overrides": {
     "madge": {

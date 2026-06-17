@@ -1,2 +1,5 @@
 npx lint-staged
+npm run typecheck
+npm test
 npm run audit:window
+# To run the full CI pipeline before pushing: npm run ci:check

@@ -144,7 +144,11 @@ describe('computeBipartiteOrder', () => {
 
   it('puts left nodes (group 0/1) before right nodes (group 2)', () => {
     const graph: DataViewGraph = {
-      nodes: [makeNode('left1', 0), makeNode('left2', 1), makeNode('right1', 2)],
+      nodes: [
+        makeNode('left1', 0),
+        makeNode('left2', 1),
+        makeNode('right1', 2),
+      ],
       links: [],
     }
     const ranks = computeBipartiteOrder(graph, 800, 600)
@@ -237,11 +241,7 @@ describe('computeBipartiteOrder', () => {
         makeNode('b2', 2),
         makeNode('b3', 2),
       ],
-      links: [
-        makeLink('a1', 'b1'),
-        makeLink('a2', 'b2'),
-        makeLink('a3', 'b3'),
-      ],
+      links: [makeLink('a1', 'b1'), makeLink('a2', 'b2'), makeLink('a3', 'b3')],
     }
     const ranks = computeBipartiteOrder(graph, 800, 600)
 
@@ -260,10 +260,7 @@ describe('computeBipartiteOrder', () => {
         makeNode('n3', 1),
         makeNode('n4', 2),
       ],
-      links: [
-        makeLink('n1', 'n2'),
-        makeLink('n3', 'n4'),
-      ],
+      links: [makeLink('n1', 'n2'), makeLink('n3', 'n4')],
     }
     const firstRun = computeBipartiteOrder(graph, 800, 600)
     const secondRun = computeBipartiteOrder(graph, 800, 600)
@@ -291,7 +288,12 @@ describe('computeBipartiteOrder', () => {
     // a→d, b→c (crossing edges in default order)
     // After barycenter, order should swap to minimize crossings
     const graph: DataViewGraph = {
-      nodes: [makeNode('a', 0), makeNode('b', 0), makeNode('c', 2), makeNode('d', 2)],
+      nodes: [
+        makeNode('a', 0),
+        makeNode('b', 0),
+        makeNode('c', 2),
+        makeNode('d', 2),
+      ],
       links: [makeLink('a', 'd'), makeLink('b', 'c')],
     }
     const ranks = computeBipartiteOrder(graph, 800, 600)
@@ -321,7 +323,7 @@ describe('computeBipartiteOrder', () => {
 
     // For non-crossing: if a is before b on left, d should be before c on right
     // (because a→d, b→c)
-    const edgesCross = (rankA < rankB) !== (rankD < rankC)
+    const edgesCross = rankA < rankB !== rankD < rankC
     // The algorithm should produce non-crossing layout
     expect(edgesCross).toBe(false)
   })

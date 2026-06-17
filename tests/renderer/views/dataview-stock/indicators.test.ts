@@ -1,7 +1,6 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest'
-import type { DataViewStock } from '../../../../src/renderer/views/dataview-stock/types'
 
+import { describe, expect, it } from 'vitest'
 import {
   aggregateData,
   calculateATR,
@@ -18,6 +17,7 @@ import {
   calculateVWAP,
   enrichDataWithIndicators,
 } from '../../../../src/renderer/views/dataview-stock/indicators'
+import type { DataViewStock } from '../../../../src/renderer/views/dataview-stock/types'
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -33,11 +33,7 @@ function makeCandle(
 }
 
 /** Linear series: close = start + i*step */
-function linearSeries(
-  n: number,
-  start = 100,
-  step = 1,
-): DataViewStock[] {
+function linearSeries(n: number, start = 100, step = 1): DataViewStock[] {
   const data: DataViewStock[] = []
   for (let i = 0; i < n; i++) {
     const c = start + i * step
@@ -222,10 +218,7 @@ describe('calculateMACD', () => {
       if (!Number.isNaN(histogram[i]) || !Number.isNaN(macdLine[i])) {
         // When macdLine and signalLine are both valid, histogram = macd - signal
         if (!Number.isNaN(macdLine[i]) && !Number.isNaN(signalLine[i])) {
-          expect(histogram[i]).toBeCloseTo(
-            macdLine[i] - signalLine[i],
-            8,
-          )
+          expect(histogram[i]).toBeCloseTo(macdLine[i] - signalLine[i], 8)
         }
       }
     }
@@ -233,7 +226,7 @@ describe('calculateMACD', () => {
 
   it('signal line is smoothed version of macdLine', () => {
     const data = linearSeries(40, 100, 10) // strong uptrend
-    const { macdLine, signalLine } = calculateMACD(data)
+    const { macdLine, signalLine: _signalLine } = calculateMACD(data)
     // Signal line should lag behind macd line in an uptrend
     // Find first valid index
     let firstValid = -1
@@ -333,7 +326,7 @@ describe('calculateATR', () => {
 describe('calculateStochastic', () => {
   it('returns K and D values in 0-100 range', () => {
     const data = linearSeries(30, 100, 1)
-    const { stochK, stochD } = calculateStochastic(data, 14)
+    const { stochK, stochD: _stochD } = calculateStochastic(data, 14)
     for (let i = 14; i < data.length; i++) {
       expect(stochK[i]).toBeGreaterThanOrEqual(0)
       expect(stochK[i]).toBeLessThanOrEqual(100)
@@ -342,7 +335,7 @@ describe('calculateStochastic', () => {
 
   it('D line is smoothed version of K line', () => {
     const data = linearSeries(30, 100, 1)
-    const { stochK, stochD } = calculateStochastic(data, 14)
+    const { stochK: _stochK, stochD } = calculateStochastic(data, 14)
     // D is SMA of K over 3 periods
     const validIndices: number[] = []
     for (let i = 14; i < data.length; i++) {
@@ -450,7 +443,11 @@ describe('calculateSAR', () => {
 describe('calculateKeltner', () => {
   it('middle band equals EMA of close', () => {
     const data = linearSeries(40, 100, 1)
-    const { middle, upper, lower } = calculateKeltner(data, 20, 2)
+    const {
+      middle,
+      upper: _upper,
+      lower: _lower,
+    } = calculateKeltner(data, 20, 2)
     const ema = calculateEMA(data, 20)
     for (let i = 0; i < data.length; i++) {
       if (!Number.isNaN(middle[i]) && !Number.isNaN(ema[i])) {
