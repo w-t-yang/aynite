@@ -207,7 +207,8 @@ describe('createTools', () => {
           platform: process.platform,
           shell: '/bin/zsh',
           isPowershell: false,
-          runCommandHint: 'Use POSIX shell syntax. Commands run via: <shell> -l -c <command>',
+          runCommandHint:
+            'Use POSIX shell syntax. Commands run via: <shell> -l -c <command>',
         },
       })
     })
