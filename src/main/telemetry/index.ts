@@ -133,11 +133,11 @@ function pushEvent(
   }
 }
 
-function performFlush(): void {
+async function performFlush(): Promise<void> {
   if (state.buffer.length === 0) return
   const events = state.buffer.splice(0)
   state.buffer = []
-  flushEvents(state.clientId, events)
+  await flushEvents(state.clientId, events)
 }
 
 // ─── Timer Lifecycle (via PeriodicRunner) ──────────────────────────────────
@@ -152,7 +152,7 @@ function startTimers(): void {
     state.heartbeatRunner = new PeriodicRunner(ENGAGEMENT_HEARTBEAT_MS, () => {
       if (!state.enabled) return
       const elapsedMs = Date.now() - state.sessionStart
-      pushEvent('user_engagement', {
+      pushEvent('app_heartbeat', {
         engagement_time_msec: elapsedMs,
         session_id: state.sessionId,
       })
@@ -218,7 +218,7 @@ export async function startSession(): Promise<void> {
   const currentVersion = app.getVersion()
 
   if (!state.hasSentFirstOpen) {
-    pushEvent('first_open', {
+    pushEvent('app_first_open', {
       engagement_time_msec: ENGAGEMENT_TIME_MS,
       app_version: currentVersion,
     })
@@ -235,7 +235,7 @@ export async function startSession(): Promise<void> {
   state.lastTrackedVersion = currentVersion
   saveTelemetryValue('lastVersion', currentVersion)
 
-  pushEvent('session_start', { engagement_time_msec: ENGAGEMENT_TIME_MS })
+  pushEvent('app_session_started', { engagement_time_msec: ENGAGEMENT_TIME_MS })
   pushEvent('app_start', {
     is_packaged: app.isPackaged,
     app_version: currentVersion,
@@ -272,12 +272,14 @@ export function setTelemetryEnabled(enabled: boolean): void {
     state.sessionStart = Date.now()
 
     if (!state.hasSentFirstOpen) {
-      pushEvent('first_open', { engagement_time_msec: ENGAGEMENT_TIME_MS })
+      pushEvent('app_first_open', { engagement_time_msec: ENGAGEMENT_TIME_MS })
       state.hasSentFirstOpen = true
       saveTelemetryValue('hasSentFirstOpen', true)
     }
 
-    pushEvent('session_start', { engagement_time_msec: ENGAGEMENT_TIME_MS })
+    pushEvent('app_session_started', {
+      engagement_time_msec: ENGAGEMENT_TIME_MS,
+    })
     pushEvent('app_start', { is_packaged: app.isPackaged })
     startTimers()
   } else if (enabled && state.sessionId) {
