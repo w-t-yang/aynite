@@ -50,6 +50,7 @@ interface TelemetryState {
   flushTimer: ReturnType<typeof setInterval> | null
   heartbeatTimer: ReturnType<typeof setInterval> | null
   hasSentFirstOpen: boolean
+  lastTrackedVersion: string
 }
 
 // ─── State ─────────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ const state: TelemetryState = {
   flushTimer: null,
   heartbeatTimer: null,
   hasSentFirstOpen: false,
+  lastTrackedVersion: '',
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -75,11 +77,17 @@ async function loadTelemetryConfig(): Promise<{
   enabled: boolean
   clientId: string
   hasSentFirstOpen: boolean
+  lastTrackedVersion: string
 }> {
   try {
     const config = await readJson<Record<string, any>>(getMainConfigPath(), {})
     const telemetry = config.telemetry as
-      | { enabled?: boolean; clientId?: string; hasSentFirstOpen?: boolean }
+      | {
+          enabled?: boolean
+          clientId?: string
+          hasSentFirstOpen?: boolean
+          lastVersion?: string
+        }
       | undefined
     const hasSentFirstOpen = telemetry?.hasSentFirstOpen === true
     return {
@@ -87,16 +95,25 @@ async function loadTelemetryConfig(): Promise<{
       clientId:
         telemetry?.clientId || config._telemetryClientId || randomUUID(),
       hasSentFirstOpen,
+      lastTrackedVersion: telemetry?.lastVersion || '',
     }
   } catch {
-    return { enabled: false, clientId: randomUUID(), hasSentFirstOpen: false }
+    return {
+      enabled: false,
+      clientId: randomUUID(),
+      hasSentFirstOpen: false,
+      lastTrackedVersion: '',
+    }
   }
 }
 
 /**
  * Persist telemetry config back to disk (to remember first_open state).
  */
-async function saveTelemetryFlag(key: string, value: boolean): Promise<void> {
+async function saveTelemetryValue(
+  key: string,
+  value: boolean | string,
+): Promise<void> {
   try {
     const config = await readJson<Record<string, any>>(getMainConfigPath(), {})
     if (!config.telemetry) config.telemetry = {}
@@ -259,22 +276,37 @@ export async function startSession(): Promise<void> {
   state.clientId = config.clientId
   state.enabled = config.enabled
   state.hasSentFirstOpen = config.hasSentFirstOpen
+  state.lastTrackedVersion = config.lastTrackedVersion
 
   if (!state.enabled) return
 
   state.sessionId = randomUUID()
   state.sessionStart = Date.now()
 
+  const currentVersion = app.getVersion()
+
   // first_open: sent only once per client. GA4 uses this to distinguish
   // new vs returning users for the "New Users" metric.
   if (!state.hasSentFirstOpen) {
     trackEvent('first_open', {
       engagement_time_msec: ENGAGEMENT_TIME_MS,
+      app_version: currentVersion,
     })
     state.hasSentFirstOpen = true
-    // Persist so we don't send again
-    saveTelemetryFlag('hasSentFirstOpen', true)
+    saveTelemetryValue('hasSentFirstOpen', true)
   }
+
+  // Track app version changes — fires when the user upgrades to a new version.
+  // This enables version adoption tracking (e.g. "how many users are on v0.1.9?").
+  if (state.lastTrackedVersion && state.lastTrackedVersion !== currentVersion) {
+    trackEvent('app_version_updated', {
+      from_version: state.lastTrackedVersion.slice(0, 20),
+      to_version: currentVersion.slice(0, 20),
+    })
+  }
+  // Persist the current version so we can detect future upgrades
+  state.lastTrackedVersion = currentVersion
+  saveTelemetryValue('lastVersion', currentVersion)
 
   // session_start: REQUIRED by GA4 for proper session counting.
   // Without this, all events are collected but GA4 can't group them into sessions.
@@ -284,6 +316,7 @@ export async function startSession(): Promise<void> {
 
   trackEvent('app_start', {
     is_packaged: app.isPackaged,
+    app_version: currentVersion,
   })
 
   startFlushTimer()
@@ -325,7 +358,7 @@ export function setTelemetryEnabled(enabled: boolean): void {
         engagement_time_msec: ENGAGEMENT_TIME_MS,
       })
       state.hasSentFirstOpen = true
-      saveTelemetryFlag('hasSentFirstOpen', true)
+      saveTelemetryValue('hasSentFirstOpen', true)
     }
 
     trackEvent('session_start', {
