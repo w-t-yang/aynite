@@ -613,7 +613,7 @@ async function handleChatMessage(
   // If the agent is already processing a message for this bot, reply with a
   // single merged message explaining the situation and showing the last reply.
   if (processing.has(lockKey)) {
-    let lastReply = ''
+    let lastContent = ''
     try {
       const wsConfig = await readJson<WorkspaceConfig>(
         getWorkspaceDataPath(config.workspace),
@@ -622,17 +622,57 @@ async function handleChatMessage(
       if (botId) {
         const msgs = await findSessionFile(botId, config.workspace)
         if (msgs && Array.isArray(msgs)) {
-          const lastText = [...msgs]
+          // Find the last assistant message (text or tool calls)
+          const lastAssistant = [...msgs]
             .reverse()
-            .find(
-              (m: any) =>
-                m.role === 'assistant' &&
-                m.parts?.some((p: any) => p.type === 'text'),
-            )
-          if (lastText) {
-            const textPart = lastText.parts.find((p: any) => p.type === 'text')
-            if (textPart?.text) {
-              lastReply = textPart.text.slice(0, 2000)
+            .find((m: any) => m.role === 'assistant' && m.parts?.length > 0)
+
+          if (lastAssistant) {
+            const lines: string[] = []
+            for (const part of lastAssistant.parts) {
+              // Text content
+              if (part.type === 'text' && part.text) {
+                lines.push(part.text.slice(0, 2000))
+              }
+              // Tool calls — show tool name + primary argument (same as getToolTitle in Message.tsx)
+              if (
+                part.type === 'dynamic-tool' ||
+                part.type === 'tool-call' ||
+                part.type === 'tool-result'
+              ) {
+                const toolName = part.toolName || ''
+                const input = part.input ?? part.args ?? {}
+                const formattedName = toolName.toUpperCase().replace(/_/g, ' ')
+
+                // Extract the primary argument (command, path, pattern, etc.)
+                const actualArgs = input?.args || input?.input || input
+                const getCmd = (obj: any): string | null => {
+                  if (!obj || typeof obj !== 'object') return null
+                  return (
+                    obj.command ||
+                    obj.path ||
+                    obj.pattern ||
+                    obj.url ||
+                    obj.query ||
+                    obj.name ||
+                    null
+                  )
+                }
+
+                let cmd = getCmd(actualArgs)
+                if (cmd && toolName === 'run_command') {
+                  cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
+                }
+
+                if (cmd) {
+                  lines.push(`⚡ ${formattedName}  │  ${cmd}`)
+                } else {
+                  lines.push(`⚡ ${formattedName}`)
+                }
+              }
+            }
+            if (lines.length > 0) {
+              lastContent = lines.join('\n\n').slice(0, 2000)
             }
           }
         }
@@ -641,8 +681,8 @@ async function handleChatMessage(
       // Best effort
     }
 
-    const message = lastReply
-      ? `The agent is busy with the last request.\n\nHere is the latest message from the session:\n\n${escapeMarkdown(lastReply)}`
+    const message = lastContent
+      ? `The agent is busy with the last request.\n\nHere is the latest message from the session:\n\n${escapeMarkdown(lastContent)}`
       : 'The agent is currently processing a request. Please wait before sending another message.'
 
     await ctx.reply(message)
