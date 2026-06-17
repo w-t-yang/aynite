@@ -17,6 +17,7 @@ interface GitChangedFile {
 
 interface CommitState {
   generating: boolean
+  committing: boolean
   message: string
   root: string
   error: string | null
@@ -237,7 +238,13 @@ export function GitDiffView({
   const commitStateRef = useRef<CommitState | null>(null)
 
   const handleCommit = useCallback(async (root: string) => {
-    const newState = { generating: true, message: '', root, error: null }
+    const newState = {
+      generating: true,
+      committing: false,
+      message: '',
+      root,
+      error: null,
+    }
     commitStateRef.current = newState
     setCommitState(newState)
     try {
@@ -265,17 +272,31 @@ export function GitDiffView({
 
   const handleCommitConfirm = useCallback(async () => {
     const cs = commitStateRef.current
-    if (!cs) return
-    const result = await gitMutations.commitExecute(cs.root, cs.message)
-    if (result.error) {
-      const errState = { ...cs, error: result.error }
+    if (!cs || cs.committing) return
+    const committingState = { ...cs, committing: true, error: null }
+    commitStateRef.current = committingState
+    setCommitState(committingState)
+    try {
+      const result = await gitMutations.commitExecute(cs.root, cs.message)
+      if (result.error) {
+        const errState = {
+          ...committingState,
+          committing: false,
+          error: result.error,
+        }
+        commitStateRef.current = errState
+        setCommitState(errState)
+        return
+      }
+      commitStateRef.current = null
+      setCommitState(null)
+      // GIT_STATUS_CHANGED event will trigger refresh via handleGitStatusChanged
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e)
+      const errState = { ...committingState, committing: false, error: errMsg }
       commitStateRef.current = errState
       setCommitState(errState)
-      return
     }
-    commitStateRef.current = null
-    setCommitState(null)
-    // GIT_STATUS_CHANGED event will trigger refresh via handleGitStatusChanged
   }, [])
 
   const handleCommitCancel = useCallback(() => {
@@ -407,12 +428,18 @@ export function GitDiffView({
           title="Commit Changes"
           size="md"
           footer={
-            !commitState.generating ? (
+            commitState.committing ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-3 justify-center w-full">
+                <span className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                Committing...
+              </div>
+            ) : !commitState.generating ? (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleCommitCancel}
+                  disabled={commitState.committing}
                   className="text-xs px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-foreground/10 transition-colors"
                 >
                   Cancel
@@ -421,6 +448,7 @@ export function GitDiffView({
                   variant="primary"
                   size="sm"
                   onClick={handleCommitConfirm}
+                  disabled={commitState.committing}
                   className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
                 >
                   Commit
@@ -435,7 +463,12 @@ export function GitDiffView({
                 {commitState.error}
               </div>
             )}
-            {commitState.generating ? (
+            {commitState.committing ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
+                <span className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                Committing changes (pre-commit hooks may take a moment)...
+              </div>
+            ) : commitState.generating ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
                 <div className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
                 Generating commit message...
