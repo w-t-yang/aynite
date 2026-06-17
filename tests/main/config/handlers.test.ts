@@ -43,6 +43,12 @@ const mockGetKeybindingsConfigPath = vi.hoisted(() =>
 const mockGetAIConfigPath = vi.hoisted(() =>
   vi.fn(() => '/mock/.aynite/config/ai.json'),
 )
+const mockGetMessengersConfigPath = vi.hoisted(() =>
+  vi.fn(() => '/mock/.aynite/config/messengers.json'),
+)
+const mockGetWorkspaceDataPath = vi.hoisted(() =>
+  vi.fn((name: string) => `/mock/.aynite/workspaces/${name}/config.json`),
+)
 
 vi.mock('../../../src/lib/path', () => ({
   exists: (...args: unknown[]) => mockExists(...args),
@@ -57,6 +63,10 @@ vi.mock('../../../src/lib/path', () => ({
   getKeybindingsConfigPath: (...args: unknown[]) =>
     mockGetKeybindingsConfigPath(...args),
   getAIConfigPath: (...args: unknown[]) => mockGetAIConfigPath(...args),
+  getMessengersConfigPath: (...args: unknown[]) =>
+    mockGetMessengersConfigPath(...args),
+  getWorkspaceDataPath: (...args: unknown[]) =>
+    mockGetWorkspaceDataPath(...args),
   AYNITE_SUBDIRS: { VIEWS: 'views', CONFIG: 'config' },
   expandHome: vi.fn((p: string) => p),
   getAbsolutePath: vi.fn((p: string) => p),
@@ -88,6 +98,24 @@ vi.mock('../../../src/main/system/logic', () => ({
   restoreViewFromBundle: vi.fn(() => true),
 }))
 
+const mockReloadMessengers = vi.hoisted(() => vi.fn(() => Promise.resolve()))
+
+vi.mock('../../../src/main/messengers', () => ({
+  reloadMessengers: (...args: unknown[]) => mockReloadMessengers(...args),
+}))
+
+const mockGetThemesList = vi.hoisted(() => vi.fn(() => []))
+const mockGetTheme = vi.hoisted(() => vi.fn())
+const mockSaveTheme = vi.hoisted(() => vi.fn())
+const mockDeleteTheme = vi.hoisted(() => vi.fn())
+
+vi.mock('../../../src/main/theme', () => ({
+  getThemesList: (...args: unknown[]) => mockGetThemesList(...args),
+  getTheme: (...args: unknown[]) => mockGetTheme(...args),
+  saveTheme: (...args: unknown[]) => mockSaveTheme(...args),
+  deleteTheme: (...args: unknown[]) => mockDeleteTheme(...args),
+}))
+
 vi.mock('../../../src/main/config/schema-validator', () => ({
   validateAgainstSchema: vi.fn(() => true),
 }))
@@ -96,12 +124,14 @@ const mockGetWorkspaceState = vi.hoisted(() => vi.fn())
 const mockGetWorkspacesList = vi.hoisted(() => vi.fn())
 const mockSaveWorkspaceState = vi.hoisted(() => vi.fn())
 const mockUpdateTileData = vi.hoisted(() => vi.fn())
+const mockSwitchWorkspace = vi.hoisted(() => vi.fn())
 
 vi.mock('../../../src/main/workspace', () => ({
   getWorkspacesList: (...args: unknown[]) => mockGetWorkspacesList(...args),
   getWorkspaceState: (...args: unknown[]) => mockGetWorkspaceState(...args),
   saveWorkspaceState: (...args: unknown[]) => mockSaveWorkspaceState(...args),
   updateTileData: (...args: unknown[]) => mockUpdateTileData(...args),
+  switchWorkspace: (...args: unknown[]) => mockSwitchWorkspace(...args),
 }))
 
 vi.mock('../../../src/main/window', () => ({
@@ -109,9 +139,11 @@ vi.mock('../../../src/main/window', () => ({
 }))
 
 const mockGetWindowWorkspace = vi.hoisted(() => vi.fn(() => 'MockWorkspace'))
+const mockSetWindowWorkspace = vi.hoisted(() => vi.fn())
 
 vi.mock('../../../src/main/window-state', () => ({
   getWindowWorkspace: (...args: unknown[]) => mockGetWindowWorkspace(...args),
+  setWindowWorkspace: (...args: unknown[]) => mockSetWindowWorkspace(...args),
 }))
 
 vi.mock('../../../src/main/config/logic', () => ({
@@ -127,8 +159,11 @@ vi.mock('../../../src/main/config/logic', () => ({
 
 import { aiHandlers } from '../../../src/main/config/handlers/ai-handlers'
 import { configFileHandlers } from '../../../src/main/config/handlers/config-file-handlers'
+import { messengerHandlers } from '../../../src/main/config/handlers/messenger-handlers'
 import { staticHandlers } from '../../../src/main/config/handlers/static-handlers'
 import { telemetryHandlers } from '../../../src/main/config/handlers/telemetry-handlers'
+import { themeHandlers } from '../../../src/main/config/handlers/theme-handlers'
+import { workspaceHandlers } from '../../../src/main/config/handlers/workspace-handlers'
 import { workspaceStateHandlers } from '../../../src/main/config/handlers/workspace-state-handlers'
 
 beforeEach(() => {
@@ -237,6 +272,48 @@ describe('staticHandlers', () => {
       })
       expect(result).toEqual([])
     })
+
+    it('returns matching views when schema validates', async () => {
+      mockReadText.mockResolvedValue(
+        JSON.stringify({ name: 'Chart', type: 'dataview' }),
+      )
+      // First call for viewsDir, subsequent for config paths
+      mockExists.mockResolvedValue(true)
+      mockReaddir.mockResolvedValue([
+        { name: 'dataview-chart', isDirectory: () => true },
+      ])
+      // Return a view config with matching schema
+      mockReadJson.mockResolvedValue({
+        name: 'Chart View',
+        'aynite-version': '0.1.8',
+        description: 'A chart view',
+        expected_file_type: {
+          ext: 'json',
+          schema: { type: 'object', properties: { type: { type: 'string' } } },
+        },
+      })
+
+      const result = await staticHandlers.get?.('matching-views', {
+        filePath: '/file.json',
+      })
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('dataview-chart')
+    })
+
+    it('skips views without aynite-version in matching-views', async () => {
+      mockReadText.mockResolvedValue(JSON.stringify({ type: 'chart' }))
+      mockExists.mockResolvedValue(true)
+      mockReaddir.mockResolvedValue([
+        { name: 'dataview-chart', isDirectory: () => true },
+      ])
+      // No aynite-version in config
+      mockReadJson.mockResolvedValue({ name: 'Chart View' })
+
+      const result = await staticHandlers.get?.('matching-views', {
+        filePath: '/file.json',
+      })
+      expect(result).toEqual([])
+    })
   })
 
   describe('set', () => {
@@ -269,6 +346,15 @@ describe('staticHandlers', () => {
       expect(mockWriteJson).toHaveBeenCalledWith(
         '/mock/.aynite/config/config.json',
         expect.objectContaining({ aiTools: ['read_file'] }),
+      )
+    })
+
+    it('writes autoCompactThreshold to AI config', async () => {
+      mockReadJson.mockResolvedValue({ activeId: 'test' })
+      await staticHandlers.set?.('autoCompactThreshold', 500_000)
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        '/mock/.aynite/config/ai.json',
+        expect.objectContaining({ autoCompactThreshold: 500_000 }),
       )
     })
 
@@ -563,6 +649,16 @@ describe('configFileHandlers', () => {
       expect(result).toEqual({ folders: ['/mock/.aynite/skills'] })
     })
 
+    it('returns commands config', async () => {
+      const result = await configFileHandlers.get?.('commands', undefined)
+      expect(result).toEqual({ folders: ['/mock/.aynite/commands'] })
+    })
+
+    it('returns views config', async () => {
+      const result = await configFileHandlers.get?.('views', undefined)
+      expect(result).toEqual([])
+    })
+
     it('returns null for unknown key', async () => {
       const result = await configFileHandlers.get?.('unknown', undefined)
       expect(result).toBeNull()
@@ -606,6 +702,30 @@ describe('configFileHandlers', () => {
       expect(mockWriteJson).toHaveBeenCalledWith(
         '/mock/.aynite/config/ai.json',
         expect.objectContaining({ activeId: 'new-model' }),
+      )
+    })
+
+    it('writes commands to main config', async () => {
+      mockReadJson.mockResolvedValue({})
+      await configFileHandlers.set?.('commands', {
+        folders: ['/custom/commands'],
+      })
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        '/mock/.aynite/config/config.json',
+        expect.objectContaining({
+          commands: { folders: ['/custom/commands'] },
+        }),
+      )
+    })
+
+    it('writes tools config', async () => {
+      mockReadJson.mockResolvedValue({})
+      await configFileHandlers.set?.('tools', {
+        active: { read_file: true },
+      })
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        '/mock/.aynite/config/config.json',
+        expect.objectContaining({ aiTools: { read_file: true } }),
       )
     })
 
@@ -658,6 +778,206 @@ describe('telemetryHandlers', () => {
           telemetry: { enabled: true },
         }),
       )
+    })
+  })
+})
+
+// ─── Messenger Handlers ─────────────────────────────────────────────────
+
+describe('messengerHandlers', () => {
+  describe('get', () => {
+    it('returns messengers from config file', async () => {
+      mockReadJson.mockResolvedValue([
+        { id: 'bot-1', name: 'My Bot', enabled: true },
+      ])
+      const result = await messengerHandlers.get?.('messengers', undefined)
+      expect(result).toEqual([{ id: 'bot-1', name: 'My Bot', enabled: true }])
+    })
+
+    it('returns empty array when config is not an array', async () => {
+      mockReadJson.mockResolvedValue({})
+      const result = await messengerHandlers.get?.('messengers', undefined)
+      expect(result).toEqual([])
+    })
+
+    it('returns null for unknown key', async () => {
+      const result = await messengerHandlers.get?.('unknown', undefined)
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('set', () => {
+    it('writes messengers and reloads bots', async () => {
+      const payload = [{ id: 'bot-1', name: 'My Bot', enabled: true }]
+      const result = await messengerHandlers.set?.('messengers', payload)
+      expect(result).toBe(true)
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        '/mock/.aynite/config/messengers.json',
+        payload,
+      )
+      expect(mockReloadMessengers).toHaveBeenCalled()
+    })
+
+    it('returns false for unknown key', async () => {
+      const result = await messengerHandlers.set?.('unknown', {})
+      expect(result).toBe(false)
+    })
+  })
+})
+
+// ─── Workspace Handlers ──────────────────────────────────────────────
+
+describe('workspaceHandlers', () => {
+  beforeEach(() => {
+    mockGetWorkspacesList.mockResolvedValue({ active: 'Dev', list: ['Dev'] })
+    mockGetWorkspaceState.mockResolvedValue({
+      id: 'Dev',
+      folders: ['/project'],
+      files: [],
+    })
+  })
+
+  describe('get', () => {
+    it('returns workspaces list with states', async () => {
+      const result = await workspaceHandlers.get?.('workspaces', undefined)
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({ id: 'Dev' })
+    })
+
+    it('returns activeWorkspace by winId', async () => {
+      mockGetWindowWorkspace.mockResolvedValue('CustomWs')
+      const result = await workspaceHandlers.get?.(
+        'activeWorkspace',
+        undefined,
+        1,
+      )
+      expect(result).toBe('CustomWs')
+    })
+
+    it('returns activeWorkspace from config when no winId', async () => {
+      const result = await workspaceHandlers.get?.('activeWorkspace', undefined)
+      expect(result).toBe('Dev')
+    })
+
+    it('returns null for unknown key', async () => {
+      const result = await workspaceHandlers.get?.('unknown', undefined)
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('set', () => {
+    it('switches active workspace', async () => {
+      mockSwitchWorkspace.mockResolvedValue(undefined)
+      const result = await workspaceHandlers.set?.(
+        'activeWorkspace',
+        'NewWs',
+        1,
+      )
+      expect(result).toBe(true)
+      expect(mockSwitchWorkspace).toHaveBeenCalledWith('NewWs')
+      expect(mockSetWindowWorkspace).toHaveBeenCalledWith(1, 'NewWs')
+    })
+
+    it('saves workspace config with merge', async () => {
+      mockReadJson.mockResolvedValue({ id: 'Dev', folders: [] })
+      const payload = {
+        id: 'Dev',
+        config: { folders: ['/new/folder'] },
+      }
+      const result = await workspaceHandlers.set?.('workspace', payload)
+      expect(result).toBe(true)
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        expect.stringContaining('Dev'),
+        expect.objectContaining({
+          id: 'Dev',
+          folders: ['/new/folder'],
+        }),
+      )
+    })
+
+    it('returns false for unknown key', async () => {
+      const result = await workspaceHandlers.set?.('unknown', {})
+      expect(result).toBe(false)
+    })
+  })
+})
+
+// ─── Theme Handlers ────────────────────────────────────────────────────
+
+describe('themeHandlers', () => {
+  describe('get', () => {
+    it('returns themes list', async () => {
+      mockGetThemesList.mockResolvedValue([
+        { id: 'dark', name: 'Dark' },
+        { id: 'light', name: 'Light' },
+      ])
+      const result = await themeHandlers.get?.('themes', undefined)
+      expect(result).toEqual([
+        { id: 'dark', name: 'Dark' },
+        { id: 'light', name: 'Light' },
+      ])
+    })
+
+    it('returns theme by id', async () => {
+      mockGetTheme.mockResolvedValue({ id: 'nord', colors: {} })
+      const result = await themeHandlers.get?.('theme', 'nord')
+      expect(result).toEqual({ id: 'nord', colors: {} })
+    })
+
+    it('falls back to light theme when no id provided', async () => {
+      mockGetTheme.mockResolvedValue({ id: 'light', colors: {} })
+      await themeHandlers.get?.('theme', undefined)
+      expect(mockGetTheme).toHaveBeenCalledWith('light')
+    })
+
+    it('returns activeTheme from main config', async () => {
+      mockReadJson.mockResolvedValue({ activeTheme: 'nord' })
+      const result = await themeHandlers.get?.('activeTheme', undefined)
+      expect(result).toBe('nord')
+    })
+
+    it('falls back to light for activeTheme when config missing', async () => {
+      mockReadJson.mockResolvedValue({})
+      const result = await themeHandlers.get?.('activeTheme', undefined)
+      expect(result).toBe('light')
+    })
+
+    it('returns null for unknown key', async () => {
+      const result = await themeHandlers.get?.('unknown', undefined)
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('set', () => {
+    it('sets activeTheme', async () => {
+      mockReadJson.mockResolvedValue({})
+      const result = await themeHandlers.set?.('activeTheme', 'nord')
+      expect(result).toBe(true)
+      expect(mockWriteJson).toHaveBeenCalledWith(
+        '/mock/.aynite/config/config.json',
+        expect.objectContaining({ activeTheme: 'nord' }),
+      )
+    })
+
+    it('saves a new theme', async () => {
+      const payload = { id: 'nord', theme: { colors: { primary: '#5E81AC' } } }
+      const result = await themeHandlers.set?.('theme', payload)
+      expect(result).toBe(true)
+      expect(mockSaveTheme).toHaveBeenCalledWith('nord', {
+        colors: { primary: '#5E81AC' },
+      })
+    })
+
+    it('deletes a theme', async () => {
+      mockDeleteTheme.mockResolvedValue(true)
+      const result = await themeHandlers.set?.('theme-delete', 'nord')
+      expect(result).toBe(true)
+      expect(mockDeleteTheme).toHaveBeenCalledWith('nord')
+    })
+
+    it('returns false for unknown key', async () => {
+      const result = await themeHandlers.set?.('unknown', {})
+      expect(result).toBe(false)
     })
   })
 })
