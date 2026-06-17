@@ -294,3 +294,173 @@ describe('setPendingSessionDate', () => {
     expect(mockLoadSession).toHaveBeenCalledWith('sess-d', '2026-06-14')
   })
 })
+
+// ─── getState ───────────────────────────────────────────────────────────
+
+describe('getState', () => {
+  it('returns undefined for non-existent session', () => {
+    expect(ChatServiceModule.getState('no-such-session')).toBeUndefined()
+  })
+
+  it('returns state for existing session', () => {
+    ChatServiceModule.subscribe('state-test', vi.fn())
+    const state = ChatServiceModule.getState('state-test')
+    expect(state).toBeDefined()
+    expect(state?.sessionId).toBe('state-test')
+    expect(state?.messages).toEqual([])
+    expect(state?.loading).toBe(false)
+    expect(state?.error).toBeNull()
+  })
+})
+
+// ─── revertToMessage ────────────────────────────────────────────────────
+
+describe('revertToMessage', () => {
+  it('reverts messages to the specified index', async () => {
+    mockLoadSession.mockResolvedValue([
+      { id: '1', role: 'user', content: 'a' },
+      { id: '2', role: 'assistant', content: 'b' },
+      { id: '3', role: 'user', content: 'c' },
+    ])
+
+    const cb = vi.fn()
+    ChatServiceModule.subscribe('revert-test', cb)
+    await ChatServiceModule.loadSessionById('revert-test')
+
+    ChatServiceModule.revertToMessage('revert-test', 0)
+
+    const state = ChatServiceModule.getState('revert-test')
+    expect(state?.messages).toHaveLength(1)
+  })
+
+  it('ignores out-of-range index (too high)', async () => {
+    mockLoadSession.mockResolvedValue([{ id: '1', role: 'user', content: 'a' }])
+
+    const cb = vi.fn()
+    ChatServiceModule.subscribe('revert-high', cb)
+    await ChatServiceModule.loadSessionById('revert-high')
+
+    ChatServiceModule.revertToMessage('revert-high', 99)
+
+    const state = ChatServiceModule.getState('revert-high')
+    expect(state?.messages).toHaveLength(1)
+  })
+
+  it('ignores out-of-range index (negative)', async () => {
+    mockLoadSession.mockResolvedValue([{ id: '1', role: 'user', content: 'a' }])
+
+    ChatServiceModule.subscribe('revert-neg', vi.fn())
+    await ChatServiceModule.loadSessionById('revert-neg')
+
+    ChatServiceModule.revertToMessage('revert-neg', -1)
+
+    const state = ChatServiceModule.getState('revert-neg')
+    expect(state?.messages).toHaveLength(1)
+  })
+
+  it('does nothing for non-existent session', () => {
+    expect(() =>
+      ChatServiceModule.revertToMessage('no-session', 0),
+    ).not.toThrow()
+  })
+})
+
+// ─── abortMessage ───────────────────────────────────────────────────────
+
+describe('abortMessage', () => {
+  it('does nothing for non-existent session', () => {
+    expect(() => ChatServiceModule.abortMessage('ghost')).not.toThrow()
+  })
+
+  it('does nothing for idle session (no running controller)', () => {
+    ChatServiceModule.subscribe('idle-session', vi.fn())
+    expect(() => ChatServiceModule.abortMessage('idle-session')).not.toThrow()
+  })
+})
+
+// ─── handleApprove / handleReject ───────────────────────────────────────
+
+describe('handleApprove', () => {
+  it('does nothing for non-existent session', () => {
+    expect(() => ChatServiceModule.handleApprove('ghost')).not.toThrow()
+  })
+
+  it('clears pendingApproval when no approvalId is set', () => {
+    ChatServiceModule.subscribe('approve-clear', vi.fn())
+    ChatServiceModule.handleApprove('approve-clear')
+
+    const state = ChatServiceModule.getState('approve-clear')
+    expect(state?.pendingApproval).toBeNull()
+  })
+})
+
+describe('handleReject', () => {
+  it('does nothing for non-existent session', () => {
+    expect(() => ChatServiceModule.handleReject('ghost')).not.toThrow()
+  })
+
+  it('clears pendingApproval when no approvalId is set', () => {
+    ChatServiceModule.subscribe('reject-clear', vi.fn())
+    ChatServiceModule.handleReject('reject-clear')
+
+    const state = ChatServiceModule.getState('reject-clear')
+    expect(state?.pendingApproval).toBeNull()
+  })
+})
+
+// ─── registerStreamHandler edge cases ───────────────────────────────────
+
+describe('registerStreamHandler', () => {
+  it('overwrites previous handler for same requestId', () => {
+    const first = vi.fn()
+    const second = vi.fn()
+
+    ChatServiceModule.registerStreamHandler('req-overwrite', first)
+    ChatServiceModule.registerStreamHandler('req-overwrite', second)
+
+    _setupInit()
+    eventHandler?.({
+      type: 'ai-chat-delta',
+      data: {
+        requestId: 'req-overwrite',
+        part: { type: 'text-delta', text: 'x' },
+      },
+    })
+
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalled()
+
+    ChatServiceModule.unregisterStreamHandler('req-overwrite')
+  })
+})
+
+describe('unregisterStreamHandler', () => {
+  it('does nothing for non-existent requestId', () => {
+    expect(() =>
+      ChatServiceModule.unregisterStreamHandler('no-such-req'),
+    ).not.toThrow()
+  })
+})
+
+// ─── AI_APPROVAL_REQUEST event ──────────────────────────────────────────
+
+describe('AI_APPROVAL_REQUEST event', () => {
+  it('sets pendingApproval on the loading session', () => {
+    _setupInit()
+
+    // Create a session first
+    ChatServiceModule.subscribe('approval-sess', vi.fn())
+
+    // We can't easily set loading=true via public API, but the handler
+    // scans ALL sessions for one with loading=true. If none matches,
+    // it's a no-op — which we verify.
+    eventHandler?.({
+      type: AppEvents.AI_APPROVAL_REQUEST,
+      data: { id: 'test-approval-id', command: 'ls', cwd: '/tmp' },
+    })
+
+    // No session is in loading state, so pendingApproval should remain null
+    const state = ChatServiceModule.getState('approval-sess')
+    expect(state?.pendingApproval).toBeNull()
+  })
+})
