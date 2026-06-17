@@ -14,7 +14,7 @@
 
 <div align="center">
 
-[![macOS](https://img.shields.io/badge/macOS-.dmg-black?logo=apple&logoColor=white)](https://github.com/w-t-yang/aynite/releases/download/v0.1.8/Aynite-0.1.8-arm64.dmg)&nbsp; [![Linux](https://img.shields.io/badge/Linux-.AppImage-black?logo=linux&logoColor=white)](https://github.com/w-t-yang/aynite/releases/download/v0.1.8/Aynite-0.1.8.AppImage)&nbsp; [![Windows](https://img.shields.io/badge/Windows-.exe-black?logo=windows&logoColor=white)](https://github.com/w-t-yang/aynite/releases/download/v0.1.8/Aynite-Setup-0.1.8.exe)
+[![macOS](https://img.shields.io/badge/macOS-.dmg-black?logo=apple&logoColor=white)](https://github.com/w-t-yang/aynite/releases/download/v0.1.10/Aynite-0.1.10-arm64.dmg)&nbsp; [![Linux](https://img.shields.io/badge/Linux-.AppImage-black?logo=linux&logoColor=white)](https://github.com/w-t-yang/aynite/releases/download/v0.1.10/Aynite-0.1.10.AppImage)&nbsp; [![Windows](https://img.shields.io/badge/Windows-.exe-black?logo=windows&logoColor=white)](https://github.com/w-t-yang/aynite/releases/download/v0.1.10/Aynite-Setup-0.1.10.exe)
 
 </div>
 
@@ -52,14 +52,14 @@ Aynite is a capable AI coding agent. It reads your files, writes code, runs shel
 
 **Is it perfect? No.** But it handles most coding tasks well — and it's already self-evolving.
 
-> ⚡ **Aynite is being built with Aynite.** As of today, **45.9%** of Aynite's own commit history (250 out of 545 commits) was authored by Aynite itself (powered by DeepSeek-V4-Flash). The app reads its own source, understands its own architecture, and writes code for itself — including this very README.
+> ⚡ **Aynite is being built with Aynite.** As of today, **50.7%** of Aynite's own commit history (303 out of 598 commits) was authored by Aynite itself (powered by DeepSeek-V4-Flash). The app reads its own source, understands its own architecture, and writes code for itself — including this very README.
 >
 > ```
-> Aynite + DeepSeek-V4-Flash      250 commits  ( 45.9%)
-> Claude Code + DeepSeek-V4-Flash   71 commits  ( 13.0%)
-> Antigravity + Gemini            224 commits  ( 41.1%)
+> Aynite + DeepSeek-V4-Flash      303 commits  ( 50.7%)
+> Claude Code + DeepSeek-V4-Flash   71 commits  ( 11.9%)
+> Antigravity + Gemini            224 commits  ( 37.5%)
 > ─────────────────────────────────────────
-> Total                            545 commits
+> Total                            598 commits
 > ```
 >
 > Check the latest ratio anytime with `npm run count:aynite`.
@@ -294,14 +294,14 @@ Aynite is in active development (beta). The app ships regularly, has a growing s
 
 Everyone is welcome to contribute! There's just one small request: **write your code and make contributions with Aynite**. I believe contributors should be the people who love using Aynite the most — for everything.
 
-> ⚡ **Aynite Contribution Ratio** — Up to this point, **45.9%** of the project's commit history has already been authored by Aynite itself (powered by DeepSeek-V4-Flash), and this ratio keeps climbing. Aynite is being built with Aynite.
+> ⚡ **Aynite Contribution Ratio** — Up to this point, **50.7%** of the project's commit history has already been authored by Aynite itself (powered by DeepSeek-V4-Flash), and this ratio keeps climbing. Aynite is being built with Aynite.
 >
 > ```
-> Aynite + DeepSeek-V4-Flash      250 commits  ( 45.9%)
-> Claude Code + DeepSeek-V4-Flash   71 commits  ( 13.0%)
-> Antigravity + Gemini            224 commits  ( 41.1%)
+> Aynite + DeepSeek-V4-Flash      303 commits  ( 50.7%)
+> Claude Code + DeepSeek-V4-Flash   71 commits  ( 11.9%)
+> Antigravity + Gemini            224 commits  ( 37.5%)
 > ─────────────────────────────────────────
-> Total                            545 commits
+> Total                            598 commits
 > ```
 >
 > Check the latest ratio anytime with `npm run count:aynite`.
