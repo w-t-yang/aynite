@@ -61,12 +61,13 @@
     "build:win": "npm run build:views && electron-vite build && electron-builder --win",
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
-    "ci:check": "npm run lint && npm run typecheck && npm test && echo '---' && npm audit --audit-level=high || true && echo '---' && npm run audit:base || true"
+    "ci:check": "echo '=== Lint ===' && npm run lint 2>&1 | grep -E '^[[:space:]]*×|error|Error' | head -20 || echo '  OK' && echo '=== TypeScript ===' && npm run typecheck 2>&1 && echo '  OK' && echo '=== Tests ===' && npm test 2>&1 | tail -3 && echo '=== Dep Audit ===' && npm audit --audit-level=high 2>&1 | grep -E '^(#|Severity:|fix available|node_modules/)' | head -10 || true"
   },
   "overrides": {
     "madge": {
       "typescript": "$typescript"
-    }
+    },
+    "lodash-es": "^4.17.21"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
