@@ -49,6 +49,9 @@ export interface MessengerConfig {
   /** Telegram user IDs (as strings) that are allowed to interact with this bot.
    *  Leave empty to allow anyone. */
   whitelist: string[]
+  /** Number of recent group messages to keep as context when the bot is
+   *  @mentioned. Defaults to 100. */
+  contextSize: number
 }
 
 export interface AgentLoopConfig extends AIProvider {

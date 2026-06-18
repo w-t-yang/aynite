@@ -37,6 +37,52 @@ const bots = new Map<string, import('telegraf').Telegraf>()
 // Track which bot sessions are currently processing a message
 const processing = new Set<string>()
 
+// ─── Group Chat Context Buffer ──────────────────────────────────────────
+// Rolling buffer of recent group messages per bot+chat combination.
+// When the bot is @mentioned, the buffered messages are prepended as context
+// so the AI can understand what was being discussed before the mention.
+const groupMessageBuffer = new Map<string, string[]>()
+
+function getChatBufferKey(botId: string, chatId: string | number): string {
+  return `${botId}:${chatId}`
+}
+
+function getSenderLabel(ctx: any): string {
+  const from = ctx.from
+  if (!from) return 'Unknown'
+  if (from.username) return `@${from.username}`
+  return (
+    [from.first_name, from.last_name].filter(Boolean).join(' ') ||
+    `User ${from.id}`
+  )
+}
+
+function pushToGroupBuffer(
+  botId: string,
+  chatId: string | number,
+  entry: string,
+  maxSize: number = 100,
+) {
+  const key = getChatBufferKey(botId, chatId)
+  let buffer = groupMessageBuffer.get(key)
+  if (!buffer) {
+    buffer = []
+    groupMessageBuffer.set(key, buffer)
+  }
+  buffer.push(entry)
+  // Trim to max size (FIFO)
+  if (buffer.length > maxSize) {
+    buffer.splice(0, buffer.length - maxSize)
+  }
+}
+
+function getGroupContext(botId: string, chatId: string | number): string {
+  const key = getChatBufferKey(botId, chatId)
+  const buffer = groupMessageBuffer.get(key)
+  if (!buffer || buffer.length === 0) return ''
+  return buffer.join('\n')
+}
+
 function loadConfigs(): Promise<MessengerConfig[]> {
   return readJson<MessengerConfig[]>(getMessengersConfigPath(), [])
 }
@@ -896,8 +942,53 @@ export async function reloadMessengers() {
           // Fall back to the closure config if reload fails
         }
 
+        const isPrivate = ctx.chat?.type === 'private'
+        const chatId = ctx.chat?.id
+
+        // For non-DM chats (groups/supergroups), buffer messages for context
+        // and only respond when the bot is explicitly mentioned (@botusername).
+        if (!isPrivate) {
+          const botUsername = ctx.botInfo?.username?.toLowerCase()
+          if (!botUsername) return
+
+          // Buffer every message in this chat (regardless of mention)
+          const senderLabel = getSenderLabel(ctx)
+          const msgText = ctx.message.text || ''
+          const senderName = senderLabel || 'Unknown'
+          const contextSize = botConfig.contextSize || 100
+          pushToGroupBuffer(
+            c.id,
+            chatId,
+            `${senderName}: ${msgText}`,
+            contextSize,
+          )
+
+          // Check if this message mentions the bot
+          const entities = ctx.message.entities || []
+          const isMentioned = entities.some(
+            (e: any) =>
+              e.type === 'mention' &&
+              ctx.message.text
+                .slice(e.offset, e.offset + e.length)
+                .toLowerCase() === `@${botUsername}`,
+          )
+          if (!isMentioned) return // Not mentioned — silently ignore
+        }
+
+        // For private messages, also buffer the conversation
+        if (isPrivate && chatId) {
+          const senderLabel = getSenderLabel(ctx)
+          const msgText = ctx.message.text || ''
+          const contextSize = botConfig.contextSize || 100
+          pushToGroupBuffer(
+            c.id,
+            chatId,
+            `${senderLabel}: ${msgText}`,
+            contextSize,
+          )
+        }
+
         // Access control: if a whitelist is empty or not set, no one is allowed.
-        // Users must explicitly add trusted Telegram user IDs to the whitelist.
         if (!botConfig.whitelist || botConfig.whitelist.length === 0) {
           ctx.reply("Sorry, I'm not allowed to talk to you.")
           return
@@ -922,20 +1013,33 @@ export async function reloadMessengers() {
           return
         }
 
-        const text = ctx.message.text.trim()
-        if (text === '?') {
+        // Check command against the raw message text (commands like ?, /summarize
+        // should work without context wrapping).
+        const rawText = ctx.message.text.trim()
+
+        // For group messages with context, build an enriched message that
+        // includes recent conversation for the AI to understand.
+        let userText = rawText
+        if (!isPrivate && chatId) {
+          const context = getGroupContext(c.id, chatId)
+          if (context) {
+            userText = `[Recent conversation]:\n${context}\n\n[My message]: ${rawText}`
+          }
+        }
+
+        if (rawText === '?') {
           handleWorkspaceInfo(c, ctx)
-        } else if (text === '/summarize') {
+        } else if (rawText === '/summarize') {
           handleSummarize(c, ctx)
-        } else if (text === '/new-session') {
+        } else if (rawText === '/new-session') {
           handleNewSession(c, ctx)
-        } else if (text === '/list-sessions') {
+        } else if (rawText === '/list-sessions') {
           handleListSessions(c, ctx)
-        } else if (text.startsWith('/switch-session')) {
-          const args = text.slice('/switch-session'.length).trim()
+        } else if (rawText.startsWith('/switch-session')) {
+          const args = rawText.slice('/switch-session'.length).trim()
           handleSwitchSession(c, ctx, args)
         } else {
-          handleChatMessage(c, ctx, text)
+          handleChatMessage(c, ctx, userText)
         }
       })
 
