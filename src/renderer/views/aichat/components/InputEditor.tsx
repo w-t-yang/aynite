@@ -17,6 +17,7 @@ import type {
   InputEditorProps,
 } from '../../../../lib/types/ui'
 import { Button } from '../../../shared/basic/Button'
+import { useViewEvent } from '../../useViewEvents'
 import type { SuggestionItem } from '../utils/input'
 import { createSuggestion, serializeTiptapToText } from '../utils/input'
 
@@ -259,22 +260,14 @@ const InputEditorComponent = forwardRef<ChatInputHandle, InputEditorProps>(
       getAvailableSkills,
     ])
 
-    // Listen for config-changed events relayed from the parent window.
+    // Listen for config-changed events relayed from the hub.
     // When skills or commands config changes (e.g., a new skill folder is added),
     // re-index skills and commands so they appear immediately in the / mention popup.
-    useEffect(() => {
-      const handleMessage = (event: MessageEvent) => {
-        if (event.data?.type === 'aynite:config-changed') {
-          const key = event.data?.data?.key
-          // Re-index when skills or commands config changes
-          if (key === 'skills' || key === 'commands') {
-            rebuildRef.current()
-          }
-        }
+    useViewEvent('config-changed', (data: any) => {
+      if (data?.key === 'skills' || data?.key === 'commands') {
+        rebuildRef.current()
       }
-      window.addEventListener('message', handleMessage)
-      return () => window.removeEventListener('message', handleMessage)
-    }, [])
+    })
 
     const editor = useEditor(
       {
