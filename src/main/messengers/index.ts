@@ -930,6 +930,10 @@ export async function reloadMessengers() {
       bot.start((ctx) => ctx.reply('Connected to Aynite.'))
 
       bot.on('text', async (ctx) => {
+        console.log(
+          `[Messenger] text received: chatType="${ctx.chat?.type}" from="${ctx.from?.id}" text="${(ctx.message.text || '').slice(0, 100)}"`,
+        )
+
         // Reload the latest config for this bot on every message so that
         // whitelist changes made via the settings UI take effect immediately
         // without needing to restart the bot.
@@ -948,34 +952,45 @@ export async function reloadMessengers() {
         // For non-DM chats (groups/supergroups), buffer messages for context
         // and only respond when the bot is explicitly mentioned (@botusername).
         if (!isPrivate) {
-          const botUsername = ctx.botInfo?.username?.toLowerCase()
-          if (!botUsername) return
-
           // Buffer every message in this chat (regardless of mention)
           const senderLabel = getSenderLabel(ctx)
           const msgText = ctx.message.text || ''
-          const senderName = senderLabel || 'Unknown'
           const contextSize = botConfig.contextSize || 100
           pushToGroupBuffer(
             c.id,
             chatId,
-            `${senderName}: ${msgText}`,
+            `${senderLabel}: ${msgText}`,
             contextSize,
           )
 
-          // Check if this message mentions the bot
-          const entities = ctx.message.entities || []
-          const isMentioned = entities.some(
-            (e: any) =>
-              e.type === 'mention' &&
-              ctx.message.text
-                .slice(e.offset, e.offset + e.length)
-                .toLowerCase() === `@${botUsername}`,
-          )
-          if (!isMentioned) return // Not mentioned — silently ignore
+          // Check if the message mentions the bot by @username via entities
+          const botUsername = ctx.botInfo?.username
+          if (botUsername) {
+            const lowerText = msgText.toLowerCase()
+            const tagTarget = `@${botUsername.toLowerCase()}`
+
+            // Check entities first (most reliable)
+            const entities = ctx.message.entities || []
+            const entityMentionsBot = entities.some(
+              (e: any) =>
+                e.type === 'mention' &&
+                lowerText.slice(e.offset, e.offset + e.length) === tagTarget,
+            )
+
+            // Fallback: simple string check
+            const textMentionsBot = lowerText.includes(tagTarget)
+
+            if (!entityMentionsBot && !textMentionsBot) {
+              console.log(
+                `[Messenger] ignoring non-mentioned group message from ${senderLabel}`,
+              )
+              return // silently ignore
+            }
+          }
+          // If botUsername is unavailable, fall through to whitelist check
         }
 
-        // For private messages, also buffer the conversation
+        // For private messages, buffer the conversation
         if (isPrivate && chatId) {
           const senderLabel = getSenderLabel(ctx)
           const msgText = ctx.message.text || ''
