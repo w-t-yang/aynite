@@ -61,6 +61,7 @@ export function MessengersTab({ onRestore, t }: MessengersTabProps) {
       apiKey: '',
       workspace: workspaces[0] || '',
       enabled: false,
+      whitelist: [],
     }
     saveMessengers([...messengers, newMessenger])
   }

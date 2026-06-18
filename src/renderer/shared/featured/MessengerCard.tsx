@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react'
+import { Info, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { DESCRIPTION_TEXT } from '../../../lib/constants/renderer/styles'
 import type { MessengerConfig } from '../../../lib/types/ai'
@@ -82,6 +82,45 @@ export function MessengerCard({
               items={workspaces.map((w) => ({ id: w, label: w }))}
               placeholder="Select workspace..."
             />
+          </div>
+
+          <div className="col-span-2">
+            <label
+              htmlFor={`whitelist-${messenger.id}`}
+              className="text-xs font-medium text-muted-foreground mb-1.5 block"
+            >
+              Trusted Users
+            </label>
+            <textarea
+              id={`whitelist-${messenger.id}`}
+              value={messenger.whitelist?.join(', ') || ''}
+              onChange={(e) =>
+                onUpdate(
+                  messenger.id,
+                  'whitelist',
+                  e.target.value
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                )
+              }
+              placeholder="123456789, 987654321"
+              rows={2}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm
+                placeholder:text-muted-foreground/50 resize-none
+                focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <div className="flex items-start gap-1.5 mt-1">
+              <Info
+                size={12}
+                className="mt-0.5 shrink-0 text-muted-foreground"
+              />
+              <span className="text-[11px] text-muted-foreground leading-tight">
+                Only these Telegram user IDs or @usernames can interact with the
+                bot. If empty, no one can talk to the bot. Find your ID by
+                messaging @userinfobot on Telegram.
+              </span>
+            </div>
           </div>
 
           <div className="col-span-2 flex items-center gap-3 pt-1">

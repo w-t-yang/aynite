@@ -883,7 +883,45 @@ export async function reloadMessengers() {
       bot.catch((err) => console.error(`[Messenger] ${c.name} error:`, err))
       bot.start((ctx) => ctx.reply('Connected to Aynite.'))
 
-      bot.on('text', (ctx) => {
+      bot.on('text', async (ctx) => {
+        // Reload the latest config for this bot on every message so that
+        // whitelist changes made via the settings UI take effect immediately
+        // without needing to restart the bot.
+        let botConfig = c
+        try {
+          const configs = await loadConfigs()
+          const fresh = configs.find((cfg) => cfg.id === c.id)
+          if (fresh) botConfig = fresh
+        } catch {
+          // Fall back to the closure config if reload fails
+        }
+
+        // Access control: if a whitelist is empty or not set, no one is allowed.
+        // Users must explicitly add trusted Telegram user IDs to the whitelist.
+        if (!botConfig.whitelist || botConfig.whitelist.length === 0) {
+          ctx.reply("Sorry, I'm not allowed to talk to you.")
+          return
+        }
+        const senderId = String(ctx.from?.id ?? '')
+        const senderUsername = ctx.from?.username
+          ? `@${ctx.from.username.toLowerCase()}`
+          : ''
+        console.log(
+          `[Messenger] whitelist check: senderId="${senderId}" senderUsername="${senderUsername}" whitelist=[${botConfig.whitelist.join(',')}]`,
+        )
+        const isAllowed = botConfig.whitelist.some((entry) => {
+          const normalized = entry.trim().toLowerCase()
+          return (
+            normalized === senderId ||
+            normalized === senderUsername ||
+            normalized === senderUsername.replace('@', '')
+          )
+        })
+        if (!isAllowed) {
+          ctx.reply("Sorry, I'm not allowed to talk to you.")
+          return
+        }
+
         const text = ctx.message.text.trim()
         if (text === '?') {
           handleWorkspaceInfo(c, ctx)

@@ -46,6 +46,9 @@ export interface MessengerConfig {
   apiKey: string
   workspace: string
   enabled: boolean
+  /** Telegram user IDs (as strings) that are allowed to interact with this bot.
+   *  Leave empty to allow anyone. */
+  whitelist: string[]
 }
 
 export interface AgentLoopConfig extends AIProvider {

@@ -156,7 +156,14 @@
         "description": "Connect messenger bots to Aynite. You can chat with your Telegram bot and Aynite will use the configured AI to work on tasks in the specified workspace.",
         "bots": "Connected Bots",
         "noBots": "No messenger bots configured. Add one above.",
-        "addBot": "Add Bot"
+        "addBot": "Add Bot",
+        "whitelist": {
+          "label": "Trusted Users",
+          "description": "Only these Telegram user IDs can interact with the bot. If empty, no one can talk to the bot.",
+          "placeholder": "123456789, 987654321",
+          "hint": "Enter numeric user IDs or @usernames separated by commas. Find your ID by messaging @userinfobot on Telegram."
+        },
+        "accessDenied": "Sorry, I'm not allowed to talk to you."
       },
       "about": {
         "title": "About Aynite",
@@ -365,7 +372,14 @@
         "description": "将消息机器人连接到 Aynite。您可以通过 Telegram 机器人与 Aynite 对话，Aynite 会使用配置好的 AI 在指定的工作区中处理任务。",
         "bots": "已连接的机器人",
         "noBots": "未配置消息机器人。点击上方添加。",
-        "addBot": "添加机器人"
+        "addBot": "添加机器人",
+        "whitelist": {
+          "label": "可信用户",
+          "description": "只有这些 Telegram 用户 ID 可以与机器人交互。留空则所有人都无法使用。",
+          "placeholder": "123456789, 987654321",
+          "hint": "用逗号分隔数字 ID 或 @用户名。向 @userinfobot 发送消息可获取您的 ID。"
+        },
+        "accessDenied": "抱歉，我没有权限与您对话。"
       },
       "about": {
         "title": "关于 Aynite",
