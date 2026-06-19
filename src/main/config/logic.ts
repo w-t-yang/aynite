@@ -191,11 +191,11 @@ export async function initAppFolders() {
 /**
  * Migration from old 3-workspace defaults to new single "Aynite" workspace.
  *
- * 1. Reads folders from old workspaces (Aynite Playbook, Market Lens, The Quill)
- * 2. Collects all folders, excluding the aynite-playbook folder
- * 3. Creates the new "Aynite" workspace with those folders
- * 4. Removes old workspaces from the list
- * 5. Deletes old workspace data directories from disk
+ * 1. Reads folders from ALL existing workspaces (user-created + old defaults)
+ * 2. Collects all unique folders, excluding the aynite-playbook folder
+ * 3. Creates the new "Aynite" workspace with those collected folders
+ * 4. Removes only the 3 old default workspaces from the list, preserving user workspaces
+ * 5. Deletes old default workspace data directories from disk
  */
 async function migrateDefaultWorkspaces() {
   const wsConfig = await readJson<WorkspacesConfig>(getWorkspacesConfigPath(), {
@@ -203,14 +203,16 @@ async function migrateDefaultWorkspaces() {
     list: [NEW_DEFAULT_WORKSPACE],
   })
 
-  // Collect all folders from old default workspaces
+  // Collect folders from ALL existing workspaces (not just old defaults)
   const allFolders = new Set<string>()
   const playbookPath = await getPlaybookPathResolved()
   const playbookNormalized = playbookPath.replace(/\/+$/, '')
 
-  for (const oldName of OLD_DEFAULT_WORKSPACES) {
-    if (!wsConfig.list.includes(oldName)) continue
-    const wsPath = getWorkspaceDataPath(oldName)
+  for (const wsName of wsConfig.list) {
+    // Skip already known default workspaces — they're being removed
+    if (OLD_DEFAULT_WORKSPACES.includes(wsName)) continue
+
+    const wsPath = getWorkspaceDataPath(wsName)
     if (await exists(wsPath)) {
       try {
         const data = await readJson<WorkspaceConfig>(wsPath)
@@ -224,12 +226,33 @@ async function migrateDefaultWorkspaces() {
           }
         }
       } catch (e) {
+        console.error(`[Init] Error reading workspace ${wsName}:`, e)
+      }
+    }
+  }
+
+  // Also collect folders from the old default workspaces (they're about to be deleted)
+  for (const oldName of OLD_DEFAULT_WORKSPACES) {
+    if (!wsConfig.list.includes(oldName)) continue
+    const wsPath = getWorkspaceDataPath(oldName)
+    if (await exists(wsPath)) {
+      try {
+        const data = await readJson<WorkspaceConfig>(wsPath)
+        if (data.folders) {
+          for (const folder of data.folders) {
+            const normalized = folder.replace(/\/+$/, '')
+            if (normalized !== playbookNormalized) {
+              allFolders.add(folder)
+            }
+          }
+        }
+      } catch (e) {
         console.error(`[Init] Error reading workspace ${oldName}:`, e)
       }
     }
   }
 
-  // Create the new "Aynite" workspace with collected folders
+  // Create the new "Aynite" workspace with all collected folders
   const ayniteWsPath = getWorkspaceDataPath(NEW_DEFAULT_WORKSPACE)
   await ensureDir(getWorkspaceDir(NEW_DEFAULT_WORKSPACE))
   await initWorkspaceFolders(NEW_DEFAULT_WORKSPACE)
@@ -239,7 +262,7 @@ async function migrateDefaultWorkspaces() {
     folders: [...allFolders],
   })
 
-  // Remove old workspaces from the list
+  // Remove only the old default workspaces from the list (preserve user workspaces)
   wsConfig.list = wsConfig.list.filter(
     (w) => !OLD_DEFAULT_WORKSPACES.includes(w),
   )
@@ -251,7 +274,7 @@ async function migrateDefaultWorkspaces() {
   wsConfig.active = NEW_DEFAULT_WORKSPACE
   await writeJson(getWorkspacesConfigPath(), wsConfig)
 
-  // Clean up old workspace data directories from disk
+  // Clean up old default workspace data directories from disk
   for (const oldName of OLD_DEFAULT_WORKSPACES) {
     const oldDir = getWorkspaceDir(oldName)
     if (await exists(oldDir)) {
