@@ -1015,7 +1015,7 @@ export async function reloadMessengers() {
           ? `@${ctx.from.username.toLowerCase()}`
           : ''
         console.log(
-          `[Messenger] whitelist check: senderId="${senderId}" senderUsername="${senderUsername}" whitelist=[${botConfig.whitelist.join(',')}]`,
+          `[Messenger] whitelist check: senderId="${senderId}" senderUsername="${senderUsername}" whitelist=[${(botConfig.whitelist || []).join(',')}]`,
         )
         const isAllowed = botConfig.whitelist.some((entry) => {
           const normalized = entry.trim().toLowerCase()

@@ -14,7 +14,7 @@ import { ERROR_MESSAGES } from '../../src/lib/constants/messages'
 import { DEFAULT_SETTINGS } from '../../src/lib/constants/settings'
 import { DEFAULT_THEMES } from '../../src/lib/constants/themes'
 // view.ts module was removed — these types now live elsewhere or are unused
-import { PLAYBOOK_WORKSPACE_CONFIG } from '../../src/lib/constants/workspace'
+import { DEFAULT_WORKSPACE_CONFIG } from '../../src/lib/constants/workspace'
 
 describe('ConfigKey', () => {
   it('has required keys', () => {
@@ -35,16 +35,16 @@ describe('ConfigKey', () => {
   })
 })
 
-describe('Playbook workspace config', () => {
-  it('PLAYBOOK_WORKSPACE_CONFIG id is set', () => {
-    expect(PLAYBOOK_WORKSPACE_CONFIG.id).toBe('Aynite Playbook')
+describe('Default workspace config', () => {
+  it('DEFAULT_WORKSPACE_CONFIG id is set', () => {
+    expect(DEFAULT_WORKSPACE_CONFIG.id).toBe('Aynite')
   })
 
-  it('PLAYBOOK_WORKSPACE_CONFIG has correct structure', () => {
-    expect(PLAYBOOK_WORKSPACE_CONFIG.layouts.length).toBeGreaterThan(0)
-    expect(PLAYBOOK_WORKSPACE_CONFIG.activeLayoutId).toBe('pb-welcome')
-    expect(PLAYBOOK_WORKSPACE_CONFIG.folders).toEqual([])
-    expect(PLAYBOOK_WORKSPACE_CONFIG.files).toEqual([])
+  it('DEFAULT_WORKSPACE_CONFIG has correct structure', () => {
+    expect(DEFAULT_WORKSPACE_CONFIG.layouts.length).toBeGreaterThan(0)
+    expect(DEFAULT_WORKSPACE_CONFIG.activeLayoutId).toBe('aynite-default')
+    expect(DEFAULT_WORKSPACE_CONFIG.folders).toEqual([])
+    expect(DEFAULT_WORKSPACE_CONFIG.files).toEqual([])
   })
 })
 

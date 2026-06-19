@@ -55,23 +55,23 @@ describe('registerWindow', () => {
     expect(getWindowSession(1)).toEqual(session)
   })
 
-  it('falls back to Aynite Playbook when config read fails', () => {
+  it('falls back to Aynite when config read fails', () => {
     mockReadFileSync.mockImplementation(() => {
       throw new Error('ENOENT')
     })
 
     const session = registerWindow(2)
     expect(session).toEqual({
-      workspaceId: 'Aynite Playbook',
+      workspaceId: 'Aynite',
       workspacePinned: false,
     })
   })
 
-  it('falls back to Aynite Playbook when config has no active field', () => {
+  it('falls back to Aynite when config has no active field', () => {
     mockReadFileSync.mockReturnValue(JSON.stringify({ list: ['Dev'] }))
 
     const session = registerWindow(3)
-    expect(session.workspaceId).toBe('Aynite Playbook')
+    expect(session.workspaceId).toBe('Aynite')
   })
 
   it('returns existing session for already-registered window', () => {
@@ -166,11 +166,11 @@ describe('getWindowWorkspace', () => {
     expect(ws).toBe('Global')
   })
 
-  it('falls back to Aynite Playbook when global config also fails', async () => {
+  it('falls back to Aynite when global config also fails', async () => {
     mockGetWorkspacesList.mockRejectedValue(new Error('fail'))
 
     const ws = await getWindowWorkspace(999)
-    expect(ws).toBe('Aynite Playbook')
+    expect(ws).toBe('Aynite')
   })
 })
 

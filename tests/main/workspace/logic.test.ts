@@ -45,8 +45,8 @@ describe('workspace/logic', () => {
 
     it('returns fallback config if file missing', async () => {
       mockReadJson.mockResolvedValue({
-        active: 'Aynite Playbook',
-        list: ['Aynite Playbook'],
+        active: 'Aynite',
+        list: ['Aynite'],
       })
       const result = await getWorkspacesList()
       expect(result.active).toBeTruthy()

@@ -46,7 +46,7 @@ export function onWindowClose(winId: number, cleanup: () => void): void {
  */
 export function registerWindow(winId: number): WindowSession {
   // Read the global active workspace from disk synchronously
-  let workspaceId = 'Aynite Playbook' // fallback
+  let workspaceId = 'Aynite' // fallback
   try {
     const configPath = getWorkspacesConfigPath()
     const raw = readFileSync(configPath, 'utf-8')
@@ -102,9 +102,9 @@ export async function getWindowWorkspace(winId: number): Promise<string> {
   // Fallback: read global active workspace
   try {
     const wsConfig = await getWorkspacesList()
-    return wsConfig?.active || 'Aynite Playbook'
+    return wsConfig?.active || 'Aynite'
   } catch {
-    return 'Aynite Playbook'
+    return 'Aynite'
   }
 }
 

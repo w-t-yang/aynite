@@ -18,11 +18,7 @@ function detectSystemLanguage(): string {
 
 // View configs are bundled with each view as config.json and copied
 // to ~/.aynite/views/<view>/config.json during dist-views sync
-import {
-  PLAYBOOK_WORKSPACE_CONFIG,
-  TRADER_WORKSPACE_CONFIG,
-  WRITER_WORKSPACE_CONFIG,
-} from '../../lib/constants/workspace'
+import { DEFAULT_WORKSPACE_CONFIG } from '../../lib/constants/workspace'
 import {
   AYNITE_SUBDIRS,
   copy,
@@ -31,19 +27,18 @@ import {
   getAIConfigPath,
   getAppearanceConfigPath,
   getAyniteDir,
-  getAynitePath,
   getAynitePromptPath,
   getIgnoreConfigPath,
   getKeybindingsConfigPath,
   getMainConfigPath,
   getPlaybookPath,
-  getWelcomeMdPath,
   getWorkspaceDataPath,
   getWorkspaceDir,
   getWorkspacesConfigPath,
   joinPaths,
   readdir,
   readJson,
+  remove,
   unlink,
   writeJson,
   writeText,
@@ -63,6 +58,13 @@ import {
 } from '../spells'
 import { initThemes } from '../theme'
 import { getIgnorePatterns } from './ignore'
+
+const OLD_DEFAULT_WORKSPACES = ['Aynite Playbook', 'Market Lens', 'The Quill']
+const NEW_DEFAULT_WORKSPACE = 'Aynite'
+
+async function getPlaybookPathResolved(): Promise<string> {
+  return getPlaybookPath()
+}
 
 export async function initAppFolders() {
   const currentVersion = app.getVersion()
@@ -105,13 +107,6 @@ export async function initAppFolders() {
   if (!(await exists(getMainConfigPath()))) {
     await writeJson(getMainConfigPath(), configDefault)
   }
-  if (!(await exists(getWorkspacesConfigPath()))) {
-    const wsConfig: WorkspacesConfig = {
-      active: 'Aynite Playbook',
-      list: ['Aynite Playbook', 'Market Lens', 'The Quill'],
-    }
-    await writeJson(getWorkspacesConfigPath(), wsConfig)
-  }
 
   const ignorePath = getIgnoreConfigPath()
   if (!(await exists(ignorePath))) {
@@ -121,60 +116,45 @@ export async function initAppFolders() {
   await restoreAynitePlaybook()
   await initThemes()
 
-  // Ensure each default workspace has its config and session directory
-  const playbookPath = getPlaybookPath()
-  const defaultWorkspaces: Array<[string, WorkspaceConfig]> = [
-    [
-      'Aynite Playbook',
-      {
-        ...PLAYBOOK_WORKSPACE_CONFIG,
-        folders: [playbookPath, getAynitePath('rss'), getAynitePath('spotify')],
-        activeFile: getWelcomeMdPath(),
-      },
-    ],
-    [
-      'Market Lens',
-      {
-        ...TRADER_WORKSPACE_CONFIG,
-        folders: [playbookPath],
-        activeFile: joinPaths(playbookPath, 'trading', 'README.md'),
-      },
-    ],
-    [
-      'The Quill',
-      {
-        ...WRITER_WORKSPACE_CONFIG,
-        folders: [playbookPath],
-        activeFile: joinPaths(playbookPath, 'writing', 'README.md'),
-      },
-    ],
-  ]
-  for (const [name, config] of defaultWorkspaces) {
-    const wsPath = getWorkspaceDataPath(name)
-    if (!(await exists(wsPath))) {
-      await ensureDir(getWorkspaceDir(name))
-      await initWorkspaceFolders(name)
-    }
-    // Always patch leaf nodes with example file data, whether new or existing
-    const existing = (await exists(wsPath)) ? await readJson(wsPath) : null
-    if (existing) {
-      for (const layout of existing.layouts || []) {
-        setExampleTileData(layout.layout, playbookPath)
-      }
-      // Also update activeFile for default workspaces so changes take effect on existing installs
-      if (name === 'Market Lens') {
-        existing.activeFile = joinPaths(playbookPath, 'trading', 'README.md')
-      } else if (name === 'The Quill') {
-        existing.activeFile = joinPaths(playbookPath, 'writing', 'README.md')
-      }
-      await writeJson(wsPath, existing)
-    } else {
-      for (const layout of config.layouts) {
-        setExampleTileData(layout.layout, playbookPath)
-      }
-      await writeJson(wsPath, config)
-    }
+  // ── Migration: Replace old default workspaces with single "Aynite" workspace ──
+  const mainConfigData = await readJson<Record<string, unknown>>(
+    getMainConfigPath(),
+    {},
+  )
+  const needsMigration = !mainConfigData.migratedV1
+
+  if (needsMigration) {
+    console.log(
+      '[Init] Running V1 migration: consolidating default workspaces...',
+    )
+    await migrateDefaultWorkspaces()
+    mainConfigData.migratedV1 = true
+    await writeJson(getMainConfigPath(), mainConfigData)
   }
+
+  // ── Fresh install: create "Aynite" workspace if it doesn't exist ──
+  const wsConfig = await readJson<WorkspacesConfig>(getWorkspacesConfigPath(), {
+    active: NEW_DEFAULT_WORKSPACE,
+    list: [NEW_DEFAULT_WORKSPACE],
+  })
+
+  const ayniteWsPath = getWorkspaceDataPath(NEW_DEFAULT_WORKSPACE)
+  if (!(await exists(ayniteWsPath))) {
+    console.log('[Init] Creating Aynite workspace...')
+    await ensureDir(getWorkspaceDir(NEW_DEFAULT_WORKSPACE))
+    await initWorkspaceFolders(NEW_DEFAULT_WORKSPACE)
+    await writeJson(ayniteWsPath, {
+      ...DEFAULT_WORKSPACE_CONFIG,
+      id: NEW_DEFAULT_WORKSPACE,
+    })
+  }
+
+  // Ensure "Aynite" is in the workspace list and is active
+  if (!wsConfig.list.includes(NEW_DEFAULT_WORKSPACE)) {
+    wsConfig.list.push(NEW_DEFAULT_WORKSPACE)
+  }
+  wsConfig.active = NEW_DEFAULT_WORKSPACE
+  await writeJson(getWorkspacesConfigPath(), wsConfig)
 
   // Sync bundled skills to ~/.aynite/skills/ (only missing items)
   const bundledSkillsDir = joinPaths(getBundledResourcesPath(), 'skills')
@@ -204,6 +184,83 @@ export async function initAppFolders() {
       await copy(bundledDir, baseDir, { recursive: true })
     } catch (e) {
       console.error(`[Init] Error copying bundled views:`, e)
+    }
+  }
+}
+
+/**
+ * Migration from old 3-workspace defaults to new single "Aynite" workspace.
+ *
+ * 1. Reads folders from old workspaces (Aynite Playbook, Market Lens, The Quill)
+ * 2. Collects all folders, excluding the aynite-playbook folder
+ * 3. Creates the new "Aynite" workspace with those folders
+ * 4. Removes old workspaces from the list
+ * 5. Deletes old workspace data directories from disk
+ */
+async function migrateDefaultWorkspaces() {
+  const wsConfig = await readJson<WorkspacesConfig>(getWorkspacesConfigPath(), {
+    active: NEW_DEFAULT_WORKSPACE,
+    list: [NEW_DEFAULT_WORKSPACE],
+  })
+
+  // Collect all folders from old default workspaces
+  const allFolders = new Set<string>()
+  const playbookPath = await getPlaybookPathResolved()
+  const playbookNormalized = playbookPath.replace(/\/+$/, '')
+
+  for (const oldName of OLD_DEFAULT_WORKSPACES) {
+    if (!wsConfig.list.includes(oldName)) continue
+    const wsPath = getWorkspaceDataPath(oldName)
+    if (await exists(wsPath)) {
+      try {
+        const data = await readJson<WorkspaceConfig>(wsPath)
+        if (data.folders) {
+          for (const folder of data.folders) {
+            // Exclude the aynite-playbook folder
+            const normalized = folder.replace(/\/+$/, '')
+            if (normalized !== playbookNormalized) {
+              allFolders.add(folder)
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`[Init] Error reading workspace ${oldName}:`, e)
+      }
+    }
+  }
+
+  // Create the new "Aynite" workspace with collected folders
+  const ayniteWsPath = getWorkspaceDataPath(NEW_DEFAULT_WORKSPACE)
+  await ensureDir(getWorkspaceDir(NEW_DEFAULT_WORKSPACE))
+  await initWorkspaceFolders(NEW_DEFAULT_WORKSPACE)
+  await writeJson(ayniteWsPath, {
+    ...DEFAULT_WORKSPACE_CONFIG,
+    id: NEW_DEFAULT_WORKSPACE,
+    folders: [...allFolders],
+  })
+
+  // Remove old workspaces from the list
+  wsConfig.list = wsConfig.list.filter(
+    (w) => !OLD_DEFAULT_WORKSPACES.includes(w),
+  )
+
+  // Ensure "Aynite" is in the list and is active
+  if (!wsConfig.list.includes(NEW_DEFAULT_WORKSPACE)) {
+    wsConfig.list.push(NEW_DEFAULT_WORKSPACE)
+  }
+  wsConfig.active = NEW_DEFAULT_WORKSPACE
+  await writeJson(getWorkspacesConfigPath(), wsConfig)
+
+  // Clean up old workspace data directories from disk
+  for (const oldName of OLD_DEFAULT_WORKSPACES) {
+    const oldDir = getWorkspaceDir(oldName)
+    if (await exists(oldDir)) {
+      try {
+        await remove(oldDir, { recursive: true, force: true })
+        console.log(`[Init] Removed old workspace data: ${oldDir}`)
+      } catch (e) {
+        console.error(`[Init] Error removing workspace directory ${oldDir}:`, e)
+      }
     }
   }
 }
@@ -338,30 +395,6 @@ async function restoreAynitePlaybook() {
       } catch (e) {
         console.error(`[Init] Error copying example file ${file}:`, e)
       }
-    }
-  }
-}
-
-const EXAMPLE_FILE_MAP: Record<string, string> = {
-  canvas: 'canvas-example.json',
-  mindmap: 'mindmap-example.json',
-  flow: 'flow-example.json',
-  diagram: 'diagram-example.json',
-  graph: 'graph-example.json',
-  datachart: 'datachart-example.json',
-  stockchart: 'stockchart-example.json',
-  diff: 'diff-example.json',
-}
-
-function setExampleTileData(node: any, playbookPath: string) {
-  if (node.type === 'leaf') {
-    const exampleFile = node.name ? EXAMPLE_FILE_MAP[node.name] : undefined
-    if (exampleFile) {
-      node.data = { file: joinPaths(playbookPath, exampleFile) }
-    }
-  } else if (node.type === 'split' && node.children) {
-    for (const child of node.children) {
-      setExampleTileData(child, playbookPath)
     }
   }
 }

@@ -135,6 +135,10 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/dataview-canvas/index.html',
         ),
+        'views/home/index': resolve(
+          __dirname,
+          'src/renderer/views/home/index.html',
+        ),
       },
       output: {
         entryFileNames: isDev ? 'assets/[name].js' : 'assets/[name]-[hash].js',

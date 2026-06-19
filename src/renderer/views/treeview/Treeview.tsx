@@ -60,7 +60,7 @@ export function Treeview() {
 
   const [treeData, setTreeData] = useState<FileNode[]>([])
   const [workspaces, setWorkspaces] = useState<string[]>([])
-  const [activeWorkspace, setActiveWorkspace] = useState('Aynite Playbook')
+  const [activeWorkspace, setActiveWorkspace] = useState('Aynite')
 
   const [showNewWorkspaceModal, setShowNewWorkspaceModal] = useState(false)
   const [newWorkspaceName, setNewWorkspaceName] = useState('')

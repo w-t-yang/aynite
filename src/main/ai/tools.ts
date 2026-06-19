@@ -25,7 +25,7 @@ export function getToolsMetadata() {
 
 function getWorkspaceName(context: ToolContext): string {
   if (context.workspaceName) return context.workspaceName
-  return context.workspaceFolders[0] || 'Aynite Playbook'
+  return context.workspaceFolders[0] || 'Aynite'
 }
 
 function readWorkspaceFolders(context: ToolContext): string[] {

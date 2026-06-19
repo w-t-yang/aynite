@@ -14,7 +14,7 @@ import type {
   WorkspacesConfig,
 } from '../../lib/types/workspace'
 
-const FALLBACK_WORKSPACE_ID = 'Aynite Playbook'
+const FALLBACK_WORKSPACE_ID = 'Aynite'
 
 async function getWorkspacesConfig(): Promise<WorkspacesConfig> {
   const configPath = getWorkspacesConfigPath()
