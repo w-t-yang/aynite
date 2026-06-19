@@ -30,15 +30,16 @@ vi.mock('../../../src/main/ai/factory', () => ({
   getAIModel: (...args: unknown[]) => mockGetAIModel(...args),
 }))
 
-vi.mock('./tools', () => ({
+vi.mock('../../../src/main/ai/tools', () => ({
   createTools: vi.fn(() => ({
     read_file: { execute: vi.fn() },
     write_file: { execute: vi.fn() },
   })),
+  getToolsMetadata: vi.fn(() => []),
 }))
 
-const mockAppendText = vi.hoisted(() => vi.fn())
-vi.mock('../../lib/path', () => ({
+const mockAppendText = vi.hoisted(() => vi.fn(() => Promise.resolve()))
+vi.mock('../../../src/lib/path', () => ({
   getLogPath: vi.fn(() => '/mock/logs/ai-chat.log'),
   appendText: (...args: unknown[]) => mockAppendText(...args),
   getSessionPath: vi.fn(
@@ -60,6 +61,11 @@ vi.mock('../../lib/path', () => ({
   readdir: vi.fn(() => Promise.resolve([])),
   readJson: vi.fn(() => Promise.resolve(null)),
   writeJson: vi.fn(() => Promise.resolve()),
+  getAyniteDir: vi.fn(() => '/mock/.aynite'),
+  getMainConfigPath: vi.fn(() => '/mock/config.json'),
+  getWorkspaceDataPath: vi.fn(
+    (name: string) => `/mock/workspaces/${name}/config.json`,
+  ),
 }))
 
 import {
