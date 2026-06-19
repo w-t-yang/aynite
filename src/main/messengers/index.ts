@@ -528,7 +528,7 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       firstLine.replace(/^#+\s*/, '').slice(0, 100) || 'Conversation'
     const body = lines.slice(1).join('\n').trim() || summaryText
 
-    // Write metadata to today's date directory (consistent with saveSession)
+    // Write metadata preserving existing fields (agentName, modelName, createdAt)
     const metaPath = getSessionMetadataPath(
       botSessionId,
       undefined,
@@ -857,12 +857,14 @@ async function handleChatMessage(
     )
 
     // Build metadata consistent with ChatService's scheduleSave()
+    // Preserve original createdAt if metadata already exists for this session
+    const existingMeta = await findMetadata(sessionId, config.workspace)
     const agentName = activeAgent?.name || 'Chat'
     const modelName = activeProvider?.name || activeProvider?.model || 'AI'
     const metadata: SessionMetadata = {
       agentName,
       modelName,
-      createdAt: new Date().toISOString(),
+      createdAt: existingMeta.metadata?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
 
