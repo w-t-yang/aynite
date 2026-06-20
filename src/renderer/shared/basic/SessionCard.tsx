@@ -1,4 +1,4 @@
-import { Bot, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { cn } from '../lib/utils'
 
@@ -9,6 +9,7 @@ export interface SessionEntry {
   title: string
   preview: string
   messageCount: number
+  contextSize?: number
 }
 
 interface SessionCardProps {
@@ -30,6 +31,12 @@ function getAgentName(session: SessionEntry): string {
   return 'Aynite'
 }
 
+function formatContextSize(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
+  if (tokens >= 1_000) return `${Math.round(tokens / 1_000)}K`
+  return `${tokens}`
+}
+
 export function SessionCard({
   session,
   isActive,
@@ -38,18 +45,20 @@ export function SessionCard({
 }: SessionCardProps) {
   const dateLabel = useMemo(() => {
     const d = new Date(session.lastModified)
-    const now = new Date()
-    const diff = now.getTime() - d.getTime()
-    const days = Math.floor(diff / 86400000)
-    if (days === 0) return 'Today'
-    if (days === 1) return 'Yesterday'
-    return d.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    })
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}/${m}/${day}`
   }, [session.lastModified])
 
   const agentName = useMemo(() => getAgentName(session), [session])
+
+  const contextLabel = useMemo(() => {
+    if (session.contextSize !== undefined) {
+      return `${formatContextSize(session.contextSize)} Tokens`
+    }
+    return ''
+  }, [session.contextSize])
 
   const card = (
     <div
@@ -60,16 +69,35 @@ export function SessionCard({
           : 'border-border bg-accent/5 hover:border-border/60',
       )}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <Bot size={14} className="text-primary shrink-0" />
-        <span className="text-xs font-bold uppercase tracking-wider truncate">
-          {agentName}
+      <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed mb-2">
+        {session.preview}
+      </p>
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground/50">
+        <span className="truncate min-w-0">
+          {dateLabel} with {agentName}
         </span>
-        {onDelete && (
+        {contextLabel ? (
+          <span className="shrink-0 ml-auto flex items-center gap-1">
+            <span>{contextLabel}</span>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10"
+                title="Delete session"
+              >
+                <Trash2
+                  size={12}
+                  className="text-muted-foreground/40 hover:text-destructive transition-colors"
+                />
+              </button>
+            )}
+          </span>
+        ) : onDelete ? (
           <button
             type="button"
             onClick={onDelete}
-            className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10"
+            className="shrink-0 ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10"
             title="Delete session"
           >
             <Trash2
@@ -77,14 +105,7 @@ export function SessionCard({
               className="text-muted-foreground/40 hover:text-destructive transition-colors"
             />
           </button>
-        )}
-      </div>
-      <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed mb-2">
-        {session.preview}
-      </p>
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground/50">
-        <span>{dateLabel}</span>
-        <span>{session.messageCount} messages</span>
+        ) : null}
       </div>
     </div>
   )

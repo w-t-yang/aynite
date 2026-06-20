@@ -15,7 +15,7 @@ import { useViewEvent } from '../useViewEvents'
 import { useView } from '../ViewContext'
 import viewConfig from './config.json'
 
-const INITIAL_SESSION_LIMIT = 10
+const INITIAL_SESSION_LIMIT = 5
 
 interface ArtifactFile {
   name: string

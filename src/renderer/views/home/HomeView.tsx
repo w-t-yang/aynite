@@ -44,12 +44,14 @@ const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', '']
  */
 function buildFullYearGrid(sessions: SessionEntry[]) {
   // Count map: match session dates to local dates by parsing local date strings
+  // Uses contextSize (token count) instead of messageCount for a more meaningful metric
   const countMap = new Map<string, number>()
   let maxCount = 0
   for (const s of sessions) {
     const prev = countMap.get(s.date) || 0
-    countMap.set(s.date, prev + s.messageCount)
-    maxCount = Math.max(maxCount, prev + s.messageCount)
+    const val = s.contextSize ?? s.messageCount
+    countMap.set(s.date, prev + val)
+    maxCount = Math.max(maxCount, prev + val)
   }
 
   const today = new Date()
@@ -524,7 +526,7 @@ function ActivityHistogram({ sessions }: { sessions: SessionEntry[] }) {
                     getIntensityClass(bin.count, maxCount),
                   )}
                   title={
-                    bin.date ? `${bin.date}: ${bin.count} messages` : undefined
+                    bin.date ? `${bin.date}: ${bin.count} tokens` : undefined
                   }
                 />
               )),

@@ -170,6 +170,9 @@ export async function listSessions(workspace: string) {
         ])
 
         if (content && Array.isArray(content)) {
+          // Estimate token count from serialized JSON byte length
+          const contextSize = Math.ceil(JSON.stringify(content).length * 0.4)
+
           // Use metadata title/description when available (e.g. compact backup summary)
           if (metadata?.title && metadata?.description) {
             all.push({
@@ -180,6 +183,7 @@ export async function listSessions(workspace: string) {
               lastModified:
                 stats?.mtime.toISOString() || new Date().toISOString(),
               messageCount: content.length,
+              contextSize,
             })
           } else {
             const firstUser = content.find((m: any) => m.role === 'user')
@@ -200,6 +204,7 @@ export async function listSessions(workspace: string) {
               lastModified:
                 stats?.mtime.toISOString() || new Date().toISOString(),
               messageCount: content.length,
+              contextSize,
             })
           }
         }
