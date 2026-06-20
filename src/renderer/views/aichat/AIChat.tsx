@@ -149,8 +149,7 @@ export function AIChat() {
       />
 
       {hasProviders ? (
-        <>
-          {/* Scrollable message list — only messages inside */}
+        <div className="flex flex-col flex-1 min-h-0 px-12">
           <List
             ref={scrollRef}
             messages={messages}
@@ -160,44 +159,45 @@ export function AIChat() {
             onRevert={revertToMessage}
           />
 
-          {/* Fixed indicator row — never scrolls with messages */}
           <div className="shrink-0">
-            {pendingApproval && (
-              <ApprovalModal
-                command={pendingApproval.command}
-                cwd={pendingApproval.cwd}
-                onApprove={handleApprove}
-                onReject={handleReject}
-                onAutoApprove={() => {
-                  if (activeSessionId) {
-                    localStorage.setItem(
-                      `autoApprove:${activeSessionId}`,
-                      'true',
-                    )
-                  }
-                }}
-              />
-            )}
+            <div className="max-w-[900px] mx-auto">
+              {pendingApproval && (
+                <ApprovalModal
+                  command={pendingApproval.command}
+                  cwd={pendingApproval.cwd}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  onAutoApprove={() => {
+                    if (activeSessionId) {
+                      localStorage.setItem(
+                        `autoApprove:${activeSessionId}`,
+                        'true',
+                      )
+                    }
+                  }}
+                />
+              )}
 
-            {loading && !compacting && (
-              <StreamingIndicator step={currentStep} />
-            )}
+              {loading && !compacting && (
+                <StreamingIndicator step={currentStep} />
+              )}
 
-            {compacting && (
-              <div className="mb-3 px-6 py-2">
-                <div className="flex items-center gap-2.5 text-primary/60">
-                  <Shrink size={14} className="animate-pulse" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">
-                    Compacting context...
-                  </span>
-                  <div className="flex gap-1 ml-1 opacity-40">
-                    <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
-                    <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
-                    <div className="w-1 h-1 rounded-full bg-current animate-bounce" />
+              {compacting && (
+                <div className="mb-3 px-6 py-2">
+                  <div className="flex items-center gap-2.5 text-primary/60">
+                    <Shrink size={14} className="animate-pulse" />
+                    <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">
+                      Compacting context...
+                    </span>
+                    <div className="flex gap-1 ml-1 opacity-40">
+                      <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                      <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                      <div className="w-1 h-1 rounded-full bg-current animate-bounce" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <InputArea
@@ -220,7 +220,7 @@ export function AIChat() {
             tokenCount={tokenCount}
             t={t}
           />
-        </>
+        </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center p-10 text-center z-base relative">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse">

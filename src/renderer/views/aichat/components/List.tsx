@@ -19,7 +19,7 @@ export const List = forwardRef<HTMLDivElement, ListProps>(
   ({ messages, loading, onOpenFile, onCopy, onRevert }, ref) => {
     return (
       <div
-        className="flex-1 overflow-y-auto px-12 pb-32 mask-fade-vertical"
+        className="flex-1 overflow-y-auto mask-fade-vertical scrollbar-gutter-stable"
         ref={ref}
       >
         <div className="max-w-[900px] mx-auto">
