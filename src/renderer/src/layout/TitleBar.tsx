@@ -198,30 +198,32 @@ const TitleBar: React.FC = () => {
 
         {/* Center: Layout switcher - truly centered in the titlebar */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 no-drag group/layouts px-1">
-          {workspaceConfig.layouts.map((layout) => {
-            const isActive = workspaceConfig.activeLayoutId === layout.id
-            return (
-              <Button
-                variant="ghost"
-                key={layout.id}
-                onClick={() => switchLayout(layout.id)}
-                title={layout.name}
-                className={cn(
-                  'w-5 h-5 rounded-md flex items-center justify-center transition-all p-0 min-w-0',
-                  isActive ? 'bg-primary/10' : 'hover:bg-accent',
-                )}
-              >
-                <div
+          {workspaceConfig.layouts
+            .filter((layout) => !layout.system)
+            .map((layout) => {
+              const isActive = workspaceConfig.activeLayoutId === layout.id
+              return (
+                <Button
+                  variant="ghost"
+                  key={layout.id}
+                  onClick={() => switchLayout(layout.id)}
+                  title={layout.name}
                   className={cn(
-                    'w-2 h-2 rounded-[3px] transition-all duration-300',
-                    isActive
-                      ? 'bg-primary scale-125'
-                      : 'bg-muted-foreground/40 scale-100',
+                    'w-5 h-5 rounded-md flex items-center justify-center transition-all p-0 min-w-0',
+                    isActive ? 'bg-primary/10' : 'hover:bg-accent',
                   )}
-                />
-              </Button>
-            )
-          })}
+                >
+                  <div
+                    className={cn(
+                      'w-2 h-2 rounded-[3px] transition-all duration-300',
+                      isActive
+                        ? 'bg-primary scale-125'
+                        : 'bg-muted-foreground/40 scale-100',
+                    )}
+                  />
+                </Button>
+              )
+            })}
 
           {/* Management Menu (Only visible on hover or if one is active) */}
           <div className="opacity-0 group-hover/layouts:opacity-100 transition-opacity ml-1 flex items-center gap-0.5">
@@ -237,7 +239,11 @@ const TitleBar: React.FC = () => {
                   id: 'remove-vibe',
                   label: t('titlebar.removeCurrent'),
                   icon: <Trash2 size={14} />,
-                  disabled: workspaceConfig.layouts.length <= 1,
+                  disabled:
+                    workspaceConfig.layouts.length <= 1 ||
+                    workspaceConfig.layouts.find(
+                      (l) => l.id === workspaceConfig.activeLayoutId,
+                    )?.system,
                   type: 'danger' as any,
                 },
               ]}

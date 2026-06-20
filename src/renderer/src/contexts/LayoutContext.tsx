@@ -80,6 +80,9 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     (id: string) => {
       setWorkspaceConfig((prev) => {
         if (!prev) return null
+        const toRemove = prev.layouts.find((l) => l.id === id)
+        // Cannot remove system layouts
+        if (toRemove?.system) return prev
         if (prev.layouts.length <= 1) return prev
         const newLayouts = prev.layouts.filter((l) => l.id !== id)
         let newActiveId = prev.activeLayoutId
@@ -100,6 +103,11 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     (newLayout: LayoutNode) => {
       setWorkspaceConfig((prev) => {
         if (!prev) return null
+        const activeLayoutEntry = prev.layouts.find(
+          (l) => l.id === prev.activeLayoutId,
+        )
+        // Cannot modify system layouts
+        if (activeLayoutEntry?.system) return prev
         return updateLayoutInConfig(prev, newLayout)
       })
     },
@@ -110,12 +118,14 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     (nodeId: string, updates: Partial<LeafNode>) => {
       setWorkspaceConfig((prev) => {
         if (!prev) return null
-        const activeLayout = prev.layouts.find(
+        const activeLayoutEntry = prev.layouts.find(
           (l) => l.id === prev.activeLayoutId,
         )
-        if (!activeLayout) return prev
+        // Cannot modify system layouts
+        if (activeLayoutEntry?.system) return prev
+        if (!activeLayoutEntry) return prev
         const newLayout = updateNodeInLayout(
-          activeLayout.layout,
+          activeLayoutEntry.layout,
           nodeId,
           updates,
         )
@@ -138,6 +148,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         (l) => l.id === workspaceConfig.activeLayoutId,
       )
       if (!activeLayout) return
+      // Cannot modify system layouts
+      if (activeLayout.system) return
 
       const { node: newLayoutNode, newActiveId } = executeLayoutOperation(
         activeLayout.layout,
@@ -154,9 +166,14 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   )
 
   const handleResizeStart = useCallback(() => {
+    // Check if current layout is a system layout before enabling resize
+    const currentLayout = workspaceConfig?.layouts.find(
+      (l) => l.id === workspaceConfig.activeLayoutId,
+    )
+    if (currentLayout?.system) return
     setIsResizing(true)
     document.body.classList.add('is-resizing')
-  }, [])
+  }, [workspaceConfig])
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false)

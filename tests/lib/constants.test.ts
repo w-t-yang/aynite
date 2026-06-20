@@ -42,7 +42,14 @@ describe('Default workspace config', () => {
 
   it('DEFAULT_WORKSPACE_CONFIG has correct structure', () => {
     expect(DEFAULT_WORKSPACE_CONFIG.layouts.length).toBeGreaterThan(0)
-    expect(DEFAULT_WORKSPACE_CONFIG.activeLayoutId).toBe('aynite-default')
+    // First 3 layouts should be system layouts (Home, Projects, Settings)
+    expect(DEFAULT_WORKSPACE_CONFIG.activeLayoutId).toBe('sys-home')
+    expect(DEFAULT_WORKSPACE_CONFIG.layouts[0].system).toBe(true)
+    expect(DEFAULT_WORKSPACE_CONFIG.layouts[1].system).toBe(true)
+    expect(DEFAULT_WORKSPACE_CONFIG.layouts[2].system).toBe(true)
+    expect(DEFAULT_WORKSPACE_CONFIG.layouts[0].name).toBe('Home')
+    expect(DEFAULT_WORKSPACE_CONFIG.layouts[1].name).toBe('Projects')
+    expect(DEFAULT_WORKSPACE_CONFIG.layouts[2].name).toBe('Settings')
     expect(DEFAULT_WORKSPACE_CONFIG.folders).toEqual([])
     expect(DEFAULT_WORKSPACE_CONFIG.files).toEqual([])
   })

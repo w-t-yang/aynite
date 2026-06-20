@@ -29,6 +29,8 @@ export interface LayoutConfig {
   id: string
   name: string
   layout: LayoutNode
+  /** System layouts (Home, Projects, Settings) cannot be modified or removed */
+  system?: boolean
 }
 
 export interface WorkspaceConfig {

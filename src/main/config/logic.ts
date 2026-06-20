@@ -18,6 +18,7 @@ function detectSystemLanguage(): string {
 
 // View configs are bundled with each view as config.json and copied
 // to ~/.aynite/views/<view>/config.json during dist-views sync
+import { SYSTEM_LAYOUTS } from '../../lib/constants/layout'
 import { DEFAULT_WORKSPACE_CONFIG } from '../../lib/constants/workspace'
 import {
   AYNITE_SUBDIRS,
@@ -155,6 +156,28 @@ export async function initAppFolders() {
   }
   wsConfig.active = NEW_DEFAULT_WORKSPACE
   await writeJson(getWorkspacesConfigPath(), wsConfig)
+
+  // ── Migration: Inject system layouts into existing workspace configs ──
+  // Existing workspaces on disk don't have the system layouts.
+  // We add them at the beginning of the layouts array.
+  const existingData = await readJson<Record<string, unknown>>(ayniteWsPath, {})
+  if (existingData && typeof existingData === 'object') {
+    const existingLayouts = (existingData as any).layouts
+    if (Array.isArray(existingLayouts)) {
+      const hasSystemLayouts = existingLayouts.some(
+        (l: any) => l.system === true,
+      )
+      if (!hasSystemLayouts) {
+        console.log('[Init] Injecting system layouts into Aynite workspace...')
+        const userLayouts = existingLayouts.filter(
+          (l: any) => l.id !== 'aynite-default',
+        )
+        ;(existingData as any).layouts = [...SYSTEM_LAYOUTS, ...userLayouts]
+        ;(existingData as any).activeLayoutId = SYSTEM_LAYOUTS[0].id
+        await writeJson(ayniteWsPath, existingData)
+      }
+    }
+  }
 
   // Sync bundled skills to ~/.aynite/skills/ (only missing items)
   const bundledSkillsDir = joinPaths(getBundledResourcesPath(), 'skills')
