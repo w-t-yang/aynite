@@ -7,12 +7,42 @@
     "en": {
       "title": "Home",
       "welcome": "Welcome to Aynite",
-      "description": "A tool that grows with you — connect your folders, start a conversation, or explore the views."
+      "description": "A tool that grows with you — connect your folders, start a conversation, or explore the views.",
+      "agentsSection": "Agents",
+      "agentsDescription": "Configured AI agents for conversations",
+      "agentsActive": "Active",
+      "agentsNoData": "No agents configured",
+      "foldersSection": "Projects",
+      "foldersDescription": "Projects that Aynite is allowed to work on in this workspace",
+      "foldersNoData": "No folders added",
+      "skillsSection": "Skills",
+      "skillsDescription": "Available skills and tools",
+      "skillsNoData": "No skills found",
+      "sessionsSection": "Recent Sessions",
+      "sessionsDescription": "Your {count} past conversations",
+      "sessionsActivity": "Activity",
+      "sessionsNoData": "No sessions yet",
+      "sessionSize": "{count} messages"
     },
     "zh": {
       "title": "首页",
       "welcome": "欢迎使用 Aynite",
-      "description": "一个随您成长的工具 — 连接您的文件夹、开始对话或探索各种视图。"
+      "description": "一个随您成长的工具 — 连接您的文件夹、开始对话或探索各种视图。",
+      "agentsSection": "智能体",
+      "agentsDescription": "已配置的 AI 对话智能体",
+      "agentsActive": "活跃",
+      "agentsNoData": "尚未配置智能体",
+      "foldersSection": "项目",
+      "foldersDescription": "Aynite 在此工作区中被允许操作的项目",
+      "foldersNoData": "尚未添加文件夹",
+      "skillsSection": "技能",
+      "skillsDescription": "可用的技能和工具",
+      "skillsNoData": "未找到技能",
+      "sessionsSection": "最近会话",
+      "sessionsDescription": "您的 {count} 次历史对话",
+      "sessionsActivity": "会话活动",
+      "sessionsNoData": "暂无会话",
+      "sessionSize": "{count} 条消息"
     }
   }
 }
