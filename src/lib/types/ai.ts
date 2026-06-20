@@ -32,6 +32,9 @@ export interface Agent {
    *  Keys are tool IDs, values are whether the tool is enabled.
    *  Missing keys inherit the default (enabled). */
   tools?: Record<string, boolean>
+  /** Icon identifier used for display in the settings sidebar.
+   *  Matches keys in ICON_OPTIONS (e.g. 'sparkles', 'bot', 'brain', etc.) */
+  icon?: string
 }
 
 export interface ToolContext {

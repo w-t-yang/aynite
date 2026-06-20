@@ -1,4 +1,4 @@
-import { Bot, Folder as FolderIcon, Plus, Puzzle } from 'lucide-react'
+import { Folder as FolderIcon, Plus, Puzzle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ADD_ITEM_BUTTON,
@@ -18,6 +18,21 @@ import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
 import { useAppEventSubscriber, useView } from '../ViewContext'
 import viewConfig from './config.json'
+
+const AYNITE_AGENT_ID = 'aynite'
+
+function countEnabledTools(agent: Agent): number {
+  if (!agent.tools) return 0
+  return Object.values(agent.tools).filter(Boolean).length
+}
+
+function sortAgents(list: Agent[]): Agent[] {
+  return [...list].sort((a, b) => {
+    if (a.id === AYNITE_AGENT_ID) return -1
+    if (b.id === AYNITE_AGENT_ID) return 1
+    return 0
+  })
+}
 
 interface SkillEntry {
   name: string
@@ -213,6 +228,7 @@ export function HomeView() {
   const { agents, folders, skills, sessions: rawSessions } = data
   const sessions = rawSessions
   const recentSessions = sessions.slice(0, 4)
+  const sortedAgents = sortAgents(agents.list)
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -227,6 +243,26 @@ export function HomeView() {
               {t('description')}
             </p>
           </div>
+
+          {/* ── Agents ── */}
+          <Section title={t('agentsSection')}>
+            {sortedAgents.length > 0 ? (
+              <div className="space-y-1">
+                {sortedAgents.map((agent) => (
+                  <AgentRow
+                    key={agent.id}
+                    agent={agent}
+                    isDefault={agent.id === AYNITE_AGENT_ID}
+                    activeId={agents.activeId}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground/50 italic">
+                {t('agentsNoData')}
+              </p>
+            )}
+          </Section>
 
           {/* ── Recent Sessions ── */}
           <Section
@@ -296,28 +332,6 @@ export function HomeView() {
             )}
           </Section>
 
-          {/* ── Agents ── */}
-          <Section
-            title={t('agentsSection')}
-            description={t('agentsDescription')}
-          >
-            {agents.list.length > 0 ? (
-              <div className={GRID_2_COL}>
-                {agents.list.map((agent) => (
-                  <AgentCard
-                    key={agent.id}
-                    agent={agent}
-                    isActive={agent.id === agents.activeId}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground/50 italic">
-                {t('agentsNoData')}
-              </p>
-            )}
-          </Section>
-
           {/* ── Skills ── */}
           <Section
             title={t('skillsSection')}
@@ -366,32 +380,48 @@ function ProjectCard({ folder }: { folder: string }) {
   )
 }
 
-function AgentCard({ agent, isActive }: { agent: Agent; isActive: boolean }) {
+function AgentRow({
+  agent,
+  isDefault,
+  activeId,
+}: {
+  agent: Agent
+  isDefault: boolean
+  activeId: string
+}) {
+  const toolCount = countEnabledTools(agent)
+  const isActive = agent.id === activeId
+  const handleOpenSettings = () => {
+    events.execute('OPEN_AGENT_SETTINGS', { agentId: agent.id })
+  }
   return (
-    <div
-      className={cn(
-        'p-4 rounded-xl border transition-all',
-        isActive
-          ? 'border-primary bg-primary/[0.03]'
-          : 'border-border bg-accent/5 hover:border-border/60',
-      )}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <Bot size={14} className="text-primary shrink-0" />
-        <span className="text-xs font-bold uppercase tracking-wider">
-          {agent.name}
-        </span>
-        {isActive && (
-          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-auto">
-            Active
-          </span>
+    <div className="py-3">
+      <div className="flex items-center gap-2 mb-0.5">
+        <h3 className="text-sm font-medium text-foreground">{agent.name}</h3>
+        {isDefault && (
+          <span className="text-[10px] text-muted-foreground/50">Default</span>
+        )}
+        {isActive && !isDefault && (
+          <span className="text-[10px] text-primary/70">Active</span>
         )}
       </div>
-      {agent.description && (
-        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-          {agent.description}
+      {agent.introduction && (
+        <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+          {agent.introduction}
         </p>
       )}
+      {toolCount > 0 && (
+        <p className="text-[10px] text-muted-foreground/40 mt-0.5">
+          Masters {toolCount} tool{toolCount === 1 ? '' : 's'}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={handleOpenSettings}
+        className="mt-1 text-[10px] font-medium text-primary/60 hover:text-primary bg-transparent border-none p-0 cursor-pointer"
+      >
+        View details
+      </button>
     </div>
   )
 }

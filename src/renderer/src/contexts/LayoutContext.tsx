@@ -162,6 +162,38 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
             })
           }
           return
+        case 'OPEN_AGENT_SETTINGS':
+          if (
+            payload &&
+            typeof payload === 'object' &&
+            'agentId' in (payload as any)
+          ) {
+            const { agentId } = payload as { agentId: string }
+            setWorkspaceConfig((prev) => {
+              if (!prev) return null
+              return {
+                ...prev,
+                activeLayoutId: 'sys-settings',
+              }
+            })
+            // Broadcast a settings-tab event to all iframes (including the
+            // settings view) via postMessage — works even if the iframe
+            // hasn't finished loading yet.
+            setTimeout(() => {
+              for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
+                'iframe',
+              )) {
+                iframe.contentWindow?.postMessage(
+                  {
+                    type: 'aynite:settings-tab',
+                    data: { tab: `agent-${agentId}` },
+                  },
+                  '*',
+                )
+              }
+            }, 100)
+          }
+          return
         case 'SWITCH_LAYOUT':
           if (payload && typeof payload === 'string') {
             switchLayout(payload)

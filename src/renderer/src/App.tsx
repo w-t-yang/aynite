@@ -2,7 +2,6 @@ import type React from 'react'
 import { useEffect, useRef } from 'react'
 import { DEFAULT_KEYBINDINGS } from '../../lib/constants/keybindings'
 import { FileSwitcher } from '../shared/featured/FileSwitcher'
-import { SettingsModal } from '../shared/featured/SettingsModal'
 import { useI18n } from '../shared/i18n/useI18n'
 import { KeyManager } from '../shared/lib/key-handlers'
 import { AppProvider, useApp } from './AppContext'
@@ -17,7 +16,6 @@ const AppContent: React.FC = () => {
     workspaceConfig,
     showFileSwitcher,
     setShowFileSwitcher,
-    showSettings,
     locale,
     executeAppOperation,
   } = useApp()
@@ -73,7 +71,6 @@ const AppContent: React.FC = () => {
         </div>
       </div>
       {showFileSwitcher && <FileSwitcher />}
-      {showSettings && <SettingsModal />}
       <UpdateBanner />
     </div>
   )

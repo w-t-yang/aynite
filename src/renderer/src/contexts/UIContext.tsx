@@ -19,9 +19,6 @@ interface UIContextType {
   activeFile: string | null
   /** Set active file via bridge — ACTIVE_FILE_CHANGED event will update state */
   setActiveFile: (path: string) => Promise<void>
-  showSettings: boolean
-  settingsTab: string | null
-  setShowSettings: (show: boolean, tab?: string) => void
   activeNotification: {
     type: 'error' | 'warning' | 'info'
     title: string
@@ -43,8 +40,6 @@ export const UIProvider: React.FC<{
   const [showTileControls, setShowTileControls] = useState(false)
   const [showFileSwitcher, setShowFileSwitcher] = useState(false)
   const [activeFile, setActiveFile] = useState<string | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<string | null>(null)
 
   const [activeNotification, setActiveNotification] = useState<{
     type: 'error' | 'warning' | 'info'
@@ -98,18 +93,6 @@ export const UIProvider: React.FC<{
           setActiveNotification(payload as any)
           setTimeout(() => setActiveNotification(null), 5000)
           return
-        case 'SETTINGS':
-          if (payload && (payload as any).tab) {
-            setSettingsTab((payload as any).tab)
-            setShowSettings(true)
-          } else {
-            setShowSettings((prev) => {
-              const next = !prev
-              if (!next) setSettingsTab(null)
-              return next
-            })
-          }
-          return
         default:
           // Delegate to layout context for tile operations
           layoutExecuteAppOperation(operation, payload)
@@ -144,13 +127,6 @@ export const UIProvider: React.FC<{
         setShowFileSwitcher,
         activeFile,
         setActiveFile: setActiveFileViaBridge,
-        showSettings,
-        settingsTab,
-        setShowSettings: (show: boolean, tab?: string) => {
-          setShowSettings(show)
-          if (tab) setSettingsTab(tab)
-          else if (!show) setSettingsTab(null)
-        },
         activeNotification,
         dismissNotification,
         executeAppOperation,
