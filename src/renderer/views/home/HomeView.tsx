@@ -1,11 +1,4 @@
-import {
-  Bot,
-  Folder as FolderIcon,
-  Home,
-  MessageSquare,
-  Plus,
-  Puzzle,
-} from 'lucide-react'
+import { Bot, Folder as FolderIcon, Plus, Puzzle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ADD_ITEM_BUTTON,
@@ -18,7 +11,6 @@ import { spells } from '../../bridge/spells'
 import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
-import { ViewHeader } from '../../shared/basic/ViewHeader'
 import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
 import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
@@ -207,7 +199,6 @@ export function HomeView() {
   if (loading || !data) {
     return (
       <div className="flex flex-col h-full bg-background overflow-hidden">
-        <ViewHeader icon={<Home size={16} />} title={t('title')} />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <div className="size-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -218,13 +209,14 @@ export function HomeView() {
     )
   }
 
-  const { agents, folders, skills, sessions } = data
+  const { agents, folders, skills, sessions: rawSessions } = data
+  const sessions = rawSessions.filter(
+    (s) => !s.title?.startsWith('Compact backup'),
+  )
   const recentSessions = sessions.slice(0, 4)
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
-      <ViewHeader icon={<Home size={16} />} title={t('title')} />
-
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-8 space-y-10">
           {/* ── Welcome ── */}
@@ -240,7 +232,7 @@ export function HomeView() {
           {/* ── Recent Sessions ── */}
           <Section
             title={t('sessionsSection')}
-            description={`Your ${sessions.length} past conversations`}
+            description={`You have worked with Aynite through ${sessions.length} sessions`}
           >
             {sessions.length > 0 ? (
               <div className="space-y-6">
@@ -417,15 +409,17 @@ function SkillFolderCard({ folder }: { folder: string }) {
   )
 }
 
-/** Get a human-readable title for a session card.
- *  Uses the metadata title if available, otherwise falls back to the
- *  first user message (preview). */
-function getSessionDisplayTitle(session: SessionEntry): string {
-  // The server returns "Session XXXXXX" as fallback when no metadata title exists
+/** Extract the agent name from the session title.
+ *  The server returns "AgentName - ModelName" when metadata exists,
+ *  or "Session XXXXXX" as fallback.
+ *  Returns null for compact backup sessions. */
+function getAgentName(session: SessionEntry): string | null {
+  if (session.title?.startsWith('Compact backup')) return null
   if (session.title && !session.title.startsWith('Session ')) {
-    return session.title
+    const parts = session.title.split(' - ')
+    return parts[0] || session.title
   }
-  return session.preview || 'Untitled'
+  return 'Aynite'
 }
 
 function SessionCard({ session }: { session: SessionEntry }) {
@@ -442,17 +436,14 @@ function SessionCard({ session }: { session: SessionEntry }) {
     })
   }, [session.lastModified])
 
-  const displayTitle = useMemo(() => getSessionDisplayTitle(session), [session])
+  const agentName = useMemo(() => getAgentName(session), [session])
 
   return (
     <div className="p-4 rounded-xl border border-border bg-accent/5 transition-all hover:border-border/60">
       <div className="flex items-center gap-2 mb-2">
-        <MessageSquare
-          size={14}
-          className="text-muted-foreground/60 shrink-0"
-        />
+        <Bot size={14} className="text-primary shrink-0" />
         <span className="text-xs font-bold uppercase tracking-wider truncate">
-          {displayTitle}
+          {agentName}
         </span>
       </div>
       <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed mb-2">

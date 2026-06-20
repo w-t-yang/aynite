@@ -157,8 +157,8 @@ export async function listSessions(workspace: string) {
         const id = f.name.replace('.json', '')
 
         // Skip backup sessions (created by compact context — <session-id>-<timestamp>)
-        // Match: id is exactly `<digits>-<13-digit-timestamp>` (e.g. 1781642834081-1718640000000)
-        if (/^\d{13}-\d{13}$/.test(id)) continue
+        // Match any id ending with `-<13-digit-timestamp>`
+        if (/-\d{13}$/.test(id)) continue
 
         const sessionPath = getSessionPath(id, date, workspace)
         const metaPath = getSessionMetadataPath(id, date, workspace)
