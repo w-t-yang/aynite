@@ -15,6 +15,7 @@ import {
   listSessions,
   loadSession,
   loadSessionMetadata,
+  saveCompactBackup,
   saveSession,
 } from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
@@ -37,7 +38,6 @@ interface SessionSavePayload {
 
 interface SessionLoadPayload {
   sessionId: string
-  date: string
 }
 
 export function setupAiIpc() {
@@ -97,10 +97,10 @@ export function setupAiIpc() {
 
   ipcMain.handle(
     AiChannels.SESSION_LOAD,
-    async (event, { sessionId, date }: SessionLoadPayload) => {
+    async (event, { sessionId }: SessionLoadPayload) => {
       const winId = getWinIdFromSender(event.sender)
       const workspaceName = await getWindowWorkspace(winId)
-      return await loadSession(workspaceName, sessionId, date)
+      return await loadSession(workspaceName, sessionId)
     },
   )
 
@@ -116,6 +116,22 @@ export function setupAiIpc() {
       const winId = getWinIdFromSender(event.sender)
       const workspaceName = await getWindowWorkspace(winId)
       return await loadSessionMetadata(workspaceName, sessionId)
+    },
+  )
+
+  ipcMain.handle(
+    AiChannels.SESSION_SAVE_COMPACT,
+    async (
+      event,
+      {
+        sessionId,
+        timestamp,
+        messages,
+      }: { sessionId: string; timestamp: number; messages: UIMessage[] },
+    ) => {
+      const winId = getWinIdFromSender(event.sender)
+      const workspaceName = await getWindowWorkspace(winId)
+      await saveCompactBackup(workspaceName, sessionId, timestamp, messages)
     },
   )
 
@@ -167,6 +183,7 @@ export {
   listSessions,
   loadSession,
   loadSessionMetadata,
+  saveCompactBackup,
   saveSession,
 } from './chat'
 export { DISABLED_REASONING_OPTIONS, getAIModel } from './factory'

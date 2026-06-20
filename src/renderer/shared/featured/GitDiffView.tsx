@@ -336,10 +336,18 @@ export function GitDiffView({
     try {
       const result = await gitMutations.commitExecute(cs.root, cs.message)
       if (result.error) {
+        const isPreCommit =
+          result.error.includes('pre-commit') ||
+          result.error.includes('hook') ||
+          result.error.toLowerCase().includes('lint') ||
+          result.error.toLowerCase().includes('eslint') ||
+          result.error.toLowerCase().includes('prettier')
         const errState = {
           ...committingState,
           committing: false,
-          error: result.error,
+          error: isPreCommit
+            ? 'Commit failed. Fix the issues reported by pre-commit hooks and try again.'
+            : result.error,
         }
         commitStateRef.current = errState
         setCommitState(errState)

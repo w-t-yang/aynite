@@ -36,6 +36,8 @@ export function getAyniteSessionsDir() {
   return path.join(AYNITE_DIR, AYNITE_SUBDIRS.SESSIONS)
 }
 
+// ─── Legacy date-based session paths (deprecated, kept for migration) ─────
+
 export function getSessionPath(
   sessionId: string,
   date?: string,
@@ -65,6 +67,52 @@ export function getSessionsDateDir(date: string, workspace?: string) {
     ? getWorkspaceSessionsDir(workspace)
     : getAyniteSessionsDir()
   return path.join(base, date)
+}
+
+// ─── New flat session paths (each session has its own folder) ──────────────
+
+/**
+ * Get the directory for a session: workspaces/<name>/sessions/<session-id>/
+ */
+export function getSessionDir(sessionId: string, workspace: string): string {
+  return path.join(getWorkspaceSessionsDir(workspace), sessionId)
+}
+
+/**
+ * Get the messages file path for a session:
+ * workspaces/<name>/sessions/<session-id>/messages.json
+ */
+export function getSessionMessagesPath(
+  sessionId: string,
+  workspace: string,
+): string {
+  return path.join(getSessionDir(sessionId, workspace), 'messages.json')
+}
+
+/**
+ * Get the metadata file path for a session:
+ * workspaces/<name>/sessions/<session-id>/metadata.json
+ */
+export function getSessionMetadataFilePath(
+  sessionId: string,
+  workspace: string,
+): string {
+  return path.join(getSessionDir(sessionId, workspace), 'metadata.json')
+}
+
+/**
+ * Get the path for a compaction backup:
+ * workspaces/<name>/sessions/<session-id>/compacted-<timestamp>.json
+ */
+export function getSessionCompactPath(
+  sessionId: string,
+  timestamp: number,
+  workspace: string,
+): string {
+  return path.join(
+    getSessionDir(sessionId, workspace),
+    `compacted-${timestamp}.json`,
+  )
 }
 
 export function getAynitePromptsDir() {

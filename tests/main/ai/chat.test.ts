@@ -42,20 +42,20 @@ const mockAppendText = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 vi.mock('../../../src/lib/path', () => ({
   getLogPath: vi.fn(() => '/mock/logs/ai-chat.log'),
   appendText: (...args: unknown[]) => mockAppendText(...args),
-  getSessionPath: vi.fn(
-    (id: string, date?: string, workspace?: string) =>
-      `/mock/workspaces/${workspace}/sessions/${date || '2026-06-15'}/${id}.json`,
+  getSessionDir: vi.fn(
+    (id: string, workspace?: string) =>
+      `/mock/workspaces/${workspace}/sessions/${id}`,
   ),
-  getSessionMetadataPath: vi.fn(
-    (id: string, date?: string, workspace?: string) =>
-      `/mock/workspaces/${workspace}/sessions/${date || '2026-06-15'}/${id}-metadata.json`,
+  getSessionMessagesPath: vi.fn(
+    (id: string, workspace?: string) =>
+      `/mock/workspaces/${workspace}/sessions/${id}/messages.json`,
+  ),
+  getSessionMetadataFilePath: vi.fn(
+    (id: string, workspace?: string) =>
+      `/mock/workspaces/${workspace}/sessions/${id}/metadata.json`,
   ),
   getWorkspaceSessionsDir: vi.fn(
     (name: string) => `/mock/workspaces/${name}/sessions`,
-  ),
-  getSessionsDateDir: vi.fn(
-    (date: string, workspace?: string) =>
-      `/mock/workspaces/${workspace}/sessions/${date}`,
   ),
   stat: vi.fn(() => Promise.resolve(null)),
   readdir: vi.fn(() => Promise.resolve([])),

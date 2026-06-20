@@ -69,9 +69,9 @@ export async function compactContext(
     const afterLastUser = allMessages.slice(lastUserIdx)
 
     // Step 2: Save backup of the full pre-compacted messages
+    // Saved as compacted-<timestamp>.json inside the session's directory.
     const timestamp = Date.now()
-    const backupId = `${sessionId}-${timestamp}`
-    await aiMutations.saveSession(backupId, allMessages, undefined)
+    await aiMutations.saveCompactBackup(sessionId, timestamp, allMessages)
 
     // Step 3: Build summary messages
     const systemMsg = toSummarize.find((m) => m.role === 'system')

@@ -111,6 +111,11 @@ interface AyniteWindow {
     messages: any[],
     metadata?: any,
   ) => Promise<void>
+  saveCompactBackup: (
+    sessionId: string,
+    timestamp: number,
+    messages: any[],
+  ) => Promise<void>
   loadSession: (sessionId: string, date?: string) => Promise<any>
   runDirectCommand: (
     payload: DirectCommandPayload,

@@ -88,6 +88,12 @@ const aynite = {
   getArtifactsStatus: () => ipcRenderer.invoke(AiChannels.ARTIFACTS_STATUS),
   getSessionMetadata: (sessionId: string) =>
     ipcRenderer.invoke(AiChannels.SESSION_META_LOAD, sessionId),
+  saveCompactBackup: (sessionId: string, timestamp: number, messages: any[]) =>
+    ipcRenderer.invoke(AiChannels.SESSION_SAVE_COMPACT, {
+      sessionId,
+      timestamp,
+      messages,
+    }),
 
   // ── Git operations ────────────────────────────────────────────────────────
   getGitStatus: (path: string) => ipcRenderer.invoke(GitChannels.STATUS, path),

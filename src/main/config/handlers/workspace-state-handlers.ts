@@ -36,8 +36,8 @@ export const workspaceStateHandlers: ConfigHandler = (() => ({
       case 'chatLogs':
         return await listSessions(workspaceName)
       case 'load-chat-log': {
-        if (payload?.id && payload.date) {
-          return await loadSession(workspaceName, payload.id, payload.date)
+        if (payload?.id) {
+          return await loadSession(workspaceName, payload.id)
         }
         return null
       }

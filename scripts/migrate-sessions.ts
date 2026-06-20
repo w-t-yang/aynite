@@ -1,157 +1,142 @@
-import fs from 'node:fs/promises'
+/**
+ * Migration script: Moves sessions from date-based directories to flat per-session folders.
+ *
+ * OLD: workspaces/<name>/sessions/2026-06-19/<id>.json
+ *      workspaces/<name>/sessions/2026-06-19/<id>-metadata.json
+ *      workspaces/<name>/sessions/2026-06-19/<id>-<timestamp>.json  (compact backup)
+ *
+ * NEW: workspaces/<name>/sessions/<id>/messages.json
+ *      workspaces/<name>/sessions/<id>/metadata.json
+ *      workspaces/<name>/sessions/<id>/compacted-<timestamp>.json   (compact backup)
+ *
+ * Run: npx tsx scripts/migrate-sessions.ts
+ */
+
+import { homedir } from 'node:os'
 import path from 'node:path'
-import os from 'node:os'
+import { readdir, mkdir, rename, unlink, stat } from 'node:fs/promises'
 
-const SESSIONS_DIR = path.join(os.homedir(), '.aynite', 'sessions')
+const AYNITE_DIR = path.join(homedir(), '.aynite')
+const WORKSPACES_DIR = path.join(AYNITE_DIR, 'workspaces')
 
-async function migrate() {
-  console.log(`Starting migration in ${SESSIONS_DIR}...`)
+async function main() {
+  const workspaces = await readdir(WORKSPACES_DIR).catch(() => [])
+  let totalMigrated = 0
+  let totalSkipped = 0
+  let totalErrors = 0
 
-  try {
-    const dates = await fs.readdir(SESSIONS_DIR, { withFileTypes: true })
-    
-    for (const dateDir of dates) {
-      if (!dateDir.isDirectory()) continue
-      
-      const datePath = path.join(SESSIONS_DIR, dateDir.name)
-      const files = await fs.readdir(datePath)
-      
+  for (const ws of workspaces) {
+    const sessionsDir = path.join(WORKSPACES_DIR, ws, 'sessions')
+    const sessionsDirStat = await stat(sessionsDir).catch(() => null)
+    if (!sessionsDirStat || !sessionsDirStat.isDirectory()) continue
+
+    const dateDirs = await readdir(sessionsDir)
+    for (const dateDir of dateDirs) {
+      const datePath = path.join(sessionsDir, dateDir)
+      const dateStat = await stat(datePath).catch(() => null)
+      if (!dateStat || !dateStat.isDirectory()) continue
+
+      // Skip if this looks like a session folder (not a date dir)
+      // Date dirs look like 2026-06-19, session dirs are timestamp IDs
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateDir)) {
+        // This is likely already a session dir from a partial migration
+        // or the new flat structure. Skip it.
+        continue
+      }
+
+      const files = await readdir(datePath)
+      // Index all files by session ID
+      const sessions = new Map<
+        string,
+        { messages?: string; metadata?: string; compacted: string[] }
+      >()
+
       for (const file of files) {
-        if (!file.endsWith('.json') || file.endsWith('-metadata.json')) continue
-        
-        const filePath = path.join(datePath, file)
-        console.log(`Migrating ${filePath}...`)
-        
-        try {
-          const content = await fs.readFile(filePath, 'utf8')
-          const messages = JSON.parse(content)
-          
-          if (!Array.isArray(messages)) {
-            console.warn(`Skipping ${file}: not an array`)
-            continue
-          }
-          
-          const migrated = transform(messages)
-          await fs.writeFile(filePath, JSON.stringify(migrated, null, 2))
-          console.log(`Successfully migrated ${file}`)
-        } catch (err) {
-          console.error(`Failed to migrate ${file}:`, err)
+        // Parse: <sessionId>.json, <sessionId>-metadata.json, <sessionId>-<timestamp>.json
+        const match = file.match(/^(.+?)(-metadata|-(\d{13}))?\.json$/)
+        if (!match) continue
+
+        const sessionId = match[1]
+        const suffix = match[2]
+
+        if (!sessions.has(sessionId)) {
+          sessions.set(sessionId, { compacted: [] })
         }
-      }
-    }
-    
-    console.log('Migration complete!')
-  } catch (err) {
-    console.error('Migration failed:', err)
-  }
-}
+        const entry = sessions.get(sessionId)!
 
-function transform(messages: any[]): any[] {
-  const result: any[] = []
-  const knownCalls = new Set<string>()
-
-  // 1. Pass to find known calls
-  for (const msg of messages) {
-    const parts = (msg.parts || (Array.isArray(msg.content) ? msg.content : [])) as any[]
-    for (const p of parts) {
-      if (p.type === 'tool-call' || (p.type === 'dynamic-tool' && (p.state === 'input-available' || p.state === 'input-streaming'))) {
-        if (p.toolCallId) knownCalls.add(p.toolCallId)
-      }
-    }
-  }
-
-  // 2. Pass to transform and recover
-  for (const msg of messages) {
-    const currentParts = [
-      ...(msg.parts || (Array.isArray(msg.content) ? msg.content : [])),
-    ]
-    const assistantParts: any[] = []
-    const toolParts: any[] = []
-    const otherParts: any[] = []
-
-    for (const p of currentParts) {
-      if (p.type === 'dynamic-tool') {
-        const isResult = p.state === 'output-available' || p.state === 'output-error'
-        if (isResult) {
-          toolParts.push({
-            type: 'tool-result',
-            toolCallId: p.toolCallId,
-            toolName: p.toolName,
-            result: p.output ?? p.result,
-            output: p.output ?? p.result,
-            isError: p.state === 'output-error',
-          })
+        if (suffix === '-metadata') {
+          entry.metadata = file
+        } else if (match[3]) {
+          // compact backup: <sessionId>-<timestamp>.json
+          entry.compacted.push(file)
         } else {
-          assistantParts.push({
-            type: 'tool-call',
-            toolCallId: p.toolCallId,
-            toolName: p.toolName,
-            args: p.input ?? p.args,
-            input: p.input ?? p.args,
-          })
-          if (p.toolCallId) knownCalls.add(p.toolCallId)
+          entry.messages = file
         }
-      } else if (p.type === 'tool-call') {
-        assistantParts.push({
-          ...p,
-          args: p.input ?? p.args,
-          input: p.input ?? p.args,
-        })
-        if (p.toolCallId) knownCalls.add(p.toolCallId)
-      } else if (p.type === 'tool-result') {
-        toolParts.push({
-          ...p,
-          result: p.output ?? p.result,
-          output: p.output ?? p.result,
-        })
-      } else if (p.type === 'reasoning') {
-        assistantParts.push({ type: 'text', text: `Thinking:\n${p.text}` })
-      } else if (p.type === 'text') {
-        if (msg.role === 'assistant') assistantParts.push(p)
-        else otherParts.push(p)
-      } else {
-        otherParts.push(p)
       }
-    }
 
-    if (msg.role === 'user' || msg.role === 'system') {
-      result.push({
-        role: msg.role,
-        content: otherParts.length > 0 ? otherParts : (msg.content || ''),
-      })
-    } else if (msg.role === 'assistant') {
-      if (assistantParts.length > 0) {
-        result.push({ role: 'assistant', content: assistantParts })
-      }
-      if (toolParts.length > 0) {
-        result.push({ role: 'tool', content: toolParts })
-      }
-    } else if (msg.role === 'tool') {
-      // RECOVERY: If we have tool results but no corresponding call was found,
-      // insert an assistant message with the call first.
-      for (const p of toolParts) {
-        if (p.toolCallId && !knownCalls.has(p.toolCallId)) {
-          result.push({
-            role: 'assistant',
-            content: [{
-              type: 'tool-call',
-              toolCallId: p.toolCallId,
-              toolName: p.toolName,
-              args: p.input || p.args || {},
-              input: p.input || p.args || {},
-            }]
-          })
-          knownCalls.add(p.toolCallId)
+      // Move each session
+      for (const [sessionId, entry] of sessions) {
+        if (!entry.messages) {
+          // No messages file — skip
+          continue
+        }
+
+        const sessionDir = path.join(sessionsDir, sessionId)
+        await mkdir(sessionDir, { recursive: true }).catch(() => {})
+
+        try {
+          // Move messages.json
+          const oldMessages = path.join(datePath, entry.messages!)
+          const newMessages = path.join(sessionDir, 'messages.json')
+          await rename(oldMessages, newMessages)
+
+          // Move metadata.json if it exists
+          if (entry.metadata) {
+            const oldMeta = path.join(datePath, entry.metadata)
+            const newMeta = path.join(sessionDir, 'metadata.json')
+            await rename(oldMeta, newMeta)
+          }
+
+          // Move compact backups
+          for (const compactFile of entry.compacted) {
+            const ts = compactFile.match(/-(\d{13})\.json$/)?.[1]
+            if (ts) {
+              const oldCompact = path.join(datePath, compactFile)
+              const newCompact = path.join(sessionDir, `compacted-${ts}.json`)
+              await rename(oldCompact, newCompact)
+            }
+          }
+
+          totalMigrated++
+        } catch (err) {
+          console.error(
+            `[ERROR] Failed to migrate session "${sessionId}" from "${dateDir}":`,
+            err,
+          )
+          totalErrors++
         }
       }
-      result.push({
-        role: 'tool',
-        content: toolParts.length > 0 ? toolParts : otherParts,
-      })
+
+      // Remove empty date directory
+      const remaining = await readdir(datePath).catch(() => [])
+      if (remaining.length === 0) {
+        await unlink(datePath).catch(() => {})
+      } else {
+        console.warn(
+          `[WARN] Date dir "${dateDir}" in workspace "${ws}" still has ${remaining.length} files, not removing`,
+        )
+        totalSkipped += remaining.length
+      }
     }
   }
 
-  return result
+  console.log('\n--- Migration complete ---')
+  console.log(`Migrated: ${totalMigrated} sessions`)
+  console.log(`Errors:   ${totalErrors}`)
+  console.log(`Skipped:  ${totalSkipped} files left in date dirs (unrecognized)`)
 }
 
-migrate()
+main().catch((err) => {
+  console.error('Migration failed:', err)
+  process.exit(1)
+})

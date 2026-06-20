@@ -14,11 +14,9 @@ import {
   getAIConfigPath,
   getMainConfigPath,
   getMessengersConfigPath,
-  getSessionMetadataPath,
-  getSessionPath,
+  getSessionMessagesPath,
+  getSessionMetadataFilePath,
   getWorkspaceDataPath,
-  getWorkspaceSessionsDir,
-  readdir,
   readJson,
   writeJson,
 } from '../../lib/path'
@@ -105,27 +103,14 @@ async function findMetadata(
   sessionId: string,
   workspace: string,
 ): Promise<{ metadata: SessionMetadata | null; dateDir: string | null }> {
-  const sessionsDir = getWorkspaceSessionsDir(workspace)
-  const dates = await readdir(sessionsDir).catch(() => [])
-  for (const d of dates) {
-    if (!d.isDirectory()) continue
-    const metaPath = getSessionMetadataPath(sessionId, d.name, workspace)
-    const meta = await readJson<SessionMetadata>(metaPath).catch(() => null)
-    if (meta) return { metadata: meta, dateDir: d.name }
-  }
-  return { metadata: null, dateDir: null }
+  const metaPath = getSessionMetadataFilePath(sessionId, workspace)
+  const meta = await readJson<SessionMetadata>(metaPath).catch(() => null)
+  return { metadata: meta, dateDir: null }
 }
 
 async function findSessionFile(sessionId: string, workspace: string) {
-  const sessionsDir = getWorkspaceSessionsDir(workspace)
-  const dates = await readdir(sessionsDir).catch(() => [])
-  for (const d of dates) {
-    if (!d.isDirectory()) continue
-    const sessionPath = getSessionPath(sessionId, d.name, workspace)
-    const content = await readJson(sessionPath).catch(() => null)
-    if (content) return content
-  }
-  return null
+  const path = getSessionMessagesPath(sessionId, workspace)
+  return readJson(path).catch(() => null)
 }
 
 function genId(): string {
@@ -525,11 +510,7 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
     const body = summaryText.trim()
 
     // Write summary to metadata preserving existing fields (agentName, modelName, createdAt)
-    const metaPath = getSessionMetadataPath(
-      botSessionId,
-      undefined,
-      config.workspace,
-    )
+    const metaPath = getSessionMetadataFilePath(botSessionId, config.workspace)
     const existingMeta = await readJson<SessionMetadata>(metaPath).catch(
       () => null,
     )

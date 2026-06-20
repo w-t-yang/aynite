@@ -71,6 +71,13 @@ export const aiMutations = (() => ({
     metadata?: any,
   ): Promise<void> => getAynite().saveSession(sessionId, messages, metadata),
 
+  saveCompactBackup: (
+    sessionId: string,
+    timestamp: number,
+    messages: any[],
+  ): Promise<void> =>
+    getAynite().saveCompactBackup(sessionId, timestamp, messages),
+
   runDirectCommand: (
     payload: DirectCommandPayload,
   ): Promise<{ stdout: string; stderr: string }> =>

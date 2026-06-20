@@ -4,9 +4,10 @@ import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
   getLogPath,
-  getSessionMetadataPath,
-  getSessionPath,
-  getSessionsDateDir,
+  getSessionCompactPath,
+  getSessionDir,
+  getSessionMessagesPath,
+  getSessionMetadataFilePath,
   getWorkspaceSessionsDir,
   readdir,
   readJson,
@@ -77,164 +78,136 @@ export async function initWorkspaceFolders(workspace: string) {
   }
 }
 
+/**
+ * Save a session to disk.
+ *
+ * Each session lives in its own directory under workspaces/<name>/sessions/<id>/:
+ *   - messages.json   — the message array
+ *   - metadata.json   — session metadata (agent, model, summary, timestamps)
+ */
 export async function saveSession(
   workspace: string,
   id: string,
   messages: UIMessage[],
   metadata?: SessionMetadata,
 ) {
-  const path = getSessionPath(id, undefined, workspace)
+  const { mkdir } = await import('node:fs/promises')
+  const sessionDir = getSessionDir(id, workspace)
+  await mkdir(sessionDir, { recursive: true }).catch(() => {})
+
+  const path = getSessionMessagesPath(id, workspace)
   await writeJson(path, messages)
 
   if (metadata) {
-    const metaPath = getSessionMetadataPath(id, undefined, workspace)
+    const metaPath = getSessionMetadataFilePath(id, workspace)
     const existing = await readJson<SessionMetadata>(metaPath).catch(() => null)
     await writeJson(metaPath, { ...(existing || {}), ...metadata })
   }
-
-  // Session saved notification is no longer sent globally.
-  // The caller (window-scoped IPC handler) is responsible for any event emission.
-}
-
-export async function loadSession(
-  workspace: string,
-  id: string,
-  date?: string,
-) {
-  if (date) {
-    const path = getSessionPath(id, date, workspace)
-    return readJson(path).catch(() => null)
-  }
-
-  // Find session across all dates
-  const dir = getWorkspaceSessionsDir(workspace)
-  const dates = await readdir(dir).catch(() => [])
-  for (const d of dates) {
-    if (!d.isDirectory()) continue
-    const dateDir = d.name
-    const path = getSessionPath(id, dateDir, workspace)
-    const content = await readJson(path).catch(() => null)
-    if (content) return content
-  }
-  return null
 }
 
 /**
- * Load session metadata from disk, searching across all date directories.
+ * Load session messages from disk.
+ * Returns null if the session does not exist.
+ */
+export async function loadSession(workspace: string, id: string) {
+  const path = getSessionMessagesPath(id, workspace)
+  return readJson(path).catch(() => null)
+}
+
+/**
+ * Load session metadata from disk.
  * Returns null if no metadata file is found.
  */
 export async function loadSessionMetadata(
   workspace: string,
   id: string,
 ): Promise<SessionMetadata | null> {
-  const dir = getWorkspaceSessionsDir(workspace)
-  const dates = await readdir(dir).catch(() => [])
-  for (const d of dates) {
-    if (!d.isDirectory()) continue
-    const dateDir = d.name
-    const metaPath = getSessionMetadataPath(id, dateDir, workspace)
-    const content = await readJson<SessionMetadata>(metaPath).catch(() => null)
-    if (content) {
-      // Verify the session still exists under this date
-      const sessionPath = getSessionPath(id, dateDir, workspace)
-      const sessionExists = await stat(sessionPath).catch(() => null)
-      if (sessionExists) return content
-    }
-  }
-  return null
+  const metaPath = getSessionMetadataFilePath(id, workspace)
+  return readJson<SessionMetadata>(metaPath).catch(() => null)
 }
 
+/**
+ * Save a compaction backup — writes the pre-compacted messages to a file
+ * named compacted-<timestamp>.json inside the session's directory.
+ * This does NOT modify messages.json or metadata.json.
+ */
+export async function saveCompactBackup(
+  workspace: string,
+  sessionId: string,
+  timestamp: number,
+  messages: UIMessage[],
+) {
+  const { mkdir } = await import('node:fs/promises')
+  const sessionDir = getSessionDir(sessionId, workspace)
+  await mkdir(sessionDir, { recursive: true }).catch(() => {})
+  const path = getSessionCompactPath(sessionId, timestamp, workspace)
+  await writeJson(path, messages)
+}
+
+/**
+ * Delete a session and all its files (messages.json, metadata.json,
+ * compacted-*.json backups).
+ */
 export async function deleteSession(workspace: string, id: string) {
-  const dir = getWorkspaceSessionsDir(workspace)
-  const dates = await readdir(dir).catch(() => [])
-  const { unlink } = await import('node:fs/promises')
-
-  for (const d of dates) {
-    if (!d.isDirectory()) continue
-    const dateDir = d.name
-    const path = getSessionPath(id, dateDir, workspace)
-    const metaPath = getSessionMetadataPath(id, dateDir, workspace)
-
-    if (await stat(path).catch(() => null)) {
-      await unlink(path).catch(() => {})
-      if (await stat(metaPath).catch(() => null)) {
-        await unlink(metaPath).catch(() => {})
-      }
-    }
-  }
+  const { rm } = await import('node:fs/promises')
+  const sessionDir = getSessionDir(id, workspace)
+  await rm(sessionDir, { recursive: true, force: true }).catch(() => {})
 }
 
+/**
+ * List all sessions for a workspace.
+ *
+ * Reads the subdirectories of workspaces/<name>/sessions/, each of which
+ * represents a single session. Returns them sorted by last modified time
+ * (most recent first).
+ */
 export async function listSessions(workspace: string) {
   const dir = getWorkspaceSessionsDir(workspace)
-  const dates = await readdir(dir).catch(() => [])
+  const entries = await readdir(dir).catch(() => [])
   const all: any[] = []
-  for (const d of dates) {
-    if (!d.isDirectory()) continue
-    const date = d.name
-    const dPath = getSessionsDateDir(date, workspace)
-    const files = await readdir(dPath).catch(() => [])
-    for (const f of files) {
-      if (
-        f.isFile() &&
-        f.name.endsWith('.json') &&
-        !f.name.endsWith('-metadata.json')
-      ) {
-        const id = f.name.replace('.json', '')
 
-        // Skip backup sessions (created by compact context — <session-id>-<timestamp>)
-        // Match any id ending with `-<13-digit-timestamp>`
-        if (/-\d{13}$/.test(id)) continue
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const sessionId = entry.name
 
-        const sessionPath = getSessionPath(id, date, workspace)
-        const metaPath = getSessionMetadataPath(id, date, workspace)
+    // Safety: skip entries that look like old-style backup IDs
+    if (/-\d{13}$/.test(sessionId)) continue
 
-        const [content, metadata, stats] = await Promise.all([
-          readJson(sessionPath).catch(() => null),
-          readJson(metaPath).catch(() => null),
-          stat(sessionPath).catch(() => null),
-        ])
+    const messagesPath = getSessionMessagesPath(sessionId, workspace)
+    const metaPath = getSessionMetadataFilePath(sessionId, workspace)
 
-        if (content && Array.isArray(content)) {
-          // Estimate token count from serialized JSON byte length
-          const contextSize = Math.ceil(JSON.stringify(content).length * 0.4)
+    const [content, metadata, stats] = await Promise.all([
+      readJson(messagesPath).catch(() => null),
+      readJson(metaPath).catch(() => null),
+      stat(messagesPath).catch(() => null),
+    ])
 
-          const firstUser = content.find((m: any) => m.role === 'user')
-          const preview =
-            metadata?.summary ||
-            (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') ||
-            'No content'
+    if (content && Array.isArray(content)) {
+      const contextSize = Math.ceil(JSON.stringify(content).length * 0.4)
 
-          const title = metadata
-            ? `${metadata.agentName} - ${metadata.modelName}`
-            : `Session ${id.slice(-6)}`
+      const firstUser = content.find((m: any) => m.role === 'user')
+      const preview =
+        metadata?.summary ||
+        (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') ||
+        'No content'
 
-          all.push({
-            id,
-            date,
-            title,
-            preview,
-            lastModified:
-              stats?.mtime.toISOString() || new Date().toISOString(),
-            messageCount: content.length,
-            contextSize,
-          })
-        }
-      }
+      const title = metadata
+        ? `${metadata.agentName} - ${metadata.modelName}`
+        : `Session ${sessionId.slice(-6)}`
+
+      all.push({
+        id: sessionId,
+        date: '',
+        title,
+        preview,
+        lastModified: stats?.mtime.toISOString() || new Date().toISOString(),
+        messageCount: content.length,
+        contextSize,
+      })
     }
   }
 
-  // De-duplicate by id, keeping the most recent one
-  const unique = new Map<string, any>()
-  for (const s of all) {
-    const existing = unique.get(s.id)
-    if (!existing || s.lastModified > existing.lastModified) {
-      unique.set(s.id, s)
-    }
-  }
-
-  return Array.from(unique.values()).sort((a, b) =>
-    b.lastModified.localeCompare(a.lastModified),
-  )
+  return all.sort((a, b) => b.lastModified.localeCompare(a.lastModified))
 }
 
 export async function aiChat(params: {

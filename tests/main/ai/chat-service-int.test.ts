@@ -4,7 +4,7 @@
  * Tests saveSession → loadSession → listSessions → deleteSession
  * through the actual chat.ts module with real filesystem I/O.
  */
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,29 +16,17 @@ let tmpDir = ''
 const mockGetWorkspaceSessionsDir = vi.hoisted(() =>
   vi.fn((name: string) => join(tmpDir, name, 'sessions')),
 )
-const mockGetSessionPath = vi.hoisted(
-  () => (id: string, date?: string, workspace?: string) =>
-    join(
-      tmpDir,
-      workspace || 'testws',
-      'sessions',
-      date || '2026-06-15',
-      `${id}.json`,
-    ),
+const mockGetSessionDir = vi.hoisted(
+  () => (id: string, workspace?: string) =>
+    join(tmpDir, workspace || 'testws', 'sessions', id),
 )
-const mockGetSessionMetadataPath = vi.hoisted(
-  () => (id: string, date?: string, workspace?: string) =>
-    join(
-      tmpDir,
-      workspace || 'testws',
-      'sessions',
-      date || '2026-06-15',
-      `${id}-metadata.json`,
-    ),
+const mockGetSessionMessagesPath = vi.hoisted(
+  () => (id: string, workspace?: string) =>
+    join(tmpDir, workspace || 'testws', 'sessions', id, 'messages.json'),
 )
-const mockGetSessionsDateDir = vi.hoisted(
-  () => (date: string, workspace?: string) =>
-    join(tmpDir, workspace || 'testws', 'sessions', date),
+const mockGetSessionMetadataFilePath = vi.hoisted(
+  () => (id: string, workspace?: string) =>
+    join(tmpDir, workspace || 'testws', 'sessions', id, 'metadata.json'),
 )
 const mockGetLogPath = vi.hoisted(() =>
   vi.fn(() => join(tmpDir, 'ai-chat.log')),
@@ -77,28 +65,28 @@ vi.mock('../../../src/lib/path', () => ({
   }),
   getWorkspaceSessionsDir: (...args: unknown[]) =>
     mockGetWorkspaceSessionsDir(...args),
-  getSessionPath: (...args: unknown[]) => mockGetSessionPath(...args),
-  getSessionMetadataPath: (...args: unknown[]) =>
-    mockGetSessionMetadataPath(...args),
-  getSessionsDateDir: (...args: unknown[]) => mockGetSessionsDateDir(...args),
+  getSessionDir: (...args: unknown[]) => mockGetSessionDir(...args),
+  getSessionMessagesPath: (...args: unknown[]) =>
+    mockGetSessionMessagesPath(...args),
+  getSessionMetadataFilePath: (...args: unknown[]) =>
+    mockGetSessionMetadataFilePath(...args),
   getLogPath: (...args: unknown[]) => mockGetLogPath(...args),
   appendText: (...args: unknown[]) => mockAppendText(...args),
 }))
 
-// Mock the real fs/promises used by deleteSession
 vi.mock('node:fs/promises', () => ({
-  unlink: vi.fn((p: string) => {
+  rm: vi.fn((p: string, opts: any) => {
     const fs = require('node:fs')
     try {
-      fs.unlinkSync(p)
+      fs.rmSync(p, opts)
     } catch {
       // ignore
     }
     return Promise.resolve()
   }),
-  mkdir: vi.fn((p: string) => {
+  mkdir: vi.fn((p: string, opts: any) => {
     const fs = require('node:fs')
-    fs.mkdirSync(p, { recursive: true })
+    fs.mkdirSync(p, opts)
     return Promise.resolve()
   }),
 }))
@@ -113,9 +101,8 @@ import {
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'aynite-test-'))
   // Create the sessions directory structure
-  mkdirSync(join(tmpDir, 'testws', 'sessions', '2026-06-15'), {
-    recursive: true,
-  })
+  const fs = require('node:fs')
+  fs.mkdirSync(join(tmpDir, 'testws', 'sessions'), { recursive: true })
 })
 
 afterEach(() => {
@@ -133,12 +120,12 @@ describe('chat-service integration', () => {
     ]
 
     await saveSession('testws', 'session-1', messages as any)
-    const loaded = await loadSession('testws', 'session-1', '2026-06-15')
+    const loaded = await loadSession('testws', 'session-1')
 
     expect(loaded).toEqual(messages)
   })
 
-  it('save → list shows session in correct date group', async () => {
+  it('save → list shows session', async () => {
     const messages = [
       {
         role: 'user',
@@ -153,7 +140,6 @@ describe('chat-service integration', () => {
     expect(sessions.length).toBeGreaterThanOrEqual(1)
     const found = sessions.find((s: any) => s.id === 'session-list-test')
     expect(found).toBeDefined()
-    expect(found.date).toBe('2026-06-15')
     expect(found.messageCount).toBe(1)
   })
 
@@ -169,56 +155,39 @@ describe('chat-service integration', () => {
     await saveSession('testws', 'session-to-delete', messages as any)
     await deleteSession('testws', 'session-to-delete')
 
-    const loaded = await loadSession(
-      'testws',
-      'session-to-delete',
-      '2026-06-15',
-    )
+    const loaded = await loadSession('testws', 'session-to-delete')
     expect(loaded).toBeNull()
   })
 
   it('handles empty messages array', async () => {
     await saveSession('testws', 'empty-session', [] as any)
-    const loaded = await loadSession('testws', 'empty-session', '2026-06-15')
+    const loaded = await loadSession('testws', 'empty-session')
 
     expect(loaded).toEqual([])
   })
 
-  it('lists multiple sessions across different dates', async () => {
-    // Create sessions in different date dirs
-    mkdirSync(join(tmpDir, 'testws', 'sessions', '2026-06-14'), {
-      recursive: true,
-    })
-
+  it('lists multiple sessions', async () => {
     const msg1 = [
       {
         role: 'user',
-        content: 'day 1',
-        parts: [{ type: 'text', text: 'day 1' }],
+        content: 'session one',
+        parts: [{ type: 'text', text: 'session one' }],
       },
     ]
     const msg2 = [
       {
         role: 'user',
-        content: 'day 2',
-        parts: [{ type: 'text', text: 'day 2' }],
+        content: 'session two',
+        parts: [{ type: 'text', text: 'session two' }],
       },
     ]
 
-    await saveSession('testws', 'session-day1', msg1 as any)
-    // Force different date by writing directly
-    const fs = require('node:fs')
-    fs.writeFileSync(
-      join(tmpDir, 'testws', 'sessions', '2026-06-14', 'session-day1.json'),
-      JSON.stringify(msg1),
-    )
-    fs.writeFileSync(
-      join(tmpDir, 'testws', 'sessions', '2026-06-15', 'session-day2.json'),
-      JSON.stringify(msg2),
-    )
+    await saveSession('testws', 'session-a', msg1 as any)
+    await saveSession('testws', 'session-b', msg2 as any)
 
     const sessions = await listSessions('testws')
-    // Should have 2 unique sessions (saveSession creates one, we wrote 2 more)
-    expect(sessions.length).toBeGreaterThanOrEqual(2)
+    expect(sessions.length).toBe(2)
+    const ids = sessions.map((s: any) => s.id).sort()
+    expect(ids).toEqual(['session-a', 'session-b'])
   })
 })
