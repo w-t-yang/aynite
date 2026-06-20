@@ -67,14 +67,15 @@ export function SelectionMenu({
       }
     }
 
-    // Use a small delay to avoid immediate closing from the opening click
+    // Use a small delay to avoid immediate closing from the opening click.
+    // Using 'mouseup' instead of 'mousedown' works better with -webkit-app-region drag areas.
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside)
+      window.addEventListener('mouseup', handleClickOutside, true)
     }, 10)
 
     return () => {
       clearTimeout(timer)
-      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('mouseup', handleClickOutside, true)
     }
   }, [isOpen, handleClose])
 

@@ -1,13 +1,10 @@
 import {
   Bug,
-  ExternalLink,
   Languages,
   Minus,
   Moon,
   MoreHorizontal,
   Palette,
-  Plus,
-  Settings,
   Square,
   Sun,
   Trash2,
@@ -15,7 +12,6 @@ import {
 } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
-import { FLEX_CENTER_GAP_1 } from '../../../lib/constants/renderer/styles'
 import { systemMutations } from '../../bridge/system'
 import { platform } from '../../bridge/utils'
 import { Button } from '../../shared/basic/Button'
@@ -36,10 +32,7 @@ const TitleBar: React.FC = () => {
     switchWorkspace,
     addWorkspace,
     deleteWorkspace,
-    openNewWindow,
-    switchLayout,
     addLayout,
-    removeLayout,
     themes,
     activeTheme,
     setTheme,
@@ -47,7 +40,6 @@ const TitleBar: React.FC = () => {
     setLocale,
     showTileControls,
     setShowTileControls,
-    setShowSettings,
     isMaximized,
     isFullscreen,
   } = useApp()
@@ -127,7 +119,7 @@ const TitleBar: React.FC = () => {
         )}
       >
         {/* Left: Workspace switcher */}
-        <div className="flex items-center no-drag shrink-0">
+        <div className="flex items-center no-drag">
           <SelectionMenu
             activeId={workspaceConfig.id}
             items={workspaceOptions}
@@ -136,22 +128,14 @@ const TitleBar: React.FC = () => {
             align="left"
             menuClassName="min-w-[260px]"
             trigger={
-              <Button variant="ghost" size="sm" className={FLEX_CENTER_GAP_1}>
-                <span>{workspaceConfig.id}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3.5 w-3.5 text-muted-foreground"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <title>Chevron down</title>
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="min-w-[72px] px-3 flex items-center justify-center"
+              >
+                <span className="text-sm font-medium truncate">
+                  {workspaceConfig.id}
+                </span>
               </Button>
             }
             title={t('titlebar.workspaces')}
@@ -196,92 +180,10 @@ const TitleBar: React.FC = () => {
           />
         </div>
 
-        {/* Center: Layout switcher - truly centered in the titlebar */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 no-drag group/layouts px-1">
-          {workspaceConfig.layouts
-            .filter((layout) => !layout.system)
-            .map((layout) => {
-              const isActive = workspaceConfig.activeLayoutId === layout.id
-              return (
-                <Button
-                  variant="ghost"
-                  key={layout.id}
-                  onClick={() => switchLayout(layout.id)}
-                  title={layout.name}
-                  className={cn(
-                    'w-5 h-5 rounded-md flex items-center justify-center transition-all p-0 min-w-0',
-                    isActive ? 'bg-primary/10' : 'hover:bg-accent',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'w-2 h-2 rounded-[3px] transition-all duration-300',
-                      isActive
-                        ? 'bg-primary scale-125'
-                        : 'bg-muted-foreground/40 scale-100',
-                    )}
-                  />
-                </Button>
-              )
-            })}
-
-          {/* Management Menu (Only visible on hover or if one is active) */}
-          <div className="opacity-0 group-hover/layouts:opacity-100 transition-opacity ml-1 flex items-center gap-0.5">
-            <SelectionMenu
-              items={[
-                {
-                  id: 'add-vibe',
-                  label: t('titlebar.addLayout'),
-                  icon: <Plus size={14} />,
-                  disabled: workspaceConfig.layouts.length >= 9,
-                },
-                {
-                  id: 'remove-vibe',
-                  label: t('titlebar.removeCurrent'),
-                  icon: <Trash2 size={14} />,
-                  disabled:
-                    workspaceConfig.layouts.length <= 1 ||
-                    workspaceConfig.layouts.find(
-                      (l) => l.id === workspaceConfig.activeLayoutId,
-                    )?.system,
-                  type: 'danger' as any,
-                },
-              ]}
-              onSelect={(id: string) => {
-                if (id === 'add-vibe') setShowVibeModal(true)
-                else if (id === 'remove-vibe')
-                  removeLayout(workspaceConfig.activeLayoutId)
-              }}
-              trigger={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-7 h-7 hover:bg-accent"
-                >
-                  <MoreHorizontal size={14} />
-                </Button>
-              }
-              title={t('titlebar.layouts')}
-            />
-          </div>
-        </div>
-
         {/* Right: App options + Window controls */}
         <div className="flex items-center gap-1 no-drag shrink-0">
           <SelectionMenu
             items={[
-              {
-                id: 'settings',
-                label: t('titlebar.settings'),
-                icon: <Settings size={14} />,
-              },
-              { id: 'divider-0', type: 'divider' },
-              {
-                id: 'new-window',
-                label: t('titlebar.newWindow'),
-                icon: <ExternalLink size={14} />,
-              },
-              { id: 'divider-1', type: 'divider' },
               {
                 id: 'theme',
                 label: t('theme.label'),
@@ -300,7 +202,7 @@ const TitleBar: React.FC = () => {
                 icon: <Languages size={14} />,
                 submenu: languageOptions,
               },
-              { id: 'divider-2', type: 'divider' },
+              { id: 'divider-1', type: 'divider' },
               {
                 id: 'toggle-controls',
                 label: t('titlebar.showTileControls'),
@@ -309,7 +211,7 @@ const TitleBar: React.FC = () => {
               },
               ...(import.meta.env.DEV
                 ? [
-                    { id: 'divider-3', type: 'divider' },
+                    { id: 'divider-2', type: 'divider' },
                     {
                       id: 'inspector',
                       label: t('titlebar.toggleInspector'),
@@ -319,9 +221,7 @@ const TitleBar: React.FC = () => {
                 : []),
             ]}
             onSelect={(id: string) => {
-              if (id === 'settings') setShowSettings(true)
-              else if (id === 'new-window') openNewWindow()
-              else if (id === 'toggle-controls')
+              if (id === 'toggle-controls')
                 setShowTileControls(!showTileControls)
               else if (id === 'inspector') systemMutations.openDevTools()
             }}
@@ -337,7 +237,7 @@ const TitleBar: React.FC = () => {
                 size="icon"
                 title={t('titlebar.appOptions')}
               >
-                <Palette size={16} />
+                <MoreHorizontal size={16} />
               </Button>
             }
           />
