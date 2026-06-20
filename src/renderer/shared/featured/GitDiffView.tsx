@@ -664,8 +664,7 @@ export function GitDiffView({
               </div>
             )}
             {commitState.committing ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
-                <span className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+              <div className="text-xs text-muted-foreground/70 italic py-8 text-center">
                 Committing changes (pre-commit hooks may take a moment)...
               </div>
             ) : commitState.generating ? (
