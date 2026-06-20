@@ -8,6 +8,7 @@ import type {
   GitStatusMap,
   GitStatusType,
   HunkData,
+  SplitGitStatus,
 } from '../../lib/types/files'
 
 // ─── Status Parsing ─────────────────────────────────────────────────────
@@ -90,6 +91,84 @@ export function parsePorcelain(stdout: string, root: string): GitStatusMap {
   }
 
   return statusMap
+}
+
+/**
+ * Parses porcelain output and splits files into staged vs unstaged.
+ *
+ * Porcelain format: XY
+ *   X = staging area status (space = not staged)
+ *   Y = working tree status  (space = no working tree change)
+ */
+export function parseSplitPorcelain(
+  stdout: string,
+  root: string,
+): SplitGitStatus {
+  const staged: Record<string, string> = {}
+  const unstaged: Record<string, string> = {}
+  const lines = stdout.split('\n')
+
+  for (const line of lines) {
+    if (!line || line.length < 3) continue
+    const code = line.slice(0, 2)
+    let filePath = line.slice(3)
+
+    // Handle renames: "R  old -> new"
+    if (code.startsWith('R')) {
+      filePath = filePath.split(' -> ').pop() || filePath
+    }
+
+    // Remove quotes if present
+    if (filePath.startsWith('"') && filePath.endsWith('"')) {
+      filePath = filePath.slice(1, -1)
+    }
+
+    // Normalize trailing slashes
+    if (filePath.endsWith('/') || filePath.endsWith('\\')) {
+      filePath = filePath.slice(0, -1)
+    }
+
+    const absPath = joinPaths(root, filePath)
+    const X = code[0]
+    const Y = code[1]
+
+    // Untracked files (??) — only in unstaged
+    if (X === '?' && Y === '?') {
+      unstaged[absPath] = 'untracked'
+      continue
+    }
+
+    // Staging area status (X character)
+    if (X !== ' ' && X !== '?' && X !== '!') {
+      const xType = mapSingleStatus(X)
+      if (xType) staged[absPath] = xType
+    }
+
+    // Working tree status (Y character)
+    if (Y !== ' ' && Y !== '?' && Y !== '!') {
+      const yType = mapSingleStatus(Y)
+      if (yType) unstaged[absPath] = yType
+    }
+  }
+
+  return { staged, unstaged }
+}
+
+function mapSingleStatus(ch: string): string | null {
+  switch (ch) {
+    case 'M':
+      return 'modified'
+    case 'A':
+      return 'added'
+    case 'D':
+      return 'deleted'
+    case 'R':
+      return 'renamed'
+    case 'C':
+      return 'renamed'
+    default:
+      return null
+  }
 }
 
 export type { GitStatusMap, HunkData }

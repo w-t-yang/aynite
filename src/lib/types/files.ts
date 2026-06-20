@@ -38,6 +38,11 @@ export interface GitStatusMap {
   [path: string]: GitStatusType
 }
 
+export interface SplitGitStatus {
+  staged: Record<string, string>
+  unstaged: Record<string, string>
+}
+
 export interface HunkData {
   filePath: string
   oldStart: number

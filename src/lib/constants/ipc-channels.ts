@@ -102,6 +102,11 @@ export const GitChannels = {
   DIFF_STATS: 'aynite:git-diff-stats',
   COMMIT_GENERATE: 'aynite:git-commit-generate',
   COMMIT_EXECUTE: 'aynite:git-commit-execute',
+  STAGE_FILE: 'aynite:git-stage-file',
+  UNSTAGE_FILE: 'aynite:git-unstage-file',
+  STAGE_ALL: 'aynite:git-stage-all',
+  UNSTAGE_ALL: 'aynite:git-unstage-all',
+  SPLIT_STATUS: 'aynite:git-split-status',
 } as const
 export const RssChannels = {
   GET_CONFIG: 'aynite:rss-get-config',
