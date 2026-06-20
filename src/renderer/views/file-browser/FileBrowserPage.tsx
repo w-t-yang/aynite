@@ -95,6 +95,9 @@ export function FileBrowserPage() {
     })
   }, [content, originalContent, activePath, setDirtyPaths])
 
+  // Show error message for files that no longer exist on disk
+  // (tabs stay open so the user sees the error and can close manually)
+
   // ── Keyboard Shortcuts ───────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

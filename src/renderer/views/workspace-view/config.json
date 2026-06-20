@@ -7,9 +7,8 @@
     "en": {
       "name": "Workspace View",
       "description": "Workspace overview with folders, artifacts, sessions, and git status",
-      "header": "Workspace - {name}",
-      "folders": {
-        "title": "Folders",
+      "projects": {
+        "title": "Projects",
         "addTitle": "Add folder to workspace",
         "empty": "No folders added"
       },
@@ -21,9 +20,9 @@
       "sessions": {
         "title": "Sessions",
         "newTitle": "New Session",
-        "empty": "No sessions found"
+        "empty": "No sessions found",
+        "loadMore": "Load {count} more"
       },
-      "footer": "Select a session to update the AI chat view",
       "delete": {
         "title": "Delete Session",
         "cancel": "Cancel",
@@ -34,9 +33,8 @@
     "zh": {
       "name": "工作区视图",
       "description": "工作区概览，包含文件夹、产物、会话和 Git 状态",
-      "header": "工作区 - {name}",
-      "folders": {
-        "title": "文件夹",
+      "projects": {
+        "title": "项目",
         "addTitle": "添加文件夹到工作区",
         "empty": "未添加文件夹"
       },
@@ -48,9 +46,9 @@
       "sessions": {
         "title": "会话",
         "newTitle": "新建会话",
-        "empty": "未找到会话"
+        "empty": "未找到会话",
+        "loadMore": "加载 {count} 条更多"
       },
-      "footer": "选择一个会话以更新 AI 聊天视图",
       "delete": {
         "title": "删除会话",
         "cancel": "取消",

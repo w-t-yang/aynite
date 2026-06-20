@@ -26,12 +26,14 @@ export function useFileContent(activePath: string | null) {
     if (!activePath) {
       setContent(null)
       setFileInfo(null)
+      setError(null)
       return
     }
 
     setContent(null)
     setOriginalContent(null)
     setFileInfo(null)
+    setError(null)
 
     const loadFile = async () => {
       setLoading(true)
@@ -55,7 +57,15 @@ export function useFileContent(activePath: string | null) {
           setOriginalContent(null)
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load file')
+        const rawMessage =
+          err instanceof Error ? err.message : 'Failed to load file'
+        // Electron wraps IPC errors as "Error invoking remote method '<channel>': Error: <original message>"
+        // Extract just the meaningful part for display
+        const message = rawMessage.replace(
+          /^Error invoking remote method '[^']+': Error:\s*/,
+          '',
+        )
+        setError(message)
       } finally {
         setLoading(false)
       }

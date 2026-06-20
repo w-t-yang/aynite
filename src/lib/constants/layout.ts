@@ -8,6 +8,7 @@ export const HOME_LAYOUT: LayoutConfig = {
   id: 'sys-home',
   name: 'Home',
   system: true,
+  fixed: true,
   layout: {
     id: 'tile-home',
     type: 'leaf',
@@ -20,11 +21,26 @@ export const PROJECTS_LAYOUT: LayoutConfig = {
   id: 'sys-projects',
   name: 'Projects',
   system: true,
+  fixed: true,
   layout: {
-    id: 'tile-projects',
-    type: 'leaf',
-    name: 'projects-view',
+    id: 'split-projects',
+    type: 'split',
+    direction: 'horizontal',
     size: 100,
+    children: [
+      {
+        id: 'tile-projects-workspace',
+        type: 'leaf',
+        name: 'workspace-view',
+        size: 25,
+      },
+      {
+        id: 'tile-projects-chat',
+        type: 'leaf',
+        name: 'ai-browser',
+        size: 75,
+      },
+    ],
   },
 }
 
@@ -32,6 +48,7 @@ export const SETTINGS_LAYOUT: LayoutConfig = {
   id: 'sys-settings',
   name: 'Settings',
   system: true,
+  fixed: true,
   layout: {
     id: 'tile-settings',
     type: 'leaf',

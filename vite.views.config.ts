@@ -135,10 +135,6 @@ export default defineConfig({
           __dirname,
           'src/renderer/views/dataview-canvas/index.html',
         ),
-        'views/projects-view/index': resolve(
-          __dirname,
-          'src/renderer/views/projects-view/index.html',
-        ),
         'views/home/index': resolve(
           __dirname,
           'src/renderer/views/home/index.html',

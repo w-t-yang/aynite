@@ -97,11 +97,20 @@ export function FileContent({
   }
 
   if (error) {
+    const isNotFound =
+      error.includes('File does not exist') || error.includes('ENOENT')
     return (
-      <div className="flex-1 flex items-center justify-center text-destructive p-8 text-center">
+      <div className="flex-1 flex items-center justify-center p-8 text-center">
         <div>
-          <div className="text-lg font-bold mb-2">{t('error.title')}</div>
-          <div className="text-sm opacity-80">{error}</div>
+          <div
+            className={`text-lg font-bold mb-2 ${isNotFound ? 'text-amber-500' : 'text-destructive'}`}
+          >
+            {isNotFound ? t('error.fileNotFound') : t('error.title')}
+          </div>
+          <div className="text-sm text-muted-foreground/70">{error}</div>
+          <div className="mt-4 text-xs text-muted-foreground/40 italic">
+            {path}
+          </div>
         </div>
       </div>
     )

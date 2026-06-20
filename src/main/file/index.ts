@@ -106,7 +106,15 @@ export function setupFileIpc() {
     trackEvent('file_opened', {
       extension: getExtname(filePath).toLowerCase().slice(1) || 'none',
     })
-    return await readText(filePath)
+    try {
+      return await readText(filePath)
+    } catch (err: unknown) {
+      const nodeErr = err as NodeJS.ErrnoException
+      if (nodeErr.code === 'ENOENT') {
+        throw new Error(`File does not exist: ${filePath}`)
+      }
+      throw err
+    }
   })
 
   ipcMain.handle(FileChannels.READ_BINARY, async (_event, filePath: string) => {
@@ -119,7 +127,16 @@ export function setupFileIpc() {
 
   ipcMain.handle(FileChannels.INFO, async (_event, filePath: string) => {
     const expandedPath = expandHome(filePath)
-    const s = await stat(expandedPath)
+    let s
+    try {
+      s = await stat(expandedPath)
+    } catch (err: unknown) {
+      const nodeErr = err as NodeJS.ErrnoException
+      if (nodeErr.code === 'ENOENT') {
+        throw new Error(`File does not exist: ${expandedPath}`)
+      }
+      throw err
+    }
     const isText = s.isDirectory() ? false : await checkIsTextFile(expandedPath)
 
     return {

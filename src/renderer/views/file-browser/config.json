@@ -34,7 +34,8 @@
         "selectFile": "Select a file"
       },
       "error": {
-        "title": "Error"
+        "title": "Error",
+        "fileNotFound": "File not found"
       },
       "search": {
         "placeholder": "Find in file\u2026",
@@ -67,7 +68,8 @@
         "selectFile": "选择文件"
       },
       "error": {
-        "title": "错误"
+        "title": "错误",
+        "fileNotFound": "文件未找到"
       },
       "search": {
         "placeholder": "在文件中查找…",

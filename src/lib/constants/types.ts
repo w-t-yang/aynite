@@ -31,6 +31,8 @@ export interface LayoutConfig {
   layout: LayoutNode
   /** System layouts (Home, Projects, Settings) cannot be modified or removed */
   system?: boolean
+  /** Fixed layouts prevent tile add/delete operations but allow resizing */
+  fixed?: boolean
 }
 
 export interface WorkspaceConfig {
