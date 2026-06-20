@@ -115,7 +115,7 @@ export function SessionCard({
       <button
         type="button"
         onClick={onClick}
-        className="w-full text-left group"
+        className="w-full text-left group rounded-xl transition-all hover:bg-accent/5"
       >
         {card}
       </button>

@@ -142,8 +142,31 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   )
 
   const executeAppOperation = useCallback(
-    (operation: string, _payload?: unknown) => {
+    (operation: string, payload?: unknown) => {
       switch (operation) {
+        case 'OPEN_SESSION':
+          if (
+            payload &&
+            typeof payload === 'object' &&
+            'sessionId' in (payload as any)
+          ) {
+            const { sessionId } = payload as { sessionId: string }
+            // Update activeSessionId in the workspace config in-memory before switching
+            setWorkspaceConfig((prev) => {
+              if (!prev) return null
+              return {
+                ...prev,
+                activeSessionId: sessionId,
+                activeLayoutId: 'sys-projects',
+              }
+            })
+          }
+          return
+        case 'SWITCH_LAYOUT':
+          if (payload && typeof payload === 'string') {
+            switchLayout(payload)
+          }
+          return
         case 'TOGGLE_LEFT_PANEL':
           console.log('[App] Toggle Left Panel')
           return
@@ -168,7 +191,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         setWorkspaceConfig(updateLayoutInConfig(workspaceConfig, newLayoutNode))
       }
     },
-    [workspaceConfig, setWorkspaceConfig],
+    [workspaceConfig, setWorkspaceConfig, switchLayout],
   )
 
   const handleResizeStart = useCallback(() => {

@@ -7,6 +7,7 @@ import {
 import type { Agent } from '../../../lib/types/ai'
 import { ai } from '../../bridge/ai'
 import { config } from '../../bridge/config'
+import { events } from '../../bridge/events'
 import { spells } from '../../bridge/spells'
 import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
@@ -43,25 +44,26 @@ const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', '']
  * The grid is oldest→newest left→right.
  */
 function buildFullYearGrid(sessions: SessionEntry[]) {
-  // Count map: match session dates to local dates by parsing local date strings
-  // Uses contextSize (token count) instead of messageCount for a more meaningful metric
+  // Token count per day
   const countMap = new Map<string, number>()
+  // Session count per day (for tooltip)
+  const sessionCountMap = new Map<string, number>()
   let maxCount = 0
   for (const s of sessions) {
     const prev = countMap.get(s.date) || 0
     const val = s.contextSize ?? s.messageCount
     countMap.set(s.date, prev + val)
     maxCount = Math.max(maxCount, prev + val)
+    sessionCountMap.set(s.date, (sessionCountMap.get(s.date) || 0) + 1)
   }
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const days: { date: string; count: number }[] = []
+  const days: { date: string; count: number; sessionCount: number }[] = []
 
   for (let i = 364; i >= 0; i--) {
     const d = new Date(today)
     d.setDate(d.getDate() - i)
-    // Format date as YYYY-MM-DD in local timezone (matches how the user sees dates)
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
@@ -69,20 +71,20 @@ function buildFullYearGrid(sessions: SessionEntry[]) {
     days.push({
       date: dateStr,
       count: countMap.get(dateStr) || 0,
+      sessionCount: sessionCountMap.get(dateStr) || 0,
     })
   }
 
   // Pad start to align first day with Sunday (row 0)
-  // Parse the date parts back to get the correct day-of-week
   const [y0, m0, d0] = days[0].date.split('-').map(Number)
   const firstDate = new Date(y0, m0 - 1, d0)
-  const firstDayOfWeek = firstDate.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  const firstDayOfWeek = firstDate.getDay()
   for (let i = 0; i < firstDayOfWeek; i++) {
-    days.unshift({ date: '', count: 0 })
+    days.unshift({ date: '', count: 0, sessionCount: 0 })
   }
 
   // Group into weeks (Sunday first = index 0)
-  const weeks: { date: string; count: number }[][] = []
+  const weeks: { date: string; count: number; sessionCount: number }[][] = []
   for (let i = 0; i < days.length; i += 7) {
     weeks.push(days.slice(i, i + 7))
   }
@@ -190,6 +192,11 @@ export function HomeView() {
     return () => unsub()
   }, [subscribeToAppEvents, reloadData])
 
+  const handleSelectSession = useCallback(async (sessionId: string) => {
+    // Update in-memory config + switch to projects layout atomically
+    events.execute('OPEN_SESSION', { sessionId })
+  }, [])
+
   if (loading || !data) {
     return (
       <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -233,7 +240,11 @@ export function HomeView() {
                 <ActivityHistogram sessions={sessions} />
                 <div className={GRID_2_COL}>
                   {recentSessions.map((s) => (
-                    <SessionCard key={s.id} session={s} />
+                    <SessionCard
+                      key={s.id}
+                      session={s}
+                      onClick={() => handleSelectSession(s.id)}
+                    />
                   ))}
                 </div>
               </div>
@@ -526,7 +537,14 @@ function ActivityHistogram({ sessions }: { sessions: SessionEntry[] }) {
                     getIntensityClass(bin.count, maxCount),
                   )}
                   title={
-                    bin.date ? `${bin.date}: ${bin.count} tokens` : undefined
+                    bin.date
+                      ? (() => {
+                          const parts = bin.date.split('-')
+                          const month = parseInt(parts[1], 10)
+                          const day = parseInt(parts[2], 10)
+                          return `${MONTH_NAMES_SHORT[month - 1]} ${day} — ${bin.sessionCount} Sessions`
+                        })()
+                      : undefined
                   }
                 />
               )),
@@ -582,6 +600,8 @@ const MONTH_NAMES = [
   'Nov',
   'Dec',
 ]
+
+const MONTH_NAMES_SHORT = MONTH_NAMES
 
 /** Return the 12-month labels ending at the current month. */
 function getTrailingMonths(): string[] {
