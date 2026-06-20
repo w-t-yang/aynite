@@ -1,3 +1,4 @@
+import { SYSTEM_LAYOUTS } from '../../lib/constants/layout'
 import type { LayoutConfig, WorkspaceConfig } from '../../lib/constants/types'
 import {
   getPathSep,
@@ -46,7 +47,7 @@ function defaultWorkspaceConfig(name: string): WorkspaceConfig {
   const layout = defaultLayout(name)
   return {
     id: name,
-    layouts: [layout],
+    layouts: [...SYSTEM_LAYOUTS, layout],
     activeLayoutId: layout.id,
     activeAgentId: 'aynite',
     activeSessionId: null,
@@ -239,7 +240,18 @@ export async function getWorkspaceState(
 ): Promise<WorkspaceConfig> {
   const wsConfig = await getWorkspacesConfig()
   const targetWs = workspaceName || wsConfig.active
-  return await getWorkspaceData(targetWs)
+  const data = await getWorkspaceData(targetWs)
+
+  // Ensure system layouts are present in all workspaces (data migration for
+  // workspaces created before system layouts existed).
+  if (data.layouts) {
+    const hasSystemLayouts = data.layouts.some((l: any) => l.system === true)
+    if (!hasSystemLayouts) {
+      data.layouts = [...SYSTEM_LAYOUTS, ...data.layouts]
+    }
+  }
+
+  return data
 }
 
 export async function renameWorkspaceFolder(oldPath: string, newPath: string) {

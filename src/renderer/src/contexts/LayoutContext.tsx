@@ -12,6 +12,7 @@ import type { LayoutActions } from '../../../lib/types/ui'
 import { configMutations } from '../../bridge/config'
 import {
   executeLayoutOperation,
+  getAllLeafIds,
   updateLayoutInConfig,
   updateNodeInLayout,
 } from '../utils/tile'
@@ -55,8 +56,18 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         if (!prev) return null
         return { ...prev, activeLayoutId: id }
       })
+      // Set the first tile as active after switching layout
+      if (workspaceConfig) {
+        const newLayout = workspaceConfig.layouts.find((l) => l.id === id)
+        if (newLayout) {
+          const leafIds = getAllLeafIds(newLayout.layout)
+          if (leafIds.length > 0) {
+            setActiveTileId(leafIds[0])
+          }
+        }
+      }
     },
-    [setWorkspaceConfig],
+    [setWorkspaceConfig, workspaceConfig],
   )
 
   const addLayout = useCallback(
