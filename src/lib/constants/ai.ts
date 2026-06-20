@@ -564,6 +564,7 @@ export function createDefaultAgents(
     {
       id: AGENT_IDS.AYNITE,
       name: 'Aynite',
+      icon: 'sparkles',
       promptFiles: [
         ...globalPromptFiles,
         getPromptPath(AGENT_PROMPTS.AYNITE.filename),
@@ -575,6 +576,7 @@ export function createDefaultAgents(
     {
       id: AGENT_IDS.ASSISTANT,
       name: `${userName}'s Assistant`,
+      icon: 'bot',
       promptFiles: [...globalPromptFiles],
       introduction:
         'I am your personal assistant. I can help take notes, organize ideas, discuss topics, and investigate questions.',

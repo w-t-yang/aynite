@@ -150,6 +150,7 @@ export const aiHandlers: ConfigHandler = (() => ({
               await saveAgent({
                 id: agent.id,
                 name: agent.name || agent.id,
+                icon: agent.icon,
                 promptFiles: agent.promptFiles || [],
                 introduction: agent.introduction,
                 tools: agent.tools,

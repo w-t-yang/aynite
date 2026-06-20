@@ -2,6 +2,7 @@ import { FileCode, Folder, MessageSquare, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ai as aiBridge } from '../../bridge/ai'
 import { config, configMutations } from '../../bridge/config'
+import { events } from '../../bridge/events'
 import { file as bridgeFile } from '../../bridge/file'
 import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
@@ -112,6 +113,7 @@ export function WorkspaceView() {
     try {
       await configMutations.set('activeSessionId', id)
       setActiveSessionId(id)
+      events.execute('SET_SESSION', { sessionId: id })
     } catch (e) {
       console.error('[WorkspaceView] Failed to set active session:', e)
     }
@@ -144,6 +146,7 @@ export function WorkspaceView() {
       console.error('[WorkspaceView] Failed to create session:', e)
     }
     configMutations.set('activeSessionId', newId)
+    events.execute('SET_SESSION', { sessionId: newId })
   }
 
   // Sessions displayed (most recent first), limited by visibleCount

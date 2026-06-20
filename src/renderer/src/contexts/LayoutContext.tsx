@@ -32,6 +32,11 @@ interface LayoutContextType {
   handleResizeEnd: () => void
   /** Exposed so AppContext single router can call event-driven updates */
   actionsRef: React.MutableRefObject<LayoutActions | null>
+  /** Navigation history */
+  navHistory: string[]
+  navIndex: number
+  navigateBack: () => void
+  navigateForward: () => void
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined)
@@ -45,6 +50,54 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   const [activeTileId, setActiveTileId] = useState<string | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const activeTileIdRef = useRef(activeTileId)
+
+  // Navigation history
+  const [navHistory, setNavHistory] = useState<string[]>(() => {
+    // Initialize with the current layout if available
+    return workspaceConfig?.activeLayoutId
+      ? [workspaceConfig.activeLayoutId]
+      : []
+  })
+  const [navIndex, setNavIndex] = useState(0)
+
+  const pushNavEntry = useCallback(
+    (layoutId: string) => {
+      setNavHistory((prev) => {
+        // If we navigated back, truncate forward history
+        const truncated = prev.slice(0, navIndex + 1)
+        return [...truncated, layoutId]
+      })
+      setNavIndex((prev) => prev + 1)
+      // navIndex dep intentionally omitted — we always append to the current position
+    },
+    [navIndex],
+  )
+
+  const navigateBack = useCallback(() => {
+    if (navIndex <= 0) return
+    const newIndex = navIndex - 1
+    const layoutId = navHistory[newIndex]
+    if (layoutId) {
+      setNavIndex(newIndex)
+      setWorkspaceConfig((prev) => {
+        if (!prev) return null
+        return { ...prev, activeLayoutId: layoutId }
+      })
+    }
+  }, [navIndex, navHistory, setWorkspaceConfig])
+
+  const navigateForward = useCallback(() => {
+    if (navIndex >= navHistory.length - 1) return
+    const newIndex = navIndex + 1
+    const layoutId = navHistory[newIndex]
+    if (layoutId) {
+      setNavIndex(newIndex)
+      setWorkspaceConfig((prev) => {
+        if (!prev) return null
+        return { ...prev, activeLayoutId: layoutId }
+      })
+    }
+  }, [navIndex, navHistory, setWorkspaceConfig])
 
   useEffect(() => {
     activeTileIdRef.current = activeTileId
@@ -66,8 +119,9 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
           }
         }
       }
+      pushNavEntry(id)
     },
-    [setWorkspaceConfig, workspaceConfig],
+    [setWorkspaceConfig, workspaceConfig, pushNavEntry],
   )
 
   const addLayout = useCallback(
@@ -160,6 +214,20 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
                 activeLayoutId: 'sys-projects',
               }
             })
+            pushNavEntry('sys-projects')
+          }
+          return
+        case 'SET_SESSION':
+          if (
+            payload &&
+            typeof payload === 'object' &&
+            'sessionId' in (payload as any)
+          ) {
+            const { sessionId } = payload as { sessionId: string }
+            setWorkspaceConfig((prev) => {
+              if (!prev) return null
+              return { ...prev, activeSessionId: sessionId }
+            })
           }
           return
         case 'OPEN_AGENT_SETTINGS':
@@ -176,6 +244,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
                 activeLayoutId: 'sys-settings',
               }
             })
+            pushNavEntry('sys-settings')
             // Set hash directly — Settings is now rendered inline (no iframe),
             // so window.location.hash is the main window's hash and works.
             window.history.replaceState(null, '', `#tab=agent-${agentId}`)
@@ -211,7 +280,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         setWorkspaceConfig(updateLayoutInConfig(workspaceConfig, newLayoutNode))
       }
     },
-    [workspaceConfig, setWorkspaceConfig, switchLayout],
+    [workspaceConfig, setWorkspaceConfig, switchLayout, pushNavEntry],
   )
 
   const handleResizeStart = useCallback(() => {
@@ -262,6 +331,10 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         handleResizeStart,
         handleResizeEnd,
         actionsRef,
+        navHistory,
+        navIndex,
+        navigateBack,
+        navigateForward,
       }}
     >
       {children}

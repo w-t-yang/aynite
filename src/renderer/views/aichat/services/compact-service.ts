@@ -148,12 +148,15 @@ export async function compactContext(
         .catch(reject)
     })
 
+    // Strip markdown headings from the summary (AI sometimes includes ## or ###)
+    const cleanSummary = result.replace(/^#{1,6}\s+/gm, '').trim()
+
     // Step 5: Build the compacted message list
     const systemOnly = systemMsg ? [systemMsg] : []
     const summaryAssistantMsg: UIMessage = {
       id: genId(),
       role: 'assistant',
-      parts: [{ type: 'text', text: result, state: 'done' }],
+      parts: [{ type: 'text', text: cleanSummary, state: 'done' }],
     }
     const compactedMessages: UIMessage[] = [
       ...systemOnly,
@@ -169,7 +172,7 @@ export async function compactContext(
     session.lastSavedSnapshot = ''
 
     await aiMutations.saveSession(sessionId, compactedMessages, {
-      summary: result,
+      summary: cleanSummary,
     })
 
     // Notify listeners via updateState callback

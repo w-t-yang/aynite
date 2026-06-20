@@ -52,7 +52,6 @@ export function AIChat() {
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const prevLoadingRef = useRef(loading)
   const [showHistory, setShowHistory] = useState(false)
   const [sessions, setSessions] = useState<any[]>([])
 
@@ -75,36 +74,64 @@ export function AIChat() {
     prevPendingApprovalRef.current = pendingApproval
   }, [pendingApproval])
 
+  // Watch the inner content for size changes and scroll to bottom.
+  // Observes the first child div (the max-w-[900px] wrapper) for
+  // ResizeObserver changes, and the scroll container for MutationObserver
+  // changes. This catches async rendering (images, content blocks, session
+  // loads) more reliably than React state-based effects.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const inner = el.firstElementChild
+    if (!inner) return
+    const scrollToBottom = () => {
+      el.scrollTop = el.scrollHeight
+    }
+    const resizeObserver = new ResizeObserver(() => scrollToBottom())
+    resizeObserver.observe(inner)
+    const mutationObserver = new MutationObserver(() => scrollToBottom())
+    mutationObserver.observe(el, { childList: true, subtree: true })
+    return () => {
+      resizeObserver.disconnect()
+      mutationObserver.disconnect()
+    }
+  }, [])
+
+  // Immediately scroll to bottom whenever messages change (React state trigger).
   useEffect(() => {
     const el = scrollRef.current
     if (!el || messages.length === 0) return
-
-    // Detect whether this change is a streaming update (AI generating)
-    // vs a bulk message load (initial load, session switch, revert).
-    // During streaming: loading is true, or just transitioned true→false.
-    const streamingUpdate = loading || (prevLoadingRef.current && !loading)
-
-    if (streamingUpdate) {
-      // During streaming - only scroll if user is already near the bottom
-      const isNearBottom =
-        el.scrollHeight - el.scrollTop - el.clientHeight < 150
-      if (isNearBottom) {
-        requestAnimationFrame(() => {
-          el.scrollTop = el.scrollHeight
-        })
-        setTimeout(() => {
-          el.scrollTop = el.scrollHeight
-        }, 100)
-      }
-    } else {
-      // Bulk load (initial load, session switch) - always scroll to bottom
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight
-      })
+    const scrollToBottom = () => {
+      el.scrollTop = el.scrollHeight
     }
+    requestAnimationFrame(scrollToBottom)
+    const t1 = setTimeout(scrollToBottom, 200)
+    const t2 = setTimeout(scrollToBottom, 500)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [messages.length])
 
-    prevLoadingRef.current = loading
-  }, [messages, loading])
+  // Separate effect for streaming: only auto-scroll if user is near bottom,
+  // preventing fighting with manual scrolling during active streaming.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    if (!loading) return
+
+    const interval = setInterval(() => {
+      if (!scrollRef.current) return
+      const el2 = scrollRef.current
+      const isNearBottom =
+        el2.scrollHeight - el2.scrollTop - el2.clientHeight < 150
+      if (isNearBottom) {
+        el2.scrollTop = el2.scrollHeight
+      }
+    }, 200)
+
+    return () => clearInterval(interval)
+  }, [loading])
 
   // Global actions for micro-app bridge
   useEffect(() => {

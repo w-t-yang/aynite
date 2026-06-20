@@ -313,6 +313,10 @@ export const useApp = () => {
     updateTileView: layout.updateTileView,
     handleResizeStart: layout.handleResizeStart,
     handleResizeEnd: layout.handleResizeEnd,
+    navHistory: layout.navHistory,
+    navIndex: layout.navIndex,
+    navigateBack: layout.navigateBack,
+    navigateForward: layout.navigateForward,
 
     // Update
     updateStatus: update.updateStatus,

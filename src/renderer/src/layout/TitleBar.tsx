@@ -1,5 +1,7 @@
 import {
   Bug,
+  ChevronLeft,
+  ChevronRight,
   Languages,
   Minus,
   Moon,
@@ -42,6 +44,10 @@ const TitleBar: React.FC = () => {
     setShowTileControls,
     isMaximized,
     isFullscreen,
+    navIndex,
+    navHistory,
+    navigateBack,
+    navigateForward,
   } = useApp()
   const { t } = useI18n(locale)
   const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false)
@@ -118,7 +124,7 @@ const TitleBar: React.FC = () => {
           isMac && !isFullscreen ? 'pl-[78px] pr-2' : isMac ? 'pr-2' : 'px-2',
         )}
       >
-        {/* Left: Workspace switcher */}
+        {/* Left: Workspace switcher + nav arrows */}
         <div className="flex items-center no-drag">
           <SelectionMenu
             activeId={workspaceConfig.id}
@@ -178,6 +184,28 @@ const TitleBar: React.FC = () => {
               </>
             }
           />
+
+          {/* Navigation arrows */}
+          <div className="flex items-center gap-0.5 ml-1">
+            <button
+              type="button"
+              onClick={navigateBack}
+              disabled={navIndex <= 0}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              title="Back"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={navigateForward}
+              disabled={navIndex >= navHistory.length - 1}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              title="Forward"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Right: App options + Window controls */}
