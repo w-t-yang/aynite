@@ -155,7 +155,13 @@ function useEventRouter() {
           break
       }
 
-      // Step 2: Relay to all iframe views via postMessage
+      // Step 2: Relay to all iframe views AND the main window via postMessage
+      // The main window broadcast supports inline components (e.g. Settings
+      // tile) that use useAppEventSubscriber() to listen for events.
+      window.postMessage(
+        { type: `aynite:${event.type}`, data: event.data },
+        '*',
+      )
       for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
         'iframe',
       )) {

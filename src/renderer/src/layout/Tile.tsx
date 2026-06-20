@@ -6,7 +6,24 @@ import { Button } from '../../shared/basic/Button'
 import { SelectionMenu } from '../../shared/featured/SelectionMenu'
 import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
+import { Settings } from '../../views/settings/Settings'
+import { ViewProvider } from '../../views/ViewContext'
 import { useApp } from '../AppContext'
+
+/**
+ * Inline wrapper for the Settings view.
+ * Wraps in ViewProvider so sub-components (AppearanceTab, AboutTab) that
+ * rely on useView() / useViewEvent() continue to work. The ViewProvider
+ * handles theme/event setup similar to iframe mode.
+ */
+function InlineSettings() {
+  const { locale } = useApp()
+  return (
+    <ViewProvider>
+      <Settings locale={locale} />
+    </ViewProvider>
+  )
+}
 
 interface TileProps {
   node: LeafNode
@@ -136,7 +153,9 @@ const Tile: React.FC<TileProps> = ({ node }) => {
       </div>
 
       <div className="tile-content h-full p-0 relative overflow-hidden bg-background">
-        {name ? (
+        {name === 'settings' ? (
+          <InlineSettings />
+        ) : name ? (
           <>
             {/* Loading overlay — shown before iframe has loaded */}
             <div

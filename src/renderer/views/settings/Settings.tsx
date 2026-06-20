@@ -15,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { Locale } from '../../../lib/types/ui'
 import { config } from '../../bridge/config'
 import { systemMutations } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
@@ -24,7 +25,6 @@ import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
 import { useI18n } from '../../shared/i18n/useI18n'
 import type { Agent } from '../../shared/lib/types'
 import { cn } from '../../shared/lib/utils'
-import { useAppEventSubscriber, useView } from '../ViewContext'
 import { AboutTab } from './AboutTab'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { AITab } from './AITab'
@@ -65,10 +65,20 @@ function sortAgents(list: Agent[]): Agent[] {
   })
 }
 
-export function Settings() {
-  const [activeTab, setActiveTab] = useState('appearance')
-  const { locale } = useView()
+interface SettingsProps {
+  locale?: Locale
+}
+
+export function Settings({ locale: localeProp }: SettingsProps) {
+  const [activeTab, setActiveTab] = useState(() => {
+    // Read initial tab from hash
+    const hash = window.location.hash
+    if (hash.startsWith('#tab=')) return hash.replace('#tab=', '')
+    return 'appearance'
+  })
   const [agents, setAgents] = useState<Agent[]>([])
+
+  const locale: Locale = localeProp || 'en'
 
   // Load agents for sidebar
   useEffect(() => {
@@ -77,18 +87,31 @@ export function Settings() {
     })
   }, [])
 
-  // Reload on config change
-  const subscribeToAppEvents = useAppEventSubscriber()
+  // Reload on config change — listen for postMessage events (works both
+  // inline and in iframe, since AppContext relays events to both).
   useEffect(() => {
-    const unsub = subscribeToAppEvents((event: any) => {
-      if (event.type === 'config-changed') {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'aynite:config-changed') {
         config.get('agents').then((res: any) => {
           if (res?.list) setAgents(sortAgents(res.list))
         })
       }
-    })
-    return () => unsub()
-  }, [subscribeToAppEvents])
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
+  // Listen for tab changes via hash (works universally when rendered inline)
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash
+      if (hash.startsWith('#tab=')) {
+        setActiveTab(hash.replace('#tab=', ''))
+      }
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   // Load view-specific translations from config.json
   const customTranslations = useMemo(
@@ -100,20 +123,10 @@ export function Settings() {
   // Restore modal state
   const [showRestoreModal, setShowRestoreModal] = useState(false)
 
-  // Listen for settings-tab events from the parent window (via postMessage).
-  // This is how the parent tells us which agent tab to open.
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'aynite:settings-tab' && event.data?.data?.tab) {
-        setActiveTab(event.data.data.tab)
-      }
-    }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [])
-
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab)
+    // Update hash so that the current tab is reflected in the URL
+    window.history.replaceState(null, '', `#tab=${tab}`)
   }, [])
 
   // ─── Render Tab Content ─────────────────────────────────────────────

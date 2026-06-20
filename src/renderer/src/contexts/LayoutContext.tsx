@@ -176,22 +176,10 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
                 activeLayoutId: 'sys-settings',
               }
             })
-            // Broadcast a settings-tab event to all iframes (including the
-            // settings view) via postMessage — works even if the iframe
-            // hasn't finished loading yet.
-            setTimeout(() => {
-              for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
-                'iframe',
-              )) {
-                iframe.contentWindow?.postMessage(
-                  {
-                    type: 'aynite:settings-tab',
-                    data: { tab: `agent-${agentId}` },
-                  },
-                  '*',
-                )
-              }
-            }, 100)
+            // Set hash directly — Settings is now rendered inline (no iframe),
+            // so window.location.hash is the main window's hash and works.
+            window.history.replaceState(null, '', `#tab=agent-${agentId}`)
+            window.dispatchEvent(new HashChangeEvent('hashchange'))
           }
           return
         case 'SWITCH_LAYOUT':
