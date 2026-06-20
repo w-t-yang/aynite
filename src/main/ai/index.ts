@@ -10,7 +10,13 @@ import {
 import { trackEvent } from '../telemetry/index'
 import { showOpenDialog } from '../window'
 import { getWindowWorkspace } from '../window-state'
-import { aiChat, listSessions, loadSession, saveSession } from './chat'
+import {
+  aiChat,
+  listSessions,
+  loadSession,
+  loadSessionMetadata,
+  saveSession,
+} from './chat'
 import { getMergedSystemPrompt, restoreDefaultPrompts } from './prompts'
 import { getToolsMetadata } from './tools'
 
@@ -104,6 +110,15 @@ export function setupAiIpc() {
     return await listSessions(workspaceName)
   })
 
+  ipcMain.handle(
+    AiChannels.SESSION_META_LOAD,
+    async (event, sessionId: string) => {
+      const winId = getWinIdFromSender(event.sender)
+      const workspaceName = await getWindowWorkspace(winId)
+      return await loadSessionMetadata(workspaceName, sessionId)
+    },
+  )
+
   ipcMain.handle(AiChannels.PROMPT_RESTORE, async () => {
     return await restoreDefaultPrompts()
   })
@@ -151,6 +166,7 @@ export {
   initWorkspaceFolders,
   listSessions,
   loadSession,
+  loadSessionMetadata,
   saveSession,
 } from './chat'
 export { DISABLED_REASONING_OPTIONS, getAIModel } from './factory'

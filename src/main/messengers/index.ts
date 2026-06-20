@@ -407,15 +407,15 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
       )
 
       if (foundMetadata) {
-        const title = escapeMarkdown(
-          foundMetadata.title ||
-            `${foundMetadata.agentName || 'Unknown'} - ${foundMetadata.modelName || 'Unknown'}`,
+        const name = escapeMarkdown(
+          `${foundMetadata.agentName || 'Unknown'} - ${foundMetadata.modelName || 'Unknown'}`,
         )
-        if (foundMetadata.description) {
-          lines.push(`*Title:* ${title}`)
-          lines.push(
-            `*Description:* ${escapeMarkdown(foundMetadata.description)}`,
-          )
+        const summary = foundMetadata.summary
+          ? escapeMarkdown(foundMetadata.summary.slice(0, 200))
+          : null
+        if (summary) {
+          lines.push(`*Session:* ${name}`)
+          lines.push(`*Summary:* ${summary}`)
         } else {
           const sessionContent = await findSessionFile(
             botSessionId,
@@ -427,8 +427,8 @@ async function handleWorkspaceInfo(config: MessengerConfig, ctx: any) {
               ?.map((p: any) => p.text || '')
               .join('')
               ?.slice(0, 80) || '_(no messages)_'
-          lines.push(`*Title:* ${title}`)
-          lines.push(`*Description:* ${escapeMarkdown(preview)}`)
+          lines.push(`*Session:* ${name}`)
+          lines.push(`*Summary:* ${escapeMarkdown(preview)}`)
         }
       } else {
         lines.push(`*Session:* \`${botSessionId}\` _(no metadata)_`)
@@ -521,14 +521,10 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
       }
     }
 
-    // First line is the title, the rest is the summary body
-    const lines = summaryText.split('\n')
-    const firstLine = lines[0]?.trim() || ''
-    const title =
-      firstLine.replace(/^#+\s*/, '').slice(0, 100) || 'Conversation'
-    const body = lines.slice(1).join('\n').trim() || summaryText
+    // The full AI-generated summary text
+    const body = summaryText.trim()
 
-    // Write metadata preserving existing fields (agentName, modelName, createdAt)
+    // Write summary to metadata preserving existing fields (agentName, modelName, createdAt)
     const metaPath = getSessionMetadataPath(
       botSessionId,
       undefined,
@@ -539,13 +535,12 @@ async function handleSummarize(config: MessengerConfig, ctx: any) {
     )
     await writeJson(metaPath, {
       ...(existingMeta || {}),
-      title,
-      description: body,
+      summary: body,
       updatedAt: new Date().toISOString(),
     })
 
     await ctx.replyWithMarkdown(
-      `*Session summarized*\n\n*Title:* ${escapeMarkdown(title)}\n*Description:* ${escapeMarkdown(body.slice(0, 200))}...`,
+      `*Session summarized*\n\n*Summary:* ${escapeMarkdown(body.slice(0, 200))}...`,
     )
   } catch (err) {
     console.error(`[Messenger] Summarize error for "${config.name}":`, err)
@@ -586,11 +581,11 @@ async function handleListSessions(config: MessengerConfig, ctx: any) {
     const top = sessions.slice(0, 10)
     const lines: string[] = ['*Last 10 sessions:*', '']
     top.forEach((s: any, i: number) => {
-      const title = s.title || `Session ${s.id.slice(-6)}`
+      const name = s.title || `Session ${s.id.slice(-6)}`
       const desc = s.preview
         ? escapeMarkdown(s.preview.slice(0, 60))
-        : '_(no description)_'
-      lines.push(`*${i + 1}.* ${escapeMarkdown(title)}`)
+        : '_(no messages)_'
+      lines.push(`*${i + 1}.* ${escapeMarkdown(name)}`)
       lines.push(`   ${desc}`)
     })
 
@@ -639,9 +634,9 @@ async function handleSwitchSession(
       key: 'activeSessionIdForBot',
     })
 
-    const title = target.title || `Session ${target.id.slice(-6)}`
+    const name = target.title || `Session ${target.id.slice(-6)}`
     await ctx.replyWithMarkdown(
-      `*Switched bot to session*\n\n*Title:* ${escapeMarkdown(title)}\n*ID:* \`${target.id}\``,
+      `*Switched bot to session*\n\n*Session:* ${escapeMarkdown(name)}\n*ID:* \`${target.id}\``,
     )
   } catch (err) {
     console.error(`[Messenger] Switch session error for "${config.name}":`, err)

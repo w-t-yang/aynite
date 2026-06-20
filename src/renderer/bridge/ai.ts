@@ -52,6 +52,9 @@ export const ai = (() => ({
 
   getArtifactsStatus: (): Promise<any> =>
     (getAynite() as any).getArtifactsStatus(),
+
+  getSessionMetadata: (sessionId: string): Promise<any> =>
+    getAynite().getSessionMetadata(sessionId),
 }))()
 
 // ── Setters (return void — state changes come through events) ────────

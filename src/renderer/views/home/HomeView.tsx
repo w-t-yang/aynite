@@ -211,9 +211,7 @@ export function HomeView() {
   }
 
   const { agents, folders, skills, sessions: rawSessions } = data
-  const sessions = rawSessions.filter(
-    (s) => !s.title?.startsWith('Compact backup'),
-  )
+  const sessions = rawSessions
   const recentSessions = sessions.slice(0, 4)
 
   return (

@@ -73,17 +73,6 @@ export async function compactContext(
     const backupId = `${sessionId}-${timestamp}`
     await aiMutations.saveSession(backupId, allMessages, undefined)
 
-    // Compute title/description from the conversation
-    const firstUserMsg = allMessages.find((m) => m.role === 'user')
-    const firstUserText =
-      firstUserMsg?.parts
-        ?.filter((p) => p.type === 'text')
-        .map((p: any) => p.text)
-        .join('')
-        ?.slice(0, 80) || ''
-    const sessionDescription =
-      firstUserText + (firstUserText.length >= 80 ? '...' : '')
-
     // Step 3: Build summary messages
     const systemMsg = toSummarize.find((m) => m.role === 'system')
     const nonSystemToSummarize = toSummarize.filter((m) => m.role !== 'system')
@@ -180,8 +169,7 @@ export async function compactContext(
     session.lastSavedSnapshot = ''
 
     await aiMutations.saveSession(sessionId, compactedMessages, {
-      title: `Compact backup - ${new Date(timestamp).toLocaleString()}`,
-      description: sessionDescription,
+      summary: result,
     })
 
     // Notify listeners via updateState callback

@@ -117,6 +117,7 @@ interface AyniteWindow {
   ) => Promise<{ stdout: string; stderr: string }>
   respondToAiApproval: (id: string, approved: boolean) => void
   restorePrompts: () => Promise<boolean>
+  getSessionMetadata: (sessionId: string) => Promise<any>
   onAiChatDelta: (
     requestId: string,
     callback: (part: any) => void,

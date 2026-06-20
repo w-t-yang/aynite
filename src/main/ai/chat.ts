@@ -119,6 +119,31 @@ export async function loadSession(
   return null
 }
 
+/**
+ * Load session metadata from disk, searching across all date directories.
+ * Returns null if no metadata file is found.
+ */
+export async function loadSessionMetadata(
+  workspace: string,
+  id: string,
+): Promise<SessionMetadata | null> {
+  const dir = getWorkspaceSessionsDir(workspace)
+  const dates = await readdir(dir).catch(() => [])
+  for (const d of dates) {
+    if (!d.isDirectory()) continue
+    const dateDir = d.name
+    const metaPath = getSessionMetadataPath(id, dateDir, workspace)
+    const content = await readJson<SessionMetadata>(metaPath).catch(() => null)
+    if (content) {
+      // Verify the session still exists under this date
+      const sessionPath = getSessionPath(id, dateDir, workspace)
+      const sessionExists = await stat(sessionPath).catch(() => null)
+      if (sessionExists) return content
+    }
+  }
+  return null
+}
+
 export async function deleteSession(workspace: string, id: string) {
   const dir = getWorkspaceSessionsDir(workspace)
   const dates = await readdir(dir).catch(() => [])
@@ -173,40 +198,26 @@ export async function listSessions(workspace: string) {
           // Estimate token count from serialized JSON byte length
           const contextSize = Math.ceil(JSON.stringify(content).length * 0.4)
 
-          // Use metadata title/description when available (e.g. compact backup summary)
-          if (metadata?.title && metadata?.description) {
-            all.push({
-              id,
-              date,
-              title: metadata.title,
-              preview: metadata.description,
-              lastModified:
-                stats?.mtime.toISOString() || new Date().toISOString(),
-              messageCount: content.length,
-              contextSize,
-            })
-          } else {
-            const firstUser = content.find((m: any) => m.role === 'user')
-            const preview =
-              (firstUser as any)?.parts
-                ?.map((p: any) => p.text || '')
-                .join('') || 'No content'
+          const firstUser = content.find((m: any) => m.role === 'user')
+          const preview =
+            metadata?.summary ||
+            (firstUser as any)?.parts?.map((p: any) => p.text || '').join('') ||
+            'No content'
 
-            const title = metadata
-              ? `${metadata.agentName} - ${metadata.modelName}`
-              : `Session ${id.slice(-6)}`
+          const title = metadata
+            ? `${metadata.agentName} - ${metadata.modelName}`
+            : `Session ${id.slice(-6)}`
 
-            all.push({
-              id,
-              date,
-              title,
-              preview,
-              lastModified:
-                stats?.mtime.toISOString() || new Date().toISOString(),
-              messageCount: content.length,
-              contextSize,
-            })
-          }
+          all.push({
+            id,
+            date,
+            title,
+            preview,
+            lastModified:
+              stats?.mtime.toISOString() || new Date().toISOString(),
+            messageCount: content.length,
+            contextSize,
+          })
         }
       }
     }

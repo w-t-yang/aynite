@@ -46,6 +46,7 @@ export const AiChannels = {
   SESSION_SAVE: 'aynite:ai-session-save',
   SESSION_LOAD: 'aynite:ai-session-load',
   SESSION_LIST: 'aynite:ai-session-list',
+  SESSION_META_LOAD: 'aynite:ai-session-meta-load',
   PROMPT_RESTORE: 'aynite:ai-prompt-restore',
   PROMPT_PICK_FILE: 'aynite:ai-prompt-pick-file',
   ARTIFACTS_STATUS: 'aynite:ai-artifacts-status',

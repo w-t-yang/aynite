@@ -86,6 +86,8 @@ const aynite = {
   respondToAiApproval: (id: string, approved: boolean) =>
     ipcRenderer.send(AiEventChannels.APPROVAL_RESPONSE, { id, approved }),
   getArtifactsStatus: () => ipcRenderer.invoke(AiChannels.ARTIFACTS_STATUS),
+  getSessionMetadata: (sessionId: string) =>
+    ipcRenderer.invoke(AiChannels.SESSION_META_LOAD, sessionId),
 
   // ── Git operations ────────────────────────────────────────────────────────
   getGitStatus: (path: string) => ipcRenderer.invoke(GitChannels.STATUS, path),

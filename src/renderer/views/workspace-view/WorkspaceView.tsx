@@ -47,10 +47,7 @@ export function WorkspaceView() {
         config.get('activeSessionId'),
       ])
       setFolders(folderList || [])
-      const filtered = (sessionList || []).filter(
-        (s: SessionEntry) => !s.title?.startsWith('Compact backup'),
-      )
-      setAllSessions(filtered)
+      setAllSessions(sessionList || [])
       setActiveSessionId(activeId)
       setVisibleCount(INITIAL_SESSION_LIMIT)
     } catch (e) {
