@@ -1,4 +1,4 @@
-import { FileText, Plus } from 'lucide-react'
+import { FileText, Plus, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { ADD_ITEM_BUTTON } from '../../../lib/constants/renderer/styles'
 import type { SettingsState } from '../../../lib/types/settings'
@@ -7,11 +7,113 @@ import { config, configMutations } from '../../bridge/config'
 import { system } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import { Collapsible } from '../../shared/basic/Collapsible'
-import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
-import { AgentCard, PromptFileRow } from '../../shared/featured/AgentCard'
+import { Switch } from '../../shared/basic/Switch'
+import { AgentCard } from '../../shared/featured/AgentCard'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import type { Agent } from '../../shared/lib/types'
+
+const ALL_TOOL_IDS = [
+  'read_file',
+  'write_file',
+  'edit_file',
+  'list_files',
+  'run_command',
+  'grep_search',
+  'read_url',
+  'glob_search',
+  'create_task',
+  'update_task',
+  'get_tasks',
+  'propose_plan',
+  'initialize_memory',
+  'update_memory',
+  'read_memory',
+  'get_file_tree',
+  'get_workspace_info',
+]
+
+interface ToolDef {
+  id: string
+  name: string
+  description: string
+}
+
+const TOOL_DEFS: ToolDef[] = [
+  {
+    id: 'read_file',
+    name: 'Read File',
+    description: 'Read the contents of a file',
+  },
+  {
+    id: 'write_file',
+    name: 'Write File',
+    description: 'Write content to a file',
+  },
+  {
+    id: 'edit_file',
+    name: 'Edit File',
+    description: 'Perform surgical edits on a file',
+  },
+  {
+    id: 'list_files',
+    name: 'List Files',
+    description: 'List files in a directory',
+  },
+  {
+    id: 'run_command',
+    name: 'Run Command',
+    description: 'Execute shell commands',
+  },
+  {
+    id: 'grep_search',
+    name: 'Grep Search',
+    description: 'Search for regex patterns',
+  },
+  { id: 'read_url', name: 'Read URL', description: 'Fetch content from a URL' },
+  {
+    id: 'glob_search',
+    name: 'Glob Search',
+    description: 'Search files by glob pattern',
+  },
+  {
+    id: 'create_task',
+    name: 'Create Task',
+    description: 'Initialize a task list',
+  },
+  { id: 'update_task', name: 'Update Task', description: 'Update task status' },
+  { id: 'get_tasks', name: 'Get Tasks', description: 'Read current task list' },
+  {
+    id: 'propose_plan',
+    name: 'Propose Plan',
+    description: 'Create an implementation plan',
+  },
+  {
+    id: 'initialize_memory',
+    name: 'Initialize Memory',
+    description: 'Scan project for memory',
+  },
+  {
+    id: 'update_memory',
+    name: 'Update Memory',
+    description: 'Update project memory',
+  },
+  {
+    id: 'read_memory',
+    name: 'Read Memory',
+    description: 'Read project memory',
+  },
+  {
+    id: 'get_file_tree',
+    name: 'Get File Tree',
+    description: 'Get file tree of a directory',
+  },
+  {
+    id: 'get_workspace_info',
+    name: 'Workspace Info',
+    description: 'Get workspace information',
+  },
+]
 
 interface AgentsTabProps {
   onRestore?: () => void
@@ -20,12 +122,11 @@ interface AgentsTabProps {
 
 export function AgentsTab({ onRestore, t }: AgentsTabProps) {
   const [agents, setAgents] = useState<SettingsState['agents'] | null>(null)
-  const [prompts, setPrompts] = useState<SettingsState['prompts']>({
+  const [_prompts, setPrompts] = useState<SettingsState['prompts']>({
     files: [],
   })
   const [mergedPrompt, setMergedPrompt] = useState('')
   const [loading, setLoading] = useState(true)
-  const [fileToDelete, setFileToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -58,21 +159,12 @@ export function AgentsTab({ onRestore, t }: AgentsTabProps) {
   }, [])
 
   const persist = useCallback(
-    async (
-      updatedAgents: SettingsState['agents'],
-      updatedPrompts?: SettingsState['prompts'],
-    ) => {
+    async (updatedAgents: SettingsState['agents']) => {
       setAgents(updatedAgents)
-      if (updatedPrompts !== undefined) setPrompts(updatedPrompts)
       await configMutations.set('agents', {
         activeId: updatedAgents.activeId,
         list: updatedAgents.list,
       } as any)
-      if (updatedPrompts !== undefined) {
-        await configMutations.set('prompts', {
-          files: updatedPrompts.files,
-        } as any)
-      }
     },
     [],
   )
@@ -102,18 +194,31 @@ export function AgentsTab({ onRestore, t }: AgentsTabProps) {
   const handleAddAgent = useCallback(() => {
     if (!agents) return
     const id = `agent-${Date.now()}`
-    const newAgent: Agent = { id, name: 'New Agent', promptFiles: [] }
+    const newAgent: Agent = {
+      id,
+      name: 'New Agent',
+      promptFiles: [],
+      tools: Object.fromEntries(ALL_TOOL_IDS.map((tid) => [tid, true])),
+    }
     const list = [...(agents.list || []), newAgent]
     persist({ ...agents, list, activeId: id })
   }, [agents, persist])
 
-  const confirmDeleteGlobalFile = useCallback(() => {
-    if (fileToDelete) {
-      const newFiles = (prompts.files || []).filter((f) => f !== fileToDelete)
-      persist(agents || { activeId: '', list: [] }, { files: newFiles })
-      setFileToDelete(null)
-    }
-  }, [fileToDelete, prompts, agents, persist])
+  const handleToggleTool = useCallback(
+    (agentId: string, toolId: string) => {
+      if (!agents) return
+      const list = (agents.list || []).map((a: Agent) => {
+        if (a.id !== agentId) return a
+        const currentTools = a.tools || {}
+        return {
+          ...a,
+          tools: { ...currentTools, [toolId]: !currentTools[toolId] },
+        }
+      })
+      persist({ ...agents, list })
+    },
+    [agents, persist],
+  )
 
   const handlePickPromptFile = useCallback(async () => {
     const file = await system.selectFile({
@@ -142,45 +247,6 @@ export function AgentsTab({ onRestore, t }: AgentsTabProps) {
       description={t('agents.description')}
       onRestore={onRestore}
     >
-      {/* Global System Prompts */}
-      <Section
-        title={t('agents.globalPrompts.title')}
-        description={t('agents.globalPrompts.description')}
-        action={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              const res = await handlePickPromptFile()
-              if (res?.data) {
-                const newFiles = [...(prompts.files || []), res.data]
-                persist(agents, {
-                  files: Array.from(new Set(newFiles)) as string[],
-                })
-              }
-            }}
-            className={ADD_ITEM_BUTTON}
-          >
-            <Plus size={14} /> {t('agents.globalPrompts.addPrompt')}
-          </Button>
-        }
-      >
-        <div className="space-y-2">
-          {(prompts.files || []).map((filePath) => (
-            <PromptFileRow
-              key={filePath}
-              filePath={filePath}
-              onDelete={() => setFileToDelete(filePath)}
-            />
-          ))}
-          {(!prompts.files || prompts.files.length === 0) && (
-            <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
-              {t('agents.globalPrompts.noPrompts')}
-            </p>
-          )}
-        </div>
-      </Section>
-
       {/* Agents List */}
       <Section
         title={t('agents.profiles.title')}
@@ -218,6 +284,45 @@ export function AgentsTab({ onRestore, t }: AgentsTabProps) {
                 }
               }}
             >
+              {/* Per-agent tools section */}
+              <div className="pt-4">
+                <Collapsible
+                  title="Tools"
+                  icon={Wrench}
+                  colorClass="border-primary/20"
+                  defaultExpanded={false}
+                >
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {TOOL_DEFS.map((tool) => {
+                      const agentTools = agent.tools || {}
+                      const isEnabled = agentTools[tool.id] !== false
+                      return (
+                        <div
+                          key={tool.id}
+                          className="flex items-center justify-between p-2 rounded-lg border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group"
+                        >
+                          <div className="flex-1 min-w-0 pr-2">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider">
+                              {tool.name}
+                            </h4>
+                            <p className="text-[9px] text-muted-foreground/70 truncate">
+                              {tool.description}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={() =>
+                              handleToggleTool(agent.id, tool.id)
+                            }
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Collapsible>
+              </div>
+
+              {/* Prompt Preview */}
               <div className="pt-2">
                 <Collapsible
                   title={t('agents.promptPreview')}
@@ -240,32 +345,6 @@ export function AgentsTab({ onRestore, t }: AgentsTabProps) {
           ))}
         </div>
       </Section>
-
-      {/* Global File Delete Confirmation */}
-      <Modal
-        isOpen={!!fileToDelete}
-        onClose={() => setFileToDelete(null)}
-        title={t('agents.globalPrompts.removeTitle')}
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setFileToDelete(null)}>
-              {t('agents.globalPrompts.removeCancel')}
-            </Button>
-            <Button variant="destructive" onClick={confirmDeleteGlobalFile}>
-              {t('agents.globalPrompts.removeConfirm')}
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-muted-foreground">
-          {t('agents.globalPrompts.removeBody')}{' '}
-          <span className="font-bold text-foreground">
-            "{fileToDelete?.split(/[/\\]/).pop()}"
-          </span>
-          ?
-        </p>
-      </Modal>
     </SettingsPage>
   )
 }

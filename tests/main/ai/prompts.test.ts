@@ -18,6 +18,8 @@ vi.mock('../../../src/lib/path', () => ({
   ensureDir: (...args: unknown[]) => mockEnsureDir(...args),
   getAynitePromptPath: vi.fn((name: string) => `/mock/.aynite/prompts/${name}`),
   getAynitePromptsDir: vi.fn(() => '/mock/.aynite/prompts'),
+  getAgentsDir: vi.fn(() => '/mock/.aynite/agents'),
+  getAgentPath: vi.fn((id: string) => `/mock/.aynite/agents/${id}.json`),
   getMainConfigPath: vi.fn(() => '/mock/.aynite/config/config.json'),
 }))
 

@@ -243,6 +243,9 @@ export async function sendMessage(
     (a: any) => a.id === agentsConfig?.activeId,
   )
 
+  // Use per-agent tools if available, otherwise fall back to global tools config
+  const enabledTools = activeAgent?.tools || toolsConfig?.active || {}
+
   const agentConfig: AgentLoopConfig = {
     id: activeProvider?.id || 'chat',
     name: activeProvider?.name || 'Chat',
@@ -251,7 +254,7 @@ export async function sendMessage(
     baseUrl: activeProvider?.baseUrl || '',
     model: activeProvider?.model || '',
     compatibility: activeProvider?.compatibility,
-    enabledTools: toolsConfig?.active || {},
+    enabledTools,
     agentPromptFiles: activeAgent?.promptFiles || [],
   }
 

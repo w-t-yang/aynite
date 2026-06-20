@@ -230,6 +230,7 @@ describe('AYNITE_SUBDIRS', () => {
     expect(AYNITE_SUBDIRS).toHaveProperty('VIEWS')
     expect(AYNITE_SUBDIRS).toHaveProperty('WORKSPACES')
     expect(AYNITE_SUBDIRS).toHaveProperty('SESSIONS')
+    expect(AYNITE_SUBDIRS).toHaveProperty('AGENTS')
   })
 })
 

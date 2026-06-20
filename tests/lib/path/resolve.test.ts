@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest'
 import {
   expandHome,
   getAbsolutePath,
+  getAgentPath,
+  getAgentsDir,
   getAIConfigPath,
   getAppearanceConfigPath,
   getAyniteConfigDir,
@@ -378,6 +380,25 @@ describe('path resolution', () => {
     it('getRssSummaryPath returns summary path', () => {
       const p = getRssSummaryPath('item-1')
       expect(p).toContain('item-1.json')
+    })
+  })
+
+  describe('agent paths', () => {
+    it('getAgentsDir returns agents directory', () => {
+      const dir = getAgentsDir()
+      expect(dir).toContain('agents')
+    })
+
+    it('getAgentPath returns agent file path', () => {
+      const p = getAgentPath('aynite')
+      expect(p).toContain('agents')
+      expect(p).toContain('aynite.json')
+    })
+
+    it('getAgentPath returns correct path for assistant agent', () => {
+      const p = getAgentPath('assistant')
+      expect(p).toContain('agents')
+      expect(p).toContain('assistant.json')
     })
   })
 

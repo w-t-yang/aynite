@@ -71,11 +71,9 @@ describe('AgentsTab', () => {
     )
   })
 
-  it('shows empty prompts state', async () => {
+  it('shows agent tools section', async () => {
     const { container } = render(<AgentsTab t={t} />)
-    await vi.waitFor(() =>
-      expect(container.textContent).toContain('No prompts configured'),
-    )
+    await vi.waitFor(() => expect(container.textContent).toContain('Tools'))
   })
 
   it('shows Restore Defaults when onRestore provided', async () => {

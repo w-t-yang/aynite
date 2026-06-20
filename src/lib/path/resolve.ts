@@ -287,6 +287,14 @@ export function getIconPath(baseDir: string) {
   return path.resolve(baseDir, '../../build/icon.png')
 }
 
+export function getAgentsDir() {
+  return getAynitePath(AYNITE_SUBDIRS.AGENTS)
+}
+
+export function getAgentPath(agentId: string) {
+  return getAynitePath(AYNITE_SUBDIRS.AGENTS, `${agentId}.json`)
+}
+
 export function getSkillsDir() {
   return getAynitePath('skills')
 }

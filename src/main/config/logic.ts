@@ -1,6 +1,8 @@
+import { userInfo } from 'node:os'
 import { app } from 'electron'
 import {
-  createDefaultAgentConfig,
+  AGENT_IDS,
+  createDefaultAgents,
   DEFAULT_AI_CONFIG,
   DEFAULT_PROVIDER_URLS,
 } from '../../lib/constants/ai'
@@ -24,6 +26,8 @@ import {
   copy,
   ensureDir,
   exists,
+  getAgentPath,
+  getAgentsDir,
   getAIConfigPath,
   getAppearanceConfigPath,
   getAyniteDir,
@@ -61,6 +65,79 @@ import { getIgnorePatterns } from './ignore'
 
 const NEW_DEFAULT_WORKSPACE = 'Aynite'
 
+/**
+ * Migrate agents from the old config.json format (agents.list) to individual
+ * files in ~/.aynite/agents/<id>.json.
+ * Also ensures the two default agents (Aynite Dev + Assistant) exist.
+ */
+async function migrateAgentsToFiles() {
+  const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
+  const agentsDir = getAgentsDir()
+  await ensureDir(agentsDir)
+
+  // Check if we already have agent files (migration already done)
+  const existingFiles = await readdir(agentsDir).catch(() => [])
+  const existingAgentIds = new Set(
+    existingFiles
+      .filter((e) => e.isFile() && e.name.endsWith('.json'))
+      .map((e) => e.name.replace(/\.json$/, '')),
+  )
+
+  const globalPromptFiles = mainConfig.prompts?.files || []
+  const userName = userInfo().username
+
+  // Create default agents if they don't exist
+  const defaultAgents = createDefaultAgents(
+    (filename: string) => getAynitePromptPath(filename),
+    userName,
+    globalPromptFiles,
+  )
+
+  for (const agent of defaultAgents) {
+    if (!existingAgentIds.has(agent.id)) {
+      await writeJson(getAgentPath(agent.id), agent)
+      existingAgentIds.add(agent.id)
+    }
+  }
+
+  // Migrate old agents from config.json to individual files
+  if (mainConfig.agents?.list && Array.isArray(mainConfig.agents.list)) {
+    const oldList = mainConfig.agents.list
+    for (const oldAgent of oldList) {
+      if (!existingAgentIds.has(oldAgent.id)) {
+        const migratedAgent = {
+          id: oldAgent.id,
+          name: oldAgent.name,
+          promptFiles: oldAgent.promptFiles || [],
+          introduction: undefined,
+          tools: undefined,
+        }
+        // Keep the global prompt filter from config
+        const filteredPromptFiles = (migratedAgent.promptFiles || []).filter(
+          (f: string) => {
+            const filename = f.split('/').pop()
+            return filename ? !filename.startsWith('agent-') : true
+          },
+        )
+        migratedAgent.promptFiles = [
+          ...globalPromptFiles,
+          ...filteredPromptFiles,
+        ]
+        await writeJson(getAgentPath(oldAgent.id), migratedAgent)
+      }
+    }
+
+    // Clean up old agents field from config.json
+    const defaultAgentId =
+      mainConfig.defaultAgentId ||
+      mainConfig.agents?.activeId ||
+      AGENT_IDS.AYNITE
+    delete mainConfig.agents
+    mainConfig.defaultAgentId = defaultAgentId
+    await writeJson(getMainConfigPath(), mainConfig)
+  }
+}
+
 export async function initAppFolders() {
   const currentVersion = app.getVersion()
   const baseDir = getAyniteDir()
@@ -83,7 +160,6 @@ export async function initAppFolders() {
     skills: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS)] },
     commands: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.COMMANDS)] },
     prompts: { files: getDefaultGlobalPrompts() },
-    agents: createDefaultAgentConfig(getAynitePromptPath),
     telemetry: { enabled: true },
   }
   const ignoreDefault = [
@@ -113,6 +189,9 @@ export async function initAppFolders() {
 
   // ── Run all pending data migrations ──
   await runMigrations()
+
+  // ── Migrate agents from config.json to individual files ──
+  await migrateAgentsToFiles()
 
   // ── Fresh install: create "Aynite" workspace if it doesn't exist ──
   const wsConfig = await readJson<WorkspacesConfig>(getWorkspacesConfigPath(), {
@@ -224,11 +303,6 @@ export async function loadConfig() {
       const filename = f.split('/').pop()
       return filename ? !filename.startsWith('agent-') : true
     })
-  }
-
-  // Repair agents if lists are missing
-  if (!mainConfig.agents?.list || !Array.isArray(mainConfig.agents.list)) {
-    mainConfig.agents = createDefaultAgentConfig(getAynitePromptPath)
   }
 
   const appearancePath = getAppearanceConfigPath()

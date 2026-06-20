@@ -1,10 +1,9 @@
+import { ArrowRight, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { GRID_2_COL } from '../../../lib/constants/renderer/styles'
-import { config, configMutations } from '../../bridge/config'
+import { config } from '../../bridge/config'
 import { Section } from '../../shared/basic/Section'
-import { Switch } from '../../shared/basic/Switch'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
-import type { SettingsState } from '../../shared/lib/types'
 
 interface ToolsTabProps {
   onRestore?: () => void
@@ -12,7 +11,6 @@ interface ToolsTabProps {
 }
 
 export function ToolsTab({ onRestore, t }: ToolsTabProps) {
-  const [aiTools, setAiTools] = useState<SettingsState['aiTools']>({})
   const [availableTools, setAvailableTools] = useState<
     { id: string; name: string; description: string }[]
   >([])
@@ -21,21 +19,11 @@ export function ToolsTab({ onRestore, t }: ToolsTabProps) {
   useEffect(() => {
     config.get('tools').then((resTools: any) => {
       if (resTools) {
-        setAiTools(resTools.active || {})
         setAvailableTools(resTools.list || [])
       }
       setLoading(false)
     })
   }, [])
-
-  const handleToggleTool = async (id: string) => {
-    const newTools = { ...aiTools, [id]: !aiTools[id] }
-    setAiTools(newTools)
-    await configMutations.set('tools', {
-      active: newTools,
-      list: availableTools,
-    } as any)
-  }
 
   if (loading) {
     return (
@@ -56,28 +44,55 @@ export function ToolsTab({ onRestore, t }: ToolsTabProps) {
       description={t('tools.description')}
       onRestore={onRestore}
     >
+      {/* Notice */}
+      <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
+        <div className="flex items-start gap-3">
+          <Wrench size={16} className="text-primary shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-semibold text-foreground mb-1">
+              Tools are now per-agent
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Tool configuration has moved to the <strong>Agents</strong>{' '}
+              settings tab. Each agent has its own set of toggleable tools.
+              Click the Agents tab in the sidebar to configure tools for each
+              agent individually.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+                onClick={() => {
+                  window.location.hash = '#tab=agents'
+                  window.location.reload()
+                }}
+              >
+                Go to Agents <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tool Reference — read-only list of available tools */}
       <Section
         title={t('tools.capabilities')}
-        description={t('tools.capabilitiesDesc')}
+        description="This is a reference list of all available system tools."
       >
         <div className={GRID_2_COL}>
           {availableTools.map((tool) => (
             <div
               key={tool.id}
-              className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group"
+              className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5"
             >
               <div className="space-y-1 flex-1 min-w-0 pr-6">
                 <h4 className="text-sm font-bold uppercase tracking-wider">
                   {tool.name}
                 </h4>
-                <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed line-clamp-2">
+                <p className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-2">
                   {tool.description}
                 </p>
               </div>
-              <Switch
-                checked={!!aiTools?.[tool.id]}
-                onCheckedChange={() => handleToggleTool(tool.id)}
-              />
             </div>
           ))}
           {availableTools.length === 0 && (

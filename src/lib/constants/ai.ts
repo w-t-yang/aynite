@@ -519,6 +519,71 @@ Visual, detail-oriented, and inspired by light.`,
   },
 }
 
+/** Default agent IDs */
+export const AGENT_IDS = {
+  AYNITE: 'aynite',
+  ASSISTANT: 'assistant',
+} as const
+
+/**
+ * Create the default two-agent set.
+ * Returns an array of Agent objects ready to be saved to ~/.aynite/agents/.
+ *
+ * @param getPromptPath - Function to resolve prompt filenames to full paths
+ * @param userName - The system user's name (e.g. from os.userInfo())
+ * @param globalPromptFiles - List of global prompt file paths to include
+ */
+export function createDefaultAgents(
+  getPromptPath: (filename: string) => string,
+  userName: string,
+  globalPromptFiles: string[],
+) {
+  const devTools: Record<string, boolean> = {}
+  const assistantTools: Record<string, boolean> = {}
+  // Enable all tools for Dev
+  for (const key of Object.keys(TOOL_METADATA)) {
+    devTools[key] = true
+  }
+  // Assistant gets read-only + communication tools, no file mutation or system ops
+  const assistantAllowedTools = new Set([
+    'read_file',
+    'list_files',
+    'grep_search',
+    'glob_search',
+    'read_url',
+    'get_file_tree',
+    'get_workspace_info',
+    'read_memory',
+    'get_tasks',
+  ])
+  for (const key of Object.keys(TOOL_METADATA)) {
+    assistantTools[key] = assistantAllowedTools.has(key)
+  }
+
+  return [
+    {
+      id: AGENT_IDS.AYNITE,
+      name: 'Aynite',
+      promptFiles: [
+        ...globalPromptFiles,
+        getPromptPath(AGENT_PROMPTS.AYNITE.filename),
+      ],
+      introduction:
+        'I am an experienced software engineer and author of product Aynite. I can help you implementing new ideas, solve computer-related issues, and perform various tasks on your system.',
+      tools: devTools,
+    },
+    {
+      id: AGENT_IDS.ASSISTANT,
+      name: `${userName}'s Assistant`,
+      promptFiles: [...globalPromptFiles],
+      introduction:
+        'I am your personal assistant. I can help take notes, organize ideas, discuss topics, and investigate questions.',
+      tools: assistantTools,
+    },
+  ]
+}
+
+/** @deprecated Use createDefaultAgents() instead. Legacy agent definitions. */
 export const DEFAULT_AGENTS = [
   { id: 'aynite', name: 'Agent Aynite', promptKey: 'AYNITE' },
   { id: 'void', name: 'Void Coder', promptKey: 'VOID' },
@@ -528,6 +593,7 @@ export const DEFAULT_AGENTS = [
   { id: 'prism', name: 'Prism Photographer', promptKey: 'PRISM' },
 ]
 
+/** @deprecated Use createDefaultAgents() instead. */
 export function createDefaultAgentConfig(
   getPromptPath: (filename: string) => string,
 ) {

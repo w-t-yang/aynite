@@ -56,6 +56,9 @@ vi.mock('../../../src/lib/path', () => ({
   readdir: (...args: unknown[]) => mockReaddir(...args),
   readText: (...args: unknown[]) => mockReadText(...args),
   writeJson: (...args: unknown[]) => mockWriteJson(...args),
+  ensureDir: vi.fn(() => Promise.resolve()),
+  getAgentsDir: vi.fn(() => '/mock/.aynite/agents'),
+  getAgentPath: vi.fn((id: string) => `/mock/.aynite/agents/${id}.json`),
   getPlaybookPath: (...args: unknown[]) => mockGetPlaybookPath(...args),
   getViewConfigPath: (...args: unknown[]) => mockGetViewConfigPath(...args),
   getMainConfigPath: (...args: unknown[]) => mockGetMainConfigPath(...args),
@@ -574,18 +577,32 @@ describe('aiHandlers', () => {
       mockGetWorkspaceState.mockResolvedValue({
         activeAgentId: 'custom-agent',
       })
+      // Mock readdir to return an agent file
+      mockReaddir.mockResolvedValue([
+        { name: 'aynite.json', isFile: () => true },
+      ])
+      mockReadJson.mockResolvedValue({
+        id: 'aynite',
+        name: 'Aynite Developer',
+        promptFiles: [],
+      })
       const result = await aiHandlers.get?.('agents', undefined)
       expect(result).toMatchObject({
         activeId: 'custom-agent',
+        list: [
+          expect.objectContaining({ id: 'aynite', name: 'Aynite Developer' }),
+        ],
       })
     })
 
     it('returns agents config with fallback to main config', async () => {
       mockGetWorkspaceState.mockResolvedValue({})
+      // Mock no agent files (empty dir)
+      mockReaddir.mockResolvedValue([])
       const result = await aiHandlers.get?.('agents', undefined)
       expect(result).toMatchObject({
         activeId: 'aynite',
-        list: [{ id: 'aynite', name: 'Aynite' }],
+        list: [],
       })
     })
 

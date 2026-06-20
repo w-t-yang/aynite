@@ -1,11 +1,13 @@
 import {
   AGENT_PROMPTS,
-  createDefaultAgentConfig,
+  createDefaultAgents,
   GLOBAL_PROMPTS,
 } from '../../lib/constants/ai'
 import {
   ensureDir,
   exists,
+  getAgentPath,
+  getAgentsDir,
   getAynitePromptPath,
   getAynitePromptsDir,
   getMainConfigPath,
@@ -83,16 +85,32 @@ export async function restoreDefaultPrompts() {
   }
 
   const promptFiles = getDefaultGlobalPrompts()
-  const agents = createDefaultAgentConfig(getAynitePromptPath)
+  const userName = 'User'
+  const defaultAgents = createDefaultAgents(
+    getAynitePromptPath,
+    userName,
+    promptFiles,
+  )
+
+  // Save agent files individually
+  const agentsDir = getAgentsDir()
+  await ensureDir(agentsDir)
+  for (const agent of defaultAgents) {
+    await writeJson(getAgentPath(agent.id), agent)
+  }
 
   // Save to config.json
   const mainConfigPath = getMainConfigPath()
   const config = (await readJson(mainConfigPath)) || {}
   config.prompts = { files: promptFiles }
-  config.agents = agents
+  config.defaultAgentId = defaultAgents[0].id
+  delete config.agents
   await writeJson(mainConfigPath, config)
 
-  return { prompts: { files: promptFiles }, agents }
+  return {
+    prompts: { files: promptFiles },
+    agents: { activeId: config.defaultAgentId, list: defaultAgents },
+  }
 }
 
 /**

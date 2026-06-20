@@ -26,6 +26,12 @@ export interface Agent {
   name: string
   description?: string
   promptFiles: string[]
+  /** An introduction or greeting for this agent (e.g. shown in UI) */
+  introduction?: string
+  /** Per-agent tool enable/disable overrides.
+   *  Keys are tool IDs, values are whether the tool is enabled.
+   *  Missing keys inherit the default (enabled). */
+  tools?: Record<string, boolean>
 }
 
 export interface ToolContext {

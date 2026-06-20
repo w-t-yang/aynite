@@ -48,6 +48,8 @@ vi.mock('../../../src/lib/path', () => ({
   getIgnoreConfigPath: vi.fn(() => '/mock/.aynite/config/ignore'),
   getMainConfigPath: vi.fn(() => '/mock/.aynite/config/config.json'),
   getAppearanceConfigPath: vi.fn(() => '/mock/.aynite/config/appearance.json'),
+  getAgentsDir: vi.fn(() => '/mock/.aynite/agents'),
+  getAgentPath: vi.fn((id: string) => `/mock/.aynite/agents/${id}.json`),
   getPlaybookPath: vi.fn(() => '/mock/.aynite/aynite-playbook'),
   getWelcomeMdPath: vi.fn(() => '/mock/.aynite/aynite-playbook/Welcome.md'),
   expandHome: vi.fn((p: string) => p),
@@ -61,6 +63,7 @@ vi.mock('../../../src/lib/path', () => ({
     VIEWS: 'views',
     WORKSPACES: 'workspaces',
     SESSIONS: 'sessions',
+    AGENTS: 'agents',
   },
 }))
 

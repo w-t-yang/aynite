@@ -78,6 +78,11 @@ export interface MainConfig {
   activeTheme?: string
   language?: string
   aiTools?: Record<string, boolean>
+  /** The default agent ID used when workspace state does not specify one.
+   *  Individual agent configs are stored in ~/.aynite/agents/<id>.json */
+  defaultAgentId?: string
+  /** @deprecated Agents are now stored as individual files in ~/.aynite/agents/.
+   *  This field may still hold legacy data during migration. */
   agents?: {
     activeId: string
     list: Array<{
