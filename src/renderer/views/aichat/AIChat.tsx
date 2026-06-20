@@ -1,4 +1,4 @@
-import { Bot, Plus } from 'lucide-react'
+import { Bot, Plus, Shrink } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { configMutations } from '../../bridge/config'
 import { events } from '../../bridge/events'
@@ -9,6 +9,8 @@ import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
 import { useI18n } from '../../shared/i18n/useI18n'
 import { useView } from '../ViewContext'
 import { Header, InputArea, List, SessionsModal } from './components'
+import { ApprovalModal } from './components/ApprovalModal'
+import { StreamingIndicator } from './components/StreamingIndicator'
 import viewConfig from './config.json'
 import { useAIChat } from './hooks/useAIChat'
 import * as ChatService from './services/ChatService'
@@ -55,66 +57,17 @@ export function AIChat() {
   const [showHistory, setShowHistory] = useState(false)
   const [sessions, setSessions] = useState<any[]>([])
 
-  // Separate effect for approval: always scroll to bottom when approval box appears
-  const prevPendingApprovalRef = useRef(pendingApproval)
+  // ── Scroll to bottom on every render where messages exist ──
+  // Runs after every render (no deps) so it always catches the point
+  // when both the scroll container is mounted and messages are loaded.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
+    if (messages.length === 0) return
+    el.scrollTop = el.scrollHeight
+  })
 
-    // When approval appears, always scroll to bottom
-    if (pendingApproval && !prevPendingApprovalRef.current) {
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight
-      })
-      setTimeout(() => {
-        el.scrollTop = el.scrollHeight
-      }, 100)
-    }
-
-    prevPendingApprovalRef.current = pendingApproval
-  }, [pendingApproval])
-
-  // Watch the inner content for size changes and scroll to bottom.
-  // Observes the first child div (the max-w-[900px] wrapper) for
-  // ResizeObserver changes, and the scroll container for MutationObserver
-  // changes. This catches async rendering (images, content blocks, session
-  // loads) more reliably than React state-based effects.
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const inner = el.firstElementChild
-    if (!inner) return
-    const scrollToBottom = () => {
-      el.scrollTop = el.scrollHeight
-    }
-    const resizeObserver = new ResizeObserver(() => scrollToBottom())
-    resizeObserver.observe(inner)
-    const mutationObserver = new MutationObserver(() => scrollToBottom())
-    mutationObserver.observe(el, { childList: true, subtree: true })
-    return () => {
-      resizeObserver.disconnect()
-      mutationObserver.disconnect()
-    }
-  }, [])
-
-  // Immediately scroll to bottom whenever messages change (React state trigger).
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el || messages.length === 0) return
-    const scrollToBottom = () => {
-      el.scrollTop = el.scrollHeight
-    }
-    requestAnimationFrame(scrollToBottom)
-    const t1 = setTimeout(scrollToBottom, 200)
-    const t2 = setTimeout(scrollToBottom, 500)
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-    }
-  }, [messages.length])
-
-  // Separate effect for streaming: only auto-scroll if user is near bottom,
-  // preventing fighting with manual scrolling during active streaming.
+  // ── Streaming: only auto-scroll if user is near bottom ──
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -197,24 +150,55 @@ export function AIChat() {
 
       {hasProviders ? (
         <>
+          {/* Scrollable message list — only messages inside */}
           <List
             ref={scrollRef}
             messages={messages}
             loading={loading}
-            compacting={compacting}
-            currentStep={currentStep}
-            pendingApproval={pendingApproval}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onAutoApprove={() => {
-              if (activeSessionId) {
-                localStorage.setItem(`autoApprove:${activeSessionId}`, 'true')
-              }
-            }}
             onOpenFile={(path) => fileMutations.open(path)}
             onCopy={copyToClipboard}
             onRevert={revertToMessage}
           />
+
+          {/* Fixed indicator row — never scrolls with messages */}
+          <div className="shrink-0">
+            {pendingApproval && (
+              <ApprovalModal
+                command={pendingApproval.command}
+                cwd={pendingApproval.cwd}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onAutoApprove={() => {
+                  if (activeSessionId) {
+                    localStorage.setItem(
+                      `autoApprove:${activeSessionId}`,
+                      'true',
+                    )
+                  }
+                }}
+              />
+            )}
+
+            {loading && !compacting && (
+              <StreamingIndicator step={currentStep} />
+            )}
+
+            {compacting && (
+              <div className="mb-3 px-6 py-2">
+                <div className="flex items-center gap-2.5 text-primary/60">
+                  <Shrink size={14} className="animate-pulse" />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">
+                    Compacting context...
+                  </span>
+                  <div className="flex gap-1 ml-1 opacity-40">
+                    <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-1 h-1 rounded-full bg-current animate-bounce" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <InputArea
             ref={inputRef}
