@@ -69,8 +69,8 @@ export function SessionCard({
           : 'border-border bg-accent/5 hover:border-border/60',
       )}
     >
-      <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed mb-2">
-        {session.preview}
+      <p className="text-[11px] text-muted-foreground leading-relaxed mb-2 h-[3em] overflow-hidden">
+        {session.preview === 'No content' ? 'New Session' : session.preview}
       </p>
       <div className="flex items-center justify-between text-[10px] text-muted-foreground/50">
         <span className="truncate min-w-0">
