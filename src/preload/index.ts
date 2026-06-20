@@ -117,6 +117,15 @@ const aynite = {
     newStart: number
     newLines: string[]
   }) => ipcRenderer.invoke(GitChannels.DISCARD_HUNK, data),
+  stageFile: (filePath: string) =>
+    ipcRenderer.invoke(GitChannels.STAGE_FILE, filePath),
+  unstageFile: (filePath: string) =>
+    ipcRenderer.invoke(GitChannels.UNSTAGE_FILE, filePath),
+  stageAll: (root: string) => ipcRenderer.invoke(GitChannels.STAGE_ALL, root),
+  unstageAll: (root: string) =>
+    ipcRenderer.invoke(GitChannels.UNSTAGE_ALL, root),
+  getSplitStatus: (root: string) =>
+    ipcRenderer.invoke(GitChannels.SPLIT_STATUS, root),
 
   // ── System ──────────────────────────────────────────────────────────────
   openExternal: (url: string) =>

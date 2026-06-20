@@ -14,7 +14,7 @@ import { getWorkspaceFolders } from '../workspace'
 import { generateCommitMessage } from './commit-gen'
 import { createGitWatcher } from './git-watcher'
 import type { HunkData } from './porcelain'
-import { buildHunkPatch } from './porcelain'
+import { buildHunkPatch, parseSplitPorcelain } from './porcelain'
 import { createRootFinder } from './root-finder'
 import { createStatusManager } from './status-manager'
 
@@ -178,6 +178,66 @@ class GitService {
       }
     })
 
+    ipcMain.handle(GitChannels.SPLIT_STATUS, async (_event, root: string) => {
+      try {
+        const { stdout } = await execAsync('git status --porcelain', {
+          cwd: root,
+        })
+        return parseSplitPorcelain(stdout, root)
+      } catch {
+        return { staged: {}, unstaged: {} }
+      }
+    })
+
+    ipcMain.handle(GitChannels.STAGE_FILE, async (_event, filePath: string) => {
+      try {
+        const root = await this.rootFinder.findGitRoot(filePath)
+        if (!root) return { error: 'Not in a git repository' }
+        const relative = toUnixPath(getRelativePath(root, filePath))
+        await execAsync(`git add "${relative}"`, { cwd: root })
+        await this.statusManager.refreshStatus(root, true)
+        return { error: null }
+      } catch (e: unknown) {
+        return { error: e instanceof Error ? e.message : String(e) }
+      }
+    })
+
+    ipcMain.handle(
+      GitChannels.UNSTAGE_FILE,
+      async (_event, filePath: string) => {
+        try {
+          const root = await this.rootFinder.findGitRoot(filePath)
+          if (!root) return { error: 'Not in a git repository' }
+          const relative = toUnixPath(getRelativePath(root, filePath))
+          await execAsync(`git restore --staged "${relative}"`, { cwd: root })
+          await this.statusManager.refreshStatus(root, true)
+          return { error: null }
+        } catch (e: unknown) {
+          return { error: e instanceof Error ? e.message : String(e) }
+        }
+      },
+    )
+
+    ipcMain.handle(GitChannels.STAGE_ALL, async (_event, root: string) => {
+      try {
+        await execAsync('git add -A', { cwd: root })
+        await this.statusManager.refreshStatus(root, true)
+        return { error: null }
+      } catch (e: unknown) {
+        return { error: e instanceof Error ? e.message : String(e) }
+      }
+    })
+
+    ipcMain.handle(GitChannels.UNSTAGE_ALL, async (_event, root: string) => {
+      try {
+        await execAsync('git restore --staged .', { cwd: root })
+        await this.statusManager.refreshStatus(root, true)
+        return { error: null }
+      } catch (e: unknown) {
+        return { error: e instanceof Error ? e.message : String(e) }
+      }
+    })
+
     ipcMain.handle(
       GitChannels.COMMIT_GENERATE,
       async (_event, root: string) => {
@@ -192,7 +252,7 @@ class GitService {
           if (!message.trim()) {
             return { error: 'Commit message cannot be empty' }
           }
-          await execAsync('git add -A', { cwd: root })
+          // Only commit staged changes — no `git add -A` here.
           // Use spawn with stdin to pass the commit message, avoiding all
           // shell escaping issues on Windows (PowerShell) and Unix.
           const commitProc = spawn('git', ['commit', '-F', '-'], {

@@ -1,4 +1,10 @@
-import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
+import {
+  ArrowDownToLine,
+  ArrowUpToLine,
+  GitBranch,
+  GitCommitHorizontal,
+  RefreshCw,
+} from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { DiffStats } from '../../../lib/types/files'
 import { git, gitMutations } from '../../bridge/git'
@@ -10,8 +16,8 @@ import { cn, normalizePath } from '../lib/utils'
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface GitChangedFile {
-  name: string
   path: string
+  relativePath: string
   status: string
 }
 
@@ -57,6 +63,8 @@ interface FileItemProps {
   stat: DiffStats | undefined
   statusConfig: { letter: string; className: string }
   onSelect: (path: string) => void
+  /** Action button to show on the right (stage/unstage) */
+  actionButton?: React.ReactNode
 }
 
 const FileItem = React.memo(function FileItem({
@@ -64,37 +72,54 @@ const FileItem = React.memo(function FileItem({
   stat,
   statusConfig,
   onSelect,
+  actionButton,
 }: FileItemProps) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => onSelect(file.path)}
-      className="w-full justify-start text-left hover:bg-accent/10"
-      title={file.path}
-    >
-      <span
-        className={`text-[10px] font-bold font-mono shrink-0 w-5 ${statusConfig.className}`}
+    <div className="flex items-center gap-1 group px-1 rounded-lg hover:bg-accent/5 transition-colors">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onSelect(file.path)}
+        className="flex-1 justify-start text-left hover:bg-transparent h-auto min-h-0 py-1.5 px-2"
+        title={file.path}
       >
-        {statusConfig.letter}
-      </span>
-      <span className="truncate flex-1">{file.name}</span>
-      {stat && (
-        <span className="text-[10px] font-mono leading-none whitespace-nowrap shrink-0">
-          {stat.additions > 0 && (
-            <span className="text-green-500">+{stat.additions}</span>
-          )}
-          {stat.additions > 0 && stat.deletions > 0 && (
-            <span className="text-muted-foreground/40"> </span>
-          )}
-          {stat.deletions > 0 && (
-            <span className="text-red-500">-{stat.deletions}</span>
-          )}
+        <span
+          className={`text-[10px] font-bold font-mono shrink-0 w-5 ${statusConfig.className}`}
+        >
+          {statusConfig.letter}
         </span>
+        <span className="truncate flex-1 text-xs font-mono text-foreground/80">
+          {file.relativePath}
+        </span>
+        {stat && (
+          <span className="text-[10px] font-mono leading-none whitespace-nowrap shrink-0 ml-2">
+            {stat.additions > 0 && (
+              <span className="text-green-500">+{stat.additions}</span>
+            )}
+            {stat.additions > 0 && stat.deletions > 0 && (
+              <span className="text-muted-foreground/40"> </span>
+            )}
+            {stat.deletions > 0 && (
+              <span className="text-red-500">-{stat.deletions}</span>
+            )}
+          </span>
+        )}
+      </Button>
+      {actionButton && (
+        <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {actionButton}
+        </div>
       )}
-    </Button>
+    </div>
   )
 })
+
+// ─── Split Status State ─────────────────────────────────────────────────────
+
+interface FolderSplitStatus {
+  staged: GitChangedFile[]
+  unstaged: GitChangedFile[]
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -105,18 +130,14 @@ export function GitDiffView({
   showFolderHeaders = true,
 }: GitDiffViewProps) {
   const [gitRoots, setGitRoots] = useState<Set<string>>(new Set())
-  const [gitChangedFiles, setGitChangedFiles] = useState<
-    Record<string, GitChangedFile[]>
+  const [splitStatus, setSplitStatus] = useState<
+    Record<string, FolderSplitStatus>
   >({})
   const [diffStats, setDiffStats] = useState<Record<string, DiffStats>>({})
   const [commitState, setCommitState] = useState<CommitState | null>(null)
+  const [noStagedModal, setNoStagedModal] = useState<string | null>(null)
 
   // ─── Stable folders key ───────────────────────────────────────────────────
-  // `folders` is often created as `arr.map(...)` in the parent, which creates
-  // a NEW array reference on every parent render. Using `folders` directly as
-  // an effect dep causes an infinite loop: effect fires → loadGitStatus →
-  // setState → re-render → effect fires again (because folders is a new ref).
-  // We stabilize by comparing CONTENT, not reference.
   const prevFoldersRef = useRef<string[]>([])
   if (
     prevFoldersRef.current.length !== folders.length ||
@@ -124,8 +145,6 @@ export function GitDiffView({
   ) {
     prevFoldersRef.current = folders
   }
-  // Stable key that only changes when folder paths actually change
-  const _foldersKey = prevFoldersRef.current.join('\x00')
 
   // Guard against concurrent loadGitStatus calls
   const loadingRef = useRef(false)
@@ -134,11 +153,11 @@ export function GitDiffView({
 
   const loadGitStatus = useCallback(
     async (folderPaths: string[], forceRefresh = false) => {
-      if (loadingRef.current) return // skip if already loading
+      if (loadingRef.current) return
       loadingRef.current = true
 
       const newRoots = new Set<string>()
-      const newChangedFiles: Record<string, GitChangedFile[]> = {}
+      const newSplitStatus: Record<string, FolderSplitStatus> = {}
       const newDiffStats: Record<string, DiffStats> = {}
 
       try {
@@ -148,47 +167,43 @@ export function GitDiffView({
             if (isRoot) {
               newRoots.add(folderPath)
 
-              const statusMap = forceRefresh
-                ? await git.refreshStatus(folderPath)
-                : await git.getStatus(folderPath)
-              if (statusMap) {
-                const allPaths: string[] = []
+              // Get split status (staged vs unstaged)
+              const split = forceRefresh
+                ? await git
+                    .refreshStatus(folderPath)
+                    .then(() => git.getSplitStatus(folderPath))
+                : await git.getSplitStatus(folderPath)
+
+              if (split) {
                 const normalizedFolder = normalizePath(folderPath)
-                for (const [absPath, status] of Object.entries(statusMap)) {
-                  const normalizedPath = normalizePath(absPath)
-                  if (
-                    normalizedPath.startsWith(`${normalizedFolder}/`) &&
-                    normalizedPath !== normalizedFolder &&
-                    status !== 'none' &&
-                    status !== 'ignored'
-                  ) {
-                    allPaths.push(normalizedPath)
+
+                const toChangedFiles = (
+                  map: Record<string, string>,
+                ): GitChangedFile[] => {
+                  const result: GitChangedFile[] = []
+                  for (const [absPath, status] of Object.entries(map)) {
+                    const normalizedPath = normalizePath(absPath)
+                    if (
+                      normalizedPath.startsWith(`${normalizedFolder}/`) &&
+                      normalizedPath !== normalizedFolder
+                    ) {
+                      result.push({
+                        path: normalizedPath,
+                        relativePath: normalizedPath.slice(
+                          normalizedFolder.length + 1,
+                        ),
+                        status,
+                      })
+                    }
                   }
-                }
-                const leafPaths = allPaths.filter(
-                  (p) =>
-                    !allPaths.some(
-                      (other) => other !== p && other.startsWith(`${p}/`),
-                    ),
-                )
-                // Build a lookup map with normalized keys so we can
-                // reliably index into it regardless of the original
-                // path separator style from the main process.
-                const normalizedStatusMap: Record<string, string> = {}
-                for (const [k, v] of Object.entries(statusMap)) {
-                  normalizedStatusMap[normalizePath(k)] = v
-                }
-                const changed: GitChangedFile[] = leafPaths.map(
-                  (normalizedPath) => ({
-                    name: normalizedPath.split('/').pop() || normalizedPath,
-                    path: normalizedPath,
-                    status: normalizedStatusMap[normalizedPath],
-                  }),
-                )
-                if (changed.length > 0) {
-                  newChangedFiles[folderPath] = changed.sort((a, b) =>
-                    a.name.localeCompare(b.name),
+                  return result.sort((a, b) =>
+                    a.relativePath.localeCompare(b.relativePath),
                   )
+                }
+
+                newSplitStatus[folderPath] = {
+                  staged: toChangedFiles(split.staged || {}),
+                  unstaged: toChangedFiles(split.unstaged || {}),
                 }
               }
 
@@ -203,7 +218,7 @@ export function GitDiffView({
         }
 
         setGitRoots(newRoots)
-        setGitChangedFiles(newChangedFiles)
+        setSplitStatus(newSplitStatus)
         setDiffStats(newDiffStats)
       } finally {
         loadingRef.current = false
@@ -212,7 +227,7 @@ export function GitDiffView({
     [],
   )
 
-  // Load git status when folders change (by content, not reference)
+  // Load git status when folders change
   useEffect(() => {
     if (folders.length > 0) {
       loadGitStatus(folders)
@@ -220,12 +235,10 @@ export function GitDiffView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadGitStatus, folders])
 
-  // Listen for git status changes — stable callback to avoid listener thrashing
-  // Uses _foldersKey (stable string) instead of `folders` (array ref) to avoid
-  // constant re-registration of the event listener on every parent render.
+  // Listen for git status changes — reload all tracked folders on any event
   const handleGitStatusChanged = useCallback(
-    (data: { root: string }) => {
-      if (data?.root && prevFoldersRef.current.includes(data.root)) {
+    (_data: { root: string }) => {
+      if (prevFoldersRef.current.length > 0) {
         loadGitStatus(prevFoldersRef.current)
       }
     },
@@ -233,42 +246,86 @@ export function GitDiffView({
   )
   useViewEvent('git-status-changed', handleGitStatusChanged)
 
+  // ─── Stage / Unstage Handlers ─────────────────────────────────────────────
+
+  const handleStageFile = useCallback(
+    async (filePath: string) => {
+      await gitMutations.stageFile(filePath)
+      // Manually reload after mutation — the git-status-changed event should
+      // also trigger a reload via handleGitStatusChanged, but we do it here
+      // to guarantee the UI updates even if the event relay is delayed.
+      loadGitStatus(prevFoldersRef.current)
+    },
+    [loadGitStatus],
+  )
+
+  const handleUnstageFile = useCallback(
+    async (filePath: string) => {
+      await gitMutations.unstageFile(filePath)
+      loadGitStatus(prevFoldersRef.current)
+    },
+    [loadGitStatus],
+  )
+
+  const handleStageAll = useCallback(
+    async (root: string) => {
+      await gitMutations.stageAll(root)
+      loadGitStatus(prevFoldersRef.current)
+    },
+    [loadGitStatus],
+  )
+
   // ─── Commit Flow ──────────────────────────────────────────────────────────
 
   const commitStateRef = useRef<CommitState | null>(null)
 
-  const handleCommit = useCallback(async (root: string) => {
-    const newState = {
-      generating: true,
-      committing: false,
-      message: '',
-      root,
-      error: null,
-    }
-    commitStateRef.current = newState
-    setCommitState(newState)
-    try {
-      const result = await gitMutations.commitGenerate(root)
-      if (result.error) {
-        const errState = { ...newState, generating: false, error: result.error }
-        commitStateRef.current = errState
-        setCommitState(errState)
+  const handleCommit = useCallback(
+    async (root: string) => {
+      const status = splitStatus[root]
+      const stagedCount = status?.staged?.length ?? 0
+
+      if (stagedCount === 0) {
+        setNoStagedModal(root)
         return
       }
-      const msgState = {
-        ...newState,
-        generating: false,
-        message: result.message || '',
+
+      const newState = {
+        generating: true,
+        committing: false,
+        message: '',
+        root,
+        error: null,
       }
-      commitStateRef.current = msgState
-      setCommitState(msgState)
-    } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : String(e)
-      const errState = { ...newState, generating: false, error: errMsg }
-      commitStateRef.current = errState
-      setCommitState(errState)
-    }
-  }, [])
+      commitStateRef.current = newState
+      setCommitState(newState)
+      try {
+        const result = await gitMutations.commitGenerate(root)
+        if (result.error) {
+          const errState = {
+            ...newState,
+            generating: false,
+            error: result.error,
+          }
+          commitStateRef.current = errState
+          setCommitState(errState)
+          return
+        }
+        const msgState = {
+          ...newState,
+          generating: false,
+          message: result.message || '',
+        }
+        commitStateRef.current = msgState
+        setCommitState(msgState)
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e)
+        const errState = { ...newState, generating: false, error: errMsg }
+        commitStateRef.current = errState
+        setCommitState(errState)
+      }
+    },
+    [splitStatus],
+  )
 
   const handleCommitConfirm = useCallback(async () => {
     const cs = commitStateRef.current
@@ -290,7 +347,6 @@ export function GitDiffView({
       }
       commitStateRef.current = null
       setCommitState(null)
-      // GIT_STATUS_CHANGED event will trigger refresh via handleGitStatusChanged
     } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : String(e)
       const errState = { ...committingState, committing: false, error: errMsg }
@@ -306,28 +362,31 @@ export function GitDiffView({
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  // Check if any folder has changes
-  const hasAnyChanges = Object.keys(gitChangedFiles).length > 0
+  const hasAnyChanges = Object.values(splitStatus).some(
+    (s) => s.staged.length > 0 || s.unstaged.length > 0,
+  )
 
   if (!hasAnyChanges && gitRoots.size === 0) {
-    // No folders are git repos — show nothing or minimal state
     return null
   }
 
   return (
     <div className={cn('space-y-1', className)}>
-      {folders.map((path) => {
-        const isGit = gitRoots.has(path)
-        const changedFiles = gitChangedFiles[path]
-        const folderName = path.split(/[/\\]/).pop() || path
+      {folders.map((folderPath) => {
+        const isGit = gitRoots.has(folderPath)
+        const status = splitStatus[folderPath]
+        const stagedFiles = status?.staged ?? []
+        const unstagedFiles = status?.unstaged ?? []
+        const folderName = folderPath.split(/[/\\]/).pop() || folderPath
+        const hasChanges = stagedFiles.length > 0 || unstagedFiles.length > 0
 
         return (
-          <div key={path} className="space-y-0.5">
+          <div key={folderPath} className="space-y-0.5">
+            {/* ── Folder Header ── */}
             {showFolderHeaders && (
-              /* Folder header */
               <div
                 className="flex items-center gap-3 px-3 py-2 rounded-lg bg-accent/5 border border-transparent text-sm text-foreground/80 overflow-hidden"
-                title={path}
+                title={folderPath}
               >
                 {isGit ? (
                   <GitBranch size={14} className="text-primary/50 shrink-0" />
@@ -338,21 +397,26 @@ export function GitDiffView({
                   />
                 )}
                 <span className="truncate flex-1">{folderName}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => loadGitStatus(folders, true)}
-                  className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-accent/30"
-                  title="Refresh git status"
-                >
-                  <RefreshCw size={12} />
-                </Button>
+
+                {/* Refresh button — only for git repos */}
+                {isGit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => loadGitStatus(folders, true)}
+                    className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-accent/30"
+                    title="Refresh git status"
+                  >
+                    <RefreshCw size={12} />
+                  </Button>
+                )}
+
                 {!isGit && (
                   <span className="text-[10px] text-muted-foreground/40 italic shrink-0">
                     not a git repository
                   </span>
                 )}
-                {isGit && (!changedFiles || changedFiles.length === 0) && (
+                {isGit && !hasChanges && (
                   <span className="text-[10px] text-muted-foreground/40 italic shrink-0">
                     No changes
                   </span>
@@ -360,59 +424,171 @@ export function GitDiffView({
               </div>
             )}
 
-            {/* "Not a git repo" indicator when showFolderHeaders is false */}
+            {/* "Not a git repo" when showFolderHeaders is false */}
             {!showFolderHeaders && !isGit && (
               <div className="px-3 py-2 text-[10px] text-muted-foreground/40 italic">
                 {folderName} — not a git repository
               </div>
             )}
 
-            {/* "No changes" indicator when showFolderHeaders is false */}
-            {!showFolderHeaders &&
-              isGit &&
-              (!changedFiles || changedFiles.length === 0) && (
-                <div className="px-3 py-2 text-[10px] text-muted-foreground/40 italic">
-                  {folderName} — No changes
-                </div>
-              )}
+            {/* "No changes" when showFolderHeaders is false */}
+            {!showFolderHeaders && isGit && !hasChanges && (
+              <div className="px-3 py-2 text-[10px] text-muted-foreground/40 italic">
+                {folderName} — No changes
+              </div>
+            )}
 
-            {/* Changed files list */}
-            {isGit && changedFiles && changedFiles.length > 0 && (
+            {/* ── Changed Files ── */}
+            {isGit && hasChanges && (
               <div
                 className={
                   showFolderHeaders
-                    ? 'ml-5 pl-4 border-l border-border/30 space-y-0.5'
-                    : 'space-y-0.5'
+                    ? 'ml-5 pl-4 border-l border-border/30 space-y-1'
+                    : 'space-y-1'
                 }
               >
-                {changedFiles.map((file) => (
-                  <FileItem
-                    key={file.path}
-                    file={file}
-                    stat={diffStats[file.path]}
-                    statusConfig={getStatusConfig(file.status)}
-                    onSelect={(path) => onSelectFile?.(path)}
-                  />
-                ))}
-
-                {/* Commit button */}
-                <div className="pt-1 pl-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCommit(path)}
-                    disabled={commitState?.generating}
-                    className="text-[10px] px-2.5 py-1 rounded-md font-medium transition-all bg-primary/15 text-primary hover:bg-primary/25 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
-                  >
-                    {commitState?.generating && commitState?.root === path ? (
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />
-                        Generating...
-                      </span>
-                    ) : (
-                      `Commit (${folderName})`
+                {/* ── Staged Section ── */}
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-green-500/70">
+                      Staged
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/40 font-mono">
+                      {stagedFiles.length}
+                    </span>
+                    {/* Unstage all button — only when there are staged files */}
+                    {stagedFiles.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          gitMutations
+                            .unstageAll(folderPath)
+                            .then(() => loadGitStatus(prevFoldersRef.current))
+                        }}
+                        className="ml-auto p-0.5 h-5 w-5 rounded text-muted-foreground/40 hover:text-amber-400 hover:bg-accent/20"
+                        title="Unstage all — remove all files from the staging area"
+                      >
+                        <ArrowDownToLine size={10} />
+                      </Button>
                     )}
-                  </Button>
+                  </div>
+                  {stagedFiles.length > 0 ? (
+                    <>
+                      {stagedFiles.map((file) => (
+                        <FileItem
+                          key={file.path}
+                          file={file}
+                          stat={diffStats[file.path]}
+                          statusConfig={getStatusConfig(file.status)}
+                          onSelect={(path) => onSelectFile?.(path)}
+                          actionButton={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleUnstageFile(file.path)
+                              }}
+                              className="p-0.5 h-5 w-5 rounded text-muted-foreground/40 hover:text-amber-400 hover:bg-accent/20"
+                              title="Unstage — remove from staging area"
+                            >
+                              <ArrowDownToLine size={10} />
+                            </Button>
+                          }
+                        />
+                      ))}
+                      {/* Commit button — only when there are staged files */}
+                      <div className="pt-1 pl-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCommit(folderPath)}
+                          disabled={commitState?.generating}
+                          className="text-[10px] px-2.5 py-1 rounded-md font-medium transition-all bg-primary/15 text-primary hover:bg-primary/25 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                        >
+                          {commitState?.generating &&
+                          commitState?.root === folderPath ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />
+                              Generating...
+                            </span>
+                          ) : (
+                            `Commit (${folderName})`
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    /* No staged files — disabled commit with hint */
+                    <div className="pl-2 pt-1 space-y-1">
+                      <p className="text-[10px] text-muted-foreground/50 italic leading-relaxed">
+                        No staged changes. Stage any file above to enable
+                        committing.
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        className="text-[10px] px-2.5 py-1 rounded-md font-medium bg-muted text-muted-foreground cursor-not-allowed"
+                      >
+                        Commit ({folderName})
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Unstaged Section ── */}
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-amber-500/70">
+                      Unstaged
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/40 font-mono">
+                      {unstagedFiles.length}
+                    </span>
+                    {/* Stage all button — only when there are unstaged files */}
+                    {unstagedFiles.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleStageAll(folderPath)}
+                        className="ml-auto p-0.5 h-5 w-5 rounded text-muted-foreground/40 hover:text-green-400 hover:bg-accent/20"
+                        title="Stage all — add all unstaged changes to the staging area"
+                      >
+                        <ArrowUpToLine size={10} />
+                      </Button>
+                    )}
+                  </div>
+                  {unstagedFiles.length > 0 ? (
+                    unstagedFiles.map((file) => (
+                      <FileItem
+                        key={file.path}
+                        file={file}
+                        stat={diffStats[file.path]}
+                        statusConfig={getStatusConfig(file.status)}
+                        onSelect={(path) => onSelectFile?.(path)}
+                        actionButton={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStageFile(file.path)
+                            }}
+                            className="p-0.5 h-5 w-5 rounded text-muted-foreground/40 hover:text-green-400 hover:bg-accent/20"
+                            title="Stage — add this file to the staging area"
+                          >
+                            <ArrowUpToLine size={10} />
+                          </Button>
+                        }
+                      />
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-[10px] text-muted-foreground/40 italic">
+                      All changes are staged
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -420,7 +596,32 @@ export function GitDiffView({
         )
       })}
 
-      {/* Commit Modal */}
+      {/* ── Nothing to Commit Modal ── */}
+      <Modal
+        isOpen={!!noStagedModal}
+        onClose={() => setNoStagedModal(null)}
+        title="Nothing to Commit"
+        size="sm"
+        footer={
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setNoStagedModal(null)}
+            className="text-xs px-3 py-1.5 rounded-lg"
+          >
+            OK
+          </Button>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-foreground/80 leading-relaxed">
+            There are no staged changes to commit. Stage your changes first
+            using the stage buttons, then try again.
+          </p>
+        </div>
+      </Modal>
+
+      {/* ── Commit Modal ── */}
       {commitState && (
         <Modal
           isOpen

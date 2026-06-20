@@ -45,6 +45,13 @@ export const git = (() => ({
 
   checkIsRoot: (path: string): Promise<boolean> =>
     (getAynite() as any).checkIsGitRoot(path),
+
+  getSplitStatus: (
+    root: string,
+  ): Promise<{
+    staged: Record<string, string>
+    unstaged: Record<string, string>
+  }> => (getAynite() as any).getSplitStatus(root),
 }))()
 
 // ── Setters (return void — state changes come through events) ────────
@@ -66,4 +73,16 @@ export const gitMutations = (() => ({
     message: string,
   ): Promise<{ success?: boolean; error?: string }> =>
     (getAynite() as any).commitExecute(root, message),
+
+  stageFile: (filePath: string): Promise<{ error?: string }> =>
+    (getAynite() as any).stageFile(filePath),
+
+  unstageFile: (filePath: string): Promise<{ error?: string }> =>
+    (getAynite() as any).unstageFile(filePath),
+
+  stageAll: (root: string): Promise<{ error?: string }> =>
+    (getAynite() as any).stageAll(root),
+
+  unstageAll: (root: string): Promise<{ error?: string }> =>
+    (getAynite() as any).unstageAll(root),
 }))()
