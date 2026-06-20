@@ -7,6 +7,7 @@
 
 import { jsonSchema } from '@ai-sdk/provider-utils'
 import { TOOL_METADATA } from '../../../lib/constants/ai'
+import { AppEvents } from '../../../lib/constants/app'
 import { ERROR_MESSAGES } from '../../../lib/constants/messages'
 import {
   secureEditFile,
@@ -17,6 +18,8 @@ import {
   secureReadText,
   secureWriteText,
 } from '../../../lib/path'
+import { gitService } from '../../git/index'
+import { broadcastAppEvent } from '../../ipc-utils'
 
 export function createFileOps(domains: string[], workspaceFolders: string[]) {
   return {
@@ -37,7 +40,15 @@ export function createFileOps(domains: string[], workspaceFolders: string[]) {
         path: string
         content: string
       }) => {
-        return await secureWriteText(filePath, content, domains)
+        const result = await secureWriteText(filePath, content, domains)
+        if (result.startsWith('Success')) {
+          broadcastAppEvent(AppEvents.FS_CHANGE, {
+            event: 'change',
+            path: filePath,
+          })
+          gitService.handleFsChange(filePath)
+        }
+        return result
       },
     },
     edit_file: {
@@ -52,12 +63,20 @@ export function createFileOps(domains: string[], workspaceFolders: string[]) {
         targetContent: string
         replacementContent: string
       }) => {
-        return await secureEditFile(
+        const result = await secureEditFile(
           filePath,
           targetContent,
           replacementContent,
           domains,
         )
+        if (result.startsWith('Success')) {
+          broadcastAppEvent(AppEvents.FS_CHANGE, {
+            event: 'change',
+            path: filePath,
+          })
+          gitService.handleFsChange(filePath)
+        }
+        return result
       },
     },
     list_files: {

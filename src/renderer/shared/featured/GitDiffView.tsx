@@ -522,9 +522,8 @@ export function GitDiffView({
                   ) : (
                     /* No staged files — disabled commit with hint */
                     <div className="pl-2 pt-1 space-y-1">
-                      <p className="text-[10px] text-muted-foreground/50 italic leading-relaxed">
-                        No staged changes. Stage any file above to enable
-                        committing.
+                      <p className="text-[10px] text-muted-foreground/50 italic">
+                        No staged changes
                       </p>
                       <Button
                         variant="ghost"
