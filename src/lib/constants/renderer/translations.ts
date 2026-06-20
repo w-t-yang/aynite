@@ -77,6 +77,11 @@ export const translations: Record<string, { en: string; zh: string }> = {
   'update.dismiss': { en: 'Dismiss', zh: '忽略' },
   'update.unknownVersion': { en: '?', zh: '?' },
 
+  // Sidebar
+  'sidebar.home': { en: 'Home', zh: '首页' },
+  'sidebar.projects': { en: 'Projects', zh: '项目' },
+  'sidebar.settings': { en: 'Settings', zh: '设置' },
+
   // Tile
   'tile.close': { en: 'Close Tile', zh: '关闭面板' },
   'tile.loadView': { en: 'Load View', zh: '加载视图' },

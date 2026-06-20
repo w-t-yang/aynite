@@ -1,0 +1,16 @@
+{
+  "name": "Projects",
+  "description": "Projects view",
+  "author": "Aynite",
+  "key_bindings": {},
+  "i18n": {
+    "en": {
+      "title": "Projects",
+      "placeholder": "Your projects will appear here."
+    },
+    "zh": {
+      "title": "项目",
+      "placeholder": "您的项目将显示在这里。"
+    }
+  }
+}

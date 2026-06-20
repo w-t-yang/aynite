@@ -6,6 +6,7 @@ import { SettingsModal } from '../shared/featured/SettingsModal'
 import { useI18n } from '../shared/i18n/useI18n'
 import { KeyManager } from '../shared/lib/key-handlers'
 import { AppProvider, useApp } from './AppContext'
+import Sidebar from './layout/Sidebar'
 import TileNode from './layout/TileNode'
 import TitleBar from './layout/TitleBar'
 import { NotificationProvider } from './NotificationProvider'
@@ -62,8 +63,14 @@ const AppContent: React.FC = () => {
   return (
     <div className="h-screen w-screen flex flex-col relative bg-background">
       <TitleBar />
-      <div id="layout-container" className="flex-1 flex overflow-hidden p-0.5">
-        {activeLayout && <TileNode isRoot node={activeLayout.layout} />}
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <div
+          id="layout-container"
+          className="flex-1 flex overflow-hidden p-0.5"
+        >
+          {activeLayout && <TileNode isRoot node={activeLayout.layout} />}
+        </div>
       </div>
       {showFileSwitcher && <FileSwitcher />}
       {showSettings && <SettingsModal />}
