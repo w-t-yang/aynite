@@ -129,13 +129,15 @@ export async function initAppFolders() {
       ...DEFAULT_WORKSPACE_CONFIG,
       id: NEW_DEFAULT_WORKSPACE,
     })
+    // Fresh install: set as active workspace
+    wsConfig.active = NEW_DEFAULT_WORKSPACE
   }
 
-  // Ensure "Aynite" is in the workspace list and is active
+  // Ensure "Aynite" is in the workspace list
   if (!wsConfig.list.includes(NEW_DEFAULT_WORKSPACE)) {
     wsConfig.list.push(NEW_DEFAULT_WORKSPACE)
   }
-  wsConfig.active = NEW_DEFAULT_WORKSPACE
+  // Only set active on fresh install — don't overwrite saved workspace choice
   await writeJson(getWorkspacesConfigPath(), wsConfig)
 
   // Sync bundled skills to ~/.aynite/skills/ (only missing items)
