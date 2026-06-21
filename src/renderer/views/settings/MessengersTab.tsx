@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { ADD_ITEM_BUTTON } from '../../../lib/constants/renderer/styles'
 import type { MessengerConfig } from '../../../lib/types/ai'
 import { config, configMutations } from '../../bridge/config'
-import { workspace } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
 import { MessengerCard } from '../../shared/featured/MessengerCard'
@@ -16,18 +15,13 @@ interface MessengersTabProps {
 
 export function MessengersTab({ onRestore, t }: MessengersTabProps) {
   const [messengers, setMessengers] = useState<MessengerConfig[]>([])
-  const [workspaces, setWorkspaces] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([config.get('messengers'), workspace.list()]).then(
-      ([resMessengers, wsConfig]: [any, any]) => {
-        if (resMessengers) setMessengers(resMessengers)
-        const wsList = wsConfig?.list || []
-        setWorkspaces(wsList)
-        setLoading(false)
-      },
-    )
+    config.get('messengers').then((resMessengers: any) => {
+      if (resMessengers) setMessengers(resMessengers)
+      setLoading(false)
+    })
   }, [])
 
   const saveMessengers = async (list: MessengerConfig[]) => {
@@ -56,10 +50,8 @@ export function MessengersTab({ onRestore, t }: MessengersTabProps) {
     const id = `messenger-${Date.now()}`
     const newMessenger: MessengerConfig = {
       id,
-      name: 'New Telegram Bot',
-      type: 'telegram',
+      provider: 'telegram',
       apiKey: '',
-      workspace: workspaces[0] || '',
       enabled: false,
       whitelist: [],
       contextSize: 100,
@@ -104,7 +96,6 @@ export function MessengersTab({ onRestore, t }: MessengersTabProps) {
             <MessengerCard
               key={m.id}
               messenger={m}
-              workspaces={workspaces}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
             />
