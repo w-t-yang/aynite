@@ -6,7 +6,7 @@
  * interface and delegates to these shared functions.
  */
 
-import { exec, spawn } from 'node:child_process'
+import { type ChildProcess, exec, spawn } from 'node:child_process'
 import { readdirSync } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -65,6 +65,43 @@ export interface BotHandle {
 const bots = new Map<string, BotHandle>()
 /** Track which bot sessions are currently processing a message */
 export const processing = new Set<string>()
+
+/** Track running dev servers keyed by project folder path */
+const devProcesses = new Map<string, ChildProcess>()
+
+/**
+ * Kill a dev server process if running.
+ * Sends SIGTERM first, then SIGKILL after 3 seconds if it doesn't exit.
+ */
+async function killDevProcess(root: string): Promise<boolean> {
+  const proc = devProcesses.get(root)
+  if (!proc) return false
+
+  proc.kill('SIGTERM')
+
+  // Wait up to 3 seconds for graceful exit
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        proc.kill('SIGKILL')
+        reject(new Error('Timeout'))
+      }, 3000)
+      proc.on('exit', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+      proc.on('error', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+    })
+  } catch {
+    // Process was force-killed, that's fine
+  }
+
+  devProcesses.delete(root)
+  return true
+}
 
 // ─── Group Chat Context Buffer ──────────────────────────────────────────
 
@@ -596,6 +633,7 @@ export async function handleHelp(
   lines.push(
     '`/commit` — Stage all changes, generate commit message, and commit',
   )
+  lines.push('`/dev` — Start/restart dev server (`npm run dev`)')
   lines.push('')
   lines.push('Send any other message to chat with the AI agent.')
 
@@ -839,6 +877,86 @@ export async function handleCommit(
     const errorMsg = err instanceof Error ? err.message : String(err)
     console.error('[Messenger] /commit error:', errorMsg)
     await ctx.reply(`Commit failed: ${errorMsg}`)
+  }
+}
+
+// ─── Command: /dev ──────────────────────────────────────────────────────
+
+export async function handleDev(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+) {
+  // ── Resolve project folder ──────────────────────────────────────────
+  let root = config.projectFolder
+  if (!root) {
+    if (config.agentId === 'assistant') {
+      root = await ensureAssistantProjectDir()
+    } else {
+      await ctx.reply(
+        'No project folder is set. Use `/set-project` to choose one first.',
+      )
+      return
+    }
+  }
+
+  try {
+    // ── Check if already running → restart ─────────────────────────────
+    const existing = devProcesses.get(root)
+    if (existing) {
+      console.log(`[Messenger] /dev: restarting dev server for ${root}`)
+      await ctx.reply('Restarting dev server...')
+      await killDevProcess(root)
+    } else {
+      console.log(`[Messenger] /dev: starting dev server for ${root}`)
+      await ctx.reply('Starting dev server...')
+    }
+
+    // ── Start npm run dev ─────────────────────────────────────────────
+    const proc = spawn('npm', ['run', 'dev'], {
+      cwd: root,
+      stdio: 'pipe',
+      env: { ...process.env },
+    })
+
+    // Capture a small amount of startup output to verify it's working
+    let startupOutput = ''
+    proc.stdout?.once('data', (chunk: Buffer) => {
+      startupOutput += chunk.toString()
+    })
+    proc.stderr?.once('data', (chunk: Buffer) => {
+      startupOutput += chunk.toString()
+    })
+
+    proc.on('exit', (code, signal) => {
+      console.log(
+        `[Messenger] /dev: process for ${root} exited (code=${code}, signal=${signal})`,
+      )
+      devProcesses.delete(root)
+    })
+
+    proc.on('error', (err) => {
+      console.error(`[Messenger] /dev: process error for ${root}:`, err)
+      devProcesses.delete(root)
+    })
+
+    devProcesses.set(root, proc)
+
+    const status = existing ? 'restarted' : 'started'
+
+    // Give it a moment to produce initial output, then reply
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    const preview = startupOutput
+      ? `\n\n\`\`\`\n${startupOutput.slice(0, 500).trim()}\n\`\`\``
+      : ''
+
+    await ctx.replyWithMarkdown(
+      `✅ *Dev server ${status}* for \`${escapeMarkdown(root)}\`\nPID: \`${proc.pid}\`${preview}\n\nUse \`/dev\` again to restart.`,
+    )
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error('[Messenger] /dev error:', errorMsg)
+    await ctx.reply(`Failed to start dev server: ${errorMsg}`)
   }
 }
 
@@ -1190,6 +1308,8 @@ export async function processIncomingMessage(
     await handleSetAgent(config, ctx, args)
   } else if (lowerCmd === '/commit') {
     await handleCommit(config, ctx, msg.chatName)
+  } else if (lowerCmd === '/dev') {
+    await handleDev(config, ctx)
   } else {
     await handleChatMessage(
       config,
