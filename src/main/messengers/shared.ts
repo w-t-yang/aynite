@@ -930,8 +930,13 @@ export async function handleDev(
         `✅ *Build complete* — relaunching Aynite with latest changes...\n\nSee you in a moment! 👋`,
       )
 
-      // Relaunch the app with the newly compiled code
+      // Relaunch the app with the newly compiled code.
+      // In dev mode (electron-vite dev), ELECTRON_RENDERER_URL points to the
+      // Vite dev server (e.g. http://localhost:5173/). After building, that
+      // server is no longer running, so delete the env var so the new instance
+      // loads from the production-built files instead.
       const { app } = await import('electron')
+      delete process.env.ELECTRON_RENDERER_URL
       app.relaunch()
       app.exit(0)
       return
