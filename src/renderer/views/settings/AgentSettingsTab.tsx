@@ -3,6 +3,7 @@ import {
   Brain,
   Code,
   Compass,
+  FileText,
   Heart,
   Plus,
   Sparkles,
@@ -16,8 +17,10 @@ import {
   GRID_2_COL,
 } from '../../../lib/constants/renderer/styles'
 import { config, configMutations } from '../../bridge/config'
+import { file } from '../../bridge/file'
 import { system } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
+import { Collapsible } from '../../shared/basic/Collapsible'
 import { Input } from '../../shared/basic/Input'
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
@@ -168,6 +171,14 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
     [agent, persist],
   )
 
+  const handleIntroductionChange = useCallback(
+    (value: string) => {
+      if (!agent) return
+      persist({ ...agent, introduction: value || undefined })
+    },
+    [agent, persist],
+  )
+
   const handleIconChange = useCallback(
     (icon: string) => {
       if (!agent) return
@@ -211,6 +222,30 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
     [agent, persist],
   )
 
+  // Build system prompt preview
+  const [systemPromptPreview, setSystemPromptPreview] = useState('')
+
+  useEffect(() => {
+    if (!agent) return
+    const buildPreview = async () => {
+      const header = `My name is ${agent.name}.${agent.introduction ? ` ${agent.introduction}` : ''}`
+      let merged = `${header}\n\n`
+      const files = agent.promptFiles || []
+      for (const filePath of files) {
+        try {
+          const content = await file.read(filePath)
+          if (content) {
+            merged += `${content}\n\n`
+          }
+        } catch {
+          merged += `[Error reading: ${filePath}]\n\n`
+        }
+      }
+      setSystemPromptPreview(merged.trim())
+    }
+    buildPreview()
+  }, [agent])
+
   if (loading || !agent) {
     return (
       <SettingsPage title={agent?.name || 'Agent'} description="">
@@ -222,36 +257,54 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
   }
 
   return (
-    <SettingsPage title={agent.name} description={agent.introduction || ''}>
+    <SettingsPage title={agent.name} description="">
       {/* Identity */}
       <Section title="Identity" description="Agent name and identifier">
-        <div className="space-y-4 max-w-md">
-          <div>
-            <label
-              htmlFor="agent-name"
-              className="text-xs font-medium text-muted-foreground mb-1 block"
-            >
-              Name
-            </label>
-            <Input
-              id="agent-name"
-              value={agent.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="Agent Name"
-            />
+        <div className="space-y-4">
+          <div className="flex items-end gap-4">
+            <div className="flex-1">
+              <label
+                htmlFor="agent-name"
+                className="text-xs font-medium text-muted-foreground mb-1 block"
+              >
+                Name
+              </label>
+              <Input
+                id="agent-name"
+                value={agent.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Agent Name"
+              />
+            </div>
+            <div className="flex-1">
+              <label
+                htmlFor="agent-id"
+                className="text-xs font-medium text-muted-foreground mb-1 block"
+              >
+                ID
+              </label>
+              <Input
+                id="agent-id"
+                value={agent.id}
+                disabled
+                placeholder="Agent ID"
+              />
+            </div>
           </div>
           <div>
             <label
-              htmlFor="agent-id"
+              htmlFor="agent-introduction"
               className="text-xs font-medium text-muted-foreground mb-1 block"
             >
-              ID
+              Introduction
             </label>
-            <Input
-              id="agent-id"
-              value={agent.id}
-              disabled
-              placeholder="Agent ID"
+            <textarea
+              id="agent-introduction"
+              value={agent.introduction || ''}
+              onChange={(e) => handleIntroductionChange(e.target.value)}
+              placeholder="Describe this agent's role and personality..."
+              className="w-full bg-transparent border border-border/60 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/50 resize-none"
+              rows={3}
             />
           </div>
           <div>
@@ -324,6 +377,24 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
               No prompt files configured.
             </p>
           )}
+        </div>
+
+        {/* System Prompt Preview */}
+        <div className="mt-6">
+          <Collapsible
+            title="System Prompt Preview"
+            icon={FileText}
+            colorClass="border-primary/20"
+            defaultExpanded={false}
+          >
+            <div className="p-4 rounded-lg bg-background/50 border border-border/40 font-mono text-[10px] whitespace-pre-wrap max-h-60 overflow-y-auto">
+              {systemPromptPreview || (
+                <span className="text-muted-foreground italic">
+                  No prompt files configured.
+                </span>
+              )}
+            </div>
+          </Collapsible>
         </div>
       </Section>
 

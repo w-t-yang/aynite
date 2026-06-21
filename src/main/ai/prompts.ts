@@ -114,18 +114,36 @@ export async function restoreDefaultPrompts() {
 }
 
 /**
- * Merges the contents of the specified prompt files into a single system prompt.
+ * Load an agent by ID from ~/.aynite/agents/<id>.json.
  */
-export async function getMergedSystemPrompt(
-  globalFiles?: string[],
-  agentFiles?: string[],
-) {
-  const promptFiles = [
-    ...(globalFiles || (await getPromptsConfig())),
-    ...(agentFiles || []),
-  ]
-  let merged = ''
+async function loadAgent(agentId?: string): Promise<{
+  name?: string
+  introduction?: string
+  promptFiles?: string[]
+} | null> {
+  if (!agentId) return null
+  try {
+    return await readJson(getAgentPath(agentId))
+  } catch {
+    return null
+  }
+}
 
+/**
+ * Build the system prompt for an agent.
+ * Reads the agent config from ~/.aynite/agents/<agentId>.json,
+ * prepends "My name is <name>. <introduction>", then concatenates
+ * all of the agent's prompt files.
+ */
+export async function getMergedSystemPrompt(agentId?: string): Promise<string> {
+  if (!agentId) return ''
+
+  const agent = await loadAgent(agentId)
+  if (!agent) return ''
+
+  let merged = `My name is ${agent.name || 'Agent'}.${agent.introduction ? ` ${agent.introduction}` : ''}\n\n`
+
+  const promptFiles = agent.promptFiles || []
   for (const filePath of promptFiles) {
     const content = await readText(filePath)
     if (content) {

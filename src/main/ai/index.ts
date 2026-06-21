@@ -43,8 +43,8 @@ interface SessionLoadPayload {
 export function setupAiIpc() {
   ipcMain.handle(
     AiChannels.PROMPT_GET_MERGED,
-    async (_event, globalFiles?: string[], agentFiles?: string[]) => {
-      return await getMergedSystemPrompt(globalFiles, agentFiles)
+    async (_event, agentId?: string) => {
+      return await getMergedSystemPrompt(agentId)
     },
   )
   ipcMain.handle(AiChannels.GET_TOOLS, async () => {

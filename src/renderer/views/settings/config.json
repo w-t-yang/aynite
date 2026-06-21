@@ -8,18 +8,17 @@
       "name": "Settings",
       "description": "Application settings and configuration panel",
       "sidebar": {
-        "basic": "Basic",
-        "appearance": "Appearance",
-        "keybindings": "Keybindings",
-        "ai": "AI",
-        "providers": "Providers",
+        "app": "App",
+        "about": "About",
         "agents": "Agents",
-        "tools": "Tools",
+        "ai": "AI Resources",
+        "providers": "Providers",
         "skills": "Skills",
         "commands": "Commands",
         "messengers": "Messengers",
-        "app": "App",
-        "about": "About"
+        "general": "General",
+        "appearance": "Appearance",
+        "keybindings": "Keybindings"
       },
       "loading": "Loading settings...",
       "restore": {
@@ -159,9 +158,9 @@
         "addBot": "Add Bot",
         "whitelist": {
           "label": "Trusted Users",
-          "description": "Only these Telegram user IDs can interact with the bot. If empty, no one can talk to the bot.",
-          "placeholder": "123456789, 987654321",
-          "hint": "Enter numeric user IDs or @usernames separated by commas. Find your ID by messaging @userinfobot on Telegram."
+          "description": "Only these user IDs can interact with the bot. If empty, no one can talk to the bot.",
+          "placeholder": "123456789, @username",
+          "hint": "Enter user IDs or @usernames separated by commas."
         },
         "accessDenied": "Sorry, I'm not allowed to talk to you."
       },
@@ -224,18 +223,17 @@
       "name": "设置",
       "description": "应用程序设置和配置面板",
       "sidebar": {
-        "basic": "基本",
-        "appearance": "外观",
-        "keybindings": "快捷键",
-        "ai": "AI",
-        "providers": "提供商",
+        "app": "应用",
+        "about": "关于",
         "agents": "智能体",
-        "tools": "工具",
+        "ai": "AI 资源",
+        "providers": "提供商",
         "skills": "技能",
         "commands": "命令",
         "messengers": "消息推送",
-        "app": "应用",
-        "about": "关于"
+        "general": "通用",
+        "appearance": "外观",
+        "keybindings": "快捷键"
       },
       "loading": "正在加载设置...",
       "restore": {
@@ -375,9 +373,9 @@
         "addBot": "添加机器人",
         "whitelist": {
           "label": "可信用户",
-          "description": "只有这些 Telegram 用户 ID 可以与机器人交互。留空则所有人都无法使用。",
-          "placeholder": "123456789, 987654321",
-          "hint": "用逗号分隔数字 ID 或 @用户名。向 @userinfobot 发送消息可获取您的 ID。"
+          "description": "只有这些用户 ID 可以与机器人交互。留空则所有人都无法使用。",
+          "placeholder": "123456789, @用户名",
+          "hint": "用逗号分隔数字 ID 或 @用户名。"
         },
         "accessDenied": "抱歉，我没有权限与您对话。"
       },

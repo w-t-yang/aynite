@@ -11,7 +11,6 @@ import {
   Star,
   Sun,
   Terminal,
-  Wrench,
   Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -74,7 +73,7 @@ export function Settings({ locale: localeProp }: SettingsProps) {
     // Read initial tab from hash
     const hash = window.location.hash
     if (hash.startsWith('#tab=')) return hash.replace('#tab=', '')
-    return 'appearance'
+    return 'about'
   })
   const [agents, setAgents] = useState<Agent[]>([])
 
@@ -216,10 +215,21 @@ export function Settings({ locale: localeProp }: SettingsProps) {
     <div className="w-full h-full bg-card flex flex-col text-foreground">
       <div className="flex flex-1 overflow-hidden">
         {/* Settings Sidebar */}
-        <div className="w-52 border-r border-border bg-sidebar/50 p-4 space-y-1 shrink-0 overflow-y-auto custom-scrollbar">
-          {/* AI Agents group at the top */}
+        <div className="w-60 border-r border-border bg-sidebar/50 p-4 space-y-1 shrink-0 overflow-y-auto custom-scrollbar">
+          {/* App group */}
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mb-2 px-3">
-            AI Agents
+            {t('sidebar.app')}
+          </div>
+          <TabButton
+            active={activeTab === 'about'}
+            onClick={() => handleTabChange('about')}
+            icon={<Info size={16} />}
+            label={t('sidebar.about')}
+          />
+
+          {/* Agents group */}
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
+            {t('sidebar.agents')}
           </div>
           {agents.map((agent) => {
             const AgentIcon = getAgentIcon(agent.icon)
@@ -241,24 +251,7 @@ export function Settings({ locale: localeProp }: SettingsProps) {
             )
           })}
 
-          {/* Basic group */}
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
-            {t('sidebar.basic')}
-          </div>
-          <TabButton
-            active={activeTab === 'appearance'}
-            onClick={() => handleTabChange('appearance')}
-            icon={<Sun size={16} />}
-            label={t('sidebar.appearance')}
-          />
-          <TabButton
-            active={activeTab === 'keybindings'}
-            onClick={() => handleTabChange('keybindings')}
-            icon={<Keyboard size={16} />}
-            label={t('sidebar.keybindings')}
-          />
-
-          {/* AI group (providers / tools) */}
+          {/* AI Resources group */}
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
             {t('sidebar.ai')}
           </div>
@@ -267,12 +260,6 @@ export function Settings({ locale: localeProp }: SettingsProps) {
             onClick={() => handleTabChange('ai')}
             icon={<Bot size={16} />}
             label={t('sidebar.providers')}
-          />
-          <TabButton
-            active={activeTab === 'tools'}
-            onClick={() => handleTabChange('tools')}
-            icon={<Wrench size={16} />}
-            label="Tool Reference"
           />
           <TabButton
             active={activeTab === 'skills'}
@@ -293,14 +280,21 @@ export function Settings({ locale: localeProp }: SettingsProps) {
             label={t('sidebar.messengers')}
           />
 
+          {/* General group */}
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
-            {t('sidebar.app')}
+            {t('sidebar.general')}
           </div>
           <TabButton
-            active={activeTab === 'about'}
-            onClick={() => handleTabChange('about')}
-            icon={<Info size={16} />}
-            label={t('sidebar.about')}
+            active={activeTab === 'appearance'}
+            onClick={() => handleTabChange('appearance')}
+            icon={<Sun size={16} />}
+            label={t('sidebar.appearance')}
+          />
+          <TabButton
+            active={activeTab === 'keybindings'}
+            onClick={() => handleTabChange('keybindings')}
+            icon={<Keyboard size={16} />}
+            label={t('sidebar.keybindings')}
           />
         </div>
 

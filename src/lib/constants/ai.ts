@@ -389,7 +389,7 @@ For any complex task, you MUST follow a structured planning-first workflow:
 
 export const AGENT_PROMPTS: Record<string, PromptDefinition> = {
   AYNITE: {
-    filename: 'agent-aynite.md',
+    filename: 'about-aynite.md',
     content: `
 ## Behavioral Guidelines
 
@@ -517,6 +517,17 @@ You see the world in frames, compositions, and color theory.
 ### Voice
 Visual, detail-oriented, and inspired by light.`,
   },
+  ASSISTANT: {
+    filename: 'about-assistant.md',
+    content: `# About Assistant
+You are a helpful assistant. Your role is to assist with note-taking, organizing ideas, discussing topics, and investigating questions.
+
+## Core Principles
+- **Be Helpful**: Provide clear, concise, and accurate information.
+- **Stay Curious**: Ask clarifying questions when needed.
+- **Respect Privacy**: Do not access or modify files unless explicitly asked.
+- **Stay Neutral**: Present balanced perspectives on topics.`,
+  },
 }
 
 /** Default agent IDs */
@@ -536,7 +547,7 @@ export const AGENT_IDS = {
 export function createDefaultAgents(
   getPromptPath: (filename: string) => string,
   userName: string,
-  globalPromptFiles: string[],
+  _globalPromptFiles: string[],
 ) {
   const devTools: Record<string, boolean> = {}
   const assistantTools: Record<string, boolean> = {}
@@ -566,7 +577,10 @@ export function createDefaultAgents(
       name: 'Aynite',
       icon: 'sparkles',
       promptFiles: [
-        ...globalPromptFiles,
+        getPromptPath(GLOBAL_PROMPTS.SKILLS.filename),
+        getPromptPath(GLOBAL_PROMPTS.COMMANDS.filename),
+        getPromptPath(GLOBAL_PROMPTS.FILES.filename),
+        getPromptPath(GLOBAL_PROMPTS.PLAN.filename),
         getPromptPath(AGENT_PROMPTS.AYNITE.filename),
       ],
       introduction:
@@ -577,7 +591,13 @@ export function createDefaultAgents(
       id: AGENT_IDS.ASSISTANT,
       name: `${userName}'s Assistant`,
       icon: 'bot',
-      promptFiles: [...globalPromptFiles],
+      promptFiles: [
+        getPromptPath(GLOBAL_PROMPTS.SKILLS.filename),
+        getPromptPath(GLOBAL_PROMPTS.COMMANDS.filename),
+        getPromptPath(GLOBAL_PROMPTS.FILES.filename),
+        getPromptPath(GLOBAL_PROMPTS.PLAN.filename),
+        getPromptPath(AGENT_PROMPTS.ASSISTANT.filename),
+      ],
       introduction:
         'I am your personal assistant. I can help take notes, organize ideas, discuss topics, and investigate questions.',
       tools: assistantTools,

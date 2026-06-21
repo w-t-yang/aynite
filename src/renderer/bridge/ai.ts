@@ -44,11 +44,8 @@ export const ai = (() => ({
   loadSession: (sessionId: string, date?: string): Promise<any> =>
     getAynite().loadSession(sessionId, date),
 
-  getMergedSystemPrompt: (
-    globalFiles?: string[],
-    agentFiles?: string[],
-  ): Promise<string> =>
-    getAynite().getMergedSystemPrompt(globalFiles, agentFiles),
+  getMergedSystemPrompt: (agentId?: string): Promise<string> =>
+    getAynite().getMergedSystemPrompt(agentId),
 
   getArtifactsStatus: (): Promise<any> =>
     (getAynite() as any).getArtifactsStatus(),

@@ -50,12 +50,10 @@ export interface ToolContext {
 
 export interface MessengerConfig {
   id: string
-  name: string
-  type: 'telegram'
+  provider: 'telegram' | 'discord'
   apiKey: string
-  workspace: string
   enabled: boolean
-  /** Telegram user IDs (as strings) that are allowed to interact with this bot.
+  /** User IDs or @usernames that are allowed to interact with this bot.
    *  If empty or not set, no one is allowed. */
   whitelist?: string[]
   /** Number of recent group messages to keep as context when the bot is

@@ -1,14 +1,36 @@
-import { Bot, Bug, CloudDownload, GitBranch, RefreshCw } from 'lucide-react'
+import { Bug, CloudDownload, GitBranch, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { UpdateStatus } from '../../../lib/types/app'
-import { config, configMutations } from '../../bridge/config'
+import { config } from '../../bridge/config'
 import { updateMutations } from '../../bridge/update'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
-import { Switch } from '../../shared/basic/Switch'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import { useViewEvent } from '../useViewEvents'
+
+const APP_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <circle cx="512" cy="512" r="512" fill="#403A35"/>
+  <g transform="translate(512, 512)">
+    <polygon points="-40,-324 40,-324 -180,320 -260,320" fill="#FFFFFF"/>
+    <polygon points="-40,-324 40,-324 260,320 180,320" fill="#FFFFFF"/>
+    <polygon points="-100,320 100,320 72.67,240 -72.67,240" fill="#FFFFFF"/>
+  </g>
+</svg>`
+
+function AppIcon({ className }: { className?: string }) {
+  return (
+    <div
+      className={className}
+      style={{
+        backgroundImage: `url("data:image/svg+xml;base64,${btoa(APP_LOGO_SVG)}")`,
+        backgroundSize: 'contain',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    />
+  )
+}
 
 interface AboutTabProps {
   onOpenExternal: (url: string) => void
@@ -21,26 +43,12 @@ export function AboutTab({ onOpenExternal, t }: AboutTabProps) {
   const [updateInfo, setUpdateInfo] = useState<any>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [showModal, setShowModal] = useState(false)
-  const [telemetryEnabled, setTelemetryEnabled] = useState(false)
 
   useEffect(() => {
     config.get('version').then((v: any) => {
       if (v) setAppVersion(v)
     })
   }, [])
-
-  useEffect(() => {
-    config.get('telemetry').then((t: any) => {
-      if (t && typeof t.enabled === 'boolean') {
-        setTelemetryEnabled(t.enabled)
-      }
-    })
-  }, [])
-
-  const handleTelemetryToggle = async (checked: boolean) => {
-    setTelemetryEnabled(checked)
-    await configMutations.set('telemetry', { enabled: checked })
-  }
 
   // Listen for update events
   useViewEvent('update-checking', () => {
@@ -187,7 +195,7 @@ export function AboutTab({ onOpenExternal, t }: AboutTabProps) {
       default:
         return (
           <div className="flex flex-col items-center text-center space-y-4 py-8">
-            <Bot size={28} className="text-primary" />
+            <CloudDownload size={28} className="text-primary" />
             <div className="space-y-1">
               <p className="text-lg font-semibold">
                 {t('about.update.upToDateTitle')}
@@ -265,36 +273,76 @@ export function AboutTab({ onOpenExternal, t }: AboutTabProps) {
 
   return (
     <SettingsPage title={t('about.title')} description={t('about.description')}>
-      {/* Header */}
+      {/* Header: app icon + name + version on one line */}
       <div className="flex flex-col items-center text-center space-y-4 pt-4 mb-8">
-        <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-          <Bot size={56} className="text-primary-foreground" />
+        <div className="w-20 h-20 rounded-2xl bg-sidebar flex items-center justify-center shadow-lg shadow-primary/10 ring-1 ring-border/40 overflow-hidden">
+          <AppIcon className="w-14 h-14" />
         </div>
-        <div className="space-y-1.5 text-center">
+        <div className="space-y-2 text-center">
           <h3 className="text-4xl font-black tracking-tighter text-foreground">
             Aynite
           </h3>
-          <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-bold text-primary tracking-[0.3em] uppercase">
-              {t('about.title')}
-            </p>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest opacity-60">
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <span className="font-medium uppercase tracking-wider opacity-60">
               {t('about.version')}
-            </p>
-          </div>
-          <div className="px-4 py-1.5 bg-accent/30 rounded-full border border-border/50 text-xs font-mono text-muted-foreground shadow-sm">
-            v{appVersion}
+            </span>
+            <span className="font-mono font-semibold text-foreground/80">
+              v{appVersion}
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-8">
-        {/* Software Update */}
+      <div className="space-y-8">
+        {/* Resources — full width, cards in a 2-column grid */}
+        <Section
+          title={t('about.resources.title')}
+          description={t('about.resources.description')}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() =>
+                onOpenExternal('https://github.com/w-t-yang/aynite')
+              }
+              className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
+            >
+              <GitBranch size={18} className="text-foreground" />
+              <div className="text-left">
+                <div className="font-bold">{t('about.resources.github')}</div>
+                <div className="text-[10px] text-muted-foreground font-normal">
+                  {t('about.resources.githubDesc')}
+                </div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() =>
+                onOpenExternal('https://github.com/w-t-yang/aynite/issues')
+              }
+              className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
+            >
+              <Bug size={18} className="text-destructive" />
+              <div className="text-left">
+                <div className="font-bold">
+                  {t('about.resources.reportIssue')}
+                </div>
+                <div className="text-[10px] text-muted-foreground font-normal">
+                  {t('about.resources.reportIssueDesc')}
+                </div>
+              </div>
+            </Button>
+          </div>
+        </Section>
+
+        {/* Software Update — full width */}
         <Section
           title={t('about.update.title')}
           description={t('about.update.description')}
         >
-          <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
               <h4 className="text-sm font-semibold flex items-center gap-2">
                 <CloudDownload size={16} className="text-primary" />
@@ -305,7 +353,7 @@ export function AboutTab({ onOpenExternal, t }: AboutTabProps) {
               <p className="text-xs text-muted-foreground">{statusLabel()}</p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               {(updateStatus === 'idle' || updateStatus === 'error') && (
                 <Button
                   variant="secondary"
@@ -354,79 +402,6 @@ export function AboutTab({ onOpenExternal, t }: AboutTabProps) {
             </div>
           </div>
         </Section>
-
-        {/* Resources */}
-        <Section
-          title={t('about.resources.title')}
-          description={t('about.resources.description')}
-        >
-          <div className="grid grid-cols-1 gap-3">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() =>
-                onOpenExternal('https://github.com/w-t-yang/aynite')
-              }
-              className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
-            >
-              <GitBranch size={18} className="text-foreground" />
-              <div className="text-left">
-                <div className="font-bold">{t('about.resources.github')}</div>
-                <div className="text-[10px] text-muted-foreground font-normal">
-                  {t('about.resources.githubDesc')}
-                </div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() =>
-                onOpenExternal('https://github.com/w-t-yang/aynite/issues')
-              }
-              className="flex items-center justify-start gap-3 p-4 text-sm font-medium h-auto hover:bg-accent transition-all"
-            >
-              <Bug size={18} className="text-destructive" />
-              <div className="text-left">
-                <div className="font-bold">
-                  {t('about.resources.reportIssue')}
-                </div>
-                <div className="text-[10px] text-muted-foreground font-normal">
-                  {t('about.resources.reportIssueDesc')}
-                </div>
-              </div>
-            </Button>
-          </div>
-        </Section>
-      </div>
-
-      {/* Usage Analytics */}
-      <Section
-        title={t('about.analytics.title')}
-        description={t('about.analytics.description')}
-        className="mt-8"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-semibold">
-              {telemetryEnabled
-                ? t('about.analytics.enabled')
-                : t('about.analytics.disabled')}
-            </h4>
-            <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-              {t('about.analytics.privacyNotice')}
-            </p>
-          </div>
-          <Switch
-            checked={telemetryEnabled}
-            onCheckedChange={handleTelemetryToggle}
-          />
-        </div>
-      </Section>
-
-      <div className="pt-20 text-center">
-        <p className="text-[10px] text-muted-foreground/30 font-mono italic tracking-widest">
-          {t('about.footer')}
-        </p>
       </div>
 
       {/* Update Modal */}

@@ -69,8 +69,8 @@ const aynite = {
 
   // ── AI operations ───────────────────────────────────────────────────────
   aiChat: (payload: any) => ipcRenderer.invoke(AiChannels.CHAT, payload),
-  getMergedSystemPrompt: (globalFiles?: string[], agentFiles?: string[]) =>
-    ipcRenderer.invoke(AiChannels.PROMPT_GET_MERGED, globalFiles, agentFiles),
+  getMergedSystemPrompt: (agentId?: string) =>
+    ipcRenderer.invoke(AiChannels.PROMPT_GET_MERGED, agentId),
   restorePrompts: () => ipcRenderer.invoke(AiChannels.PROMPT_RESTORE),
   listSessions: () => ipcRenderer.invoke(AiChannels.SESSION_LIST),
   saveSession: (sessionId: string, messages: any[], metadata?: any) =>

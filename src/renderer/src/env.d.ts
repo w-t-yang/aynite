@@ -101,10 +101,7 @@ interface AyniteWindow {
   aiChat: (
     payload: AiChatPayload,
   ) => Promise<{ requestId?: string; error?: string }>
-  getMergedSystemPrompt: (
-    globalFiles?: string[],
-    agentFiles?: string[],
-  ) => Promise<string>
+  getMergedSystemPrompt: (agentId?: string) => Promise<string>
   listSessions: () => Promise<ChatSessionEntry[]>
   saveSession: (
     sessionId: string,

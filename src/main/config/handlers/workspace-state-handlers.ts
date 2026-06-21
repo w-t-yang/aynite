@@ -42,10 +42,7 @@ export const workspaceStateHandlers: ConfigHandler = (() => ({
         return null
       }
       case 'merged-system-prompt': {
-        return await getMergedSystemPrompt(
-          payload?.globalFiles,
-          payload?.agentFiles,
-        )
+        return await getMergedSystemPrompt(payload?.agentId)
       }
       case 'activeFile': {
         const state = await getWorkspaceState(workspaceName)

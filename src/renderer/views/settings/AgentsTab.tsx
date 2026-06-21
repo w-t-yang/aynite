@@ -145,11 +145,7 @@ export function AgentsTab({ onRestore, t }: AgentsTabProps) {
           list: agentsData.list || [],
         })
 
-        const merged = await aiBridge.getMergedSystemPrompt(
-          normalizedPrompts,
-          (agentsData.list || []).find((a: any) => a.id === agentsData.activeId)
-            ?.promptFiles || [],
-        )
+        const merged = await aiBridge.getMergedSystemPrompt(agentsData.activeId)
         setMergedPrompt(merged || '')
       }
       setPrompts({ files: normalizedPrompts })

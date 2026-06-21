@@ -9,15 +9,11 @@ import { MessengersTab } from '../../../../src/renderer/views/settings/Messenger
 // ─── Mocks ──────────────────────────────────────────────────────────────
 
 const mockConfigGet = vi.hoisted(() => vi.fn())
-const mockWorkspaceList = vi.hoisted(() => vi.fn())
+const mockConfigSet = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 
 vi.mock('../../../../src/renderer/bridge/config', () => ({
   config: { get: (...args: unknown[]) => mockConfigGet(...args) },
-  configMutations: { set: vi.fn(() => Promise.resolve()) },
-}))
-
-vi.mock('../../../../src/renderer/bridge/workspace', () => ({
-  workspace: { list: (...args: unknown[]) => mockWorkspaceList(...args) },
+  configMutations: { set: (...args: unknown[]) => mockConfigSet(...args) },
 }))
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -25,11 +21,10 @@ vi.mock('../../../../src/renderer/bridge/workspace', () => ({
 function m(overrides: Partial<MessengerConfig> = {}): MessengerConfig {
   return {
     id: 'm1',
-    name: 'My Bot',
-    type: 'telegram',
+    provider: 'telegram',
     apiKey: '123',
-    workspace: 'ws1',
     enabled: true,
+    whitelist: [],
     ...overrides,
   }
 }
@@ -47,7 +42,6 @@ describe('MessengersTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockConfigGet.mockResolvedValue([])
-    mockWorkspaceList.mockResolvedValue({ list: ['ws1'] })
   })
 
   it('renders title and description after loading', async () => {
@@ -58,35 +52,34 @@ describe('MessengersTab', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders messenger names in input fields', async () => {
-    mockConfigGet.mockResolvedValue([m({ name: 'My Telegram Bot' })])
-    render(<MessengersTab t={t} />)
-    expect(
-      await screen.findByDisplayValue('My Telegram Bot'),
-    ).toBeInTheDocument()
-  })
-
   it('shows empty state when no messengers', async () => {
-    mockConfigGet.mockResolvedValue([])
     render(<MessengersTab t={t} />)
     expect(await screen.findByText('No bots configured')).toBeInTheDocument()
   })
 
-  it('renders multiple messengers', async () => {
-    mockConfigGet.mockResolvedValue([
-      m({ id: 'a', name: 'Bot A' }),
-      m({ id: 'b', name: 'Bot B' }),
-    ])
+  it('renders messenger provider badge', async () => {
+    mockConfigGet.mockResolvedValue([m({ provider: 'telegram' })])
     render(<MessengersTab t={t} />)
-    expect(await screen.findByDisplayValue('Bot A')).toBeInTheDocument()
-    expect(await screen.findByDisplayValue('Bot B')).toBeInTheDocument()
+    const matches = await screen.findAllByText('Telegram')
+    expect(matches.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('loads config and workspaces on mount', async () => {
+  it('renders multiple messengers', async () => {
+    mockConfigGet.mockResolvedValue([
+      m({ id: 'a', provider: 'telegram' }),
+      m({ id: 'b', provider: 'discord' }),
+    ])
+    render(<MessengersTab t={t} />)
+    const telegramMatches = await screen.findAllByText('Telegram')
+    const discordMatches = await screen.findAllByText('Discord')
+    expect(telegramMatches.length).toBeGreaterThanOrEqual(1)
+    expect(discordMatches.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('loads config on mount', async () => {
     render(<MessengersTab t={t} />)
     await vi.waitFor(() => {
       expect(mockConfigGet).toHaveBeenCalledWith('messengers')
-      expect(mockWorkspaceList).toHaveBeenCalled()
     })
   })
 

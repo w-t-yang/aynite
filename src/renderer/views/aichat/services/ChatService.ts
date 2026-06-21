@@ -219,7 +219,7 @@ export async function sendMessage(
     aiConfig,
     agentsConfig,
     toolsConfig,
-    promptsConfig,
+    _promptsConfig,
     folders,
     activeFilePath,
     workspaceName,
@@ -322,11 +322,7 @@ export async function sendMessage(
   // Build initial messages with system prompt if needed
   const initialMessages = [...session.state.messages]
   if (initialMessages.length === 0) {
-    const globalPromptFiles = promptsConfig?.files || []
-    const systemPrompt = await aiBridge.getMergedSystemPrompt(
-      globalPromptFiles,
-      activeAgent?.promptFiles || [],
-    )
+    const systemPrompt = await aiBridge.getMergedSystemPrompt(activeAgent?.id)
     if (systemPrompt) {
       initialMessages.push({
         id: genId(),

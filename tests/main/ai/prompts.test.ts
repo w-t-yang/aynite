@@ -63,27 +63,41 @@ describe('prompts', () => {
 
   describe('getMergedSystemPrompt', () => {
     it('merges content from multiple files', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        name: 'Aynite',
+        introduction: 'I am Agent Aynite.',
+        promptFiles: ['/prompts/about-me.md', '/prompts/about-skills.md'],
+      })
       mockReadText
         .mockResolvedValueOnce('# About Me\nI am Aynite.')
         .mockResolvedValueOnce('# About Skills\nI can use tools.')
 
-      const result = await getMergedSystemPrompt(
-        ['/prompts/about-me.md'],
-        ['/prompts/about-skills.md'],
-      )
+      const result = await getMergedSystemPrompt('aynite')
 
+      expect(result).toContain('My name is Aynite.')
+      expect(result).toContain('I am Agent Aynite.')
       expect(result).toContain('# About Me')
       expect(result).toContain('# About Skills')
     })
 
     it('trims final result', async () => {
+      mockReadJson.mockResolvedValueOnce({
+        name: 'Test',
+        promptFiles: ['/prompts/test.md'],
+      })
       mockReadText.mockResolvedValue('content\n\n')
-      const result = await getMergedSystemPrompt(['/prompts/test.md'])
-      expect(result).toBe('content')
+      const result = await getMergedSystemPrompt('test')
+      expect(result).toBe('My name is Test.\n\ncontent')
     })
 
-    it('returns empty string when no files', async () => {
-      const result = await getMergedSystemPrompt([], [])
+    it('returns empty string when no agentId', async () => {
+      const result = await getMergedSystemPrompt()
+      expect(result).toBe('')
+    })
+
+    it('returns empty string when agent not found', async () => {
+      mockReadJson.mockRejectedValueOnce(new Error('not found'))
+      const result = await getMergedSystemPrompt('unknown')
       expect(result).toBe('')
     })
   })
