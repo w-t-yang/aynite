@@ -731,10 +731,6 @@ export async function handleChatMessage(
 
     const chat = chatName || 'default'
 
-    // ── Save incoming message to chat history ────────────────────────────
-
-    await saveBotMessage(config.id, chat, 'user', 'User', text)
-
     // ── Resolve session ID ───────────────────────────────────────────────
 
     const sessionId = getOrCreateBotSessionId(config.id, chat)
@@ -788,7 +784,7 @@ export async function handleChatMessage(
         'Use `notify_user` only when you cannot answer immediately and need time to work (e.g. running long commands, researching).',
         'When using `notify_user`, send a brief message like "Working on it, I\'ll get back to you" so the user knows the request is being handled.',
         '',
-        'Respond conversationally to the content of the message, addressing the sender directly.',
+        "Respond conversationally to the user's message. Do NOT use @mentions, @tags, or usernames in your replies — just respond naturally as if talking directly to the person.",
       ].join('\n')
       const systemPrompt = agentPrompt
         ? `${agentPrompt}\n\n${BOT_INSTRUCTION}`
@@ -809,8 +805,13 @@ export async function handleChatMessage(
 
     // Inject group context as separate user messages (before the current message)
     // so the AI sees them as distinct conversation turns.
+    // Inject limited recent group context as separate messages so the AI
+    // has immediate awareness of the last few exchanges. For deeper history,
+    // the AI should use the get_messages tool.
     if (groupContextLines && groupContextLines.length > 0) {
-      for (const line of groupContextLines) {
+      // Only inject the most recent 5 lines to keep session context focused
+      const recentLines = groupContextLines.slice(-5)
+      for (const line of recentLines) {
         const ctxMsg: UIMessage = {
           id: genId(),
           role: 'user',
@@ -893,6 +894,139 @@ export async function handleChatMessage(
   } finally {
     unlockBot(lockKey)
     console.log(`[Messenger] processing lock released for "${config.provider}"`)
+  }
+}
+
+// ─── Normalized Incoming Message ─────────────────────────────────────────
+
+/**
+ * A normalized message from any messaging platform.
+ * Each adapter (Telegram, Discord, etc.) creates one of these and passes it
+ * to processIncomingMessage(), which handles all routing logic uniformly.
+ */
+export interface IncomingMessage {
+  /** Raw message text (before any mention stripping) */
+  rawText: string
+  /** Whether this is a private/DM chat */
+  isPrivate: boolean
+  /** Unique name for the channel (e.g. '@username', '#Server/general') */
+  chatName: string
+  /** Platform-specific chat ID (used for group buffer key) */
+  chatId: string | number
+  /** Display label for the sender (e.g. '@john', 'John Doe') */
+  senderLabel: string
+  /** Message text with bot mention stripped (for command matching) */
+  textWithoutMention: string
+  /** Whether the bot was mentioned/mentioned in a group chat */
+  isMentioned: boolean
+  /** Raw sender ID string (for whitelist matching) */
+  senderRaw: string
+  /** Sender's @username (for whitelist matching, without @) */
+  senderUsername: string
+  /** Additional whitelist identifiers (e.g. Discord globalName) */
+  senderExtra?: string
+}
+
+/**
+ * Process an incoming message from any messenger.
+ * Handles persistence, buffering, mention check, whitelist, busy check,
+ * command routing, and AI chat — all in a provider-agnostic way.
+ */
+export async function processIncomingMessage(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  msg: IncomingMessage,
+) {
+  console.log(
+    `[Messenger] processIncomingMessage: provider="${config.provider}" chatType="${msg.isPrivate ? 'dm' : 'group'}" from="${msg.senderLabel}" text="${msg.rawText.slice(0, 100)}"`,
+  )
+
+  // ── 1. Persist every message to chat history ───────────────────────────
+  saveBotMessage(
+    config.id,
+    msg.chatName,
+    'user',
+    msg.senderLabel,
+    msg.rawText,
+  ).catch(() => {})
+
+  // ── 2. Buffer the message (for in-memory group context) ────────────────
+  const contextSize = config.contextSize || 100
+  pushToGroupBuffer(
+    config.id,
+    msg.chatId,
+    `${msg.senderLabel}: ${msg.rawText}`,
+    contextSize,
+  )
+
+  // ── 3. Group message: only respond if mentioned ────────────────────────
+  if (!msg.isPrivate && !msg.isMentioned) {
+    console.log(
+      `[Messenger] ignoring non-mentioned group message from ${msg.senderLabel}`,
+    )
+    return
+  }
+
+  // ── 4. Whitelist access control ────────────────────────────────────────
+  if (!config.whitelist || config.whitelist.length === 0) {
+    await ctx.reply("Sorry, I'm not allowed to talk to you.")
+    return
+  }
+  const isAllowed = config.whitelist.some((entry) => {
+    const norm = entry.trim().toLowerCase()
+    return (
+      norm === msg.senderRaw.toLowerCase() ||
+      norm === `@${msg.senderUsername.toLowerCase()}` ||
+      norm === msg.senderUsername.toLowerCase() ||
+      (msg.senderExtra ? norm === msg.senderExtra.toLowerCase() : false)
+    )
+  })
+  if (!isAllowed) {
+    await ctx.reply("Sorry, I'm not allowed to talk to you.")
+    return
+  }
+
+  // ── 5. Busy check ─────────────────────────────────────────────────────
+  const busyReply = await getBusyReply(config.id, msg.chatName)
+  if (busyReply) {
+    await ctx.reply(busyReply)
+    return
+  }
+
+  // ── 6. Build group context lines (only the most recent) ────────────────
+  let groupContextLines: string[] | undefined
+  if (!msg.isPrivate) {
+    const context = getGroupContext(config.id, msg.chatId)
+    if (context) {
+      groupContextLines = context.split('\n').filter(Boolean)
+    }
+  }
+
+  // ── 7. Command routing (using text without mention) ────────────────────
+  const lowerCmd = msg.textWithoutMention.toLowerCase()
+
+  if (
+    lowerCmd === '/?' ||
+    lowerCmd === '/h' ||
+    lowerCmd === '/help' ||
+    lowerCmd === '?'
+  ) {
+    await handleHelp(config, ctx)
+  } else if (lowerCmd.startsWith('/set-project')) {
+    const args = msg.textWithoutMention.slice('/set-project'.length).trim()
+    await handleSetProject(config, ctx, args)
+  } else if (lowerCmd.startsWith('/set-agent')) {
+    const args = msg.textWithoutMention.slice('/set-agent'.length).trim()
+    await handleSetAgent(config, ctx, args)
+  } else {
+    await handleChatMessage(
+      config,
+      ctx,
+      msg.textWithoutMention,
+      msg.chatName,
+      msg.senderLabel,
+      groupContextLines,
+    )
   }
 }
 
