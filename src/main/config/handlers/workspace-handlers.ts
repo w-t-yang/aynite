@@ -57,18 +57,7 @@ export const workspaceHandlers: ConfigHandler = (() => ({
         }
         const dataPath = getWorkspaceDataPath(id)
         const existing = await readJson<Record<string, unknown>>(dataPath, {})
-        // Preserve activeSessionIdForBot if the incoming config doesn't have it.
-        // The renderer doesn't track this field (it's messenger-only), so without
-        // this guard, any renderer-side workspace config save would erase it.
-        const updated = {
-          ...existing,
-          ...config,
-          id,
-          activeSessionIdForBot:
-            config.activeSessionIdForBot ??
-            existing.activeSessionIdForBot ??
-            null,
-        }
+        const updated = { ...existing, ...config, id }
         await writeJson(dataPath, updated)
         return true
       }

@@ -320,6 +320,26 @@ export const TOOL_METADATA: Record<
       properties: {},
     },
   },
+  get_messages: {
+    name: 'Get Messages',
+    description:
+      'Fetch recent messages from the chat history. Use this when you need to understand context from earlier conversation, especially in group chats where users discuss topics before asking you to take action (e.g. summarizing notes, creating todos). Only messages from the current channel are accessible. After reading history, you MUST ask the user to confirm whether you understood the context correctly.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        count: {
+          type: 'number',
+          description:
+            'Number of recent messages to fetch (default 10, max 50)',
+        },
+        since: {
+          type: 'string',
+          description:
+            'Optional ISO date string to fetch messages from a specific date (e.g. "2026-06-20"). If omitted, fetches from today.',
+        },
+      },
+    },
+  },
 }
 
 export const DEFAULT_AI_TOOLS: Record<string, boolean> = Object.keys(

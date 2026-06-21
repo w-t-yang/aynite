@@ -8,16 +8,16 @@
 
 import { readdirSync } from 'node:fs'
 import type { UIMessage } from 'ai'
-import { AppEvents } from '../../lib/constants/app'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import {
   getAgentPath,
   getAgentsDir,
   getAIConfigPath,
+  getBotChatDatePath,
+  getBotSessionMessagesPath,
+  getBotSessionMetadataPath,
   getMainConfigPath,
   getMessengersConfigPath,
-  getSessionMessagesPath,
-  getSessionMetadataFilePath,
   getWorkspaceDataPath,
   getWorkspacesConfigPath,
   readJson,
@@ -31,8 +31,6 @@ import {
   getProviderReasoningOptions,
   saveSession,
 } from '../ai'
-import { broadcastAppEvent } from '../ipc-utils'
-import { saveWorkspaceState } from '../workspace'
 
 // ─── Abstract Messenger Context ──────────────────────────────────────────
 
@@ -142,20 +140,6 @@ export function escapeMarkdown(text: string): string {
   return text.replace(/[_*`[]/g, '\\$&')
 }
 
-async function findMetadata(
-  sessionId: string,
-  workspace: string,
-): Promise<{ metadata: SessionMetadata | null; dateDir: string | null }> {
-  const metaPath = getSessionMetadataFilePath(sessionId, workspace)
-  const meta = await readJson<SessionMetadata>(metaPath).catch(() => null)
-  return { metadata: meta, dateDir: null }
-}
-
-async function findSessionFile(sessionId: string, workspace: string) {
-  const path = getSessionMessagesPath(sessionId, workspace)
-  return readJson(path).catch(() => null)
-}
-
 function genId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
@@ -179,6 +163,114 @@ function randomProcessingReply(): string {
   ]
 }
 
+// ─── Bot Session Management ──────────────────────────────────────────────
+
+/**
+ * Per-channel bot session IDs.
+ * Keyed by `${messengerId}:${chatName}`, maps to a session ID string.
+ * This is purely in-memory — no config file needed.
+ */
+const botSessionMap = new Map<string, string>()
+
+/** Get or create a session ID for a bot channel. */
+export function getOrCreateBotSessionId(
+  messengerId: string,
+  chatName: string,
+): string {
+  const key = `${messengerId}:${chatName}`
+  let id = botSessionMap.get(key)
+  if (!id) {
+    id = Date.now().toString()
+    botSessionMap.set(key, id)
+  }
+  return id
+}
+
+/** Reset (delete) the session for a channel — next message starts fresh. */
+export function resetBotSessionId(messengerId: string, chatName: string) {
+  const key = `${messengerId}:${chatName}`
+  botSessionMap.delete(key)
+}
+
+// ─── Bot Message Persistence ─────────────────────────────────────────────
+
+/**
+ * Save an incoming/outgoing message to the per-chat date-based log:
+ *   ~/.aynite/bots/<messengerId>/<chatName>/<date>.json
+ *
+ * Each file is an array of { role, sender, text, timestamp } objects.
+ */
+export async function saveBotMessage(
+  messengerId: string,
+  chatName: string,
+  role: 'user' | 'assistant',
+  sender: string,
+  text: string,
+) {
+  const date = new Date().toISOString().split('T')[0]
+  const path = getBotChatDatePath(messengerId, chatName, date)
+  const existing = await readJson<Array<Record<string, unknown>>>(path, [])
+  existing.push({
+    role,
+    sender,
+    text,
+    timestamp: new Date().toISOString(),
+  })
+  await writeJson(path, existing)
+}
+
+// ─── Bot Session Persistence ─────────────────────────────────────────────
+
+/**
+ * Save session data to the bot session directory:
+ *   ~/.aynite/bots/<messengerId>/<chatName>/session/messages.json
+ *   ~/.aynite/bots/<messengerId>/<chatName>/session/metadata.json
+ */
+export async function saveBotSession(
+  messengerId: string,
+  chatName: string,
+  messages: UIMessage[],
+  metadata?: SessionMetadata,
+) {
+  const { mkdir } = await import('node:fs/promises')
+
+  const msgPath = getBotSessionMessagesPath(messengerId, chatName)
+  const dir = msgPath.substring(0, msgPath.lastIndexOf('/'))
+  await mkdir(dir, { recursive: true }).catch(() => {})
+  await writeJson(msgPath, messages)
+
+  if (metadata) {
+    const metaPath = getBotSessionMetadataPath(messengerId, chatName)
+    const existing = await readJson<SessionMetadata>(metaPath).catch(() => null)
+    await writeJson(metaPath, { ...(existing || {}), ...metadata })
+  }
+}
+
+/**
+ * Load bot session messages from disk.
+ * Returns empty array if the session does not exist.
+ */
+export async function loadBotSessionMessages(
+  messengerId: string,
+  chatName: string,
+): Promise<UIMessage[]> {
+  const path = getBotSessionMessagesPath(messengerId, chatName)
+  const msgs = await readJson<UIMessage[]>(path).catch(() => null)
+  return msgs || []
+}
+
+/**
+ * Load bot session metadata from disk.
+ * Returns null if no metadata file is found.
+ */
+export async function loadBotSessionMetadata(
+  messengerId: string,
+  chatName: string,
+): Promise<SessionMetadata | null> {
+  const path = getBotSessionMetadataPath(messengerId, chatName)
+  return readJson<SessionMetadata>(path).catch(() => null)
+}
+
 // ─── Agent Loop ──────────────────────────────────────────────────────────
 
 export async function runMessengerAgent(
@@ -189,6 +281,8 @@ export async function runMessengerAgent(
   enabledTools: Record<string, boolean>,
   onProgress: (text: string) => void,
   sessionId: string,
+  /** Optional bot session info — if provided, saves use bot paths instead of workspace paths */
+  botSession?: { messengerId: string; chatName: string },
 ): Promise<UIMessage[]> {
   const aiConfig = await loadAiConfig()
   const activeProvider =
@@ -226,6 +320,16 @@ export async function runMessengerAgent(
     autoApproveCommands: true,
   }
   const tools = createTools(toolContext)
+
+  // Add get_messages tool when running in messenger/bot session mode.
+  // This allows the AI to fetch history from the per-chat message logs.
+  if (botSession) {
+    const { createGetMessagesTool } = await import('../ai/tools/get-messages')
+    ;(tools as any).get_messages = createGetMessagesTool(
+      botSession.messengerId,
+      botSession.chatName,
+    )
+  }
 
   console.log(
     `[Messenger] calling streamText with ${Object.keys(tools).length} tools`,
@@ -349,14 +453,24 @@ export async function runMessengerAgent(
         )
         flushAssistant()
         const incrementalMessages = [...messages, ...loopMessages]
-        await saveSession(
-          workspaceName,
-          sessionId,
-          incrementalMessages,
-          undefined,
-        ).catch((err: any) =>
-          console.error('[Messenger] incremental save failed:', err),
-        )
+        if (botSession) {
+          await saveBotSession(
+            botSession.messengerId,
+            botSession.chatName,
+            incrementalMessages,
+          ).catch((err: any) =>
+            console.error('[Messenger] bot incremental save failed:', err),
+          )
+        } else {
+          await saveSession(
+            workspaceName,
+            sessionId,
+            incrementalMessages,
+            undefined,
+          ).catch((err: any) =>
+            console.error('[Messenger] incremental save failed:', err),
+          )
+        }
         break
       }
       case 'error':
@@ -591,126 +705,53 @@ export async function handleChatMessage(
   config: MessengerConfig,
   ctx: MessengerContext,
   text: string,
+  /** Chat name for per-channel sessions, e.g. '@username' (DM) or '#general' (group) */
+  chatName?: string,
+  /** Display name of the sender (e.g. '@john' or 'John Doe') */
+  senderLabel?: string,
 ) {
   const workspace = await getActiveWorkspace()
-  const lockKey = `${config.id}:${workspace}`
-
-  if (processing.has(lockKey)) {
-    let lastContent = ''
-    try {
-      const wsConfig = await readJson<WorkspaceConfig>(
-        getWorkspaceDataPath(workspace),
-      )
-      const botId = wsConfig.activeSessionIdForBot || wsConfig.activeSessionId
-      if (botId) {
-        const msgs = await findSessionFile(botId, workspace)
-        if (msgs && Array.isArray(msgs)) {
-          const lastAssistant = [...msgs]
-            .reverse()
-            .find((m: any) => m.role === 'assistant' && m.parts?.length > 0)
-
-          if (lastAssistant) {
-            const lines: string[] = []
-            for (const part of lastAssistant.parts) {
-              if (part.type === 'text' && part.text) {
-                lines.push(part.text.slice(0, 2000))
-              }
-              if (
-                part.type === 'dynamic-tool' ||
-                part.type === 'tool-call' ||
-                part.type === 'tool-result'
-              ) {
-                const toolName = part.toolName || ''
-                const input = part.input ?? part.args ?? {}
-                const formattedName = toolName.toUpperCase().replace(/_/g, ' ')
-                const actualArgs = input?.args || input?.input || input
-                const getCmd = (obj: any): string | null => {
-                  if (!obj || typeof obj !== 'object') return null
-                  return (
-                    obj.command ||
-                    obj.path ||
-                    obj.pattern ||
-                    obj.url ||
-                    obj.query ||
-                    obj.name ||
-                    null
-                  )
-                }
-                let cmd = getCmd(actualArgs)
-                if (cmd && toolName === 'run_command') {
-                  cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
-                }
-                if (cmd) {
-                  lines.push(`⚡ ${formattedName}  │  ${cmd}`)
-                } else {
-                  lines.push(`⚡ ${formattedName}`)
-                }
-              }
-            }
-            if (lines.length > 0) {
-              lastContent = lines.join('\n\n').slice(0, 2000)
-            }
-          }
-        }
-      }
-    } catch {
-      // Best effort
-    }
-
-    const message = lastContent
-      ? `The agent is busy with the last request.\n\nHere is the latest message from the session:\n\n${escapeMarkdown(lastContent)}`
-      : 'The agent is currently processing a request. Please wait before sending another message.'
-
-    await ctx.reply(message)
-    return
-  }
-
-  processing.add(lockKey)
+  const chat = chatName || 'default'
+  const lockKey = lockBot(config.id, chat)
 
   try {
     console.log(
-      `[Messenger] handleChatMessage: provider="${config.provider}" workspace="${workspace}" text="${text.slice(0, 100)}"`,
+      `[Messenger] handleChatMessage: provider="${config.provider}" workspace="${workspace}" text="${text.slice(0, 100)}" chatName="${chatName}"`,
     )
 
-    const workspaceConfig = await readJson<WorkspaceConfig>(
-      getWorkspaceDataPath(workspace),
-    )
-    if (!workspaceConfig) {
-      await ctx.reply(`Workspace "${workspace}" not found.`)
+    // ── Guard: agent and project folder must be set ──────────────────────
+
+    if (!config.agentId) {
+      await ctx.reply(
+        'No agent is bound to this bot. Use `/set-agent` to choose an agent, then try again.',
+      )
+      return
+    }
+    if (!config.projectFolder) {
+      await ctx.reply(
+        'No project folder is set for this bot. Use `/set-project` to choose one, then try again.',
+      )
       return
     }
 
-    const { activeSessionId, activeSessionIdForBot } = workspaceConfig
-    const activeAgentId = config.agentId || workspaceConfig.activeAgentId
-    const workspaceFolders = config.projectFolder
-      ? [config.projectFolder]
-      : workspaceConfig.folders
+    // ── Determine chat name ──────────────────────────────────────────────
 
-    const botSessionId = activeSessionIdForBot || activeSessionId
-    console.log(
-      `[Messenger] workspace: activeSessionId="${activeSessionId}" activeSessionIdForBot="${activeSessionIdForBot}" botSessionId="${botSessionId}" agentId="${activeAgentId}" folders=${workspaceFolders?.length}`,
-    )
+    const chat = chatName || 'default'
 
-    let sessionId: string
-    if (!botSessionId) {
-      sessionId = Date.now().toString()
-      await saveSession(workspace, sessionId, [], undefined)
-      await saveWorkspaceState(workspace, {
-        activeSessionIdForBot: sessionId,
-      })
-      broadcastAppEvent(AppEvents.CONFIG_CHANGED, {
-        key: 'activeSessionIdForBot',
-      })
-      console.log(`[Messenger] created new bot session: ${sessionId}`)
-    } else {
-      sessionId = botSessionId
-    }
+    // ── Save incoming message to chat history ────────────────────────────
 
-    let messages = await findSessionFile(sessionId, workspace)
-    if (!messages || !Array.isArray(messages)) {
-      messages = []
-    }
+    await saveBotMessage(config.id, chat, 'user', 'User', text)
+
+    // ── Resolve session ID ───────────────────────────────────────────────
+
+    const sessionId = getOrCreateBotSessionId(config.id, chat)
+
+    // ── Load existing session messages ───────────────────────────────────
+
+    const messages = await loadBotSessionMessages(config.id, chat)
     console.log(`[Messenger] loaded ${messages.length} existing messages`)
+
+    // ── Load configs ─────────────────────────────────────────────────────
 
     const [aiConfig, mainConfig] = await Promise.all([
       loadAiConfig(),
@@ -718,14 +759,19 @@ export async function handleChatMessage(
     ])
 
     const toolsConfig = mainConfig?.aiTools || {}
-    const agentsConfig = mainConfig?.agents || { list: [] }
-    const activeAgent = agentsConfig.list?.find(
-      (a: any) => a.id === activeAgentId,
-    )
+    const activeAgentId = config.agentId
+    const workspaceFolders = [config.projectFolder]
+
+    // ── Resolve agent ────────────────────────────────────────────────────
+
+    const agentFile = await loadAgent(activeAgentId)
+    const activeAgent = agentFile || null
 
     const activeProvider =
       aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
       aiConfig?.providers?.[0]
+
+    // ── Build message array ──────────────────────────────────────────────
 
     const updatedMessages: UIMessage[] = [...messages]
     if (
@@ -733,7 +779,20 @@ export async function handleChatMessage(
       !updatedMessages.some((m: any) => m.role === 'system')
     ) {
       const { getMergedSystemPrompt } = await import('../ai')
-      const systemPrompt = await getMergedSystemPrompt(activeAgent?.id)
+      const agentPrompt = await getMergedSystemPrompt(activeAgentId)
+      // Append a bot-forwarding instruction so the AI understands the context.
+      // The AI is not talking to the end user directly — messages are forwarded
+      // by a messenger bot that wraps them with sender/timestamp metadata.
+      const BOT_INSTRUCTION = [
+        "You are communicating through a messenger bot. The user's messages are forwarded to you with sender and timestamp metadata.",
+        "You have access to a `get_messages` tool that can fetch history from the chat's message log.",
+        "Use `get_messages` only when necessary to understand the user's request — for example, if a group chat user asks you to summarize a discussion or create action items based on earlier conversation.",
+        'IMPORTANT: After using `get_messages` to read history, you MUST ask the user to confirm whether you understood the context correctly before proceeding with any action.',
+        'Respond conversationally to the content of the message, addressing the sender directly.',
+      ].join('\n')
+      const systemPrompt = agentPrompt
+        ? `${agentPrompt}\n\n${BOT_INSTRUCTION}`
+        : BOT_INSTRUCTION
       if (systemPrompt) {
         updatedMessages.unshift({
           id: genId(),
@@ -746,10 +805,14 @@ export async function handleChatMessage(
       }
     }
 
+    const now = new Date().toISOString()
+    const formattedText = `- sender: ${senderLabel || 'Unknown'}
+- timestamp: ${now}
+- content: ${text}`
     const userMsg: UIMessage = {
       id: genId(),
       role: 'user',
-      parts: [{ type: 'text', text }],
+      parts: [{ type: 'text', text: formattedText }],
     }
     updatedMessages.push(userMsg)
     console.log(
@@ -758,7 +821,7 @@ export async function handleChatMessage(
 
     await ctx.reply(randomProcessingReply())
 
-    const activeFile = workspaceConfig.activeFile || ''
+    const activeFile = '' // Bot doesn't have an active file
     const finalMessages = await runMessengerAgent(
       updatedMessages,
       workspace,
@@ -767,24 +830,25 @@ export async function handleChatMessage(
       toolsConfig,
       () => {},
       sessionId,
+      { messengerId: config.id, chatName: chat },
     )
 
     console.log(
       `[Messenger] agent loop finished, total messages: ${finalMessages.length}`,
     )
 
-    const existingMeta = await findMetadata(sessionId, workspace)
+    const existingMeta = await loadBotSessionMetadata(config.id, chat)
     const agentName = activeAgent?.name || 'Chat'
     const modelName = activeProvider?.name || activeProvider?.model || 'AI'
     const metadata: SessionMetadata = {
       agentName,
       modelName,
-      createdAt: existingMeta.metadata?.createdAt || new Date().toISOString(),
+      createdAt: existingMeta?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
 
-    await saveSession(workspace, sessionId, finalMessages, metadata)
-    console.log(`[Messenger] session saved (with metadata): ${sessionId}`)
+    await saveBotSession(config.id, chat, finalMessages, metadata)
+    console.log(`[Messenger] bot session saved: ${chat}/session/`)
 
     const lastAssistant = [...finalMessages]
       .reverse()
@@ -799,13 +863,16 @@ export async function handleChatMessage(
       if (textPart) replyText = (textPart as any).text
     }
 
+    // Save assistant reply to chat history too
+    await saveBotMessage(config.id, chat, 'assistant', 'Bot', replyText)
+
     console.log(`[Messenger] replying with ${replyText.length} chars`)
     await ctx.reply(replyText)
   } catch (err) {
     console.error(`[Messenger] Chat error for "${config.provider}":`, err)
     await ctx.reply('An error occurred while processing your request.')
   } finally {
-    processing.delete(lockKey)
+    unlockBot(lockKey)
     console.log(`[Messenger] processing lock released for "${config.provider}"`)
   }
 }
@@ -830,4 +897,101 @@ export function hasBot(id: string): boolean {
 
 export function getAllBotIds(): string[] {
   return Array.from(bots.keys())
+}
+
+/**
+ * Build a per-chat lock key from messenger ID and chat name.
+ * This ensures concurrent messages to different chats don't block each other.
+ */
+export function getBotLockKey(messengerId: string, chatName: string): string {
+  return `${messengerId}:${chatName}`
+}
+
+/**
+ * Check if a bot is busy processing a message for a specific chat.
+ * If busy, returns a reply string with the last assistant message content
+ * (or a generic message if no last message exists). Returns null if not busy.
+ */
+export async function getBusyReply(
+  messengerId: string,
+  chatName: string,
+): Promise<string | null> {
+  const lockKey = getBotLockKey(messengerId, chatName)
+  if (!processing.has(lockKey)) return null
+
+  let lastContent = ''
+  try {
+    const msgs = await loadBotSessionMessages(messengerId, chatName)
+    if (msgs && Array.isArray(msgs)) {
+      const lastAssistant = [...msgs]
+        .reverse()
+        .find((m: any) => m.role === 'assistant' && m.parts?.length > 0)
+
+      if (lastAssistant) {
+        const lines: string[] = []
+        for (const part of lastAssistant.parts) {
+          if (part.type === 'text' && part.text) {
+            lines.push(part.text.slice(0, 2000))
+          }
+          if (
+            part.type === 'dynamic-tool' ||
+            part.type === 'tool-call' ||
+            part.type === 'tool-result'
+          ) {
+            const p = part as any
+            const toolName = p.toolName || ''
+            const input = p.input ?? p.args ?? {}
+            const formattedName = toolName.toUpperCase().replace(/_/g, ' ')
+            const actualArgs = input?.args || input?.input || input
+            const getCmd = (obj: any): string | null => {
+              if (!obj || typeof obj !== 'object') return null
+              return (
+                obj.command ||
+                obj.path ||
+                obj.pattern ||
+                obj.url ||
+                obj.query ||
+                obj.name ||
+                null
+              )
+            }
+            let cmd = getCmd(actualArgs)
+            if (cmd && toolName === 'run_command') {
+              cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
+            }
+            if (cmd) {
+              lines.push(`⚡ ${formattedName}  │  ${cmd}`)
+            } else {
+              lines.push(`⚡ ${formattedName}`)
+            }
+          }
+        }
+        if (lines.length > 0) {
+          lastContent = lines.join('\n\n').slice(0, 2000)
+        }
+      }
+    }
+  } catch {
+    // Best effort
+  }
+
+  return lastContent
+    ? `The agent is busy with the last request.\n\nHere is the latest message from the session:\n\n${escapeMarkdown(lastContent)}`
+    : 'The agent is currently processing a request. Please wait before sending another message.'
+}
+
+/**
+ * Mark a bot chat as busy (locked). Returns the lock key for later release.
+ */
+export function lockBot(messengerId: string, chatName: string): string {
+  const lockKey = getBotLockKey(messengerId, chatName)
+  processing.add(lockKey)
+  return lockKey
+}
+
+/**
+ * Release (unlock) a bot chat that was previously locked.
+ */
+export function unlockBot(lockKey: string) {
+  processing.delete(lockKey)
 }

@@ -295,6 +295,73 @@ export function getAgentPath(agentId: string) {
   return getAynitePath(AYNITE_SUBDIRS.AGENTS, `${agentId}.json`)
 }
 
+// ─── Bot / Messenger Paths ──────────────────────────────────────────────
+
+/** Root bots directory: ~/.aynite/bots/ */
+export function getBotsDir(): string {
+  return getAynitePath(AYNITE_SUBDIRS.BOTS)
+}
+
+/** Per-messenger directory: ~/.aynite/bots/<messengerId>/ */
+export function getBotDir(messengerId: string): string {
+  return path.join(getBotsDir(), messengerId)
+}
+
+/** Per-chat directory: ~/.aynite/bots/<messengerId>/<chatName>/ */
+export function getBotChatDir(messengerId: string, chatName: string): string {
+  return path.join(getBotDir(messengerId), chatName)
+}
+
+/** Per-chat date-based message log:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/<date>.json */
+export function getBotChatDatePath(
+  messengerId: string,
+  chatName: string,
+  date: string,
+): string {
+  return path.join(getBotChatDir(messengerId, chatName), `${date}.json`)
+}
+
+/** Per-chat session directory:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/session/ */
+export function getBotSessionDir(
+  messengerId: string,
+  chatName: string,
+): string {
+  return path.join(getBotChatDir(messengerId, chatName), 'session')
+}
+
+/** Session messages file:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/session/messages.json */
+export function getBotSessionMessagesPath(
+  messengerId: string,
+  chatName: string,
+): string {
+  return path.join(getBotSessionDir(messengerId, chatName), 'messages.json')
+}
+
+/** Session metadata file:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/session/metadata.json */
+export function getBotSessionMetadataPath(
+  messengerId: string,
+  chatName: string,
+): string {
+  return path.join(getBotSessionDir(messengerId, chatName), 'metadata.json')
+}
+
+/** Session compaction backup:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/session/compacted-<timestamp>.json */
+export function getBotSessionCompactPath(
+  messengerId: string,
+  chatName: string,
+  timestamp: number,
+): string {
+  return path.join(
+    getBotSessionDir(messengerId, chatName),
+    `compacted-${timestamp}.json`,
+  )
+}
+
 export function getSkillsDir() {
   return getAynitePath('skills')
 }

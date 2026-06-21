@@ -23,6 +23,7 @@ import type { MessengerConfig } from '../../lib/types/ai'
 import { broadcastAppEvent } from '../ipc-utils'
 import type { BotHandle } from './shared'
 import {
+  getBusyReply,
   getGroupContext,
   getSenderLabel,
   handleChatMessage,
@@ -211,8 +212,22 @@ export async function startDiscordBot(config: MessengerConfig) {
       return
     }
 
-    const rawText = content.trim()
-    const cleanText = rawText.replace(/<@!?(\d+)>\s*/g, '').trim()
+    // Determine chat name: @username for DMs, #channel-name for guilds
+    const chatName = isPrivate
+      ? `@${message.author.username}`
+      : `#${(message.channel as any)?.name || chatId}`
+
+    // Strip Discord mention syntax <@!id> or <@id> from text before command matching
+    const cleanText = content.replace(/<@!?(\d+)>\s*/g, '').trim()
+    const cleanLower = cleanText.toLowerCase()
+
+    // ── Busy check: if this chat is already processing, reject all messages ──
+
+    const busyReply = await getBusyReply(config.id, chatName)
+    if (busyReply) {
+      message.reply(busyReply)
+      return
+    }
 
     // Enrich with group context for guild channels
     let userText = cleanText
@@ -225,22 +240,33 @@ export async function startDiscordBot(config: MessengerConfig) {
 
     debug(`routing command: "${cleanText}"`)
 
-    const lowerCmd = cleanText.toLowerCase()
     if (
-      lowerCmd === '/?' ||
-      lowerCmd === '/h' ||
-      lowerCmd === '/help' ||
-      lowerCmd === '?'
+      cleanLower === '/?' ||
+      cleanLower === '/h' ||
+      cleanLower === '/help' ||
+      cleanLower === '?'
     ) {
       handleHelp(botConfig, messengerCtx)
-    } else if (lowerCmd.startsWith('/set-project')) {
+    } else if (cleanLower.startsWith('/set-project')) {
       const args = cleanText.slice('/set-project'.length).trim()
       handleSetProject(botConfig, messengerCtx, args)
-    } else if (lowerCmd.startsWith('/set-agent')) {
+    } else if (cleanLower.startsWith('/set-agent')) {
       const args = cleanText.slice('/set-agent'.length).trim()
       handleSetAgent(botConfig, messengerCtx, args)
     } else {
-      handleChatMessage(botConfig, messengerCtx, userText)
+      const senderLabel = getSenderLabel({
+        id: Number(message.author.id),
+        username: message.author.username,
+        first_name: message.author.displayName,
+        last_name: undefined,
+      })
+      handleChatMessage(
+        botConfig,
+        messengerCtx,
+        userText,
+        chatName,
+        senderLabel,
+      )
     }
   })
 

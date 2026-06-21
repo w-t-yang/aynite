@@ -10,6 +10,7 @@ import type { MessengerConfig } from '../../lib/types/ai'
 import { broadcastAppEvent } from '../ipc-utils'
 import type { BotHandle } from './shared'
 import {
+  getBusyReply,
   getGroupContext,
   getSenderLabel,
   handleChatMessage,
@@ -134,33 +135,61 @@ export async function startTelegramBot(config: MessengerConfig) {
       return
     }
 
-    const rawText = ctx.message.text.trim().toLowerCase()
+    // Determine chat name — for DMs use @username, for groups use #chat-title
+    const chatName = isPrivate
+      ? ctx.from?.username
+        ? `@${ctx.from.username}`
+        : `user-${ctx.from?.id}`
+      : `#${(ctx.chat as any)?.title || chatId}`
 
-    // Enrich message with group context for non-DM chats
-    let userText = ctx.message.text.trim()
+    // Strip @botname mention from the text before command matching
+    const botUsername = ctx.botInfo?.username
+    const cleanText = ctx.message.text.trim()
+    const cleanTextForCheck = botUsername
+      ? cleanText.replace(new RegExp(`@${botUsername}`, 'gi'), '').trim()
+      : cleanText
+    const cleanLower = cleanTextForCheck.toLowerCase()
+
+    // ── Busy check: if this chat is already processing, reject all messages ──
+
+    const busyReply = await getBusyReply(config.id, chatName)
+    if (busyReply) {
+      await ctx.reply(busyReply)
+      return
+    }
+
+    // Route commands (using cleaned text for matching, original for context)
+    let userText = cleanText
     if (!isPrivate && chatId) {
       const context = getGroupContext(config.id, chatId)
       if (context) {
-        userText = `[Recent conversation]:\n${context}\n\n[My message]: ${userText}`
+        userText = `[Recent conversation]:\n${context}\n\n[My message]: ${cleanTextForCheck}`
       }
     }
 
-    // Route commands
     if (
-      rawText === '/?' ||
-      rawText === '/h' ||
-      rawText === '/help' ||
-      rawText === '?'
+      cleanLower === '/?' ||
+      cleanLower === '/h' ||
+      cleanLower === '/help' ||
+      cleanLower === '?' ||
+      cleanLower === '/help'
     ) {
       handleHelp(botConfig, messengerCtx)
-    } else if (rawText.startsWith('/set-project')) {
-      const args = ctx.message.text.trim().slice('/set-project'.length).trim()
+    } else if (cleanLower.startsWith('/set-project')) {
+      const args = cleanTextForCheck.slice('/set-project'.length).trim()
       handleSetProject(botConfig, messengerCtx, args)
-    } else if (rawText.startsWith('/set-agent')) {
-      const args = ctx.message.text.trim().slice('/set-agent'.length).trim()
+    } else if (cleanLower.startsWith('/set-agent')) {
+      const args = cleanTextForCheck.slice('/set-agent'.length).trim()
       handleSetAgent(botConfig, messengerCtx, args)
     } else {
-      handleChatMessage(botConfig, messengerCtx, userText)
+      const senderLabel = getSenderLabel(ctx.from)
+      handleChatMessage(
+        botConfig,
+        messengerCtx,
+        userText,
+        chatName,
+        senderLabel,
+      )
     }
   })
 
