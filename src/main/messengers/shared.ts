@@ -924,7 +924,7 @@ export async function handleDev(
       }
 
       await ctx.replyWithMarkdown(
-        `✅ *Build complete* — relaunching Aynite with latest changes...\n\nSee you in a moment! 👋`,
+        `✅ *Build complete* — relaunching Aynite with latest changes...\n\n> 💡 If there are UI-related changes, you may need to manually restart the app to see them reflected in the interface.\n\nSee you in a moment! 👋`,
       )
 
       // Relaunch the app with the newly compiled code.
@@ -985,8 +985,11 @@ export async function handleDev(
       ? `\n\n\`\`\`\n${startupOutput.slice(0, 500).trim()}\n\`\`\``
       : ''
 
+    const uiNote =
+      '\n\n> 💡 If there are UI-related changes, you may need to manually restart the app to see them reflected in the interface.'
+
     await ctx.replyWithMarkdown(
-      `✅ *Dev server ${status}* for \`${escapeMarkdown(root)}\`\nPID: \`${proc.pid}\`${preview}\n\nUse \`/dev\` again to restart.`,
+      `✅ *Dev server ${status}* for \`${escapeMarkdown(root)}\`\nPID: \`${proc.pid}\`${preview}\n\nUse \`/dev\` again to restart.${uiNote}`,
     )
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err)
