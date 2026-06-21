@@ -8,9 +8,10 @@
 
 import type { UIMessage } from 'ai'
 import type { InternalSession } from '../../../../lib/types/chat'
+import { createMessage } from '../../../../lib/types/chat'
 import { aiMutations } from '../../../bridge/ai'
 import { config } from '../../../bridge/config'
-import { estimateTokenCount, genId } from '../utils/message'
+import { estimateTokenCount } from '../utils/message'
 import {
   registerStreamHandler,
   unregisterStreamHandler,
@@ -84,12 +85,9 @@ export async function compactContext(
       ? [systemMsg, ...nonSystemToSummarize]
       : nonSystemToSummarize
 
-    const summaryRequestMsg: UIMessage = {
-      id: genId(),
-      role: 'user',
-      parts: [{ type: 'text', text: summaryPrompt }],
-    }
-    summaryMessages.push(summaryRequestMsg)
+    summaryMessages.push(
+      createMessage('user', [{ type: 'text', text: summaryPrompt }]),
+    )
 
     // Step 4: Send to AI for summarization (no tools)
     const aiConfig = await config.get('ai')
@@ -153,11 +151,9 @@ export async function compactContext(
 
     // Step 5: Build the compacted message list
     const systemOnly = systemMsg ? [systemMsg] : []
-    const summaryAssistantMsg: UIMessage = {
-      id: genId(),
-      role: 'assistant',
-      parts: [{ type: 'text', text: cleanSummary, state: 'done' }],
-    }
+    const summaryAssistantMsg = createMessage('assistant', [
+      { type: 'text', text: cleanSummary, state: 'done' },
+    ])
     const compactedMessages: UIMessage[] = [
       ...systemOnly,
       summaryAssistantMsg,

@@ -11,10 +11,10 @@
  * simple pass-through operations (clearChat, handleApprove, etc.).
  */
 
-import type { UIMessage } from 'ai'
 import { AppEvents } from '../../../../lib/constants/app'
 import type { AgentLoopConfig } from '../../../../lib/types/ai'
 import type { InternalSession, SessionState } from '../../../../lib/types/chat'
+import { createMessage } from '../../../../lib/types/chat'
 import { ai as aiBridge, aiMutations } from '../../../bridge/ai'
 import { config } from '../../../bridge/config'
 import { workspace } from '../../../bridge/workspace'
@@ -26,7 +26,6 @@ import {
   appendReasoningToAssistant,
   appendToAssistant,
   appendToolInputDeltaToAssistant,
-  genId,
   updateToolResult,
 } from '../utils/message'
 import { scheduleSave } from './auto-saver'
@@ -324,11 +323,9 @@ export async function sendMessage(
   if (initialMessages.length === 0) {
     const systemPrompt = await aiBridge.getMergedSystemPrompt(activeAgent?.id)
     if (systemPrompt) {
-      initialMessages.push({
-        id: genId(),
-        role: 'system',
-        parts: [{ type: 'text', text: systemPrompt }],
-      })
+      initialMessages.push(
+        createMessage('system', [{ type: 'text', text: systemPrompt }]),
+      )
     }
   }
 
@@ -336,11 +333,7 @@ export async function sendMessage(
     ? `${text}\n\nI ran local commands, here are the results:\n\n${resultsText}`
     : text
 
-  const userMsg: UIMessage = {
-    id: genId(),
-    role: 'user',
-    parts: [{ type: 'text', text: userText }],
-  }
+  const userMsg = createMessage('user', [{ type: 'text', text: userText }])
 
   const updatedMessages = [...initialMessages, userMsg]
   updateStateAndSave(session, {

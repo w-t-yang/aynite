@@ -1,6 +1,6 @@
 import type { UIMessage } from 'ai'
+import { createMessage } from '../../../../lib/types/chat'
 import { aiMutations } from '../../../bridge/ai'
-import { genId } from './message'
 
 export async function executeCommandOnly(
   text: string,
@@ -42,11 +42,7 @@ export async function executeCommandOnly(
 
     setMessages([
       ...messages,
-      {
-        id: genId(),
-        role: 'user',
-        parts: [{ type: 'text', text: formattedText }],
-      },
+      createMessage('user', [{ type: 'text', text: formattedText }]),
     ])
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : String(e)
@@ -54,11 +50,7 @@ export async function executeCommandOnly(
 
     setMessages([
       ...messages,
-      {
-        id: genId(),
-        role: 'user',
-        parts: [{ type: 'text', text: formattedText }],
-      },
+      createMessage('user', [{ type: 'text', text: formattedText }]),
     ])
   } finally {
     setLoading(false)

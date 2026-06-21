@@ -3,8 +3,8 @@ import type { AgentLoopConfig } from '../../../../lib/types/ai'
 export type { AgentLoopConfig }
 
 import type { TextStreamPart, UIMessage } from 'ai'
+import { createMessage } from '../../../../lib/types/chat'
 import { aiMutations } from '../../../bridge/ai'
-import { genId } from '../utils/message'
 
 export async function runAgentLoop(
   messages: UIMessage[],
@@ -52,11 +52,7 @@ export async function runAgentLoop(
         })
       }
 
-      loopMessages.push({
-        id: genId(),
-        role: 'assistant',
-        parts,
-      })
+      loopMessages.push(createMessage('assistant', parts))
       textAccum = ''
       reasoningAccum = ''
       currentStepToolCalls = []

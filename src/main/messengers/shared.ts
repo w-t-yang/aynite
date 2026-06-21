@@ -35,6 +35,7 @@ import {
 } from '../../lib/path'
 import type { MessengerConfig } from '../../lib/types/ai'
 import type { SessionMetadata } from '../../lib/types/chat'
+import { createMessage } from '../../lib/types/chat'
 import {
   createTools,
   getAIModel,
@@ -186,10 +187,6 @@ export async function getActiveWorkspace(): Promise<string> {
 
 export function escapeMarkdown(text: string): string {
   return text.replace(/[_*`[]/g, '\\$&')
-}
-
-function genId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 // ─── Bot Session Management ──────────────────────────────────────────────
@@ -411,7 +408,7 @@ export async function runMessengerAgent(
           input: tc.input || tc.args,
         } as any)
       }
-      loopMessages.push({ id: genId(), role: 'assistant', parts })
+      loopMessages.push(createMessage('assistant', parts))
       textAccum = ''
       reasoningAccum = ''
       currentStepToolCalls = []
@@ -1168,11 +1165,9 @@ export async function handleChatMessage(
         ? `${agentPrompt}\n\n${BOT_INSTRUCTION}`
         : BOT_INSTRUCTION
       if (systemPrompt) {
-        updatedMessages.unshift({
-          id: genId(),
-          role: 'system',
-          parts: [{ type: 'text', text: systemPrompt }],
-        })
+        updatedMessages.unshift(
+          createMessage('system', [{ type: 'text', text: systemPrompt }]),
+        )
         console.log(
           `[Messenger] added system prompt (${systemPrompt.length} chars)`,
         )
@@ -1190,24 +1185,18 @@ export async function handleChatMessage(
       // Only inject the most recent 5 lines to keep session context focused
       const recentLines = groupContextLines.slice(-5)
       for (const line of recentLines) {
-        const ctxMsg: UIMessage = {
-          id: genId(),
-          role: 'user',
-          parts: [{ type: 'text', text: line }],
-        }
-        updatedMessages.push(ctxMsg)
+        updatedMessages.push(
+          createMessage('user', [{ type: 'text', text: line }]),
+        )
       }
     }
 
     const formattedText = `- sender: ${senderLabel || 'Unknown'}
 - timestamp: ${now}
 - content: ${text}`
-    const userMsg: UIMessage = {
-      id: genId(),
-      role: 'user',
-      parts: [{ type: 'text', text: formattedText }],
-    }
-    updatedMessages.push(userMsg)
+    updatedMessages.push(
+      createMessage('user', [{ type: 'text', text: formattedText }]),
+    )
     console.log(
       `[Messenger] total messages before agent loop: ${updatedMessages.length}`,
     )

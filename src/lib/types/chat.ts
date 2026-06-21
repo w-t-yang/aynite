@@ -8,6 +8,23 @@ export interface SessionMetadata {
   summary?: string
 }
 
+/**
+ * Create a UIMessage with a unique ID and a createdAt timestamp.
+ * The timestamp is stored as an extra field on the message object and
+ * persists through JSON serialization/deserialization.
+ */
+export function createMessage(
+  role: 'system' | 'user' | 'assistant',
+  parts: UIMessage['parts'],
+): UIMessage {
+  return {
+    id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    role,
+    parts,
+    createdAt: new Date().toISOString(),
+  } as UIMessage
+}
+
 export type ErrorType = 'provider' | 'tool' | 'system'
 
 export interface SessionState {
