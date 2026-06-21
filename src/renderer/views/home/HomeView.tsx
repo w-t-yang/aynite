@@ -13,6 +13,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import appIcon from '../../../../build/icon-64.png'
 import {
   ADD_ITEM_BUTTON,
   GRID_2_COL,
@@ -270,12 +271,7 @@ export function HomeView() {
         <div className="max-w-3xl mx-auto p-8 space-y-10">
           {/* ── Welcome ── */}
           <div className="text-center pt-4 pb-2">
-            <h2 className="text-2xl font-bold text-foreground mb-3">
-              {t('welcome')}
-            </h2>
-            <p className="text-sm text-muted-foreground/70 max-w-lg mx-auto leading-relaxed">
-              {t('description')}
-            </p>
+            <AnimatedWelcome />
           </div>
 
           {/* ── Agents ── */}
@@ -780,6 +776,162 @@ const MONTH_NAMES = [
 ]
 
 const _MONTH_NAMES_SHORT = MONTH_NAMES
+
+// ── Flip animation keyframes ──────────────────────────────────────────
+
+const FLIP_STYLES = `
+@keyframes flip-top {
+  0% { transform: rotateX(0deg); }
+  49% { transform: rotateX(90deg); }
+  50% { transform: rotateX(-90deg); }
+  100% { transform: rotateX(0deg); }
+}
+@keyframes flip-bottom {
+  0% { transform: rotateX(0deg); }
+  49% { transform: rotateX(-90deg); }
+  50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+@keyframes flip-left {
+  0% { transform: rotateY(0deg); }
+  49% { transform: rotateY(90deg); }
+  50% { transform: rotateY(-90deg); }
+  100% { transform: rotateY(0deg); }
+}
+@keyframes flip-right {
+  0% { transform: rotateY(0deg); }
+  49% { transform: rotateY(-90deg); }
+  50% { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+`
+
+// ── Animated Word ──────────────────────────────────────────────────────
+
+type FlipDir = 'top' | 'bottom' | 'left' | 'right'
+
+const FLIP_DIRS: FlipDir[] = ['top', 'bottom', 'left', 'right']
+
+/**
+ * A single word that flips to a new random word at random intervals (1-3s).
+ * Each flip uses a random direction (top/bottom/left/right).
+ * The element reserves space for the longest word in the list.
+ */
+function AnimatedWord({
+  words,
+  initialIndex = 0,
+}: {
+  words: string[]
+  initialIndex?: number
+}) {
+  const [index, setIndex] = useState(initialIndex)
+  const [flipDir, setFlipDir] = useState<FlipDir>('top')
+  const [animKey, setAnimKey] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const scheduleNext = () => {
+      const delay = 1000 + Math.random() * 2000
+      const _timer = setTimeout(() => {
+        if (cancelled) return
+
+        // Pick random flip direction
+        setFlipDir(FLIP_DIRS[Math.floor(Math.random() * FLIP_DIRS.length)])
+        // Restart animation by incrementing key
+        setAnimKey((k) => k + 1)
+
+        // Mid-animation (150ms): swap the word for the flip-in phase
+        setTimeout(() => {
+          if (cancelled) return
+          setIndex((prev) => {
+            let next: number
+            do {
+              next = Math.floor(Math.random() * words.length)
+            } while (next === prev)
+            return next
+          })
+        }, 150)
+
+        // Schedule the next cycle
+        scheduleNext()
+      }, delay)
+    }
+
+    scheduleNext()
+    return () => {
+      cancelled = true
+    }
+  }, [words])
+
+  // Compute the widest word to reserve space
+  const minWidth = useMemo(() => {
+    const longest = words.reduce((a, b) => (a.length > b.length ? a : b), '')
+    return `${longest.length + 1}ch`
+  }, [words])
+
+  return (
+    <span
+      key={animKey}
+      className="inline-block text-center font-semibold text-primary/90"
+      style={{
+        minWidth,
+        animation: `flip-${flipDir} 0.3s ease-in-out`,
+      }}
+    >
+      {words[index]}
+    </span>
+  )
+}
+
+// ── Word lists ─────────────────────────────────────────────────────────
+
+const ACTION_WORDS = [
+  'Hack',
+  'Build',
+  'Create',
+  'Code',
+  'Ship',
+  'Craft',
+  'Forge',
+  'Design',
+  'Make',
+  'Shape',
+]
+
+const BREAK_WORDS = [
+  'Have fun',
+  'Coffee',
+  'Pizza',
+  'Beer',
+  'Tea',
+  'Nap',
+  'Stretch',
+  'Walk',
+  'Chill',
+  'Snack',
+]
+
+// ── Animated Welcome ───────────────────────────────────────────────────
+
+function AnimatedWelcome() {
+  return (
+    <>
+      <style>{FLIP_STYLES}</style>
+      <img src={appIcon} alt="Aynite" className="w-12 h-12 mx-auto mb-3" />
+      <h2 className="text-2xl font-bold text-foreground mb-3">
+        Welcome to Aynite
+      </h2>
+      <p className="text-lg font-semibold tracking-wide">
+        <AnimatedWord words={ACTION_WORDS} initialIndex={0} />
+        <span className="text-muted-foreground/40 mx-2">·</span>
+        <AnimatedWord words={BREAK_WORDS} initialIndex={0} />
+        <span className="text-muted-foreground/40 mx-2">·</span>
+        <span className="text-muted-foreground/60 font-semibold">Repeat</span>
+      </p>
+    </>
+  )
+}
 
 /** Return the 12-month labels ending at the current month. */
 function getTrailingMonths(): string[] {

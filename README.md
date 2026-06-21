@@ -1,8 +1,11 @@
-# Aynite
-
 <div align="center">
 
-**Pick any AI. Use any tool. Render your data any way you like. Aynite sets your creativity free.**
+<h1>
+  <img src="build/icon-64.png" width="40" height="40" style="vertical-align: middle; margin-right: 10px;" alt="Aynite icon">
+  Aynite
+</h1>
+
+Hack · Have fun · Repeat
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)&nbsp; [![Version](https://img.shields.io/github/v/release/w-t-yang/aynite?include_prereleases&label=version)](https://github.com/w-t-yang/aynite/releases/latest)&nbsp; [![Downloads](https://img.shields.io/github/downloads/w-t-yang/aynite/total?color=blue)](https://github.com/w-t-yang/aynite/releases/latest)
 
