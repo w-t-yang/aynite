@@ -22,6 +22,7 @@ import {
   getBotChatDatePath,
   getBotCommitPath,
   getBotCommitsDir,
+  getBotSessionArchivePath,
   getBotSessionMessagesPath,
   getBotSessionMetadataPath,
   getMainConfigPath,
@@ -29,6 +30,7 @@ import {
   getWorkspaceDataPath,
   getWorkspacesConfigPath,
   readJson,
+  rename,
   writeJson,
 } from '../../lib/path'
 import type { MessengerConfig } from '../../lib/types/ai'
@@ -634,6 +636,7 @@ export async function handleHelp(
     '`/commit` — Stage all changes, generate commit message, and commit',
   )
   lines.push('`/dev` — Start/restart dev server (`npm run dev`)')
+  lines.push('`/clear` — Archive current session and start a new one')
   lines.push('')
   lines.push('Send any other message to chat with the AI agent.')
 
@@ -900,7 +903,41 @@ export async function handleDev(
   }
 
   try {
-    // ── Check if already running → restart ─────────────────────────────
+    // ── Check if this is Aynite's own project (has electron.vite.config.ts) ──
+    const { exists: pathExists } = await import('../../lib/path')
+    const isAyniteProject = await pathExists(
+      join(root, 'electron.vite.config.ts'),
+    ).catch(() => false)
+
+    if (isAyniteProject) {
+      // ── For Aynite itself: build latest source then relaunch ───────────
+      await ctx.reply('Building latest changes...')
+
+      const { stdout: buildOutput, stderr: buildError } = await execAsync(
+        'npm run build',
+        { cwd: root },
+      )
+      console.log(
+        `[Messenger] /dev: build output:\n${buildOutput.slice(0, 500)}`,
+      )
+      if (buildError) {
+        console.error(
+          `[Messenger] /dev: build stderr:\n${buildError.slice(0, 500)}`,
+        )
+      }
+
+      await ctx.replyWithMarkdown(
+        `✅ *Build complete* — relaunching Aynite with latest changes...\n\nSee you in a moment! 👋`,
+      )
+
+      // Relaunch the app with the newly compiled code
+      const { app } = await import('electron')
+      app.relaunch()
+      app.exit(0)
+      return
+    }
+
+    // ── For non-Aynite projects: start/restart npm run dev ────────────
     const existing = devProcesses.get(root)
     if (existing) {
       console.log(`[Messenger] /dev: restarting dev server for ${root}`)
@@ -911,14 +948,12 @@ export async function handleDev(
       await ctx.reply('Starting dev server...')
     }
 
-    // ── Start npm run dev ─────────────────────────────────────────────
     const proc = spawn('npm', ['run', 'dev'], {
       cwd: root,
       stdio: 'pipe',
       env: { ...process.env },
     })
 
-    // Capture a small amount of startup output to verify it's working
     let startupOutput = ''
     proc.stdout?.once('data', (chunk: Buffer) => {
       startupOutput += chunk.toString()
@@ -942,8 +977,6 @@ export async function handleDev(
     devProcesses.set(root, proc)
 
     const status = existing ? 'restarted' : 'started'
-
-    // Give it a moment to produce initial output, then reply
     await new Promise((resolve) => setTimeout(resolve, 1500))
 
     const preview = startupOutput
@@ -957,6 +990,65 @@ export async function handleDev(
     const errorMsg = err instanceof Error ? err.message : String(err)
     console.error('[Messenger] /dev error:', errorMsg)
     await ctx.reply(`Failed to start dev server: ${errorMsg}`)
+  }
+}
+
+// ─── Command: /clear ────────────────────────────────────────────────────
+
+export async function handleClear(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  /** Chat name for per-channel storage, e.g. '@username' (DM) or '#general' (group) */
+  chatName?: string,
+) {
+  const chat = chatName || 'default'
+  const msgPath = getBotSessionMessagesPath(config.id, chat)
+  const metaPath = getBotSessionMetadataPath(config.id, chat)
+  const timestamp = Date.now()
+
+  try {
+    let archived = false
+
+    // Try to archive messages.json
+    try {
+      const archiveMsgPath = getBotSessionArchivePath(
+        config.id,
+        chat,
+        timestamp,
+      )
+      await rename(msgPath, archiveMsgPath)
+      archived = true
+    } catch {
+      // messages.json doesn't exist — nothing to archive
+    }
+
+    // Try to archive metadata.json
+    try {
+      const archiveMetaPath = getBotSessionArchivePath(
+        config.id,
+        chat,
+        timestamp,
+        'metadata',
+      )
+      await rename(metaPath, archiveMetaPath)
+    } catch {
+      // metadata.json doesn't exist — that's fine
+    }
+
+    // Reset the in-memory session ID so next message starts fresh
+    resetBotSessionId(config.id, chat)
+
+    if (archived) {
+      await ctx.replyWithMarkdown(
+        `✅ *Session cleared* — previous session archived.\n\nUse \`/commit\` to commit changes, or send a message to start a new session.`,
+      )
+    } else {
+      await ctx.reply('No active session to clear.')
+    }
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error('[Messenger] /clear error:', errorMsg)
+    await ctx.reply(`Failed to clear session: ${errorMsg}`)
   }
 }
 
@@ -1310,6 +1402,8 @@ export async function processIncomingMessage(
     await handleCommit(config, ctx, msg.chatName)
   } else if (lowerCmd === '/dev') {
     await handleDev(config, ctx)
+  } else if (lowerCmd === '/clear') {
+    await handleClear(config, ctx, msg.chatName)
   } else {
     await handleChatMessage(
       config,

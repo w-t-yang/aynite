@@ -362,6 +362,30 @@ export function getBotSessionCompactPath(
   )
 }
 
+/** Per-chat session archive directory:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/session/archive/ */
+export function getBotSessionArchiveDir(
+  messengerId: string,
+  chatName: string,
+): string {
+  return path.join(getBotSessionDir(messengerId, chatName), 'archive')
+}
+
+/** Per-chat session archive path for a given timestamp:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/session/archive/<timestamp>.json */
+export function getBotSessionArchivePath(
+  messengerId: string,
+  chatName: string,
+  timestamp: number,
+  suffix?: string,
+): string {
+  const name = suffix ? `${timestamp}-${suffix}` : String(timestamp)
+  return path.join(
+    getBotSessionArchiveDir(messengerId, chatName),
+    `${name}.json`,
+  )
+}
+
 /** Per-chat commits directory:
  *  ~/.aynite/bots/<messengerId>/<chatName>/commits/ */
 export function getBotCommitsDir(
