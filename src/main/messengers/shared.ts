@@ -633,6 +633,8 @@ export async function handleHelp(
     '`/commit` — Stage all changes, generate commit message, and commit',
   )
   lines.push('`/dev` — Start/restart dev server (`npm run dev`)')
+  lines.push('`/skills` — List and search skills')
+  lines.push('`/skill` — Use a skill')
   lines.push('`/clear` — Archive current session and start a new one')
   lines.push('')
   lines.push('Send any other message to chat with the AI agent.')
@@ -993,6 +995,189 @@ export async function handleDev(
     console.error('[Messenger] /dev error:', errorMsg)
     await ctx.reply(`Failed to start dev server: ${errorMsg}`)
   }
+}
+
+// ─── Skill Tracking ──────────────────────────────────────────────────────
+
+/**
+ * Record a skill usage for an agent. Keeps the last 5 used skills.
+ */
+async function addUsedSkill(agentId: string, skillName: string): Promise<void> {
+  try {
+    const agent = await readJson<{
+      name?: string
+      lastUsedSkills?: string[]
+    }>(getAgentPath(agentId)).catch(() => null)
+    if (!agent) return
+    const skills = agent.lastUsedSkills || []
+    // Remove if already in list (to move to front)
+    const filtered = skills.filter((s) => s !== skillName)
+    filtered.unshift(skillName)
+    // Keep only last 5
+    agent.lastUsedSkills = filtered.slice(0, 5)
+    await writeJson(getAgentPath(agentId), agent)
+  } catch (err) {
+    console.error('[Messenger] Failed to track skill usage:', err)
+  }
+}
+
+/**
+ * Get the last 5 used skills for an agent.
+ */
+async function getUsedSkills(agentId: string): Promise<string[]> {
+  try {
+    const agent = await readJson<{
+      name?: string
+      lastUsedSkills?: string[]
+    }>(getAgentPath(agentId)).catch(() => null)
+    return agent?.lastUsedSkills || []
+  } catch {
+    return []
+  }
+}
+
+// ─── Command: /skills ───────────────────────────────────────────────────
+
+export async function handleSkills(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  args: string,
+) {
+  let allSkills: any[]
+  try {
+    const { listAvailableSkills } = await import('../spells/skills')
+    allSkills = await listAvailableSkills()
+  } catch (err) {
+    console.error('[Messenger] /skills: failed to load skills:', err)
+    await ctx.reply('Failed to load skills list.')
+    return
+  }
+
+  if (!args) {
+    // Show last 5 used skills
+    const used = config.agentId ? await getUsedSkills(config.agentId) : []
+    if (used.length === 0) {
+      await ctx.reply('No skills have been used yet.')
+      return
+    }
+    const lines = ['*Last 5 used skills:*', '']
+    for (const name of used) {
+      const skill = allSkills.find((s) => s.name === name)
+      const desc = skill?.description
+        ? ` — ${escapeMarkdown(skill.description)}`
+        : ''
+      lines.push(`• \`${escapeMarkdown(name)}\`${desc}`)
+    }
+    lines.push('')
+    lines.push(
+      'Use `/skills <query>` to search, or `/skill <name> <message>` to use one.',
+    )
+    await ctx.replyWithMarkdown(lines.join('\n'))
+    return
+  }
+
+  // Search by query — `*` lists all skills
+  const matches =
+    args === '*'
+      ? allSkills
+      : allSkills.filter(
+          (s) =>
+            s.name.toLowerCase().includes(args.toLowerCase()) ||
+            s.description.toLowerCase().includes(args.toLowerCase()),
+        )
+
+  if (matches.length === 0) {
+    await ctx.reply(`No skills found matching "${args}".`)
+    return
+  }
+
+  // Just skill names, no descriptions (easier to read on mobile)
+  const names = matches.map((s) => s.name)
+
+  if (args === '*') {
+    const lines = ['Available skills:', '', ...names.map((n) => `- ${n}`)]
+    if (matches.length > 10) {
+      lines.push('', `... and ${matches.length - 10} more`)
+    }
+    await ctx.reply(lines.join('\n'))
+  } else {
+    const lines = [
+      `Skills matching "${args}":`,
+      '',
+      ...names.slice(0, 10).map((n) => `- ${n}`),
+    ]
+    if (matches.length > 10) {
+      lines.push('', `... and ${matches.length - 10} more`)
+    }
+    lines.push('', 'Use /skill <name> <message> to use a skill.')
+    await ctx.reply(lines.join('\n'))
+  }
+}
+
+// ─── Command: /skill ────────────────────────────────────────────────────
+
+export async function handleSkill(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  text: string,
+  /** Chat name for per-channel sessions */
+  chatName?: string,
+  /** Display name of the sender */
+  senderLabel?: string,
+  /** Optional recent group context lines */
+  groupContextLines?: string[],
+) {
+  // Parse: /skill <name> [message...]
+  const rest = text.trim()
+  if (!rest) {
+    // No args — show last 5 used skills
+    return handleSkills(config, ctx, '')
+  }
+
+  // Split into skill name and optional message
+  const spaceIdx = rest.indexOf(' ')
+  const skillQuery = spaceIdx > 0 ? rest.slice(0, spaceIdx).trim() : rest
+  const userMessage = spaceIdx > 0 ? rest.slice(spaceIdx + 1).trim() : ''
+
+  // Find the skill
+  const { listAvailableSkills } = await import('../spells/skills')
+  const allSkills = await listAvailableSkills()
+
+  // Try exact match first, then case-insensitive, then partial
+  const skill =
+    allSkills.find((s) => s.name === skillQuery) ||
+    allSkills.find((s) => s.name.toLowerCase() === skillQuery.toLowerCase()) ||
+    allSkills.find((s) =>
+      s.name.toLowerCase().includes(skillQuery.toLowerCase()),
+    )
+
+  if (!skill) {
+    await ctx.reply(
+      `Skill "${escapeMarkdown(skillQuery)}" not found. Use \`/skills\` to list available skills.`,
+    )
+    return
+  }
+
+  // Track usage
+  if (config.agentId) {
+    await addUsedSkill(config.agentId, skill.name)
+  }
+
+  // Construct the message using the existing skill mention format
+  const mentionText = `/skill[${skill.name}](${skill.path})`
+  const fullText = userMessage
+    ? `${mentionText}\n\n${userMessage}`
+    : mentionText
+
+  // Delegate to chat message handler
+  await handleChatMessage(
+    config,
+    ctx,
+    fullText,
+    chatName,
+    senderLabel,
+    groupContextLines,
+  )
 }
 
 // ─── Command: /clear ────────────────────────────────────────────────────
@@ -1406,6 +1591,19 @@ export async function processIncomingMessage(
     await handleCommit(config, ctx, msg.chatName)
   } else if (lowerCmd === '/dev') {
     await handleDev(config, ctx)
+  } else if (lowerCmd.startsWith('/skills')) {
+    const args = msg.textWithoutMention.slice('/skills'.length).trim()
+    await handleSkills(config, ctx, args)
+  } else if (lowerCmd === '/skill' || lowerCmd.startsWith('/skill ')) {
+    const args = msg.textWithoutMention.slice('/skill'.length).trim()
+    await handleSkill(
+      config,
+      ctx,
+      args,
+      msg.chatName,
+      msg.senderLabel,
+      groupContextLines,
+    )
   } else if (lowerCmd === '/clear') {
     await handleClear(config, ctx, msg.chatName)
   } else {
