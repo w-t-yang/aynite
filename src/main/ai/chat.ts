@@ -195,14 +195,34 @@ export async function listSessions(workspace: string) {
         ? `${metadata.agentName} - ${metadata.modelName}`
         : `Session ${sessionId.slice(-6)}`
 
+      const lastModified =
+        stats?.mtime.toISOString() || new Date().toISOString()
+
+      // Count messages by their createdAt date.
+      // If a message lacks createdAt, fall back to the session ID (ms timestamp).
+      const sessionTs = parseInt(sessionId, 10)
+      const sessionDateFallback = !Number.isNaN(sessionTs)
+        ? new Date(sessionTs).toISOString().split('T')[0]
+        : null
+      const messageDateCounts: Record<string, number> = {}
+      for (const msg of content) {
+        const dateStr = (msg as any)?.createdAt
+          ? String((msg as any).createdAt).split('T')[0]
+          : sessionDateFallback
+        if (dateStr) {
+          messageDateCounts[dateStr] = (messageDateCounts[dateStr] || 0) + 1
+        }
+      }
+
       all.push({
         id: sessionId,
-        date: '',
+        date: lastModified.split('T')[0],
         title,
         preview,
-        lastModified: stats?.mtime.toISOString() || new Date().toISOString(),
+        lastModified,
         messageCount: content.length,
         contextSize,
+        messageDateCounts,
       })
     }
   }

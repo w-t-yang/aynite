@@ -10,6 +10,7 @@ export interface SessionEntry {
   preview: string
   messageCount: number
   contextSize?: number
+  messageDateCounts?: Record<string, number>
 }
 
 interface SessionCardProps {

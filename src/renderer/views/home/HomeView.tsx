@@ -74,17 +74,20 @@ const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', '']
  * The grid is oldest→newest left→right.
  */
 function buildFullYearGrid(sessions: SessionEntry[]) {
-  // Token count per day
-  const countMap = new Map<string, number>()
-  // Session count per day (for tooltip)
-  const sessionCountMap = new Map<string, number>()
+  // Count messages per date using each session's messageDateCounts.
+  // Each message is counted on its actual createdAt date, falling back
+  // to the session's creation timestamp if the message lacks a timestamp.
+  const msgCountMap = new Map<string, number>()
   let maxCount = 0
   for (const s of sessions) {
-    const prev = countMap.get(s.date) || 0
-    const val = s.contextSize ?? s.messageCount
-    countMap.set(s.date, prev + val)
-    maxCount = Math.max(maxCount, prev + val)
-    sessionCountMap.set(s.date, (sessionCountMap.get(s.date) || 0) + 1)
+    if (s.messageDateCounts) {
+      for (const [dateStr, count] of Object.entries(s.messageDateCounts)) {
+        const prev = msgCountMap.get(dateStr) || 0
+        const updated = prev + count
+        msgCountMap.set(dateStr, updated)
+        if (updated > maxCount) maxCount = updated
+      }
+    }
   }
 
   const today = new Date()
@@ -100,8 +103,8 @@ function buildFullYearGrid(sessions: SessionEntry[]) {
     const dateStr = `${y}-${m}-${day}`
     days.push({
       date: dateStr,
-      count: countMap.get(dateStr) || 0,
-      sessionCount: sessionCountMap.get(dateStr) || 0,
+      count: msgCountMap.get(dateStr) || 0,
+      sessionCount: msgCountMap.get(dateStr) || 0,
     })
   }
 
@@ -717,13 +720,8 @@ function ActivityHistogram({ sessions }: { sessions: SessionEntry[] }) {
                     getIntensityClass(bin.count, maxCount),
                   )}
                   title={
-                    bin.date
-                      ? (() => {
-                          const parts = bin.date.split('-')
-                          const month = parseInt(parts[1], 10)
-                          const day = parseInt(parts[2], 10)
-                          return `${MONTH_NAMES_SHORT[month - 1]} ${day} — ${bin.sessionCount} Sessions`
-                        })()
+                    bin.date && bin.count > 0
+                      ? `${bin.count} message${bin.count === 1 ? '' : 's'} on this day`
                       : undefined
                   }
                 />
@@ -781,7 +779,7 @@ const MONTH_NAMES = [
   'Dec',
 ]
 
-const MONTH_NAMES_SHORT = MONTH_NAMES
+const _MONTH_NAMES_SHORT = MONTH_NAMES
 
 /** Return the 12-month labels ending at the current month. */
 function getTrailingMonths(): string[] {

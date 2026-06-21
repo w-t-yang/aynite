@@ -28,6 +28,7 @@ interface ChatSessionEntry {
   preview: string
   title: string
   messageCount: number
+  messageDateCounts?: Record<string, number>
 }
 
 interface DirectCommandPayload {
