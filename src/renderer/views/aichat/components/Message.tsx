@@ -18,6 +18,24 @@ import { Collapsible } from '../../../shared/basic/Collapsible'
 import { cn } from '../../../shared/lib/utils'
 import { isErrorMessage } from '../utils/message'
 
+// ─── Helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Format an ISO timestamp string to a short time display (e.g. "2:30 PM").
+ * Returns null if the timestamp is missing or invalid.
+ */
+function formatTime(createdAt?: string): string | null {
+  if (!createdAt) return null
+  try {
+    return new Date(createdAt).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return null
+  }
+}
+
 // ─── Sub-renderers ───────────────────────────────────────────────────
 
 const MarkdownRenderer = memo(
@@ -364,6 +382,13 @@ function UserMessage({
         <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
           {formatMentions(text)}
         </div>
+        {(msg as any).createdAt && (
+          <div className="text-right mt-1">
+            <span className="text-[10px] text-muted-foreground/40 font-medium select-none">
+              {formatTime((msg as any).createdAt)}
+            </span>
+          </div>
+        )}
         <div className="absolute bottom-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
           <Button
             variant="ghost"
@@ -507,6 +532,14 @@ function AssistantMessage({
           }
         })}
       </div>
+
+      {(msg as any).createdAt && (
+        <div className="text-right px-6 pb-1 -mt-2">
+          <span className="text-[10px] text-muted-foreground/40 font-medium select-none">
+            {formatTime((msg as any).createdAt)}
+          </span>
+        </div>
+      )}
 
       {!isStreaming && !hasToolParts && (
         <div className="absolute bottom-1 right-8 flex gap-1 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
