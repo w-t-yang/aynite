@@ -19,6 +19,7 @@ import {
   handleSetProject,
   loadConfigs,
   pushToGroupBuffer,
+  saveBotMessage,
   saveConfigsDirect,
   setBot,
 } from './shared'
@@ -65,10 +66,23 @@ export async function startTelegramBot(config: MessengerConfig) {
     const isPrivate = ctx.chat?.type === 'private'
     const chatId = ctx.chat?.id
 
-    // Non-DM chats: buffer messages and only respond when mentioned
+    // Determine chat name as early as possible so we can persist every message
+    const chatName = isPrivate
+      ? ctx.from?.username
+        ? `@${ctx.from.username}`
+        : `user-${ctx.from?.id}`
+      : `#${(ctx.chat as any)?.title || chatId}`
+
+    // Persist ALL messages to chat history (even non-mentioned group messages)
+    // so the agent can later read context via get_messages tool.
+    const senderLabel = getSenderLabel(ctx.from)
+    const msgText = ctx.message.text || ''
+    saveBotMessage(config.id, chatName, 'user', senderLabel, msgText).catch(
+      () => {},
+    )
+
+    // Buffer and check mention for group messages
     if (!isPrivate) {
-      const senderLabel = getSenderLabel(ctx.from)
-      const msgText = ctx.message.text || ''
       const contextSize = botConfig.contextSize || 100
       pushToGroupBuffer(
         config.id,
@@ -97,10 +111,8 @@ export async function startTelegramBot(config: MessengerConfig) {
       }
     }
 
-    // Private messages: buffer conversation context
+    // Buffer private messages too
     if (isPrivate && chatId) {
-      const senderLabel = getSenderLabel(ctx.from)
-      const msgText = ctx.message.text || ''
       const contextSize = botConfig.contextSize || 100
       pushToGroupBuffer(
         config.id,
@@ -135,13 +147,6 @@ export async function startTelegramBot(config: MessengerConfig) {
       return
     }
 
-    // Determine chat name — for DMs use @username, for groups use #chat-title
-    const chatName = isPrivate
-      ? ctx.from?.username
-        ? `@${ctx.from.username}`
-        : `user-${ctx.from?.id}`
-      : `#${(ctx.chat as any)?.title || chatId}`
-
     // Strip @botname mention from the text before command matching
     const botUsername = ctx.botInfo?.username
     const cleanText = ctx.message.text.trim()
@@ -158,12 +163,12 @@ export async function startTelegramBot(config: MessengerConfig) {
       return
     }
 
-    // Route commands (using cleaned text for matching, original for context)
-    let userText = cleanText
+    // Build group context lines as separate messages (if applicable)
+    let groupContextLines: string[] | undefined
     if (!isPrivate && chatId) {
       const context = getGroupContext(config.id, chatId)
       if (context) {
-        userText = `[Recent conversation]:\n${context}\n\n[My message]: ${cleanTextForCheck}`
+        groupContextLines = context.split('\n').filter(Boolean)
       }
     }
 
@@ -186,9 +191,10 @@ export async function startTelegramBot(config: MessengerConfig) {
       handleChatMessage(
         botConfig,
         messengerCtx,
-        userText,
+        cleanTextForCheck,
         chatName,
         senderLabel,
+        groupContextLines,
       )
     }
   })

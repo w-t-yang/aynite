@@ -144,25 +144,6 @@ function genId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
-const PROCESSING_REPLIES = [
-  'Gotcha, working on it',
-  'Diving into it, will get back to you soon',
-  'On it! Let me look into that for you',
-  'Alright, give me a moment to figure this out',
-  'Let me work through that, hang tight',
-  'One sec, let me dig into that',
-  "Sure thing, I'll get right on it",
-  'Lemme take a look and get back to you',
-  'Processing your request, stay tuned',
-  'Working through it now, will let you know',
-]
-
-function randomProcessingReply(): string {
-  return PROCESSING_REPLIES[
-    Math.floor(Math.random() * PROCESSING_REPLIES.length)
-  ]
-}
-
 // ─── Bot Session Management ──────────────────────────────────────────────
 
 /**
@@ -282,7 +263,12 @@ export async function runMessengerAgent(
   onProgress: (text: string) => void,
   sessionId: string,
   /** Optional bot session info — if provided, saves use bot paths instead of workspace paths */
-  botSession?: { messengerId: string; chatName: string },
+  botSession?: {
+    messengerId: string
+    chatName: string
+    /** Reply function for notify_user tool */
+    reply: (text: string) => Promise<void>
+  },
 ): Promise<UIMessage[]> {
   const aiConfig = await loadAiConfig()
   const activeProvider =
@@ -329,6 +315,11 @@ export async function runMessengerAgent(
       botSession.messengerId,
       botSession.chatName,
     )
+    const { createNotifyUserTool } = await import('../ai/tools/notify-user')
+    ;(tools as any).notify_user = createNotifyUserTool({
+      reply: (text: string) => botSession.reply(text),
+      replyWithMarkdown: (text: string) => botSession.reply(text),
+    })
   }
 
   console.log(
@@ -709,6 +700,8 @@ export async function handleChatMessage(
   chatName?: string,
   /** Display name of the sender (e.g. '@john' or 'John Doe') */
   senderLabel?: string,
+  /** Optional recent group context lines to inject as separate messages */
+  groupContextLines?: string[],
 ) {
   const workspace = await getActiveWorkspace()
   const chat = chatName || 'default'
@@ -785,9 +778,16 @@ export async function handleChatMessage(
       // by a messenger bot that wraps them with sender/timestamp metadata.
       const BOT_INSTRUCTION = [
         "You are communicating through a messenger bot. The user's messages are forwarded to you with sender and timestamp metadata.",
+        '',
         "You have access to a `get_messages` tool that can fetch history from the chat's message log.",
         "Use `get_messages` only when necessary to understand the user's request — for example, if a group chat user asks you to summarize a discussion or create action items based on earlier conversation.",
         'IMPORTANT: After using `get_messages` to read history, you MUST ask the user to confirm whether you understood the context correctly before proceeding with any action.',
+        '',
+        'You also have a `notify_user` tool that sends a message to the user.',
+        'Reply directly to the user whenever possible — your text response is automatically sent back.',
+        'Use `notify_user` only when you cannot answer immediately and need time to work (e.g. running long commands, researching).',
+        'When using `notify_user`, send a brief message like "Working on it, I\'ll get back to you" so the user knows the request is being handled.',
+        '',
         'Respond conversationally to the content of the message, addressing the sender directly.',
       ].join('\n')
       const systemPrompt = agentPrompt
@@ -806,6 +806,20 @@ export async function handleChatMessage(
     }
 
     const now = new Date().toISOString()
+
+    // Inject group context as separate user messages (before the current message)
+    // so the AI sees them as distinct conversation turns.
+    if (groupContextLines && groupContextLines.length > 0) {
+      for (const line of groupContextLines) {
+        const ctxMsg: UIMessage = {
+          id: genId(),
+          role: 'user',
+          parts: [{ type: 'text', text: line }],
+        }
+        updatedMessages.push(ctxMsg)
+      }
+    }
+
     const formattedText = `- sender: ${senderLabel || 'Unknown'}
 - timestamp: ${now}
 - content: ${text}`
@@ -819,7 +833,8 @@ export async function handleChatMessage(
       `[Messenger] total messages before agent loop: ${updatedMessages.length}`,
     )
 
-    await ctx.reply(randomProcessingReply())
+    // No auto-reply — the AI will either reply directly in its text response
+    // or use the notify_user tool if it needs time to work.
 
     const activeFile = '' // Bot doesn't have an active file
     const finalMessages = await runMessengerAgent(
@@ -830,7 +845,11 @@ export async function handleChatMessage(
       toolsConfig,
       () => {},
       sessionId,
-      { messengerId: config.id, chatName: chat },
+      {
+        messengerId: config.id,
+        chatName: chat,
+        reply: (text: string) => ctx.reply(text),
+      },
     )
 
     console.log(

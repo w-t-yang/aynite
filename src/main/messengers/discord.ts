@@ -32,6 +32,7 @@ import {
   handleSetProject,
   loadConfigs,
   pushToGroupBuffer,
+  saveBotMessage,
   saveConfigsDirect,
   setBot,
 } from './shared'
@@ -142,14 +143,28 @@ export async function startDiscordBot(config: MessengerConfig) {
 
     const chatId = message.channel.id
 
-    // Non-DM chats (guild channels): buffer messages and only respond when mentioned
+    // Determine chat name early so we can persist every message
+    // For guild channels, include the server name to disambiguate identical
+    // channel names across different servers (e.g. two servers both with #general).
+    const channelName = (message.channel as any)?.name || chatId
+    const guildName = message.guild?.name || 'unknown'
+    const chatName = isPrivate
+      ? `@${message.author.username}`
+      : `#${guildName}/${channelName}`
+
+    // Persist ALL messages to chat history (even non-mentioned group messages)
+    const senderLabel = getSenderLabel({
+      id: Number(message.author.id),
+      username: message.author.username,
+      first_name: message.author.displayName,
+      last_name: undefined,
+    })
+    saveBotMessage(config.id, chatName, 'user', senderLabel, content).catch(
+      () => {},
+    )
+
+    // Buffer and check mention for group messages
     if (!isPrivate) {
-      const senderLabel = getSenderLabel({
-        id: Number(message.author.id),
-        username: message.author.username,
-        first_name: message.author.displayName,
-        last_name: undefined,
-      })
       const contextSize = botConfig.contextSize || 100
       pushToGroupBuffer(
         config.id,
@@ -164,14 +179,8 @@ export async function startDiscordBot(config: MessengerConfig) {
       }
     }
 
-    // Private messages: buffer conversation context
+    // Buffer private messages too
     if (isPrivate && chatId) {
-      const senderLabel = getSenderLabel({
-        id: Number(message.author.id),
-        username: message.author.username,
-        first_name: message.author.displayName,
-        last_name: undefined,
-      })
       const contextSize = botConfig.contextSize || 100
       pushToGroupBuffer(
         config.id,
@@ -212,11 +221,6 @@ export async function startDiscordBot(config: MessengerConfig) {
       return
     }
 
-    // Determine chat name: @username for DMs, #channel-name for guilds
-    const chatName = isPrivate
-      ? `@${message.author.username}`
-      : `#${(message.channel as any)?.name || chatId}`
-
     // Strip Discord mention syntax <@!id> or <@id> from text before command matching
     const cleanText = content.replace(/<@!?(\d+)>\s*/g, '').trim()
     const cleanLower = cleanText.toLowerCase()
@@ -229,12 +233,12 @@ export async function startDiscordBot(config: MessengerConfig) {
       return
     }
 
-    // Enrich with group context for guild channels
-    let userText = cleanText
+    // Build group context lines as separate messages (if applicable)
+    let groupContextLines: string[] | undefined
     if (!isPrivate && chatId) {
       const context = getGroupContext(config.id, chatId)
       if (context) {
-        userText = `[Recent conversation]:\n${context}\n\n[My message]: ${cleanText}`
+        groupContextLines = context.split('\n').filter(Boolean)
       }
     }
 
@@ -254,18 +258,13 @@ export async function startDiscordBot(config: MessengerConfig) {
       const args = cleanText.slice('/set-agent'.length).trim()
       handleSetAgent(botConfig, messengerCtx, args)
     } else {
-      const senderLabel = getSenderLabel({
-        id: Number(message.author.id),
-        username: message.author.username,
-        first_name: message.author.displayName,
-        last_name: undefined,
-      })
       handleChatMessage(
         botConfig,
         messengerCtx,
-        userText,
+        cleanText,
         chatName,
         senderLabel,
+        groupContextLines,
       )
     }
   })

@@ -15,6 +15,7 @@
  * (e.g. group chat discussions before being asked to take action).
  */
 
+import { jsonSchema } from '@ai-sdk/provider-utils'
 import { getBotChatDatePath, getBotChatDir } from '../../../lib/path'
 import { readJson } from '../../../lib/path/operations'
 
@@ -37,7 +38,7 @@ export function createGetMessagesTool(messengerId: string, chatName: string) {
   return {
     description:
       'Fetch recent messages from the chat history. Use this when you need to understand context from earlier conversation, especially in group chats where users discuss topics before asking you to take action (e.g. summarizing notes, creating todos). Only messages from the current channel are accessible. After reading history, you MUST ask the user to confirm whether you understood the context correctly.',
-    parameters: {
+    inputSchema: jsonSchema({
       type: 'object',
       properties: {
         count: {
@@ -51,7 +52,7 @@ export function createGetMessagesTool(messengerId: string, chatName: string) {
             'Optional ISO date string to start from (e.g. "2026-06-20"). If omitted, starts from today and scans backwards.',
         },
       },
-    },
+    }),
     execute: async (params: GetMessagesParams) => {
       const targetCount = Math.min(params.count ?? 10, 50)
       const startDate = params.since || new Date().toISOString().split('T')[0]
