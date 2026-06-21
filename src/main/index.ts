@@ -7,7 +7,7 @@ import { initAppFolders, setupConfigIpc } from './config/index'
 import { setupFileIpc } from './file/index'
 import { setupGitIpc } from './git/index'
 import { setupKeybindings } from './keybindings'
-import { reloadMessengers } from './messengers'
+import { reloadMessengers, setupMessengerIpc } from './messengers'
 import { setupRssIpc } from './rss/index'
 import { setupSpellsIpc } from './spells/index'
 import { setupSpotifyIpc } from './spotify/index'
@@ -130,6 +130,7 @@ app.whenReady().then(async () => {
     // 5. Feature Subsystems (AI, Spells, Git, Messengers)
     setupAiIpc()
     setupSpellsIpc()
+    setupMessengerIpc()
 
     // 6. Start messenger bots (Telegram, etc.)
     reloadMessengers().catch((err) =>

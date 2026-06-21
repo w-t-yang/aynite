@@ -56,6 +56,13 @@ export interface MessengerConfig {
   /** The bot's display name (e.g. "MyBot" for Telegram, "MyBot#1234" for Discord).
    *  Populated when the bot successfully connects. */
   botName?: string
+  /** Whether the bot successfully connected and is currently running.
+   *  Set to true on successful launch, false on failure or when stopped.
+   *  Used by the UI to show a green (connected) or red (disconnected/failed) dot. */
+  connected?: boolean
+  /** Error message from the last failed connection attempt.
+   *  Cleared when the bot successfully connects. */
+  lastError?: string
   /** User IDs or @usernames that are allowed to interact with this bot.
    *  If empty or not set, no one is allowed. */
   whitelist?: string[]

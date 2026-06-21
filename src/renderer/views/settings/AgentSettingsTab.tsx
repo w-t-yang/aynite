@@ -3,8 +3,12 @@ import {
   Brain,
   Code,
   Compass,
+  ExternalLink,
   FileText,
   Heart,
+  Info,
+  MessageCircle,
+  Pencil,
   Plus,
   Sparkles,
   Star,
@@ -16,6 +20,7 @@ import {
   ADD_ITEM_BUTTON,
   GRID_2_COL,
 } from '../../../lib/constants/renderer/styles'
+import type { MessengerConfig } from '../../../lib/types/ai'
 import { config, configMutations } from '../../bridge/config'
 import { file } from '../../bridge/file'
 import { system } from '../../bridge/system'
@@ -24,6 +29,7 @@ import { Collapsible } from '../../shared/basic/Collapsible'
 import { Input } from '../../shared/basic/Input'
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
+import { MessengerEditModal } from '../../shared/featured/MessengerEditModal'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import type { Agent } from '../../shared/lib/types'
 import { cn } from '../../shared/lib/utils'
@@ -126,22 +132,36 @@ const TOOL_DEFS: ToolDef[] = [
   },
 ]
 
+// ─── Component ─────────────────────────────────────────────────────────
+
 export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
   const [agent, setAgent] = useState<Agent | null>(null)
   const [allAgents, setAllAgents] = useState<{
     list: Agent[]
     activeId: string
   } | null>(null)
+  const [messengers, setMessengers] = useState<MessengerConfig[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Edit modal state
+  const [editingMessenger, setEditingMessenger] =
+    useState<MessengerConfig | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(() => {
     const load = async () => {
-      const [resAgents] = await Promise.all([config.get('agents')])
+      const [resAgents, resMessengers] = await Promise.all([
+        config.get('agents'),
+        config.get('messengers'),
+      ])
       const agentsData = resAgents as { activeId: string; list: Agent[] } | null
       if (agentsData) {
         setAllAgents(agentsData)
         const found = agentsData.list.find((a) => a.id === agentId)
         if (found) setAgent(found)
+      }
+      if (Array.isArray(resMessengers)) {
+        setMessengers(resMessengers as MessengerConfig[])
       }
       setLoading(false)
     }
@@ -246,6 +266,38 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
     buildPreview()
   }, [agent])
 
+  // ─── Messenger helpers ──────────────────────────────────────────────
+
+  const handleOpenGuide = useCallback(() => {
+    window.open(
+      'https://core.telegram.org/bots#how-do-i-create-a-bot',
+      '_blank',
+    )
+  }, [])
+
+  const handleEditMessenger = useCallback((m: MessengerConfig | null) => {
+    setEditingMessenger(m)
+    setShowEditModal(true)
+  }, [])
+
+  const handleCloseEdit = useCallback(() => {
+    setEditingMessenger(null)
+    setShowEditModal(false)
+    // Reload messengers to reflect any changes made in the modal
+    config.get('messengers').then((res: any) => {
+      if (Array.isArray(res)) setMessengers(res as MessengerConfig[])
+    })
+  }, [])
+
+  const handleDeleteMessenger = useCallback(
+    async (id: string) => {
+      const updated = messengers.filter((m) => m.id !== id)
+      setMessengers(updated)
+      await configMutations.set('messengers', updated)
+    },
+    [messengers],
+  )
+
   if (loading || !agent) {
     return (
       <SettingsPage title={agent?.name || 'Agent'} description="">
@@ -255,6 +307,8 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
       </SettingsPage>
     )
   }
+
+  const boundMessengers = messengers.filter((m) => m.agentId === agent.id)
 
   return (
     <SettingsPage title={agent.name} description="">
@@ -330,6 +384,141 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
             </div>
           </div>
         </div>
+      </Section>
+
+      {/* Messengers */}
+      <Section
+        title="Messengers"
+        description="Messenger bots bound to this agent."
+        action={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEditMessenger(null)}
+            className={ADD_ITEM_BUTTON}
+          >
+            <Plus size={14} /> Add Bot
+          </Button>
+        }
+      >
+        {boundMessengers.length > 0 ? (
+          <div className="space-y-3">
+            {boundMessengers.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-start gap-3 p-4 rounded-xl border border-border/40 bg-accent/5"
+              >
+                <div className="shrink-0 mt-0.5">
+                  <span
+                    className={cn(
+                      'w-2.5 h-2.5 rounded-full block',
+                      m.enabled && m.connected ? 'bg-green-500' : 'bg-red-400',
+                    )}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        'text-xs font-semibold uppercase tracking-wider',
+                        m.provider === 'telegram'
+                          ? 'text-blue-400'
+                          : 'text-indigo-400',
+                      )}
+                    >
+                      {m.provider === 'telegram' ? 'Telegram' : 'Discord'}
+                    </span>
+                    {m.botName && (
+                      <span className="text-xs text-muted-foreground">
+                        · {m.botName}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground/50">
+                      {m.enabled && m.connected
+                        ? 'Connected'
+                        : m.enabled
+                          ? 'Disconnected'
+                          : 'Disabled'}
+                    </span>
+
+                    {/* Edit / Delete buttons */}
+                    <button
+                      type="button"
+                      onClick={() => handleEditMessenger(m)}
+                      className="p-1 text-muted-foreground/40 hover:text-foreground hover:bg-accent/30 rounded transition-all"
+                      title="Edit messenger"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMessenger(m.id)}
+                      className="p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded transition-all"
+                      title="Delete messenger"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+
+                  {/* Trusted users & default project folder */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                    {m.whitelist && m.whitelist.length > 0 && (
+                      <span className="text-[10px] text-muted-foreground/50">
+                        Trusted Users: {m.whitelist.join(', ')}
+                      </span>
+                    )}
+                    {m.projectFolder && (
+                      <span className="text-[10px] text-muted-foreground/50 truncate max-w-[200px]">
+                        Default Project: {m.projectFolder}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Hard-coded error message instead of raw error */}
+                  {m.enabled && !m.connected && (
+                    <div className="flex flex-col gap-2 mt-1">
+                      <div className="flex items-start gap-1.5">
+                        <Info
+                          size={12}
+                          className="mt-0.5 shrink-0 text-red-400"
+                        />
+                        <span className="text-[11px] text-red-400/80 leading-tight">
+                          Failed to connect. Please check your API key and
+                          ensure the bot is configured correctly.
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 ml-[22px]">
+                        <button
+                          type="button"
+                          onClick={handleOpenGuide}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary/70 hover:text-primary bg-transparent border-none p-0 cursor-pointer transition-colors"
+                        >
+                          <ExternalLink size={11} />
+                          Setup Guide
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEditMessenger(m)}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary/70 hover:text-primary bg-transparent border-none p-0 cursor-pointer transition-colors"
+                        >
+                          <Pencil size={11} />
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-4 border-2 border-dashed border-border rounded-xl opacity-50">
+            <MessageCircle size={20} className="mr-2 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              No messenger bots bound to this agent.
+            </span>
+          </div>
+        )}
       </Section>
 
       {/* Prompt Files */}
@@ -429,6 +618,14 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
           })}
         </div>
       </Section>
+
+      {/* ─── Edit Messenger Modal ────────────────────────────────────── */}
+      <MessengerEditModal
+        isOpen={showEditModal}
+        onClose={handleCloseEdit}
+        existing={editingMessenger}
+        agentId={agent.id}
+      />
     </SettingsPage>
   )
 }

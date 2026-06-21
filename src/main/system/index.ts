@@ -22,7 +22,10 @@ let clipboardPath: string | null = null
 
 // ─── Channel constants ────────────────────────────────────────────────────
 import { AppEvents } from '../../lib/constants/app'
-import { SystemChannels } from '../../lib/constants/ipc-channels'
+import {
+  LoggerChannels,
+  SystemChannels,
+} from '../../lib/constants/ipc-channels'
 
 export function setupSystemIpc() {
   ipcMain.handle(SystemChannels.FONT_LIST, async () => {
@@ -130,6 +133,25 @@ export function setupSystemIpc() {
     SystemChannels.CLIPBOARD_WRITE_TEXT,
     (_event, text: string) => {
       clipboard.writeText(text)
+      return true
+    },
+  )
+
+  // Forward renderer console.log to main process for debugging
+  ipcMain.handle(
+    LoggerChannels.LOG,
+    (_event, level: string, ...args: unknown[]) => {
+      const prefix = '[Renderer]'
+      switch (level) {
+        case 'error':
+          console.error(prefix, ...args)
+          break
+        case 'warn':
+          console.warn(prefix, ...args)
+          break
+        default:
+          console.log(prefix, ...args)
+      }
       return true
     },
   )

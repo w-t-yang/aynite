@@ -1,13 +1,15 @@
 import { MessageCircle, Plus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ADD_ITEM_BUTTON } from '../../../lib/constants/renderer/styles'
 import type { Agent, MessengerConfig } from '../../../lib/types/ai'
 
 import { config, configMutations } from '../../bridge/config'
+import { logger } from '../../bridge/logger'
 import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
 import { MessengerCard } from '../../shared/featured/MessengerCard'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
+import { useViewEvent } from '../useViewEvents'
 
 interface MessengersTabProps {
   onRestore?: () => void
@@ -20,52 +22,112 @@ export function MessengersTab({ onRestore, t }: MessengersTabProps) {
   const [projectFolders, setProjectFolders] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    Promise.all([
+  const loadData = useCallback(async () => {
+    const [resMessengers, resAgents, resWorkspaces] = (await Promise.all([
       config.get('messengers'),
       config.get('agents'),
       config.get('workspaces'),
-    ]).then(([resMessengers, resAgents, resWorkspaces]: any[]) => {
-      if (resMessengers) setMessengers(resMessengers)
-      if (resAgents?.list) setAgents(resAgents.list as Agent[])
+    ])) as [MessengerConfig[] | null, any, any]
 
-      // Collect unique project folders from all workspaces.
-      // The 'workspaces' handler returns an array of workspace config
-      // objects, each with a 'folders' field.
-      if (Array.isArray(resWorkspaces)) {
-        const unique = new Set<string>()
-        for (const ws of resWorkspaces as Array<{ folders?: string[] }>) {
-          if (ws.folders) {
-            for (const f of ws.folders) unique.add(f)
-          }
+    if (resMessengers) setMessengers(resMessengers)
+    if (resAgents?.list) setAgents(resAgents.list as Agent[])
+
+    // Collect unique project folders from all workspaces.
+    if (Array.isArray(resWorkspaces)) {
+      const unique = new Set<string>()
+      for (const ws of resWorkspaces as Array<{ folders?: string[] }>) {
+        if (ws.folders) {
+          for (const f of ws.folders) unique.add(f)
         }
-        setProjectFolders(Array.from(unique))
       }
+      setProjectFolders(Array.from(unique))
+    }
 
-      setLoading(false)
-    })
+    setLoading(false)
   }, [])
 
-  const saveMessengers = async (list: MessengerConfig[]) => {
-    // Validate: no duplicate API keys
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Listen for config changes (bot name updates, etc.)
+  useViewEvent('config-changed', (data: any) => {
+    if (data?.key === 'messengers') {
+      loadData()
+    }
+  })
+
+  // Track the latest list to save — used by the debounced saver
+  const pendingListRef = useRef<MessengerConfig[] | null>(null)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const flushSave = useCallback(async () => {
+    const list = pendingListRef.current
+    if (!list) return
+    pendingListRef.current = null
+
+    logger.log(
+      '[MessengersTab] flushSave: list=',
+      list.map((m) => ({
+        id: m.id,
+        whitelist: m.whitelist,
+        botName: m.botName,
+      })),
+    )
+
+    // Validate: no duplicate API keys (skip empty/placeholder keys)
     const apiKeys = new Set<string>()
     for (const m of list) {
-      if (m.apiKey && apiKeys.has(m.apiKey)) return
-      if (m.apiKey) apiKeys.add(m.apiKey)
+      if (!m.apiKey) continue
+      if (apiKeys.has(m.apiKey)) {
+        logger.log(
+          '[MessengersTab] flushSave: DUPLICATE API KEY detected, returning early',
+        )
+        return
+      }
+      apiKeys.add(m.apiKey)
     }
     setMessengers(list)
+    logger.log('[MessengersTab] flushSave: calling configMutations.set')
     await configMutations.set('messengers', list)
-  }
+    logger.log('[MessengersTab] flushSave: done')
+  }, [])
+
+  // Debounced save — coalesces rapid updates into a single save
+  const scheduleSave = useCallback(
+    (list: MessengerConfig[]) => {
+      pendingListRef.current = list
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(() => {
+        flushSave()
+      }, 400)
+    },
+    [flushSave],
+  )
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  }, [])
 
   const handleUpdate = (id: string, field: string, value: any) => {
+    logger.log(
+      `[MessengersTab] handleUpdate: id=${id} field=${field} value=`,
+      value,
+    )
     const list = messengers.map((m) =>
       m.id === id ? { ...m, [field]: value } : m,
     )
-    saveMessengers(list)
+    scheduleSave(list)
   }
 
   const handleDelete = (id: string) => {
-    saveMessengers(messengers.filter((m) => m.id !== id))
+    const list = messengers.filter((m) => m.id !== id)
+    // Delete needs to flush immediately (no debounce)
+    pendingListRef.current = list
+    flushSave()
   }
 
   const handleAdd = () => {
@@ -80,7 +142,10 @@ export function MessengersTab({ onRestore, t }: MessengersTabProps) {
       agentId: undefined,
       projectFolder: undefined,
     }
-    saveMessengers([...messengers, newMessenger])
+    const list = [...messengers, newMessenger]
+    // Add needs to flush immediately too
+    pendingListRef.current = list
+    flushSave()
   }
 
   if (loading) {

@@ -7,6 +7,8 @@ import {
   ConfigChannels,
   FileChannels,
   GitChannels,
+  LoggerChannels,
+  MessengerChannels,
   RssChannels,
   SpellChannels,
   SpotifyChannels,
@@ -168,6 +170,10 @@ const aynite = {
   restoreSkills: () => ipcRenderer.invoke(SpellChannels.SKILL_RESTORE),
   restoreCommands: () => ipcRenderer.invoke(SpellChannels.COMMAND_RESTORE),
 
+  // ── Messenger operations ───────────────────────────────────────────────
+  testMessenger: (provider: string, apiKey: string) =>
+    ipcRenderer.invoke(MessengerChannels.TEST, { provider, apiKey }),
+
   // ── RSS operations ──────────────────────────────────────────────────────
   rssGetConfig: () => ipcRenderer.invoke(RssChannels.GET_CONFIG),
   rssSaveConfig: (config: any) =>
@@ -291,6 +297,8 @@ const aynite = {
   platform: process.platform,
   writeClipboard: (text: string) =>
     ipcRenderer.invoke(SystemChannels.CLIPBOARD_WRITE_TEXT, text),
+  log: (level: string, ...args: unknown[]) =>
+    ipcRenderer.invoke(LoggerChannels.LOG, level, ...args),
 }
 
 // ─── Expose bridge ─────────────────────────────────────────────────────────

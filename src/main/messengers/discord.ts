@@ -13,15 +13,14 @@
  */
 
 import { Client, Events, GatewayIntentBits, Partials } from 'discord.js'
-import { AppEvents } from '../../lib/constants/app'
 import type { MessengerConfig } from '../../lib/types/ai'
-import { broadcastAppEvent } from '../ipc-utils'
 import type { BotHandle, IncomingMessage, MessengerContext } from './shared'
 import {
   loadConfigs,
   processIncomingMessage,
-  saveConfigsDirect,
   setBot,
+  updateBotConnectionStatus,
+  updateBotName,
 } from './shared'
 
 class DiscordBotHandle implements BotHandle {
@@ -47,19 +46,16 @@ export async function startDiscordBot(config: MessengerConfig) {
       `[Messenger] Discord bot "${config.provider}" logged in as ${readyClient.user?.tag}`,
     )
 
-    // Store bot display name
-    try {
-      const tag = readyClient.user?.tag
-      if (tag) {
-        const configs = await loadConfigs()
-        const updated = configs.map((c) =>
-          c.id === config.id ? { ...c, botName: tag } : c,
-        )
-        await saveConfigsDirect(updated)
-        broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'messengers' })
-      }
-    } catch {
-      /* best effort */
+    // Mark as connected
+    await updateBotConnectionStatus(config.id, true)
+
+    // Store/update bot display name
+    const tag = readyClient.user?.tag
+    console.log(
+      `[Messenger] Discord ClientReady: config.id=${config.id} tag=${tag}`,
+    )
+    if (tag) {
+      await updateBotName(config.id, tag)
     }
   })
 
@@ -138,16 +134,21 @@ export async function startDiscordBot(config: MessengerConfig) {
   })
 
   client.on(Events.Error, (err) => {
-    console.error(`[Messenger] Discord error for "${config.provider}":`, err)
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error(
+      `[Messenger] Discord error for "${config.provider}":`,
+      errorMsg,
+    )
+    updateBotConnectionStatus(config.id, false, errorMsg).catch(() => {})
   })
 
   setBot(config.id, new DiscordBotHandle(client))
-  client
-    .login(config.apiKey)
-    .catch((err) =>
-      console.error(
-        `[Messenger] Discord "${config.provider}" login failed:`,
-        err,
-      ),
+  client.login(config.apiKey).catch((err) => {
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error(
+      `[Messenger] Discord "${config.provider}" login failed:`,
+      errorMsg,
     )
+    updateBotConnectionStatus(config.id, false, errorMsg).catch(() => {})
+  })
 }

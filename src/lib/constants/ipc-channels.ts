@@ -69,6 +69,10 @@ export const SpellChannels = {
   COMMAND_RUN_DIRECT: 'aynite:spell-command-run-direct',
 } as const
 
+export const LoggerChannels = {
+  LOG: 'aynite:logger-log',
+} as const
+
 export const SystemChannels = {
   FONT_LIST: 'aynite:system-font-list',
   OPEN_EXTERNAL: 'aynite:system-open-external',
@@ -144,6 +148,10 @@ export const SpotifyChannels = {
   PLAY_TRACKS: 'aynite:spotify-play-tracks',
   GET_PLAYLIST_TRACKS: 'aynite:spotify-get-playlist-tracks',
   LOAD_PLAYLIST_TRACKS: 'aynite:spotify-load-playlist-tracks',
+} as const
+
+export const MessengerChannels = {
+  TEST: 'aynite:messenger-test',
 } as const
 
 export const ThemeChannels = {

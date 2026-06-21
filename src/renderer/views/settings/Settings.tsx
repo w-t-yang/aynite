@@ -6,7 +6,6 @@ import {
   Heart,
   Info,
   Keyboard,
-  MessageCircle,
   Sparkles,
   Star,
   Sun,
@@ -32,7 +31,6 @@ import { AppearanceTab } from './AppearanceTab'
 import { CommandsTab } from './CommandsTab'
 import viewConfig from './config.json'
 import { KeybindingsTab } from './KeybindingsTab'
-import { MessengersTab } from './MessengersTab'
 import { SkillsTab } from './SkillsTab'
 import { ToolsTab } from './ToolsTab'
 
@@ -186,13 +184,6 @@ export function Settings({ locale: localeProp }: SettingsProps) {
             t={(key: string) => t(key)}
           />
         )
-      case 'messengers':
-        return (
-          <MessengersTab
-            onRestore={() => setShowRestoreModal(true)}
-            t={(key: string) => t(key)}
-          />
-        )
       case 'about':
         return (
           <AboutTab
@@ -272,12 +263,6 @@ export function Settings({ locale: localeProp }: SettingsProps) {
             onClick={() => handleTabChange('commands')}
             icon={<Terminal size={16} />}
             label={t('sidebar.commands')}
-          />
-          <TabButton
-            active={activeTab === 'messengers'}
-            onClick={() => handleTabChange('messengers')}
-            icon={<MessageCircle size={16} />}
-            label={t('sidebar.messengers')}
           />
 
           {/* General group */}

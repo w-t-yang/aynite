@@ -7,7 +7,11 @@
  */
 
 import { readdirSync } from 'node:fs'
+import { mkdir } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { UIMessage } from 'ai'
+import { AppEvents } from '../../lib/constants/app'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import {
   getAgentPath,
@@ -690,6 +694,18 @@ export async function handleSetAgent(
   }
 }
 
+// ─── Assistant Default Project Folder ───────────────────────────────────
+
+const ASSISTANT_PROJECT_DIR = join(homedir(), '.aynite', 'assistant')
+
+/**
+ * Get or create the default project folder for the assistant agent.
+ */
+async function ensureAssistantProjectDir(): Promise<string> {
+  await mkdir(ASSISTANT_PROJECT_DIR, { recursive: true })
+  return ASSISTANT_PROJECT_DIR
+}
+
 // ─── Command: Chat Message ──────────────────────────────────────────────
 
 export async function handleChatMessage(
@@ -720,11 +736,22 @@ export async function handleChatMessage(
       )
       return
     }
-    if (!config.projectFolder) {
-      await ctx.reply(
-        'No project folder is set for this bot. Use `/set-project` to choose one, then try again.',
-      )
-      return
+    // ── Resolve project folder ──────────────────────────────────────────
+    // The assistant agent uses ~/.aynite/assistant/ as default.
+    // Other agents must have projectFolder set explicitly.
+    let resolvedProjectFolder = config.projectFolder
+    if (!resolvedProjectFolder) {
+      if (config.agentId === 'assistant') {
+        resolvedProjectFolder = await ensureAssistantProjectDir()
+        console.log(
+          `[Messenger] using default assistant project dir: ${resolvedProjectFolder}`,
+        )
+      } else {
+        await ctx.reply(
+          'No project folder is set for this bot. Use `/set-project` to choose one, then try again.',
+        )
+        return
+      }
     }
 
     // ── Determine chat name ──────────────────────────────────────────────
@@ -749,7 +776,7 @@ export async function handleChatMessage(
 
     const toolsConfig = mainConfig?.aiTools || {}
     const activeAgentId = config.agentId
-    const workspaceFolders = [config.projectFolder]
+    const workspaceFolders = [resolvedProjectFolder]
 
     // ── Resolve agent ────────────────────────────────────────────────────
 
@@ -1147,4 +1174,78 @@ export function lockBot(messengerId: string, chatName: string): string {
  */
 export function unlockBot(lockKey: string) {
   processing.delete(lockKey)
+}
+
+/**
+ * Update the bot's connection status in the config file.
+ * Called by each adapter after successful launch or failure.
+ * Optionally accepts an error message to store when disconnected.
+ */
+export async function updateBotConnectionStatus(
+  configId: string,
+  connected: boolean,
+  error?: string,
+) {
+  const configs = await loadConfigs()
+  const idx = configs.findIndex((c) => c.id === configId)
+  if (idx === -1) return
+  const current = configs[idx]
+  // Skip if nothing changed
+  if (current.connected === connected && !error) return
+  const update: Partial<MessengerConfig> = { connected }
+  if (connected) {
+    update.lastError = undefined // Clear error on success
+  } else if (error) {
+    update.lastError = error
+  }
+  configs[idx] = { ...current, ...update }
+  await saveConfigsDirect(configs)
+  const { broadcastAppEvent } = await import('../ipc-utils')
+  broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'messengers' })
+  console.log(
+    `[Messenger] connection status for ${configId}: ${connected ? 'connected' : 'disconnected'}${error ? ` error=${error}` : ''}`,
+  )
+}
+
+/**
+ * Update the bot's name in the config if it's not set or has changed.
+ * Called by each adapter after a successful connection.
+ */
+export async function updateBotName(configId: string, botName: string) {
+  console.log(
+    `[Messenger] updateBotName called: configId=${configId} botName="${botName}"`,
+  )
+  const configs = await loadConfigs()
+  console.log(
+    `[Messenger] updateBotName: loaded ${configs.length} configs`,
+    configs.map((c) => ({ id: c.id, botName: c.botName })),
+  )
+  const idx = configs.findIndex((c) => c.id === configId)
+  if (idx === -1) {
+    console.log(
+      `[Messenger] updateBotName: configId ${configId} NOT FOUND in configs`,
+    )
+    return
+  }
+
+  const current = configs[idx]
+  console.log(
+    `[Messenger] updateBotName: current.botName="${current.botName}" new.botName="${botName}"`,
+  )
+  if (current.botName === botName) {
+    console.log(
+      `[Messenger] updateBotName: botName already set to "${botName}", skipping`,
+    )
+    return // Already correct — no update needed
+  }
+
+  configs[idx] = { ...current, botName }
+  console.log(
+    `[Messenger] updateBotName: saving configsDirect, configs[idx] now=`,
+    { id: configs[idx].id, botName: configs[idx].botName },
+  )
+  await saveConfigsDirect(configs)
+  const { broadcastAppEvent } = await import('../ipc-utils')
+  broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'messengers' })
+  console.log(`[Messenger] bot name updated: ${botName}`)
 }

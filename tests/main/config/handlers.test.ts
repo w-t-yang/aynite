@@ -143,6 +143,7 @@ vi.mock('../../../src/main/window', () => ({
 
 vi.mock('../../../src/main/ipc-utils', () => ({
   sendToWindow: vi.fn(),
+  broadcastAppEvent: vi.fn(),
 }))
 
 const mockGetWindowWorkspace = vi.hoisted(() => vi.fn(() => 'MockWorkspace'))

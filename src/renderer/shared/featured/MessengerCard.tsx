@@ -2,6 +2,7 @@ import { Info, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { DESCRIPTION_TEXT } from '../../../lib/constants/renderer/styles'
 import type { Agent, MessengerConfig } from '../../../lib/types/ai'
+import { logger } from '../../bridge/logger'
 import { Button } from '../basic/Button'
 import { Input } from '../basic/Input'
 import { Switch } from '../basic/Switch'
@@ -34,6 +35,7 @@ export function MessengerCard({
   onDelete,
 }: MessengerCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [whitelistDraft, setWhitelistDraft] = useState<string | null>(null)
 
   const isConfigured = messenger.apiKey.trim()
 
@@ -115,7 +117,8 @@ export function MessengerCard({
               label="API Key"
               type="password"
               value={messenger.apiKey}
-              onChange={(e) => onUpdate(messenger.id, 'apiKey', e.target.value)}
+              onChange={(_e) => {}}
+              onBlur={(e) => onUpdate(messenger.id, 'apiKey', e.target.value)}
               placeholder={PROVIDER_PLACEHOLDERS[messenger.provider] || ''}
             />
           </div>
@@ -130,17 +133,24 @@ export function MessengerCard({
             </label>
             <textarea
               id={`whitelist-${messenger.id}`}
-              value={messenger.whitelist?.join(', ') || ''}
-              onChange={(e) =>
-                onUpdate(
-                  messenger.id,
-                  'whitelist',
-                  e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
+              value={whitelistDraft ?? (messenger.whitelist?.join(', ') || '')}
+              onChange={(e) => {
+                setWhitelistDraft(e.target.value)
+              }}
+              onBlur={() => {
+                if (whitelistDraft === null) return
+                const raw = whitelistDraft
+                const parsed = raw
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                logger.log(
+                  `[MessengerCard] whitelist onBlur: raw="${raw}" parsed=`,
+                  parsed,
                 )
-              }
+                onUpdate(messenger.id, 'whitelist', parsed)
+                setWhitelistDraft(null)
+              }}
               placeholder="123456789, @username"
               rows={2}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm

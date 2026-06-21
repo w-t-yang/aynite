@@ -5,15 +5,14 @@
  * IncomingMessage interface and delegates to processIncomingMessage().
  */
 
-import { AppEvents } from '../../lib/constants/app'
 import type { MessengerConfig } from '../../lib/types/ai'
-import { broadcastAppEvent } from '../ipc-utils'
 import type { BotHandle, IncomingMessage, MessengerContext } from './shared'
 import {
   loadConfigs,
   processIncomingMessage,
-  saveConfigsDirect,
   setBot,
+  updateBotConnectionStatus,
+  updateBotName,
 } from './shared'
 
 class TelegramBotHandle implements BotHandle {
@@ -108,22 +107,22 @@ export async function startTelegramBot(config: MessengerConfig) {
   bot
     .launch(() => {
       const username = bot.botInfo?.username
+      console.log(
+        `[Messenger] Telegram bot launched: config.id=${config.id} username=${username}`,
+      )
+      updateBotConnectionStatus(config.id, true).catch(() => {})
       if (username) {
-        loadConfigs()
-          .then((configs) => {
-            const updated = configs.map((c) =>
-              c.id === config.id ? { ...c, botName: `@${username}` } : c,
-            )
-            return saveConfigsDirect(updated)
-          })
-          .then(() => {
-            broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'messengers' })
-            console.log(`[Messenger] Telegram bot name saved: @${username}`)
-          })
-          .catch(() => {})
+        updateBotName(config.id, `@${username}`)
+      } else {
+        console.log(
+          `[Messenger] Telegram bot launched but no username in botInfo:`,
+          bot.botInfo,
+        )
       }
     })
-    .catch((err) =>
-      console.error(`[Messenger] ${config.provider} failed:`, err),
-    )
+    .catch((err) => {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error(`[Messenger] ${config.provider} failed:`, errorMsg)
+      updateBotConnectionStatus(config.id, false, errorMsg).catch(() => {})
+    })
 }

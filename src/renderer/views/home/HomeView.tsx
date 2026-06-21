@@ -1,10 +1,23 @@
-import { Folder as FolderIcon, Plus, Puzzle } from 'lucide-react'
+import {
+  Bot as BotIcon,
+  Brain,
+  Code,
+  Compass,
+  Folder as FolderIcon,
+  Heart,
+  MessageCircle,
+  Plus,
+  Puzzle,
+  Sparkles,
+  Star,
+  Zap,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ADD_ITEM_BUTTON,
   GRID_2_COL,
 } from '../../../lib/constants/renderer/styles'
-import type { Agent } from '../../../lib/types/ai'
+import type { Agent, MessengerConfig } from '../../../lib/types/ai'
 import { ai } from '../../bridge/ai'
 import { config } from '../../bridge/config'
 import { events } from '../../bridge/events'
@@ -13,6 +26,7 @@ import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
 import { SessionCard, type SessionEntry } from '../../shared/basic/SessionCard'
+import { MessengerEditModal } from '../../shared/featured/MessengerEditModal'
 import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
 import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
@@ -46,6 +60,7 @@ type DashboardData = {
   folders: string[]
   skills: { folders: string[]; items: SkillEntry[] }
   sessions: SessionEntry[]
+  messengers: MessengerConfig[]
 }
 
 // ── Activity histogram helpers ─────────────────────────────────────────
@@ -142,14 +157,21 @@ export function HomeView() {
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      const [agentsRaw, foldersRaw, skillsRaw, skillsCfg, sessionsRaw] =
-        await Promise.all([
-          config.get('agents'),
-          workspace.folders(),
-          spells.getAvailableSkills(),
-          config.get('skills'),
-          ai.listSessions(),
-        ])
+      const [
+        agentsRaw,
+        foldersRaw,
+        skillsRaw,
+        skillsCfg,
+        sessionsRaw,
+        messengersRaw,
+      ] = await Promise.all([
+        config.get('agents'),
+        workspace.folders(),
+        spells.getAvailableSkills(),
+        config.get('skills'),
+        ai.listSessions(),
+        config.get('messengers'),
+      ])
       if (cancelled) return
       const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
       setData({
@@ -160,6 +182,7 @@ export function HomeView() {
           items: (skillsRaw || []) as SkillEntry[],
         },
         sessions: (sessionsRaw || []) as SessionEntry[],
+        messengers: (messengersRaw || []) as MessengerConfig[],
       })
       setLoading(false)
     }
@@ -179,14 +202,21 @@ export function HomeView() {
   const subscribeToAppEvents = useAppEventSubscriber()
 
   const reloadData = useCallback(async () => {
-    const [agentsRaw, foldersRaw, skillsRaw, skillsCfg, sessionsRaw] =
-      await Promise.all([
-        config.get('agents'),
-        workspace.folders(),
-        spells.getAvailableSkills(),
-        config.get('skills'),
-        ai.listSessions(),
-      ])
+    const [
+      agentsRaw,
+      foldersRaw,
+      skillsRaw,
+      skillsCfg,
+      sessionsRaw,
+      messengersRaw,
+    ] = await Promise.all([
+      config.get('agents'),
+      workspace.folders(),
+      spells.getAvailableSkills(),
+      config.get('skills'),
+      ai.listSessions(),
+      config.get('messengers'),
+    ])
     const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
     setData({
       agents: agentsData || { list: [], activeId: '' },
@@ -196,6 +226,7 @@ export function HomeView() {
         items: (skillsRaw || []) as SkillEntry[],
       },
       sessions: (sessionsRaw || []) as SessionEntry[],
+      messengers: (messengersRaw || []) as MessengerConfig[],
     })
   }, [])
 
@@ -225,7 +256,7 @@ export function HomeView() {
     )
   }
 
-  const { agents, folders, skills, sessions: rawSessions } = data
+  const { agents, folders, skills, sessions: rawSessions, messengers } = data
   const sessions = rawSessions
   const recentSessions = sessions.slice(0, 4)
   const sortedAgents = sortAgents(agents.list)
@@ -245,7 +276,7 @@ export function HomeView() {
           </div>
 
           {/* ── Agents ── */}
-          <Section title={t('agentsSection')}>
+          <Section title={t('agentsSection')} className="space-y-3">
             {sortedAgents.length > 0 ? (
               <div className="space-y-1">
                 {sortedAgents.map((agent) => (
@@ -254,6 +285,7 @@ export function HomeView() {
                     agent={agent}
                     isDefault={agent.id === AYNITE_AGENT_ID}
                     activeId={agents.activeId}
+                    messengers={messengers}
                   />
                 ))}
               </div>
@@ -364,6 +396,24 @@ export function HomeView() {
 
 // ── Sub-components ─────────────────────────────────────────────────────
 
+// ── Agent Icon Map ──────────────────────────────────────────────────
+
+const AGENT_ICONS: Record<string, typeof Sparkles> = {
+  sparkles: Sparkles,
+  bot: BotIcon,
+  brain: Brain,
+  code: Code,
+  compass: Compass,
+  heart: Heart,
+  star: Star,
+  zap: Zap,
+}
+
+function getAgentIcon(iconId?: string) {
+  if (iconId && AGENT_ICONS[iconId]) return AGENT_ICONS[iconId]
+  return BotIcon
+}
+
 function ProjectCard({ folder }: { folder: string }) {
   return (
     <div className="p-4 rounded-xl border border-border bg-accent/5 transition-all hover:border-border/60">
@@ -384,44 +434,146 @@ function AgentRow({
   agent,
   isDefault,
   activeId,
+  messengers,
 }: {
   agent: Agent
   isDefault: boolean
   activeId: string
+  messengers: MessengerConfig[]
 }) {
   const toolCount = countEnabledTools(agent)
   const isActive = agent.id === activeId
+  const [showModal, setShowModal] = useState(false)
+  const [editingMessenger, setEditingMessenger] =
+    useState<MessengerConfig | null>(null)
+  const modalMessenger = editingMessenger
+
+  // Find all messengers bound to this agent
+  const boundMessengers = messengers.filter((m) => m.agentId === agent.id)
+
+  const AgentIcon = getAgentIcon(agent.icon)
+
   const handleOpenSettings = () => {
     events.execute('OPEN_AGENT_SETTINGS', { agentId: agent.id })
   }
+
+  const handleModalClose = () => {
+    setShowModal(false)
+    setEditingMessenger(null)
+  }
+
   return (
     <div className="py-3">
-      <div className="flex items-center gap-2 mb-0.5">
-        <h3 className="text-sm font-medium text-foreground">{agent.name}</h3>
-        {isDefault && (
-          <span className="text-[10px] text-muted-foreground/50">Default</span>
-        )}
-        {isActive && !isDefault && (
-          <span className="text-[10px] text-primary/70">Active</span>
-        )}
+      <div className="flex items-start gap-3">
+        <AgentIcon
+          size={16}
+          className="mt-0.5 shrink-0 text-muted-foreground/60"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="text-sm font-medium text-foreground">
+              {agent.name}
+            </h3>
+            {isDefault && (
+              <span className="text-[10px] text-muted-foreground/50">
+                Default
+              </span>
+            )}
+            {isActive && !isDefault && (
+              <span className="text-[10px] text-primary/70">Active</span>
+            )}
+          </div>
+
+          {agent.introduction && (
+            <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+              {agent.introduction}
+            </p>
+          )}
+
+          {/* Tool count + View details on the same row */}
+          <div className="flex items-center gap-3 mt-1">
+            {toolCount > 0 && (
+              <span className="text-[10px] text-muted-foreground/40">
+                Masters {toolCount} tool{toolCount === 1 ? '' : 's'}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleOpenSettings}
+              className="text-[10px] font-medium text-primary/60 hover:text-primary bg-transparent border-none p-0 cursor-pointer"
+            >
+              View details
+            </button>
+          </div>
+
+          {/* Messenger binding status */}
+          {boundMessengers.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {boundMessengers.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => {
+                    setEditingMessenger(m)
+                    setShowModal(true)
+                  }}
+                  title="Edit messenger"
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium border cursor-pointer hover:bg-accent/20 transition-colors"
+                >
+                  <span
+                    className={cn(
+                      'w-1.5 h-1.5 rounded-full',
+                      m.enabled && m.connected ? 'bg-green-500' : 'bg-red-400',
+                    )}
+                    title={
+                      m.enabled && !m.connected
+                        ? 'Failed to connect'
+                        : !m.enabled
+                          ? 'Disabled'
+                          : undefined
+                    }
+                  />
+                  <span
+                    className={cn(
+                      m.provider === 'telegram'
+                        ? 'text-blue-400'
+                        : 'text-indigo-400',
+                    )}
+                  >
+                    {m.provider === 'telegram' ? 'Telegram' : 'Discord'}
+                  </span>
+                  {m.botName && (
+                    <span className="text-muted-foreground">· {m.botName}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-primary/30 bg-primary/[0.03] p-4 space-y-2">
+              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                No messenger is bound to this agent. Connecting a messenger bot
+                allows you to interact with this agent from your phone via
+                Telegram or Discord — extremely helpful for on-the-go access.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary/70 hover:text-primary bg-transparent border-none p-0 cursor-pointer transition-colors"
+              >
+                <MessageCircle size={12} />
+                Connect a messenger bot
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-      {agent.introduction && (
-        <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-          {agent.introduction}
-        </p>
-      )}
-      {toolCount > 0 && (
-        <p className="text-[10px] text-muted-foreground/40 mt-0.5">
-          Masters {toolCount} tool{toolCount === 1 ? '' : 's'}
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={handleOpenSettings}
-        className="mt-1 text-[10px] font-medium text-primary/60 hover:text-primary bg-transparent border-none p-0 cursor-pointer"
-      >
-        View details
-      </button>
+
+      <MessengerEditModal
+        isOpen={showModal}
+        onClose={handleModalClose}
+        existing={modalMessenger}
+        agentId={agent.id}
+      />
     </div>
   )
 }

@@ -231,6 +231,7 @@ interface AyniteWindow {
   checkIsTextFile: (path: string) => Promise<boolean>
   executeAppOperation: (operation: string, data?: unknown) => void
   writeClipboard: (text: string) => Promise<boolean>
+  log: (level: string, ...args: unknown[]) => Promise<boolean>
 
   // Utilities
   joinPath: (...paths: string[]) => string
