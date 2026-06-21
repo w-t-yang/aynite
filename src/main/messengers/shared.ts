@@ -800,15 +800,6 @@ export async function handleCommit(
     })
     const commitId = commitHash.trim()
 
-    // ── Build validation suggestions ────────────────────────────────────
-    const suggestions = [
-      'Review the commit diff with `git show` to verify the changes.',
-      'Run the project tests to ensure nothing is broken.',
-      'Check for any linting or formatting issues.',
-      'Verify the app still works as expected.',
-      'If this is part of a larger feature, ensure all related changes were included.',
-    ]
-
     // ── Get changed files list ──────────────────────────────────────────
     const { stdout: changedFiles } = await execAsync(
       'git diff --name-only HEAD~1 HEAD',
@@ -829,7 +820,7 @@ export async function handleCommit(
       commitMessage,
       createdAt: new Date().toISOString(),
       files: changedFiles.trim().split('\n').filter(Boolean),
-      suggestions,
+      validated: false,
     })
 
     // ── Reply ────────────────────────────────────────────────────────────
@@ -841,9 +832,6 @@ export async function handleCommit(
       '',
       `*Files changed:*`,
       filesList || '  (none)',
-      '',
-      `*Validation suggestions:*`,
-      ...suggestions.map((s, i) => `${i + 1}. ${escapeMarkdown(s)}`),
     ].join('\n')
 
     await ctx.replyWithMarkdown(summary)
