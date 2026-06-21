@@ -1225,11 +1225,21 @@ export async function handleChatMessage(
         reply: (text: string) => ctx.reply(text),
       },
       () => {
-        ctx
-          .reply(
-            '🤖 The agent is working on your request. This may take a moment...',
-          )
-          .catch(() => {})
+        const WORKING_REPLIES = [
+          '🤖 The agent is working on your request. This may take a moment...',
+          '✨ On it! Let me work some magic behind the scenes — hang tight!',
+          "⏳ Processing your request. I'll be right back with the results.",
+          "🔧 Give me a sec — I'm busy tinkering under the hood! Back soon!",
+          '🤖 Agent loop engaged. Running tools & waiting for outputs. Stand by...',
+          '🤖 Working...',
+          "💪 Working on it! Just give me a moment and I'll have an answer for you.",
+          '🎬 The agent is now entering the arena. Spectacular things are happening. Please wait...',
+          '🚀 Processing your request... accessing tools, running commands, gathering results! Be right back!',
+          "🤖 The gears are turning (sometimes literally). I'll be back with your answer shortly!",
+        ]
+        const msg =
+          WORKING_REPLIES[Math.floor(Math.random() * WORKING_REPLIES.length)]
+        ctx.reply(msg).catch(() => {})
       },
     )
 
