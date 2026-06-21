@@ -273,6 +273,8 @@ export async function runMessengerAgent(
     /** Reply function for notify_user tool */
     reply: (text: string) => Promise<void>
   },
+  /** Optional callback fired when the AI first decides to use a tool in this turn */
+  onFirstToolCall?: () => void,
 ): Promise<UIMessage[]> {
   const aiConfig = await loadAiConfig()
   const activeProvider =
@@ -345,6 +347,7 @@ export async function runMessengerAgent(
   const allToolCalls = new Map<string, any>()
   let currentStepToolCalls: any[] = []
   let stepCount = 0
+  let firstToolCallFired = false
 
   const flushAssistant = () => {
     if (textAccum || reasoningAccum || currentStepToolCalls.length > 0) {
@@ -383,6 +386,11 @@ export async function runMessengerAgent(
         reasoningAccum += part.text
         break
       case 'tool-call': {
+        // Fire onFirstToolCall callback on first tool use
+        if (!firstToolCallFired) {
+          firstToolCallFired = true
+          onFirstToolCall?.()
+        }
         console.log(
           `[Messenger] tool-call: ${part.toolName} (id: ${part.toolCallId})`,
         )
@@ -877,6 +885,13 @@ export async function handleChatMessage(
         messengerId: config.id,
         chatName: chat,
         reply: (text: string) => ctx.reply(text),
+      },
+      () => {
+        ctx
+          .reply(
+            '🤖 The agent is working on your request. This may take a moment...',
+          )
+          .catch(() => {})
       },
     )
 
