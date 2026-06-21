@@ -6,10 +6,12 @@
  * interface and delegates to these shared functions.
  */
 
+import { exec, spawn } from 'node:child_process'
 import { readdirSync } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { promisify } from 'node:util'
 import type { UIMessage } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import type { WorkspaceConfig } from '../../lib/constants/types'
@@ -18,6 +20,8 @@ import {
   getAgentsDir,
   getAIConfigPath,
   getBotChatDatePath,
+  getBotCommitPath,
+  getBotCommitsDir,
   getBotSessionMessagesPath,
   getBotSessionMetadataPath,
   getMainConfigPath,
@@ -35,6 +39,7 @@ import {
   getProviderReasoningOptions,
   saveSession,
 } from '../ai'
+import { generateCommitMessage } from '../git/commit-gen'
 
 // ─── Abstract Messenger Context ──────────────────────────────────────────
 
@@ -588,6 +593,9 @@ export async function handleHelp(
   lines.push('`/help`, `/?`, `/h` — Show this message')
   lines.push('`/set-project` — Set working project folder')
   lines.push('`/set-agent` — Set bound agent')
+  lines.push(
+    '`/commit` — Stage all changes, generate commit message, and commit',
+  )
   lines.push('')
   lines.push('Send any other message to chat with the AI agent.')
 
@@ -712,6 +720,138 @@ const ASSISTANT_PROJECT_DIR = join(homedir(), '.aynite', 'assistant')
 async function ensureAssistantProjectDir(): Promise<string> {
   await mkdir(ASSISTANT_PROJECT_DIR, { recursive: true })
   return ASSISTANT_PROJECT_DIR
+}
+
+const execAsync = promisify(exec)
+
+// ─── Command: /commit ───────────────────────────────────────────────────
+
+export async function handleCommit(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  /** Chat name for per-channel storage, e.g. '@username' (DM) or '#general' (group) */
+  chatName?: string,
+) {
+  const chat = chatName || 'default'
+
+  // ── Resolve project folder ──────────────────────────────────────────
+  let root = config.projectFolder
+  if (!root) {
+    if (config.agentId === 'assistant') {
+      root = await ensureAssistantProjectDir()
+    } else {
+      await ctx.reply(
+        'No project folder is set. Use `/set-project` to choose one first.',
+      )
+      return
+    }
+  }
+
+  await ctx.reply('Staging all changes...')
+
+  try {
+    // ── Stage all ────────────────────────────────────────────────────────
+    await execAsync('git add -A', { cwd: root })
+
+    // Check if there's anything to commit
+    const { stdout: statusAfter } = await execAsync('git status --porcelain', {
+      cwd: root,
+    })
+    if (!statusAfter.trim()) {
+      await ctx.reply('No changes to commit.')
+      return
+    }
+
+    // ── Generate commit message ──────────────────────────────────────────
+    await ctx.reply('Generating commit message...')
+    const result = await generateCommitMessage(root)
+
+    if (result.error || !result.message) {
+      await ctx.reply(
+        `Failed to generate commit message: ${result.error || 'Unknown error'}`,
+      )
+      return
+    }
+
+    const commitMessage = result.message
+
+    // ── Execute commit ──────────────────────────────────────────────────
+    await new Promise<void>((resolve, reject) => {
+      const commitProc = spawn('git', ['commit', '-F', '-'], {
+        cwd: root,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      commitProc.stdin.write(commitMessage)
+      commitProc.stdin.end()
+      let stderr = ''
+      commitProc.stderr.on('data', (d: Buffer) => {
+        stderr += d.toString()
+      })
+      commitProc.on('close', (code) => {
+        if (code === 0) resolve()
+        else reject(new Error(stderr || `git commit exited with code ${code}`))
+      })
+      commitProc.on('error', reject)
+    })
+
+    // ── Get commit hash ─────────────────────────────────────────────────
+    const { stdout: commitHash } = await execAsync('git rev-parse HEAD', {
+      cwd: root,
+    })
+    const commitId = commitHash.trim()
+
+    // ── Build validation suggestions ────────────────────────────────────
+    const suggestions = [
+      'Review the commit diff with `git show` to verify the changes.',
+      'Run the project tests to ensure nothing is broken.',
+      'Check for any linting or formatting issues.',
+      'Verify the app still works as expected.',
+      'If this is part of a larger feature, ensure all related changes were included.',
+    ]
+
+    // ── Get changed files list ──────────────────────────────────────────
+    const { stdout: changedFiles } = await execAsync(
+      'git diff --name-only HEAD~1 HEAD',
+      { cwd: root },
+    )
+    const filesList = changedFiles
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((f) => `- \`${f}\``)
+      .join('\n')
+
+    // ── Save to commits directory ────────────────────────────────────────
+    const commitsDir = getBotCommitsDir(config.id, chat)
+    await mkdir(commitsDir, { recursive: true }).catch(() => {})
+    await writeJson(getBotCommitPath(config.id, chat, commitId), {
+      commitId,
+      commitMessage,
+      createdAt: new Date().toISOString(),
+      files: changedFiles.trim().split('\n').filter(Boolean),
+      suggestions,
+    })
+
+    // ── Reply ────────────────────────────────────────────────────────────
+    const summary = [
+      `✅ *Commit created:* \`${commitId.slice(0, 7)}\``,
+      '',
+      `*Message:*`,
+      escapeMarkdown(commitMessage),
+      '',
+      `*Files changed:*`,
+      filesList || '  (none)',
+      '',
+      `*Validation suggestions:*`,
+      ...suggestions.map((s, i) => `${i + 1}. ${escapeMarkdown(s)}`),
+    ].join('\n')
+
+    await ctx.replyWithMarkdown(summary)
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error('[Messenger] /commit error:', errorMsg)
+    await ctx.reply(`Commit failed: ${errorMsg}`)
+  }
 }
 
 // ─── Command: Chat Message ──────────────────────────────────────────────
@@ -1060,6 +1200,8 @@ export async function processIncomingMessage(
   } else if (lowerCmd.startsWith('/set-agent')) {
     const args = msg.textWithoutMention.slice('/set-agent'.length).trim()
     await handleSetAgent(config, ctx, args)
+  } else if (lowerCmd === '/commit') {
+    await handleCommit(config, ctx, msg.chatName)
   } else {
     await handleChatMessage(
       config,

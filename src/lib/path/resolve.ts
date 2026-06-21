@@ -362,6 +362,25 @@ export function getBotSessionCompactPath(
   )
 }
 
+/** Per-chat commits directory:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/commits/ */
+export function getBotCommitsDir(
+  messengerId: string,
+  chatName: string,
+): string {
+  return path.join(getBotChatDir(messengerId, chatName), 'commits')
+}
+
+/** Per-chat commit file:
+ *  ~/.aynite/bots/<messengerId>/<chatName>/commits/<commitId>.json */
+export function getBotCommitPath(
+  messengerId: string,
+  chatName: string,
+  commitId: string,
+): string {
+  return path.join(getBotCommitsDir(messengerId, chatName), `${commitId}.json`)
+}
+
 export function getSkillsDir() {
   return getAynitePath('skills')
 }
