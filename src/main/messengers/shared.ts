@@ -785,8 +785,6 @@ export async function handleCommit(
     }
   }
 
-  await ctx.reply('Staging all changes...')
-
   try {
     // ── Stage all ────────────────────────────────────────────────────────
     await execAsync('git add -A', { cwd: root })
@@ -801,7 +799,6 @@ export async function handleCommit(
     }
 
     // ── Generate commit message ──────────────────────────────────────────
-    await ctx.reply('Generating commit message...')
     const result = await generateCommitMessage(root)
 
     if (result.error || !result.message) {
