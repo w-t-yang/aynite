@@ -129,7 +129,7 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
     }
 
     return (
-      <div className="pb-8 bg-gradient-to-t from-background via-background to-transparent z-layout pointer-events-none">
+      <div className="pb-8 bg-gradient-to-t from-card/50 via-card/20 to-transparent z-layout pointer-events-none">
         <div className="max-w-[900px] mx-auto relative group pointer-events-auto">
           <div className="flex items-center justify-between px-2 mb-2 animate-in fade-in slide-in-from-bottom-1 duration-500">
             <div className="flex items-center gap-2">
