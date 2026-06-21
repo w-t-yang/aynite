@@ -53,12 +53,19 @@ export interface MessengerConfig {
   provider: 'telegram' | 'discord'
   apiKey: string
   enabled: boolean
+  /** The bot's display name (e.g. "MyBot" for Telegram, "MyBot#1234" for Discord).
+   *  Populated when the bot successfully connects. */
+  botName?: string
   /** User IDs or @usernames that are allowed to interact with this bot.
    *  If empty or not set, no one is allowed. */
   whitelist?: string[]
   /** Number of recent group messages to keep as context when the bot is
    *  @mentioned. Defaults to 100. */
   contextSize?: number
+  /** The agent ID bound to this bot. Used to determine agent name and introduction. */
+  agentId?: string
+  /** The working project folder path for this bot. */
+  projectFolder?: string
 }
 
 export interface AgentLoopConfig extends AIProvider {

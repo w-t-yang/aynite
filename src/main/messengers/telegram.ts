@@ -5,19 +5,20 @@
  * Provides a `MessengerContext` implementation wrapping Telegraf's `ctx`.
  */
 
+import { AppEvents } from '../../lib/constants/app'
 import type { MessengerConfig } from '../../lib/types/ai'
+import { broadcastAppEvent } from '../ipc-utils'
 import type { BotHandle } from './shared'
 import {
   getGroupContext,
   getSenderLabel,
   handleChatMessage,
-  handleListSessions,
-  handleNewSession,
-  handleSummarize,
-  handleSwitchSession,
-  handleWorkspaceInfo,
+  handleHelp,
+  handleSetAgent,
+  handleSetProject,
   loadConfigs,
   pushToGroupBuffer,
+  saveConfigsDirect,
   setBot,
 } from './shared'
 
@@ -133,37 +134,58 @@ export async function startTelegramBot(config: MessengerConfig) {
       return
     }
 
-    const rawText = ctx.message.text.trim()
+    const rawText = ctx.message.text.trim().toLowerCase()
 
     // Enrich message with group context for non-DM chats
-    let userText = rawText
+    let userText = ctx.message.text.trim()
     if (!isPrivate && chatId) {
       const context = getGroupContext(config.id, chatId)
       if (context) {
-        userText = `[Recent conversation]:\n${context}\n\n[My message]: ${rawText}`
+        userText = `[Recent conversation]:\n${context}\n\n[My message]: ${userText}`
       }
     }
 
     // Route commands
-    if (rawText === '?') {
-      handleWorkspaceInfo(botConfig, messengerCtx)
-    } else if (rawText === '/summarize') {
-      handleSummarize(botConfig, messengerCtx)
-    } else if (rawText === '/new-session') {
-      handleNewSession(botConfig, messengerCtx)
-    } else if (rawText === '/list-sessions') {
-      handleListSessions(botConfig, messengerCtx)
-    } else if (rawText.startsWith('/switch-session')) {
-      const args = rawText.slice('/switch-session'.length).trim()
-      handleSwitchSession(botConfig, messengerCtx, args)
+    if (
+      rawText === '/?' ||
+      rawText === '/h' ||
+      rawText === '/help' ||
+      rawText === '?'
+    ) {
+      handleHelp(botConfig, messengerCtx)
+    } else if (rawText.startsWith('/set-project')) {
+      const args = ctx.message.text.trim().slice('/set-project'.length).trim()
+      handleSetProject(botConfig, messengerCtx, args)
+    } else if (rawText.startsWith('/set-agent')) {
+      const args = ctx.message.text.trim().slice('/set-agent'.length).trim()
+      handleSetAgent(botConfig, messengerCtx, args)
     } else {
       handleChatMessage(botConfig, messengerCtx, userText)
     }
   })
 
   setBot(config.id, new TelegramBotHandle(bot))
+
+  // Capture bot name using the onLaunch callback — Telegraf calls it right
+  // after getMe() resolves (before polling starts, which never resolves).
   bot
-    .launch()
+    .launch(() => {
+      const username = bot.botInfo?.username
+      if (username) {
+        loadConfigs()
+          .then((configs) => {
+            const updated = configs.map((c) =>
+              c.id === config.id ? { ...c, botName: `@${username}` } : c,
+            )
+            return saveConfigsDirect(updated)
+          })
+          .then(() => {
+            broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'messengers' })
+            console.log(`[Messenger] Telegram bot name saved: @${username}`)
+          })
+          .catch(() => {})
+      }
+    })
     .catch((err) =>
       console.error(`[Messenger] ${config.provider} failed:`, err),
     )

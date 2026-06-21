@@ -23,7 +23,7 @@ and manage sessions — all through your messenger app.
 
 ### 1.2 Configure in Aynite
 
-1. Go to **Settings → Messengers**
+1. Go to **Settings → Messenger Bots**
 2. Click **Add Bot**
 3. Set the **Provider** to **Telegram**
 4. Paste the token from BotFather into the **API Key** field
@@ -35,22 +35,22 @@ and manage sessions — all through your messenger app.
 > **Note**: If the whitelist is empty, **no one** can talk to the bot. You must
 > add at least one user.
 
-### 1.3 Test the Bot
+### 1.3 Bind an Agent and Project
 
-1. Open Telegram and find your bot by its username
-2. Start a chat and send `?` — the bot should reply with workspace info
-3. Send a message like `list files in my project` — the bot will run the AI agent
-   and reply with the result
+After enabling the bot, use the bot commands to bind it:
+
+1. Send `/set-agent` to see available agents, then `/set-agent 1` to select one
+2. Send `/set-project` to see available project folders, then `/set-project 1`
+   to select one
+3. Send `/help` to verify the bot is properly configured
 
 ### 1.4 Bot Commands
 
 | Command | Description |
 |---------|-------------|
-| `?` | Show workspace info, active session, folders |
-| `/summarize` | Summarize the active session |
-| `/new-session` | Create a new empty session |
-| `/list-sessions` | List last 10 sessions |
-| `/switch-session <index>` | Switch to a session by index |
+| `/help`, `/?`, `/h`, `?` | Show bot status: bound agent, project folder, commands |
+| `/set-agent` | List available agents and select one |
+| `/set-project` | List available project folders and select one |
 
 Any other text is sent to the AI agent and processed as a task.
 
@@ -81,11 +81,6 @@ In the **Bot** tab, configure the following:
 - ✅ **Message Content Intent** — Required to read what users say in server
   channels and DMs. Without this, `message.content` will be empty strings.
 
-**Authorization Flow**:
-- ✅ **Allow Direct Messages** — Required for the bot to receive DMs. This is
-  **separate from the intents** — it's a toggle further up in the Bot settings.
-  Without this, the bot will respond in server channels but never in DMs.
-
 ### 2.3 Get the Bot Token
 
 Still in the **Bot** tab:
@@ -113,7 +108,7 @@ Still in the **Bot** tab:
 
 ### 2.5 Configure in Aynite
 
-1. Go to **Settings → Messengers**
+1. Go to **Settings → Messenger Bots**
 2. Click **Add Bot**
 3. Set the **Provider** to **Discord**
 4. Paste the bot token from the Developer Portal into the **API Key** field
@@ -126,11 +121,9 @@ Still in the **Bot** tab:
 > **Note**: If the whitelist is empty, **no one** can talk to the bot. You must
 > add at least one user.
 
-### 2.6 Test the Bot
+### 2.6 Bind an Agent and Project
 
-1. Open Discord and DM your bot
-2. Send `?` — the bot should reply with workspace info
-3. Send a message like `list files in my project`
+Same as Telegram — see [1.3 Bind an Agent and Project](#13-bind-an-agent-and-project).
 
 ### 2.7 Group Chat (Server Channels)
 
@@ -151,7 +144,7 @@ Same commands as Telegram (see [1.4 Bot Commands](#14-bot-commands) above).
 ### 3.1 "Sorry, I'm not allowed to talk to you."
 - The whitelist is empty or doesn't include your user ID
 - Add your Telegram user ID / @username or Discord user ID to the Trusted Users
-  field in Settings → Messengers
+  field in Settings → Messenger Bots
 
 ### 3.2 Telegram: "404: Not Found"
 - The bot token is invalid or the bot was deleted
@@ -164,8 +157,6 @@ Same commands as Telegram (see [1.4 Bot Commands](#14-bot-commands) above).
 
 ### 3.4 Discord: Bot responds in server channels but not in DMs
 - Go to **Discord Developer Portal → Your Bot → Bot tab**
-- Make sure **"Allow Direct Messages"** is enabled (it's a toggle in the
-  **Authorization Flow** section, separate from intents)
 - The bot and you must share at least one mutual server for DMs to work
 
 ### 3.5 Discord: Bot is online but doesn't respond at all
@@ -175,11 +166,11 @@ Same commands as Telegram (see [1.4 Bot Commands](#14-bot-commands) above).
 - Check that the bot has been invited with the correct permissions (see
   [2.4 Invite the Bot](#24-invite-the-bot-to-your-server))
 
-### 3.5 Bot won't start after changing settings
-- Toggle the bot off and on again in Settings → Messengers
+### 3.6 Bot won't start after changing settings
+- Toggle the bot off and on again in Settings → Messenger Bots
 - Or restart Aynite
 
-### 3.6 "No active AI provider configured"
+### 3.7 "No active AI provider configured"
 - Make sure you have at least one AI provider configured in Settings → AI
 - The bot uses the same AI provider as the Aynite Chat
 
@@ -194,6 +185,7 @@ Telegram/Discord → Aynite Messenger Runtime → AI Agent Loop → Tools (read/
 ```
 
 - Messages are processed by the same agent loop used in Aynite's AI Chat
-- Each bot has its own session (separate from the desktop AI Chat session)
+- Each bot has its own agent binding and project folder (set via `/set-agent`
+  and `/set-project`)
 - Tools run with auto-approval (no confirmation prompts)
-- The active workspace's folders and settings are used
+- When a project folder is set, only that folder is used as the working directory

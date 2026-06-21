@@ -30,6 +30,12 @@ export const workspaceHandlers: ConfigHandler = (() => ({
         const wsConfig = await getWorkspacesList()
         return wsConfig.active
       }
+      case 'workspace': {
+        // Load a single workspace config by name (payload)
+        const wsName = _payload as string
+        if (!wsName) return null
+        return await getWorkspaceState(wsName)
+      }
       default:
         return null
     }

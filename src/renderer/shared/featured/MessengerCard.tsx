@@ -1,7 +1,7 @@
 import { Info, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { DESCRIPTION_TEXT } from '../../../lib/constants/renderer/styles'
-import type { MessengerConfig } from '../../../lib/types/ai'
+import type { Agent, MessengerConfig } from '../../../lib/types/ai'
 import { Button } from '../basic/Button'
 import { Input } from '../basic/Input'
 import { Switch } from '../basic/Switch'
@@ -20,12 +20,16 @@ const PROVIDER_PLACEHOLDERS: Record<string, string> = {
 
 interface MessengerCardProps {
   messenger: MessengerConfig
+  agents: Agent[]
+  projectFolders: string[]
   onUpdate: (id: string, field: string, value: any) => void
   onDelete: (id: string) => void
 }
 
 export function MessengerCard({
   messenger,
+  agents,
+  projectFolders,
   onUpdate,
   onDelete,
 }: MessengerCardProps) {
@@ -37,6 +41,8 @@ export function MessengerCard({
     if (enabled && !isConfigured) return // Cannot enable if not configured
     onUpdate(messenger.id, 'enabled', enabled)
   }
+
+  const currentAgent = agents.find((a) => a.id === messenger.agentId)
 
   return (
     <>
@@ -62,6 +68,11 @@ export function MessengerCard({
               />
               {messenger.provider === 'telegram' ? 'Telegram' : 'Discord'}
             </span>
+            {messenger.botName && (
+              <span className="text-xs text-muted-foreground">
+                {messenger.botName}
+              </span>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -146,6 +157,62 @@ export function MessengerCard({
                 empty, no one can talk to the bot.
               </span>
             </div>
+          </div>
+
+          {/* Agent */}
+          <div>
+            <label
+              htmlFor={`agent-${messenger.id}`}
+              className="text-xs font-medium text-muted-foreground mb-1.5 block"
+            >
+              Agent
+            </label>
+            <select
+              id={`agent-${messenger.id}`}
+              value={messenger.agentId || ''}
+              onChange={(e) =>
+                onUpdate(messenger.id, 'agentId', e.target.value || undefined)
+              }
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm
+                focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="">Not set</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} {currentAgent?.id === a.id ? '(current)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Project Folder */}
+          <div>
+            <label
+              htmlFor={`project-${messenger.id}`}
+              className="text-xs font-medium text-muted-foreground mb-1.5 block"
+            >
+              Project Folder
+            </label>
+            <select
+              id={`project-${messenger.id}`}
+              value={messenger.projectFolder || ''}
+              onChange={(e) =>
+                onUpdate(
+                  messenger.id,
+                  'projectFolder',
+                  e.target.value || undefined,
+                )
+              }
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm
+                focus:outline-none focus:ring-1 focus:ring-primary truncate"
+            >
+              <option value="">Not set</option>
+              {projectFolders.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Toggle */}

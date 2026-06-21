@@ -18,19 +18,20 @@
  */
 
 import { Client, Events, GatewayIntentBits, Partials } from 'discord.js'
+import { AppEvents } from '../../lib/constants/app'
 import type { MessengerConfig } from '../../lib/types/ai'
+import { broadcastAppEvent } from '../ipc-utils'
 import type { BotHandle } from './shared'
 import {
   getGroupContext,
   getSenderLabel,
   handleChatMessage,
-  handleListSessions,
-  handleNewSession,
-  handleSummarize,
-  handleSwitchSession,
-  handleWorkspaceInfo,
+  handleHelp,
+  handleSetAgent,
+  handleSetProject,
   loadConfigs,
   pushToGroupBuffer,
+  saveConfigsDirect,
   setBot,
 } from './shared'
 
@@ -64,7 +65,7 @@ export async function startDiscordBot(config: MessengerConfig) {
     partials: [Partials.Channel, Partials.Message],
   })
 
-  client.once(Events.ClientReady, (readyClient) => {
+  client.once(Events.ClientReady, async (readyClient) => {
     console.log(
       `[Messenger] Discord bot "${config.provider}" logged in as ${readyClient.user?.tag}`,
     )
@@ -72,6 +73,21 @@ export async function startDiscordBot(config: MessengerConfig) {
       `Bot is in ${client.guilds.cache.size} guild(s):`,
       client.guilds.cache.map((g) => `${g.name} (${g.id})`).join(', '),
     )
+
+    // Store bot display name and broadcast so the UI refreshes
+    try {
+      const tag = readyClient.user?.tag
+      if (tag) {
+        const configs = await loadConfigs()
+        const updated = configs.map((c) =>
+          c.id === config.id ? { ...c, botName: tag } : c,
+        )
+        await saveConfigsDirect(updated)
+        broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'messengers' })
+      }
+    } catch {
+      // Best effort
+    }
   })
 
   client.on(Events.MessageCreate, async (message) => {
@@ -209,17 +225,20 @@ export async function startDiscordBot(config: MessengerConfig) {
 
     debug(`routing command: "${cleanText}"`)
 
-    if (cleanText === '?') {
-      handleWorkspaceInfo(botConfig, messengerCtx)
-    } else if (cleanText === '/summarize') {
-      handleSummarize(botConfig, messengerCtx)
-    } else if (cleanText === '/new-session') {
-      handleNewSession(botConfig, messengerCtx)
-    } else if (cleanText === '/list-sessions') {
-      handleListSessions(botConfig, messengerCtx)
-    } else if (cleanText.startsWith('/switch-session')) {
-      const args = cleanText.slice('/switch-session'.length).trim()
-      handleSwitchSession(botConfig, messengerCtx, args)
+    const lowerCmd = cleanText.toLowerCase()
+    if (
+      lowerCmd === '/?' ||
+      lowerCmd === '/h' ||
+      lowerCmd === '/help' ||
+      lowerCmd === '?'
+    ) {
+      handleHelp(botConfig, messengerCtx)
+    } else if (lowerCmd.startsWith('/set-project')) {
+      const args = cleanText.slice('/set-project'.length).trim()
+      handleSetProject(botConfig, messengerCtx, args)
+    } else if (lowerCmd.startsWith('/set-agent')) {
+      const args = cleanText.slice('/set-agent'.length).trim()
+      handleSetAgent(botConfig, messengerCtx, args)
     } else {
       handleChatMessage(botConfig, messengerCtx, userText)
     }

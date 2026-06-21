@@ -6,10 +6,13 @@
  * interface and delegates to these shared functions.
  */
 
+import { readdirSync } from 'node:fs'
 import type { UIMessage } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import type { WorkspaceConfig } from '../../lib/constants/types'
 import {
+  getAgentPath,
+  getAgentsDir,
   getAIConfigPath,
   getMainConfigPath,
   getMessengersConfigPath,
@@ -110,6 +113,10 @@ export function getGroupContext(
 
 export function loadConfigs(): Promise<MessengerConfig[]> {
   return readJson<MessengerConfig[]>(getMessengersConfigPath(), [])
+}
+
+export function saveConfigsDirect(configs: MessengerConfig[]): Promise<void> {
+  return writeJson(getMessengersConfigPath(), configs)
 }
 
 function loadAiConfig() {
@@ -376,296 +383,209 @@ export async function runMessengerAgent(
   return resultMessages
 }
 
-// ─── Command Handlers ────────────────────────────────────────────────────
+// ─── Help: Agent + Agent Info Loading ─────────────────────────────────────
 
-export async function handleWorkspaceInfo(
-  config: MessengerConfig,
-  ctx: MessengerContext,
-) {
+/** Load an agent file from the agents directory by ID. */
+async function loadAgent(
+  agentId: string,
+): Promise<{ name: string; introduction?: string } | null> {
   try {
-    const workspace = await getActiveWorkspace()
-    const workspaceConfig = await readJson<WorkspaceConfig>(
-      getWorkspaceDataPath(workspace),
-    )
-    if (!workspaceConfig) {
-      await ctx.reply(`Workspace "${workspace}" not found.`)
-      return
-    }
-
-    const { activeSessionId, activeSessionIdForBot, activeAgentId, folders } =
-      workspaceConfig
-
-    const lines: string[] = []
-    lines.push(`*Workspace:* ${escapeMarkdown(workspace)}`)
-    lines.push(`*Agent:* ${escapeMarkdown(activeAgentId || 'N/A')}`)
-    lines.push('')
-
-    lines.push(`*Folders (${folders?.length || 0}):*`)
-    if (folders && folders.length > 0) {
-      for (const f of folders) lines.push(`  ${escapeMarkdown(f)}`)
-    } else {
-      lines.push('  _(none)_')
-    }
-
-    const botSessionId = activeSessionIdForBot || activeSessionId
-    if (botSessionId) {
-      lines.push('')
-      lines.push(`*Bot Session:* \`${botSessionId}\``)
-
-      const { metadata: foundMetadata } = await findMetadata(
-        botSessionId,
-        workspace,
-      )
-
-      if (foundMetadata) {
-        const name = escapeMarkdown(
-          `${foundMetadata.agentName || 'Unknown'} - ${foundMetadata.modelName || 'Unknown'}`,
-        )
-        const summary = foundMetadata.summary
-          ? escapeMarkdown(foundMetadata.summary.slice(0, 200))
-          : null
-        if (summary) {
-          lines.push(`*Session:* ${name}`)
-          lines.push(`*Summary:* ${summary}`)
-        } else {
-          const sessionContent = await findSessionFile(botSessionId, workspace)
-          const firstUser = sessionContent?.find((m: any) => m.role === 'user')
-          const preview =
-            firstUser?.parts
-              ?.map((p: any) => p.text || '')
-              .join('')
-              ?.slice(0, 80) || '_(no messages)_'
-          lines.push(`*Session:* ${name}`)
-          lines.push(`*Summary:* ${escapeMarkdown(preview)}`)
-        }
-      } else {
-        lines.push(`*Session:* \`${botSessionId}\` _(no metadata)_`)
-      }
-    } else {
-      lines.push('')
-      lines.push('*Active Session:* _(none)_')
-    }
-
-    lines.push('')
-    lines.push('---')
-    lines.push('*Commands:*')
-    lines.push('`?` — Show workspace info')
-    lines.push('`/summarize` — Summarize active session')
-    lines.push('`/new-session` — Create a new empty session')
-    lines.push('`/list-sessions` — List last 10 sessions')
-    lines.push('`/switch-session <index>` — Switch to a session by index')
-
-    await ctx.replyWithMarkdown(lines.join('\n'))
-  } catch (err) {
-    console.error(
-      `[Messenger] Workspace info error for "${config.provider}":`,
-      err,
-    )
-    await ctx.reply('Failed to load workspace info.')
+    const agent = await readJson<{
+      name: string
+      introduction?: string
+    }>(getAgentPath(agentId))
+    return agent
+  } catch {
+    return null
   }
 }
 
-export async function handleSummarize(
-  config: MessengerConfig,
-  ctx: MessengerContext,
-) {
+/** List all available agent IDs from the agents directory. */
+function listAgentIds(): string[] {
   try {
-    const workspace = await getActiveWorkspace()
+    return readdirSync(getAgentsDir())
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => f.replace(/\.json$/, ''))
+  } catch {
+    return []
+  }
+}
+
+/** Collect all unique project folders across all workspaces. */
+async function listAllProjectFolders(): Promise<string[]> {
+  const wsConfig = await readJson<{ active: string; list: string[] }>(
+    getWorkspacesConfigPath(),
+    { active: 'Aynite', list: ['Aynite'] },
+  )
+  const allFolders = new Set<string>()
+  for (const ws of wsConfig.list) {
     const workspaceConfig = await readJson<WorkspaceConfig>(
-      getWorkspaceDataPath(workspace),
-    )
-    if (!workspaceConfig) {
-      await ctx.reply(`Workspace "${workspace}" not found.`)
-      return
-    }
-
-    const botSessionId =
-      workspaceConfig.activeSessionIdForBot || workspaceConfig.activeSessionId
-    if (!botSessionId) {
-      await ctx.reply('No active session.')
-      return
-    }
-
-    const messages = await findSessionFile(botSessionId, workspace)
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      await ctx.reply('Active session is empty.')
-      return
-    }
-
-    await ctx.reply('Summarizing session...')
-
-    const chatMessages = messages.filter((m: any) => m.role !== 'system')
-    const summaryPrompt =
-      'Start with a concise, meaningful title (max 10 words, no markdown, no "Summary of" prefix) on the first line. Then provide a detailed summary of the conversation below, preserving all key information, decisions, and context.'
-
-    const summaryMessages = [
-      ...chatMessages,
-      {
-        id: 'summarize-req',
-        role: 'user' as const,
-        parts: [{ type: 'text' as const, text: summaryPrompt }],
-      },
-    ]
-
-    const aiConfig = await loadAiConfig()
-    const activeProvider =
-      aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
-      aiConfig?.providers?.[0]
-
-    if (!activeProvider) {
-      await ctx.reply('No active AI provider configured.')
-      return
-    }
-
-    const { streamText, convertToModelMessages } = await import('ai')
-    const model = getAIModel(activeProvider)
-    const modelMessages = await convertToModelMessages(summaryMessages, {
-      tools: {},
-      ignoreIncompleteToolCalls: true,
-    })
-
-    let summaryText = ''
-    const result = streamText({ model, messages: modelMessages, tools: {} })
-
-    for await (const part of result.fullStream) {
-      if (part.type === 'text-delta') summaryText += part.text
-      if (part.type === 'error') {
-        await ctx.reply(`Summarization failed: ${part.error}`)
-        return
+      getWorkspaceDataPath(ws),
+    ).catch(() => null)
+    if (workspaceConfig?.folders) {
+      for (const f of workspaceConfig.folders) {
+        allFolders.add(f)
       }
     }
-
-    const body = summaryText.trim()
-
-    const metaPath = getSessionMetadataFilePath(botSessionId, workspace)
-    const existingMeta = await readJson<SessionMetadata>(metaPath).catch(
-      () => null,
-    )
-    await writeJson(metaPath, {
-      ...(existingMeta || {}),
-      summary: body,
-      updatedAt: new Date().toISOString(),
-    })
-
-    await ctx.replyWithMarkdown(
-      `*Session summarized*\n\n*Summary:* ${escapeMarkdown(body.slice(0, 200))}...`,
-    )
-  } catch (err) {
-    console.error(`[Messenger] Summarize error for "${config.provider}":`, err)
-    await ctx.reply('Failed to summarize session.')
   }
+  return Array.from(allFolders)
 }
 
-export async function handleNewSession(
+// ─── Command: /help, /?, /h ─────────────────────────────────────────────
+
+export async function handleHelp(
   config: MessengerConfig,
   ctx: MessengerContext,
 ) {
-  try {
-    const workspace = await getActiveWorkspace()
-    const newId = Date.now().toString()
-    await saveSession(workspace, newId, [], undefined)
-    await saveWorkspaceState(workspace, {
-      activeSessionIdForBot: newId,
-    })
-    broadcastAppEvent(AppEvents.CONFIG_CHANGED, {
-      key: 'activeSessionIdForBot',
-    })
+  const lines: string[] = []
+  lines.push('*Aynite Bot*')
+  lines.push('')
 
-    await ctx.replyWithMarkdown(`*New bot session created*\n\nID: \`${newId}\``)
-  } catch (err) {
-    console.error(
-      `[Messenger] New session error for "${config.provider}":`,
-      err,
-    )
-    await ctx.reply('Failed to create new session.')
-  }
-}
-
-export async function handleListSessions(
-  config: MessengerConfig,
-  ctx: MessengerContext,
-) {
-  try {
-    const workspace = await getActiveWorkspace()
-    const { listSessions } = await import('../ai')
-    const sessions = await listSessions(workspace)
-
-    if (!sessions || sessions.length === 0) {
-      await ctx.reply('No sessions found.')
-      return
+  // Agent info
+  if (config.agentId) {
+    const agent = await loadAgent(config.agentId)
+    if (agent) {
+      lines.push(`*Agent:* ${escapeMarkdown(agent.name)}`)
+      if (agent.introduction) {
+        lines.push(`${escapeMarkdown(agent.introduction)}`)
+      }
+    } else {
+      lines.push('*Agent:* Not found')
     }
-
-    const top = sessions.slice(0, 10)
-    const lines: string[] = ['*Last 10 sessions:*', '']
-    top.forEach((s: any, i: number) => {
-      const name = s.title || `Session ${s.id.slice(-6)}`
-      const desc = s.preview
-        ? escapeMarkdown(s.preview.slice(0, 60))
-        : '_(no messages)_'
-      lines.push(`*${i + 1}.* ${escapeMarkdown(name)}`)
-      lines.push(`   ${desc}`)
-    })
-
-    await ctx.replyWithMarkdown(lines.join('\n'))
-  } catch (err) {
-    console.error(
-      `[Messenger] List sessions error for "${config.provider}":`,
-      err,
-    )
-    await ctx.reply('Failed to list sessions.')
+  } else {
+    lines.push('*Agent:* Not bound. Use `/set-agent` to bind an agent.')
   }
+
+  // Project folder
+  if (config.projectFolder) {
+    lines.push(`*Project:* \`${escapeMarkdown(config.projectFolder)}\``)
+  } else {
+    lines.push(
+      '*Project:* Not set. Use `/set-project` to set a working project folder.',
+    )
+  }
+
+  lines.push('')
+  lines.push('---')
+  lines.push('*Commands:*')
+  lines.push('`/help`, `/?`, `/h` — Show this message')
+  lines.push('`/set-project` — Set working project folder')
+  lines.push('`/set-agent` — Set bound agent')
+  lines.push('')
+  lines.push('Send any other message to chat with the AI agent.')
+
+  await ctx.replyWithMarkdown(lines.join('\n'))
 }
 
-export async function handleSwitchSession(
+// ─── Command: /set-project ──────────────────────────────────────────────
+
+export async function handleSetProject(
   config: MessengerConfig,
   ctx: MessengerContext,
   args: string,
 ) {
+  const folders = await listAllProjectFolders()
+
+  if (!args) {
+    // No index provided — list available projects
+    if (folders.length === 0) {
+      await ctx.reply('No project folders found in any workspace.')
+      return
+    }
+    const lines: string[] = ['*Available project folders:*', '']
+    folders.forEach((f, i) => {
+      lines.push(`*${i + 1}.* \`${escapeMarkdown(f)}\``)
+    })
+    lines.push('')
+    lines.push('Reply with `/set-project <index>` to select a project folder.')
+    await ctx.replyWithMarkdown(lines.join('\n'))
+    return
+  }
+
+  // Index provided — try to set
+  const index = parseInt(args, 10)
+  if (Number.isNaN(index) || index < 1 || index > folders.length) {
+    await ctx.reply(
+      `Invalid index. Choose a number between 1 and ${folders.length}. Use \`/set-project\` to see the list.`,
+    )
+    return
+  }
+
+  const selected = folders[index - 1]
+
+  // Update the config in messengers.json
   try {
-    const workspace = await getActiveWorkspace()
-    const index = parseInt(args, 10)
-    if (Number.isNaN(index) || index < 1) {
-      await ctx.reply(
-        'Please provide a valid session index (e.g. `/switch-session 2`).',
-      )
-      return
-    }
-
-    const { listSessions } = await import('../ai')
-    const sessions = await listSessions(workspace)
-
-    if (!sessions || sessions.length === 0) {
-      await ctx.reply('No sessions found.')
-      return
-    }
-
-    const target = sessions[index - 1]
-    if (!target) {
-      await ctx.reply(
-        `Session index ${index} not found. Use /list-sessions to see available sessions.`,
-      )
-      return
-    }
-
-    await saveWorkspaceState(workspace, {
-      activeSessionIdForBot: target.id,
-    })
-    broadcastAppEvent(AppEvents.CONFIG_CHANGED, {
-      key: 'activeSessionIdForBot',
-    })
-
-    const name = target.title || `Session ${target.id.slice(-6)}`
+    const configs = await loadConfigs()
+    const updated = configs.map((c) =>
+      c.id === config.id ? { ...c, projectFolder: selected } : c,
+    )
+    await saveConfigsDirect(updated)
     await ctx.replyWithMarkdown(
-      `*Switched bot to session*\n\n*Session:* ${escapeMarkdown(name)}\n*ID:* \`${target.id}\``,
+      `*Project folder set*\n\n\`${escapeMarkdown(selected)}\``,
     )
   } catch (err) {
-    console.error(
-      `[Messenger] Switch session error for "${config.provider}":`,
-      err,
-    )
-    await ctx.reply('Failed to switch session.')
+    console.error('[Messenger] Failed to save project folder:', err)
+    await ctx.reply('Failed to save project folder.')
   }
 }
+
+// ─── Command: /set-agent ────────────────────────────────────────────────
+
+export async function handleSetAgent(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  args: string,
+) {
+  const agentIds = listAgentIds()
+
+  if (!args) {
+    // No index provided — list available agents
+    if (agentIds.length === 0) {
+      await ctx.reply('No agents found.')
+      return
+    }
+    const lines: string[] = ['*Available agents:*', '']
+    for (let i = 0; i < agentIds.length; i++) {
+      const agent = await loadAgent(agentIds[i])
+      const name = agent?.name || agentIds[i]
+      lines.push(`*${i + 1}.* ${escapeMarkdown(name)}`)
+    }
+    lines.push('')
+    lines.push('Reply with `/set-agent <index>` to select an agent.')
+    await ctx.replyWithMarkdown(lines.join('\n'))
+    return
+  }
+
+  // Index provided — try to set
+  const index = parseInt(args, 10)
+  if (Number.isNaN(index) || index < 1 || index > agentIds.length) {
+    await ctx.reply(
+      `Invalid index. Choose a number between 1 and ${agentIds.length}. Use \`/set-agent\` to see the list.`,
+    )
+    return
+  }
+
+  const selectedId = agentIds[index - 1]
+  const agent = await loadAgent(selectedId)
+  const agentName = agent?.name || selectedId
+
+  // Update the config in messengers.json
+  try {
+    const configs = await loadConfigs()
+    const updated = configs.map((c) =>
+      c.id === config.id ? { ...c, agentId: selectedId } : c,
+    )
+    await saveConfigsDirect(updated)
+    await ctx.replyWithMarkdown(
+      `*Agent set*\n\nBound to: ${escapeMarkdown(agentName)}`,
+    )
+  } catch (err) {
+    console.error('[Messenger] Failed to save agent:', err)
+    await ctx.reply('Failed to save agent.')
+  }
+}
+
+// ─── Command: Chat Message ──────────────────────────────────────────────
 
 export async function handleChatMessage(
   config: MessengerConfig,
@@ -760,15 +680,15 @@ export async function handleChatMessage(
       return
     }
 
-    const {
-      activeSessionId,
-      activeSessionIdForBot,
-      activeAgentId,
-      folders: workspaceFolders,
-    } = workspaceConfig
+    const { activeSessionId, activeSessionIdForBot } = workspaceConfig
+    const activeAgentId = config.agentId || workspaceConfig.activeAgentId
+    const workspaceFolders = config.projectFolder
+      ? [config.projectFolder]
+      : workspaceConfig.folders
+
     const botSessionId = activeSessionIdForBot || activeSessionId
     console.log(
-      `[Messenger] workspace: activeSessionId="${activeSessionId}" activeSessionIdForBot="${activeSessionIdForBot}" botSessionId="${botSessionId}" activeAgentId="${activeAgentId}" folders=${workspaceFolders?.length}`,
+      `[Messenger] workspace: activeSessionId="${activeSessionId}" activeSessionIdForBot="${activeSessionIdForBot}" botSessionId="${botSessionId}" agentId="${activeAgentId}" folders=${workspaceFolders?.length}`,
     )
 
     let sessionId: string

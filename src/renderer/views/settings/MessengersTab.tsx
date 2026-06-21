@@ -1,7 +1,8 @@
 import { MessageCircle, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ADD_ITEM_BUTTON } from '../../../lib/constants/renderer/styles'
-import type { MessengerConfig } from '../../../lib/types/ai'
+import type { Agent, MessengerConfig } from '../../../lib/types/ai'
+
 import { config, configMutations } from '../../bridge/config'
 import { Button } from '../../shared/basic/Button'
 import { Section } from '../../shared/basic/Section'
@@ -15,11 +16,32 @@ interface MessengersTabProps {
 
 export function MessengersTab({ onRestore, t }: MessengersTabProps) {
   const [messengers, setMessengers] = useState<MessengerConfig[]>([])
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [projectFolders, setProjectFolders] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    config.get('messengers').then((resMessengers: any) => {
+    Promise.all([
+      config.get('messengers'),
+      config.get('agents'),
+      config.get('workspaces'),
+    ]).then(([resMessengers, resAgents, resWorkspaces]: any[]) => {
       if (resMessengers) setMessengers(resMessengers)
+      if (resAgents?.list) setAgents(resAgents.list as Agent[])
+
+      // Collect unique project folders from all workspaces.
+      // The 'workspaces' handler returns an array of workspace config
+      // objects, each with a 'folders' field.
+      if (Array.isArray(resWorkspaces)) {
+        const unique = new Set<string>()
+        for (const ws of resWorkspaces as Array<{ folders?: string[] }>) {
+          if (ws.folders) {
+            for (const f of ws.folders) unique.add(f)
+          }
+        }
+        setProjectFolders(Array.from(unique))
+      }
+
       setLoading(false)
     })
   }, [])
@@ -55,6 +77,8 @@ export function MessengersTab({ onRestore, t }: MessengersTabProps) {
       enabled: false,
       whitelist: [],
       contextSize: 100,
+      agentId: undefined,
+      projectFolder: undefined,
     }
     saveMessengers([...messengers, newMessenger])
   }
@@ -96,6 +120,8 @@ export function MessengersTab({ onRestore, t }: MessengersTabProps) {
             <MessengerCard
               key={m.id}
               messenger={m}
+              agents={agents}
+              projectFolders={projectFolders}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
             />
