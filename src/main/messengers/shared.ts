@@ -1462,9 +1462,55 @@ export function getBotLockKey(messengerId: string, chatName: string): string {
 }
 
 /**
+ * Describe a tool part as a single sentence indicating the agent's progress.
+ * Mirrors the style used in the session message list titles.
+ */
+function describeToolAction(part: any): string {
+  const toolName = part.toolName || ''
+  const input = part.input ?? part.args ?? {}
+  const actualArgs = input?.args || input?.input || input
+
+  const getDetail = (obj: any): string | null => {
+    if (!obj || typeof obj !== 'object') return null
+    return obj.command || obj.path || obj.pattern || obj.url || obj.name || null
+  }
+
+  switch (toolName) {
+    case 'run_command': {
+      let cmd = getDetail(actualArgs) || ''
+      cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
+      return `running a command: ${cmd || '...'}`
+    }
+    case 'read_file':
+      return `reading: ${getDetail(actualArgs) || '...'}`
+    case 'write_file':
+    case 'edit_file':
+      return `writing to: ${getDetail(actualArgs) || '...'}`
+    case 'grep_search':
+      return `searching for: ${getDetail(actualArgs) || '...'}`
+    case 'glob_search':
+      return `searching for files matching: ${getDetail(actualArgs) || '...'}`
+    case 'read_url':
+      return `fetching: ${getDetail(actualArgs) || '...'}`
+    case 'get_messages':
+      return 'reading chat history'
+    case 'notify_user':
+      return 'processing your request'
+    case 'memory-manager':
+    case 'task-manager':
+      return 'organizing tasks and memory'
+    default: {
+      const formatted = toolName.toUpperCase().replace(/_/g, ' ')
+      const detail = getDetail(actualArgs)
+      return detail ? `using ${formatted}: ${detail}` : `using ${formatted}`
+    }
+  }
+}
+
+/**
  * Check if a bot is busy processing a message for a specific chat.
- * If busy, returns a reply string with the last assistant message content
- * (or a generic message if no last message exists). Returns null if not busy.
+ * If busy, returns a reply string with a single sentence describing
+ * what the agent is doing. Returns null if not busy.
  */
 export async function getBusyReply(
   messengerId: string,
@@ -1473,7 +1519,6 @@ export async function getBusyReply(
   const lockKey = getBotLockKey(messengerId, chatName)
   if (!processing.has(lockKey)) return null
 
-  let lastContent = ''
   try {
     const msgs = await loadBotSessionMessages(messengerId, chatName)
     if (msgs && Array.isArray(msgs)) {
@@ -1482,56 +1527,32 @@ export async function getBusyReply(
         .find((m: any) => m.role === 'assistant' && m.parts?.length > 0)
 
       if (lastAssistant) {
-        const lines: string[] = []
+        // Look for a tool part first (dynamic-tool, tool-call, tool-result)
         for (const part of lastAssistant.parts) {
-          if (part.type === 'text' && part.text) {
-            lines.push(part.text.slice(0, 2000))
-          }
           if (
             part.type === 'dynamic-tool' ||
             part.type === 'tool-call' ||
             part.type === 'tool-result'
           ) {
-            const p = part as any
-            const toolName = p.toolName || ''
-            const input = p.input ?? p.args ?? {}
-            const formattedName = toolName.toUpperCase().replace(/_/g, ' ')
-            const actualArgs = input?.args || input?.input || input
-            const getCmd = (obj: any): string | null => {
-              if (!obj || typeof obj !== 'object') return null
-              return (
-                obj.command ||
-                obj.path ||
-                obj.pattern ||
-                obj.url ||
-                obj.query ||
-                obj.name ||
-                null
-              )
-            }
-            let cmd = getCmd(actualArgs)
-            if (cmd && toolName === 'run_command') {
-              cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
-            }
-            if (cmd) {
-              lines.push(`⚡ ${formattedName}  │  ${cmd}`)
-            } else {
-              lines.push(`⚡ ${formattedName}`)
-            }
+            const action = describeToolAction(part)
+            return `The agent is working on your request. It is ${action}.`
           }
         }
-        if (lines.length > 0) {
-          lastContent = lines.join('\n\n').slice(0, 2000)
+
+        // No tool part — check if there's text content
+        const textPart = lastAssistant.parts.find(
+          (p: any) => p.type === 'text' && p.text,
+        )
+        if (textPart) {
+          return 'The agent is working on your request. It is analyzing your question.'
         }
       }
     }
   } catch {
-    // Best effort
+    // Best effort — fall through to generic reply
   }
 
-  return lastContent
-    ? `The agent is busy with the last request.\n\nHere is the latest message from the session:\n\n${escapeMarkdown(lastContent)}`
-    : 'The agent is currently processing a request. Please wait before sending another message.'
+  return 'The agent is working on your request. Please wait.'
 }
 
 /**
