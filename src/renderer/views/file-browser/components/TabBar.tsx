@@ -5,12 +5,14 @@ import {
   FileCode,
   FileImage,
   FileJson,
+  FileSearch,
   FileText,
   Menu,
   X,
 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Button } from '../../../shared/basic/Button'
+import type { SelectionItem } from '../../../shared/basic/SelectionList'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
 import { cn } from '../../../shared/lib/utils'
 
@@ -26,6 +28,7 @@ interface TabBarProps {
   onTabSelect: (path: string) => void
   onTabClose: (path: string) => void
   onCloseAll: () => void
+  onSwitchToFinderMode: () => void
   t?: (key: string) => string
 }
 
@@ -65,6 +68,7 @@ export function TabBar({
   onTabSelect,
   onTabClose,
   onCloseAll,
+  onSwitchToFinderMode,
   t: tProp,
 }: TabBarProps) {
   const t = tProp || ((key: string) => key)
@@ -80,6 +84,8 @@ export function TabBar({
   const handleMenuSelect = (id: string) => {
     if (id === 'close-all') {
       onCloseAll()
+    } else if (id === 'switch-to-finder-mode') {
+      onSwitchToFinderMode()
     } else if (id === 'prev') {
       const currentIndex = tabs.findIndex((t) => t.path === activePath)
       if (currentIndex > 0) {
@@ -93,10 +99,16 @@ export function TabBar({
     }
   }
 
-  const menuItems = [
+  const menuItems: SelectionItem[] = [
     { id: 'prev', label: t('tab.prevTab'), icon: <ChevronLeft size={14} /> },
     { id: 'next', label: t('tab.nextTab'), icon: <ChevronRight size={14} /> },
     { id: 'divider-1', type: 'divider' },
+    {
+      id: 'switch-to-finder-mode',
+      label: 'Finder Mode',
+      icon: <FileSearch size={14} />,
+    },
+    { id: 'divider-2', type: 'divider' },
     {
       id: 'close-all',
       label: t('tab.closeAll'),
