@@ -273,7 +273,7 @@ export function HomeView() {
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-8 space-y-10">
+        <div className="max-w-[768px] mx-auto p-8 space-y-10">
           {/* ── Welcome ── */}
           <div className="text-center pt-4 pb-2">
             <AnimatedWelcome />
