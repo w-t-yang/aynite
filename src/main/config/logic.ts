@@ -1,4 +1,4 @@
-import { userInfo } from 'node:os'
+import { homedir, userInfo } from 'node:os'
 import { app } from 'electron'
 import {
   AGENT_IDS,
@@ -157,7 +157,13 @@ export async function initAppFolders() {
     lastUsed: new Date().toISOString(),
     activeTheme: 'light',
     language: systemLanguage,
-    skills: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS)] },
+    skills: {
+      folders: [
+        joinPaths(baseDir, AYNITE_SUBDIRS.SKILLS),
+        joinPaths(homedir(), '.agents', 'skills'),
+        joinPaths(homedir(), '.claude', 'skills'),
+      ],
+    },
     commands: { folders: [joinPaths(baseDir, AYNITE_SUBDIRS.COMMANDS)] },
     prompts: { files: getDefaultGlobalPrompts() },
     telemetry: { enabled: true },
@@ -296,6 +302,26 @@ export async function loadConfig() {
   }
 
   if (!mainConfig.skills) mainConfig.skills = await getSkillsConfig()
+  // Ensure default and cross-app skill directories are included.
+  // listAvailableSpells handles non-existent folders gracefully,
+  // so we add them unconditionally without checking exists().
+  const requiredSkillDirs = [
+    joinPaths(getAyniteDir(), AYNITE_SUBDIRS.SKILLS),
+    joinPaths(homedir(), '.agents', 'skills'),
+    joinPaths(homedir(), '.claude', 'skills'),
+  ]
+  let skillsModified = false
+  if (mainConfig.skills?.folders) {
+    for (const dir of requiredSkillDirs) {
+      if (!mainConfig.skills.folders.includes(dir)) {
+        mainConfig.skills.folders.push(dir)
+        skillsModified = true
+      }
+    }
+  }
+  if (skillsModified) {
+    await writeJson(getMainConfigPath(), mainConfig)
+  }
   if (!mainConfig.commands) mainConfig.commands = await getCommandsConfig()
   if (!mainConfig.telemetry) mainConfig.telemetry = { enabled: true }
   if (mainConfig.prompts?.files) {

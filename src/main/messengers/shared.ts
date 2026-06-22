@@ -189,6 +189,31 @@ export function escapeMarkdown(text: string): string {
   return text.replace(/[_*`[]/g, '\\$&')
 }
 
+/**
+ * Truncate a message to fit within platform limits.
+ * Most messengers have a ~4000 char limit; we use 3500 as a safe ceiling.
+ * If truncated, appends a note at the end.
+ */
+export function truncateMessage(text: string, maxLen = 3500): string {
+  if (text.length <= maxLen) return text
+  const truncated = text.slice(0, maxLen - 60)
+  return `${truncated}\n\n... (message truncated, ${text.length - maxLen} chars omitted)`
+}
+
+/**
+ * Create a MessengerContext with auto-truncated replies.
+ */
+export function createMessengerContext(
+  rawReply: (text: string) => Promise<void>,
+  rawReplyWithMarkdown: (text: string) => Promise<void>,
+): MessengerContext {
+  return {
+    reply: (text: string) => rawReply(truncateMessage(text)),
+    replyWithMarkdown: (text: string) =>
+      rawReplyWithMarkdown(truncateMessage(text)),
+  }
+}
+
 // ─── Bot Session Management ──────────────────────────────────────────────
 
 /**
@@ -774,20 +799,19 @@ export async function handleCommit(
 ) {
   const chat = chatName || 'default'
 
-  // ── Resolve project folder ──────────────────────────────────────────
-  let root = config.projectFolder
-  if (!root) {
-    if (config.agentId === 'assistant') {
-      root = await ensureAssistantProjectDir()
-    } else {
-      await ctx.reply(
-        'No project folder is set. Use `/set-project` to choose one first.',
-      )
-      return
-    }
-  }
-
   try {
+    // ── Resolve project folder ──────────────────────────────────────────
+    let root = config.projectFolder
+    if (!root) {
+      if (config.agentId === 'assistant') {
+        root = await ensureAssistantProjectDir()
+      } else {
+        await ctx.reply(
+          'No project folder is set. Use `/set-project` to choose one first.',
+        )
+        return
+      }
+    }
     // ── Stage all ────────────────────────────────────────────────────────
     await execAsync('git add -A', { cwd: root })
 

@@ -6,8 +6,9 @@
  */
 
 import type { MessengerConfig } from '../../lib/types/ai'
-import type { BotHandle, IncomingMessage, MessengerContext } from './shared'
+import type { BotHandle, IncomingMessage } from './shared'
 import {
+  createMessengerContext,
   loadConfigs,
   processIncomingMessage,
   setBot,
@@ -78,12 +79,11 @@ export async function startTelegramBot(config: MessengerConfig) {
       ? rawText.replace(new RegExp(`@${ctx.botInfo.username}`, 'gi'), '').trim()
       : rawText.trim()
 
-    // Build MessengerContext
-    const messengerCtx: MessengerContext = {
-      reply: (text: string) => ctx.reply(text).then(() => {}),
-      replyWithMarkdown: (text: string) =>
-        ctx.replyWithMarkdown(text).then(() => {}),
-    }
+    // Build MessengerContext with auto-truncation
+    const messengerCtx = createMessengerContext(
+      (text: string) => ctx.reply(text).then(() => {}),
+      (text: string) => ctx.replyWithMarkdown(text).then(() => {}),
+    )
 
     // Normalized message
     const msg: IncomingMessage = {

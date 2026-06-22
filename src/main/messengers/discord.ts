@@ -14,8 +14,9 @@
 
 import { Client, Events, GatewayIntentBits, Partials } from 'discord.js'
 import type { MessengerConfig } from '../../lib/types/ai'
-import type { BotHandle, IncomingMessage, MessengerContext } from './shared'
+import type { BotHandle, IncomingMessage } from './shared'
 import {
+  createMessengerContext,
   loadConfigs,
   processIncomingMessage,
   setBot,
@@ -107,14 +108,14 @@ export async function startDiscordBot(config: MessengerConfig) {
     // Strip <@!id> or <@id> mentions for command matching
     const textWithoutMention = rawText.replace(/<@!?(\d+)>\s*/g, '').trim()
 
-    // Build MessengerContext (Discord doesn't support markdown reply well)
-    const messengerCtx: MessengerContext = {
-      reply: (text: string) => message.reply(text).then(() => {}),
-      replyWithMarkdown: (text: string) =>
+    // Build MessengerContext with auto-truncation
+    const messengerCtx = createMessengerContext(
+      (text: string) => message.reply(text).then(() => {}),
+      (text: string) =>
         message
           .reply(text.replace(/[_*`[]/g, '').replace(/^#+\s*/gm, ''))
           .then(() => {}),
-    }
+    )
 
     // Normalized message
     const msg: IncomingMessage = {
