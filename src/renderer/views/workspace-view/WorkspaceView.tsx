@@ -188,6 +188,9 @@ export function WorkspaceView() {
               <GitDiffView
                 folders={folders}
                 onSelectFile={(path) => configMutations.set('activeFile', path)}
+                onSelectFolder={(path) =>
+                  events.execute('OPEN_FOLDER_IN_FINDER', { path })
+                }
               />
             )}
           </div>

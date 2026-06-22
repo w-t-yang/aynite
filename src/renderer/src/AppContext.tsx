@@ -179,6 +179,7 @@ function useEventRouter() {
 // ─── App Operations Listener ───────────────────────────────────────────
 // Listens for operations sent from the main process (e.g. keyboard shortcuts)
 // and delegates them to the UI context's operation handler.
+// Also relays view-level operations (like OPEN_FOLDER_IN_FINDER) to iframes.
 
 function useAppOperations() {
   const { executeAppOperation } = useUI()
@@ -187,6 +188,22 @@ function useAppOperations() {
     if (typeof window === 'undefined') return
     const unbind = events.onAppOperation(
       (operation: string, data?: unknown) => {
+        // Relay view-level operations to iframe views via postMessage
+        if (operation === 'OPEN_FOLDER_IN_FINDER') {
+          window.postMessage(
+            { type: 'aynite:open-folder-in-finder', data },
+            '*',
+          )
+          for (const iframe of document.querySelectorAll<HTMLIFrameElement>(
+            'iframe',
+          )) {
+            iframe.contentWindow?.postMessage(
+              { type: 'aynite:open-folder-in-finder', data },
+              '*',
+            )
+          }
+          return
+        }
         executeAppOperation(operation, data)
       },
     )

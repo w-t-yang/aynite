@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { config } from '../../bridge/config'
 import { AIChat } from '../aichat/AIChat'
 import { FileBrowserPage } from '../file-browser/FileBrowserPage'
-import { useViewEvent } from '../useViewEvents'
+import { useAppEvent, useViewEvent } from '../useViewEvents'
 
 type ViewMode = 'aichat' | 'file-browser'
 
@@ -18,6 +18,17 @@ export function AiBrowserView() {
   useViewEvent(
     'active-file-changed',
     (data: { path: string }) => {
+      if (data?.path) {
+        setMode('file-browser')
+      }
+    },
+    [],
+  )
+
+  // Listen for folder-open requests → switch to file-browser view
+  useAppEvent(
+    'open-folder-in-finder',
+    (data: { path?: string }) => {
       if (data?.path) {
         setMode('file-browser')
       }

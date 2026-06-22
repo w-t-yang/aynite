@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { workspace } from '../../bridge/workspace'
 import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
 import { useI18n } from '../../shared/i18n/useI18n'
-import { useView } from '../ViewContext'
+import { useAppEvent, useView } from '../ViewContext'
 import { FileContent } from './components/FileContent'
 import { FileSearchBar } from './components/FileSearchBar'
 import { FinderBar } from './components/FinderBar'
@@ -93,6 +93,18 @@ export function FileBrowserPage() {
       .catch(() => {})
   }, [])
 
+  // Listen for folder-open requests from other views (e.g. workspace view)
+  useAppEvent(
+    'open-folder-in-finder',
+    (data: { path?: string }) => {
+      if (data?.path) {
+        setMode('finder')
+        setBrowsingFolder(data.path)
+      }
+    },
+    [],
+  )
+
   // ── Hooks ──────────────────────────────────────────────────────────────
   const {
     tabs,
@@ -169,6 +181,14 @@ export function FileBrowserPage() {
       return next
     })
   }, [content, originalContent, activePath, setDirtyPaths])
+
+  // When a file is opened from outside (e.g. git diff view) while browsing
+  // a folder, clear browsingFolder so the file content is shown instead.
+  useEffect(() => {
+    if (activePath && browsingFolder) {
+      setBrowsingFolder(null)
+    }
+  }, [activePath, browsingFolder])
 
   // ── Breadcrumb ───────────────────────────────────────────────────────
   const breadcrumbSegments = useMemo(

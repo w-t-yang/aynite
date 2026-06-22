@@ -34,6 +34,8 @@ interface GitDiffViewProps {
   folders: string[]
   /** Callback when a changed file is clicked */
   onSelectFile?: (path: string) => void
+  /** Callback when a project folder header is clicked */
+  onSelectFolder?: (path: string) => void
   /** Optional className for styling */
   className?: string
   /** If true, renders folder headers with names (default: true). Set to false when the parent already renders folder rows. */
@@ -126,6 +128,7 @@ interface FolderSplitStatus {
 export function GitDiffView({
   folders,
   onSelectFile,
+  onSelectFolder,
   className,
   showFolderHeaders = true,
 }: GitDiffViewProps) {
@@ -392,8 +395,10 @@ export function GitDiffView({
           <div key={folderPath} className="space-y-0.5">
             {/* ── Folder Header ── */}
             {showFolderHeaders && (
-              <div
-                className="flex items-center gap-3 px-3 py-2 rounded-lg bg-accent/5 border border-transparent text-sm text-foreground/80 overflow-hidden"
+              <button
+                type="button"
+                onClick={() => onSelectFolder?.(folderPath)}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-accent/5 border border-transparent text-sm text-foreground/80 overflow-hidden hover:bg-accent/10 hover:border-border/40 transition-all cursor-pointer text-left"
                 title={folderPath}
               >
                 {isGit ? (
@@ -429,7 +434,7 @@ export function GitDiffView({
                     No changes
                   </span>
                 )}
-              </div>
+              </button>
             )}
 
             {/* "Not a git repo" when showFolderHeaders is false */}
