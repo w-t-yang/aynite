@@ -62,6 +62,7 @@ type DashboardData = {
   skills: { folders: string[]; items: SkillEntry[] }
   sessions: SessionEntry[]
   messengers: MessengerConfig[]
+  activityCounts: Record<string, number>
 }
 
 // ── Activity histogram helpers ─────────────────────────────────────────
@@ -69,26 +70,16 @@ type DashboardData = {
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', '']
 
 /**
- * Generate a full 365-day grid ending at today.
+ * Generate a full 365-day grid ending at today using combined activity counts
+ * from all workspaces and messenger bots.
  * Returns 53 weeks, each with 7 DayBin (Sun=index 0, Sat=index 6).
  * Every day has a count (0 means no activity).
  * The grid is oldest→newest left→right.
  */
-function buildFullYearGrid(sessions: SessionEntry[]) {
-  // Count messages per date using each session's messageDateCounts.
-  // Each message is counted on its actual createdAt date, falling back
-  // to the session's creation timestamp if the message lacks a timestamp.
-  const msgCountMap = new Map<string, number>()
+function buildFullYearGrid(activityCounts: Record<string, number>) {
   let maxCount = 0
-  for (const s of sessions) {
-    if (s.messageDateCounts) {
-      for (const [dateStr, count] of Object.entries(s.messageDateCounts)) {
-        const prev = msgCountMap.get(dateStr) || 0
-        const updated = prev + count
-        msgCountMap.set(dateStr, updated)
-        if (updated > maxCount) maxCount = updated
-      }
-    }
+  for (const c of Object.values(activityCounts)) {
+    if (c > maxCount) maxCount = c
   }
 
   const today = new Date()
@@ -102,10 +93,11 @@ function buildFullYearGrid(sessions: SessionEntry[]) {
     const m = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
     const dateStr = `${y}-${m}-${day}`
+    const count = activityCounts[dateStr] || 0
     days.push({
       date: dateStr,
-      count: msgCountMap.get(dateStr) || 0,
-      sessionCount: msgCountMap.get(dateStr) || 0,
+      count,
+      sessionCount: count,
     })
   }
 
@@ -168,6 +160,7 @@ export function HomeView() {
         skillsCfg,
         sessionsRaw,
         messengersRaw,
+        activityCounts,
       ] = await Promise.all([
         config.get('agents'),
         workspace.folders(),
@@ -175,6 +168,7 @@ export function HomeView() {
         config.get('skills'),
         ai.listSessions(),
         config.get('messengers'),
+        ai.getActivityCounts(),
       ])
       if (cancelled) return
       const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
@@ -187,6 +181,7 @@ export function HomeView() {
         },
         sessions: (sessionsRaw || []) as SessionEntry[],
         messengers: (messengersRaw || []) as MessengerConfig[],
+        activityCounts: activityCounts || {},
       })
       setLoading(false)
     }
@@ -213,6 +208,7 @@ export function HomeView() {
       skillsCfg,
       sessionsRaw,
       messengersRaw,
+      activityCounts,
     ] = await Promise.all([
       config.get('agents'),
       workspace.folders(),
@@ -220,6 +216,7 @@ export function HomeView() {
       config.get('skills'),
       ai.listSessions(),
       config.get('messengers'),
+      ai.getActivityCounts(),
     ])
     const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
     setData({
@@ -231,6 +228,7 @@ export function HomeView() {
       },
       sessions: (sessionsRaw || []) as SessionEntry[],
       messengers: (messengersRaw || []) as MessengerConfig[],
+      activityCounts: activityCounts || {},
     })
   }, [])
 
@@ -260,7 +258,14 @@ export function HomeView() {
     )
   }
 
-  const { agents, folders, skills, sessions: rawSessions, messengers } = data
+  const {
+    agents,
+    folders,
+    skills,
+    sessions: rawSessions,
+    messengers,
+    activityCounts,
+  } = data
   const sessions = rawSessions
   const recentSessions = sessions.slice(0, 4)
   const sortedAgents = sortAgents(agents.list)
@@ -302,7 +307,7 @@ export function HomeView() {
           >
             {sessions.length > 0 ? (
               <div className="space-y-6">
-                <ActivityHistogram sessions={sessions} />
+                <ActivityHistogram activityCounts={activityCounts} />
                 <div className={GRID_2_COL}>
                   {recentSessions.map((s) => (
                     <SessionCard
@@ -595,10 +600,14 @@ function SkillFolderCard({ folder }: { folder: string }) {
 
 // ── Activity Histogram ─────────────────────────────────────────────────
 
-function ActivityHistogram({ sessions }: { sessions: SessionEntry[] }) {
+function ActivityHistogram({
+  activityCounts,
+}: {
+  activityCounts: Record<string, number>
+}) {
   const { weeks, maxCount } = useMemo(
-    () => buildFullYearGrid(sessions),
-    [sessions],
+    () => buildFullYearGrid(activityCounts),
+    [activityCounts],
   )
 
   const trailingMonths = useMemo(() => getTrailingMonths(), [])
@@ -638,7 +647,7 @@ function ActivityHistogram({ sessions }: { sessions: SessionEntry[] }) {
       <div className="flex items-center gap-2 mb-4">
         <div className="size-2 rounded-full bg-primary/60" />
         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-          Session Activity
+          Message Activity
         </span>
       </div>
 

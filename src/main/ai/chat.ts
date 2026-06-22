@@ -1,14 +1,17 @@
+import path from 'node:path'
 import type { TextStreamPart, UIMessage } from 'ai'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { AppEvents } from '../../lib/constants/app'
 import {
   appendText,
+  getBotsDir,
   getLogPath,
   getSessionCompactPath,
   getSessionDir,
   getSessionMessagesPath,
   getSessionMetadataFilePath,
   getWorkspaceSessionsDir,
+  getWorkspacesConfigPath,
   readdir,
   readJson,
   stat,
@@ -228,6 +231,70 @@ export async function listSessions(workspace: string) {
   }
 
   return all.sort((a, b) => b.lastModified.localeCompare(a.lastModified))
+}
+
+/**
+ * Aggregate per-date message counts from all workspaces' AI sessions
+ * and all messenger bot chat logs.
+ *
+ * Returns a map of `{ "YYYY-MM-DD": totalCount }` covering the past year.
+ */
+export async function getCombinedActivityCounts(): Promise<
+  Record<string, number>
+> {
+  const counts: Record<string, number> = {}
+
+  // ── 1. Collect from all workspace sessions ──────────────────────────
+  const wsConfig = await readJson<{ active: string; list: string[] }>(
+    getWorkspacesConfigPath(),
+    { active: 'Aynite', list: ['Aynite'] },
+  )
+  for (const ws of wsConfig.list) {
+    const sessions = await listSessions(ws)
+    for (const s of sessions) {
+      if ((s as any).messageDateCounts) {
+        for (const [dateStr, count] of Object.entries(
+          (s as any).messageDateCounts as Record<string, number>,
+        )) {
+          counts[dateStr] = (counts[dateStr] || 0) + (count as number)
+        }
+      }
+    }
+  }
+
+  // ── 2. Collect from all messenger bot date logs ────────────────────
+  const DATE_FILE_RE = /^\d{4}-\d{2}-\d{2}\.json$/
+  const botsDir = getBotsDir()
+  const messengerDirs = await readdir(botsDir).catch(() => [])
+  for (const messengerEntry of messengerDirs) {
+    if (!messengerEntry.isDirectory()) continue
+    const messengerId = messengerEntry.name
+    const chatDirs = await readdir(path.join(botsDir, messengerId)).catch(
+      () => [],
+    )
+    for (const chatEntry of chatDirs) {
+      if (!chatEntry.isDirectory()) continue
+      // Skip non-chat subdirs (session, commits, etc.)
+      const chatName = chatEntry.name
+      if (chatName === 'session' || chatName === 'commits') continue
+      const chatDir = path.join(botsDir, messengerId, chatName)
+      const files = await readdir(chatDir).catch(() => [])
+      for (const file of files) {
+        if (!file.isFile()) continue
+        if (!DATE_FILE_RE.test(file.name)) continue
+        const dateStr = file.name.replace(/\.json$/, '')
+        const messages = await readJson<unknown[]>(
+          path.join(chatDir, file.name),
+          [],
+        )
+        if (Array.isArray(messages)) {
+          counts[dateStr] = (counts[dateStr] || 0) + messages.length
+        }
+      }
+    }
+  }
+
+  return counts
 }
 
 export async function aiChat(params: {

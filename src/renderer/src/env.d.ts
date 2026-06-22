@@ -104,6 +104,7 @@ interface AyniteWindow {
   ) => Promise<{ requestId?: string; error?: string }>
   getMergedSystemPrompt: (agentId?: string) => Promise<string>
   listSessions: () => Promise<ChatSessionEntry[]>
+  getActivityCounts: () => Promise<Record<string, number>>
   saveSession: (
     sessionId: string,
     messages: any[],

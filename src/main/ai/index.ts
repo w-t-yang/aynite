@@ -12,6 +12,7 @@ import { showOpenDialog } from '../window'
 import { getWindowWorkspace } from '../window-state'
 import {
   aiChat,
+  getCombinedActivityCounts,
   listSessions,
   loadSession,
   loadSessionMetadata,
@@ -148,6 +149,10 @@ export function setupAiIpc() {
     return filePaths[0]
   })
 
+  ipcMain.handle(AiChannels.GET_ACTIVITY_COUNTS, async () => {
+    return await getCombinedActivityCounts()
+  })
+
   ipcMain.handle(AiChannels.ARTIFACTS_STATUS, async (event) => {
     const winId = getWinIdFromSender(event.sender)
     const workspaceName = await getWindowWorkspace(winId)
@@ -178,6 +183,7 @@ export function setupAiIpc() {
 
 export {
   deleteSession,
+  getCombinedActivityCounts,
   getProviderReasoningOptions,
   initWorkspaceFolders,
   listSessions,

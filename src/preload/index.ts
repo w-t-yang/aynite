@@ -75,6 +75,7 @@ const aynite = {
     ipcRenderer.invoke(AiChannels.PROMPT_GET_MERGED, agentId),
   restorePrompts: () => ipcRenderer.invoke(AiChannels.PROMPT_RESTORE),
   listSessions: () => ipcRenderer.invoke(AiChannels.SESSION_LIST),
+  getActivityCounts: () => ipcRenderer.invoke(AiChannels.GET_ACTIVITY_COUNTS),
   saveSession: (sessionId: string, messages: any[], metadata?: any) =>
     ipcRenderer.invoke(AiChannels.SESSION_SAVE, {
       sessionId,

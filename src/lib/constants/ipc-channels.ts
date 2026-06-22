@@ -51,6 +51,7 @@ export const AiChannels = {
   PROMPT_RESTORE: 'aynite:ai-prompt-restore',
   PROMPT_PICK_FILE: 'aynite:ai-prompt-pick-file',
   ARTIFACTS_STATUS: 'aynite:ai-artifacts-status',
+  GET_ACTIVITY_COUNTS: 'aynite:ai-get-activity-counts',
 } as const
 
 export const AiEventChannels = {

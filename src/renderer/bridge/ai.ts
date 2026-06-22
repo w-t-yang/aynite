@@ -42,6 +42,9 @@ interface DirectCommandPayload {
 export const ai = (() => ({
   listSessions: (): Promise<ChatSessionEntry[]> => getAynite().listSessions(),
 
+  getActivityCounts: (): Promise<Record<string, number>> =>
+    getAynite().getActivityCounts(),
+
   loadSession: (sessionId: string, date?: string): Promise<any> =>
     getAynite().loadSession(sessionId, date),
 
