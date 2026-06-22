@@ -66,9 +66,9 @@ import { getIgnorePatterns } from './ignore'
 const NEW_DEFAULT_WORKSPACE = 'Aynite'
 
 /**
- * Migrate agents from the old config.json format (agents.list) to individual
- * files in ~/.aynite/agents/<id>.json.
- * Also ensures the two default agents (Aynite Dev + Assistant) exist.
+ * Ensures the two default agents (Aynite + Assistant) exist as individual files
+ * in ~/.aynite/agents/<id>.json, and deletes any other agent files.
+ * Also cleans up the old config.json agents.list format if present.
  */
 async function migrateAgentsToFiles() {
   const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {})
@@ -100,34 +100,19 @@ async function migrateAgentsToFiles() {
     }
   }
 
-  // Migrate old agents from config.json to individual files
-  if (mainConfig.agents?.list && Array.isArray(mainConfig.agents.list)) {
-    const oldList = mainConfig.agents.list
-    for (const oldAgent of oldList) {
-      if (!existingAgentIds.has(oldAgent.id)) {
-        const migratedAgent = {
-          id: oldAgent.id,
-          name: oldAgent.name,
-          promptFiles: oldAgent.promptFiles || [],
-          introduction: undefined,
-          tools: undefined,
-        }
-        // Keep the global prompt filter from config
-        const filteredPromptFiles = (migratedAgent.promptFiles || []).filter(
-          (f: string) => {
-            const filename = f.split('/').pop()
-            return filename ? !filename.startsWith('agent-') : true
-          },
-        )
-        migratedAgent.promptFiles = [
-          ...globalPromptFiles,
-          ...filteredPromptFiles,
-        ]
-        await writeJson(getAgentPath(oldAgent.id), migratedAgent)
-      }
+  // Delete any agent files that are NOT Aynite or Assistant
+  const KEEP_AGENTS = new Set(['aynite', 'assistant'])
+  for (const file of existingFiles) {
+    if (!file.isFile() || !file.name.endsWith('.json')) continue
+    const agentId = file.name.replace(/\.json$/, '')
+    if (!KEEP_AGENTS.has(agentId)) {
+      await unlink(getAgentPath(agentId)).catch(() => {})
+      console.log(`[migrateAgentsToFiles] Removed old agent: ${agentId}`)
     }
+  }
 
-    // Clean up old agents field from config.json
+  // Clean up old agents field from config.json
+  if (mainConfig.agents) {
     const defaultAgentId =
       mainConfig.defaultAgentId ||
       mainConfig.agents?.activeId ||
