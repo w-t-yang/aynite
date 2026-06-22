@@ -705,7 +705,7 @@ function ActivityHistogram({ sessions }: { sessions: SessionEntry[] }) {
                 <div
                   key={bin.date || `empty-${wi}-${di}`}
                   style={{
-                    width: '100%',
+                    aspectRatio: 1,
                     height: '10px',
                     borderRadius: '2px',
                   }}
