@@ -25,7 +25,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col bg-sidebar/80 backdrop-blur-md border-r border-border select-none shrink-0"
+      className="flex flex-col bg-sidebar/80 backdrop-blur-md select-none shrink-0"
       style={{ width: SIDEBAR_WIDTH }}
     >
       {/* System items: Home, Projects */}

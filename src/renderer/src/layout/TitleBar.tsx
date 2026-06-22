@@ -5,8 +5,8 @@ import {
   Languages,
   Minus,
   Moon,
-  MoreHorizontal,
   Palette,
+  Settings2,
   Square,
   Sun,
   Trash2,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
+import appIcon from '../../../../build/icon-128.png'
 import { systemMutations } from '../../bridge/system'
 import { platform } from '../../bridge/utils'
 import { Button } from '../../shared/basic/Button'
@@ -120,12 +121,28 @@ const TitleBar: React.FC = () => {
     <>
       <div
         className={cn(
-          'h-9 flex items-center justify-between bg-sidebar/80 backdrop-blur-md border-b border-border select-none drag relative z-layout',
-          isMac && !isFullscreen ? 'pl-[78px] pr-2' : isMac ? 'pr-2' : 'px-2',
+          'h-9 flex items-center bg-sidebar/80 backdrop-blur-md select-none relative z-layout',
+          isMac && !isFullscreen ? 'pl-[72px]' : '',
         )}
       >
-        {/* Left: Workspace switcher + nav arrows */}
-        <div className="flex items-center no-drag">
+        {/* ── Left: App icon (centered) ── */}
+        <div
+          className={cn(
+            'flex items-center justify-center shrink-0',
+            isMac && !isFullscreen ? 'w-0 overflow-hidden' : 'w-[72px]',
+          )}
+        >
+          <img
+            src={appIcon}
+            alt="Aynite"
+            className="w-5 h-5 opacity-80"
+            style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.25))' }}
+            draggable={false}
+          />
+        </div>
+
+        {/* Workspace switcher */}
+        <div className="no-drag">
           <SelectionMenu
             activeId={workspaceConfig.id}
             items={workspaceOptions}
@@ -184,31 +201,34 @@ const TitleBar: React.FC = () => {
               </>
             }
           />
-
-          {/* Navigation arrows */}
-          <div className="flex items-center gap-0.5 ml-1">
-            <button
-              type="button"
-              onClick={navigateBack}
-              disabled={navIndex <= 0}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-              title="Back"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={navigateForward}
-              disabled={navIndex >= navHistory.length - 1}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-              title="Forward"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
         </div>
 
-        {/* Right: App options + Window controls */}
+        {/* Navigation arrows */}
+        <div className="flex items-center gap-0.5 no-drag">
+          <button
+            type="button"
+            onClick={navigateBack}
+            disabled={navIndex <= 0}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            title="Back"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={navigateForward}
+            disabled={navIndex >= navHistory.length - 1}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            title="Forward"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* App options (theme, language, etc.) */}
         <div className="flex items-center gap-1 no-drag shrink-0">
           <SelectionMenu
             items={[
@@ -264,8 +284,9 @@ const TitleBar: React.FC = () => {
                 variant="ghost"
                 size="icon"
                 title={t('titlebar.appOptions')}
+                className="text-muted-foreground/60 hover:text-foreground"
               >
-                <MoreHorizontal size={16} />
+                <Settings2 size={15} />
               </Button>
             }
           />
