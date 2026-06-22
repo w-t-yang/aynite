@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { workspace } from '../../bridge/workspace'
 import { loadViewTranslations } from '../../shared/i18n/loadViewI18n'
 import { useI18n } from '../../shared/i18n/useI18n'
@@ -69,7 +69,11 @@ function buildBreadcrumbSegments(
   return segments
 }
 
-export function FileBrowserPage() {
+export function FileBrowserPage({
+  initialBrowsingFolder,
+}: {
+  initialBrowsingFolder?: string | null
+} = {}) {
   const { locale } = useView()
   const customTranslations = useMemo(
     () => loadViewTranslations((viewConfig as any).i18n),
@@ -92,6 +96,16 @@ export function FileBrowserPage() {
       .then(setWorkspaceFolders)
       .catch(() => {})
   }, [])
+
+  // Handle initial browsing folder passed as prop (from AiBrowserView)
+  const initialFolderHandled = useRef(false)
+  useEffect(() => {
+    if (initialBrowsingFolder && !initialFolderHandled.current) {
+      initialFolderHandled.current = true
+      setMode('finder')
+      setBrowsingFolder(initialBrowsingFolder)
+    }
+  }, [initialBrowsingFolder])
 
   // Listen for folder-open requests from other views (e.g. workspace view)
   useAppEvent(
@@ -184,8 +198,15 @@ export function FileBrowserPage() {
 
   // When a file is opened from outside (e.g. git diff view) while browsing
   // a folder, clear browsingFolder so the file content is shown instead.
+  // Only fire when activePath changes (new file opened), not when browsingFolder changes.
+  const prevActivePathRef = useRef(activePath)
   useEffect(() => {
-    if (activePath && browsingFolder) {
+    const prev = prevActivePathRef.current
+    prevActivePathRef.current = activePath
+    // Skip initial mount
+    if (prev === null && activePath !== null) return
+    // Only clear if activePath changed to a different file while browsing
+    if (activePath && activePath !== prev && browsingFolder) {
       setBrowsingFolder(null)
     }
   }, [activePath, browsingFolder])

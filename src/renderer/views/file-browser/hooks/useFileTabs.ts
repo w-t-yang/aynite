@@ -106,7 +106,10 @@ export function useFileTabs() {
         setHistory(paths)
       }
 
-      const active = await config.get('activeFile')
+      const activeRaw: any = await config.get('activeFile')
+      // activeFile can be a string path or an object like { path: '...' }
+      const active: string | null =
+        typeof activeRaw === 'string' ? activeRaw : activeRaw?.path || null
       if (active) {
         setActivePath(active)
         setTabs((prev) => {
