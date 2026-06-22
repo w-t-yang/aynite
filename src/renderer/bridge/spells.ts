@@ -46,6 +46,12 @@ export const spellsMutations = (() => ({
 
   pickSkillFolder: (): Promise<string | null> => getAynite().pickSkillFolder(),
 
+  installSkillFromGitHub: (
+    url: string,
+    destPath?: string,
+  ): Promise<{ success: boolean; path?: string; error?: string }> =>
+    getAynite().installSkillFromGitHub(url, destPath),
+
   pickCommandFolder: (): Promise<string | null> =>
     getAynite().pickCommandFolder(),
 }))()

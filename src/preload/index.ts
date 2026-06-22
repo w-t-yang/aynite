@@ -167,6 +167,8 @@ const aynite = {
   getAvailableSkills: () => ipcRenderer.invoke(SpellChannels.SKILL_LIST),
   getAvailableCommands: () => ipcRenderer.invoke(SpellChannels.COMMAND_LIST),
   pickSkillFolder: () => ipcRenderer.invoke(SpellChannels.SKILL_ADD_FOLDER),
+  installSkillFromGitHub: (url: string, destPath?: string) =>
+    ipcRenderer.invoke(SpellChannels.SKILL_INSTALL_GITHUB, url, destPath),
   pickCommandFolder: () => ipcRenderer.invoke(SpellChannels.COMMAND_ADD_FOLDER),
   restoreSkills: () => ipcRenderer.invoke(SpellChannels.SKILL_RESTORE),
   restoreCommands: () => ipcRenderer.invoke(SpellChannels.COMMAND_RESTORE),
@@ -296,6 +298,7 @@ const aynite = {
     return hasLeadingSlash ? `/${joined}` : joined
   },
   platform: process.platform,
+  homedir: require('node:os').homedir(),
   writeClipboard: (text: string) =>
     ipcRenderer.invoke(SystemChannels.CLIPBOARD_WRITE_TEXT, text),
   log: (level: string, ...args: unknown[]) =>

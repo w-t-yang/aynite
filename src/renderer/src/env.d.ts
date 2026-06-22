@@ -168,6 +168,10 @@ interface AyniteWindow {
   restoreSkills: () => Promise<boolean>
   restoreCommands: () => Promise<boolean>
   pickSkillFolder: () => Promise<string | null>
+  installSkillFromGitHub: (
+    url: string,
+    destPath?: string,
+  ) => Promise<{ success: boolean; path?: string; error?: string }>
   pickCommandFolder: () => Promise<string | null>
 
   // RSS
@@ -239,6 +243,7 @@ interface AyniteWindow {
   joinPath: (...paths: string[]) => string
   dirname: (p: string) => string
   platform: string
+  homedir: string
 }
 
 declare global {

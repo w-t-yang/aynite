@@ -245,11 +245,18 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
               }
             })
             pushNavEntry('sys-settings')
-            // Set hash directly — Settings is now rendered inline (no iframe),
-            // so window.location.hash is the main window's hash and works.
             window.history.replaceState(null, '', `#tab=agent-${agentId}`)
             window.dispatchEvent(new HashChangeEvent('hashchange'))
           }
+          return
+        case 'OPEN_SKILLS_SETTINGS':
+          setWorkspaceConfig((prev) => {
+            if (!prev) return null
+            return { ...prev, activeLayoutId: 'sys-settings' }
+          })
+          pushNavEntry('sys-settings')
+          window.history.replaceState(null, '', '#tab=skills')
+          window.dispatchEvent(new HashChangeEvent('hashchange'))
           return
         case 'SWITCH_LAYOUT':
           if (payload && typeof payload === 'string') {

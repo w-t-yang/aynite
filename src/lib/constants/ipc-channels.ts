@@ -62,6 +62,7 @@ export const AiEventChannels = {
 export const SpellChannels = {
   SKILL_ADD_FOLDER: 'aynite:spell-skill-add-folder',
   SKILL_RESTORE: 'aynite:spell-skill-restore-default',
+  SKILL_INSTALL_GITHUB: 'aynite:spell-skill-install-github',
   COMMAND_ADD_FOLDER: 'aynite:spell-command-add-folder',
   COMMAND_RESTORE: 'aynite:spell-command-restore-default',
   SKILL_LIST: 'aynite:spell-skill-list',

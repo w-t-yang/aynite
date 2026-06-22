@@ -1,11 +1,19 @@
+import { execSync } from 'node:child_process'
 import fs from 'node:fs/promises'
 import { ipcMain } from 'electron'
+import { AppEvents } from '../../lib/constants/app'
 import { SpellChannels } from '../../lib/constants/ipc-channels'
-import { joinPaths } from '../../lib/path'
+import { getSkillsDir, joinPaths } from '../../lib/path'
+import { broadcastAppEvent } from '../ipc-utils'
 import { execInUserShell } from '../system'
 import { showOpenDialog } from '../window'
 import { listAvailableCommands, restoreDefaultCommands } from './commands'
-import { listAvailableSkills, restoreDefaultSkills } from './skills'
+import {
+  getSkillsConfig,
+  listAvailableSkills,
+  restoreDefaultSkills,
+  saveSkillsConfig,
+} from './skills'
 
 interface CommandRunPayload {
   command: string
@@ -28,6 +36,45 @@ export function setupSpellsIpc() {
   }
 
   ipcMain.handle(SpellChannels.SKILL_ADD_FOLDER, handleAddFolder)
+
+  ipcMain.handle(
+    SpellChannels.SKILL_INSTALL_GITHUB,
+    async (_event, repoUrl: string, destPath?: string) => {
+      try {
+        const { expandHome } = await import('../../lib/path')
+        const repoName =
+          repoUrl
+            .split('/')
+            .pop()
+            ?.replace(/\.git$/, '') || 'skill'
+
+        // Resolve destination: use provided path or default to skills dir
+        const baseDir = destPath ? expandHome(destPath) : getSkillsDir()
+        const destDir = joinPaths(baseDir, repoName)
+
+        // Clone the repo
+        execSync(`git clone "${repoUrl}" "${destDir}"`, {
+          stdio: 'pipe',
+          timeout: 60000,
+        })
+
+        // Add to skills config
+        const config = await getSkillsConfig()
+        if (!config.folders.includes(destDir)) {
+          config.folders.push(destDir)
+        }
+        await saveSkillsConfig(config)
+
+        broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'skills' })
+        return { success: true, path: destDir }
+      } catch (err: any) {
+        return {
+          success: false,
+          error: err?.message || 'Failed to install skill from GitHub',
+        }
+      }
+    },
+  )
 
   ipcMain.handle(SpellChannels.SKILL_RESTORE, async () => {
     return await restoreDefaultSkills()

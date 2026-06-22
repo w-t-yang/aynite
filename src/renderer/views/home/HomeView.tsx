@@ -3,11 +3,11 @@ import {
   Brain,
   Code,
   Compass,
+  Download,
   Folder as FolderIcon,
   Heart,
   MessageCircle,
   Plus,
-  Puzzle,
   Sparkles,
   Star,
   Zap,
@@ -20,11 +20,13 @@ import {
 } from '../../../lib/constants/renderer/styles'
 import type { Agent, MessengerConfig } from '../../../lib/types/ai'
 import { ai } from '../../bridge/ai'
-import { config } from '../../bridge/config'
+import { config, configMutations } from '../../bridge/config'
 import { events } from '../../bridge/events'
-import { spells } from '../../bridge/spells'
+import { spells, spellsMutations } from '../../bridge/spells'
+import { homedir } from '../../bridge/utils'
 import { workspace, workspaceMutations } from '../../bridge/workspace'
 import { Button } from '../../shared/basic/Button'
+import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
 import { SessionCard, type SessionEntry } from '../../shared/basic/SessionCard'
 import { MessengerEditModal } from '../../shared/featured/MessengerEditModal'
@@ -241,9 +243,53 @@ export function HomeView() {
   }, [subscribeToAppEvents, reloadData])
 
   const handleSelectSession = useCallback(async (sessionId: string) => {
-    // Update in-memory config + switch to projects layout atomically
     events.execute('OPEN_SESSION', { sessionId })
   }, [])
+
+  // ── Add Skill modal ──────────────────────────────────────────────────
+  const [showAddSkillModal, setShowAddSkillModal] = useState(false)
+  const [showGitHubInput, setShowGitHubInput] = useState(false)
+  const [gitHubUrl, setGitHubUrl] = useState('')
+  const [gitHubDest, setGitHubDest] = useState(homedir())
+  const [installing, setInstalling] = useState(false)
+  const [installError, setInstallError] = useState<string | null>(null)
+
+  const handleAddSkillLocalFolder = useCallback(async () => {
+    const folder = await spellsMutations.pickSkillFolder()
+    if (folder) {
+      const newFolders = Array.from(
+        new Set([...(data?.skills.folders || []), folder]),
+      )
+      await configMutations.set('skills', { folders: newFolders })
+      reloadData()
+    }
+    setShowAddSkillModal(false)
+  }, [data, reloadData])
+
+  const handleAddSkillGitHub = useCallback(async () => {
+    if (!gitHubUrl.trim()) return
+    setInstalling(true)
+    setInstallError(null)
+    try {
+      const result = await spellsMutations.installSkillFromGitHub(
+        gitHubUrl.trim(),
+        gitHubDest.trim() || homedir(),
+      )
+      if (result.success) {
+        setShowGitHubInput(false)
+        setShowAddSkillModal(false)
+        setGitHubUrl('')
+        setGitHubDest(homedir())
+        reloadData()
+      } else {
+        setInstallError(result.error || 'Installation failed')
+      }
+    } catch (err: any) {
+      setInstallError(err?.message || 'Installation failed')
+    } finally {
+      setInstalling(false)
+    }
+  }, [gitHubUrl, gitHubDest, reloadData])
 
   if (loading || !data) {
     return (
@@ -371,36 +417,151 @@ export function HomeView() {
           {/* ── Skills ── */}
           <Section
             title={t('skillsSection')}
-            description={t('skillsDescription')}
+            description={`${skills.items.length} ${t('skillsAvailable')}`}
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddSkillModal(true)}
+                className={ADD_ITEM_BUTTON}
+              >
+                <Plus size={14} /> Add Skills
+              </Button>
+            }
           >
-            {skills.items.length > 0 ? (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  {skills.items.length} skill(s) are installed.
-                </p>
-                {skills.folders.length > 0 && (
-                  <div className={GRID_2_COL}>
-                    {skills.folders.map((f) => {
-                      const count = skills.items.filter((item) =>
-                        item.path.startsWith(f.replace(/\/?$/, '/')),
-                      ).length
-                      return (
-                        <SkillFolderCard
-                          key={f}
-                          folder={f}
-                          skillCount={count}
-                        />
-                      )
-                    })}
-                  </div>
-                )}
+            {skills.items.length > 0 && skills.folders.length > 0 ? (
+              <div className={GRID_2_COL}>
+                {skills.folders.map((f) => {
+                  const count = skills.items.filter((item) =>
+                    item.path.startsWith(f.replace(/\/?$/, '/')),
+                  ).length
+                  return (
+                    <SkillFolderCard key={f} folder={f} skillCount={count} />
+                  )
+                })}
               </div>
+            ) : skills.items.length > 0 ? (
+              <p className="text-sm text-muted-foreground/50 italic">
+                No skill folders configured.
+              </p>
             ) : (
               <p className="text-sm text-muted-foreground/50 italic">
                 {t('skillsNoData')}
               </p>
             )}
           </Section>
+
+          {/* ── Add Skill Modal ── */}
+          {showAddSkillModal && !showGitHubInput && (
+            <Modal
+              isOpen
+              onClose={() => setShowAddSkillModal(false)}
+              title="Add Skills"
+              size="sm"
+            >
+              <div className="space-y-3 py-2">
+                <button
+                  type="button"
+                  onClick={handleAddSkillLocalFolder}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:border-border/70 hover:bg-accent/10 transition-all text-left"
+                >
+                  <FolderIcon
+                    size={18}
+                    className="shrink-0 text-muted-foreground/50"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-foreground">
+                      Select Local Folder
+                    </div>
+                    <div className="text-[11px] text-muted-foreground/50">
+                      Choose a folder with skill files
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowGitHubInput(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:border-border/70 hover:bg-accent/10 transition-all text-left"
+                >
+                  <Download
+                    size={18}
+                    className="shrink-0 text-muted-foreground/50"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-foreground">
+                      Add from GitHub
+                    </div>
+                    <div className="text-[11px] text-muted-foreground/50">
+                      Clone a skill repository
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </Modal>
+          )}
+
+          {/* ── GitHub URL Input Modal ── */}
+          {showGitHubInput && (
+            <Modal
+              isOpen
+              onClose={() => {
+                setShowGitHubInput(false)
+                setInstallError(null)
+                setGitHubUrl('')
+                setGitHubDest(homedir())
+              }}
+              title="Install from GitHub"
+              size="sm"
+              footer={
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowGitHubInput(false)
+                      setInstallError(null)
+                      setGitHubUrl('')
+                      setGitHubDest(homedir())
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    onClick={handleAddSkillGitHub}
+                    disabled={!gitHubUrl.trim() || installing}
+                  >
+                    {installing ? 'Installing...' : 'Install'}
+                  </Button>
+                </div>
+              }
+            >
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  GitHub repository URL:
+                </p>
+                <input
+                  type="text"
+                  value={gitHubUrl}
+                  onChange={(e) => setGitHubUrl(e.target.value)}
+                  placeholder="https://github.com/user/repo"
+                  className="w-full h-9 px-3 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors"
+                />
+                <p className="text-sm text-muted-foreground">Download to:</p>
+                <input
+                  type="text"
+                  value={gitHubDest}
+                  onChange={(e) => setGitHubDest(e.target.value)}
+                  placeholder="~"
+                  className="w-full h-9 px-3 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors font-mono"
+                />
+                {installError && (
+                  <p className="text-xs text-destructive">{installError}</p>
+                )}
+              </div>
+            </Modal>
+          )}
         </div>
       </div>
     </div>
@@ -598,27 +759,21 @@ function SkillFolderCard({
   folder: string
   skillCount: number
 }) {
-  const name = folder.split(/[/\\]/).pop() || folder
   return (
     <button
       type="button"
-      onClick={() => events.execute('SETTINGS', { tab: 'skills' })}
+      onClick={() => events.execute('OPEN_SKILLS_SETTINGS')}
       className="w-full text-left p-4 rounded-xl border border-border bg-accent/5 transition-all hover:border-border/60 hover:bg-accent/10 cursor-pointer"
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Puzzle size={14} className="text-muted-foreground/60 shrink-0" />
-          <span className="text-xs font-bold uppercase tracking-wider">
-            {name}
-          </span>
-        </div>
-        <span className="text-[10px] font-mono text-muted-foreground/40 bg-accent/10 px-1.5 py-0.5 rounded-[4px]">
+      <div className="flex items-center gap-2">
+        <FolderIcon size={14} className="shrink-0 text-muted-foreground/40" />
+        <span className="flex-1 text-xs font-mono text-foreground/80 truncate">
+          {folder}
+        </span>
+        <span className="text-[10px] font-mono text-muted-foreground/30">
           {skillCount}
         </span>
       </div>
-      <p className="text-[10px] text-muted-foreground/50 truncate font-mono">
-        {folder}
-      </p>
     </button>
   )
 }

@@ -21,3 +21,5 @@ export const utils = (() => ({
 }))()
 
 export const platform = (): string => getAynite().platform
+
+export const homedir = (): string => getAynite().homedir
