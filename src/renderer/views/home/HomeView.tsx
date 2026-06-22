@@ -380,9 +380,18 @@ export function HomeView() {
                 </p>
                 {skills.folders.length > 0 && (
                   <div className={GRID_2_COL}>
-                    {skills.folders.map((f) => (
-                      <SkillFolderCard key={f} folder={f} />
-                    ))}
+                    {skills.folders.map((f) => {
+                      const count = skills.items.filter((item) =>
+                        item.path.startsWith(f.replace(/\/?$/, '/')),
+                      ).length
+                      return (
+                        <SkillFolderCard
+                          key={f}
+                          folder={f}
+                          skillCount={count}
+                        />
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -582,19 +591,35 @@ function AgentRow({
   )
 }
 
-function SkillFolderCard({ folder }: { folder: string }) {
+function SkillFolderCard({
+  folder,
+  skillCount,
+}: {
+  folder: string
+  skillCount: number
+}) {
+  const name = folder.split(/[/\\]/).pop() || folder
   return (
-    <div className="p-4 rounded-xl border border-border bg-accent/5 transition-all hover:border-border/60">
-      <div className="flex items-center gap-2 mb-2">
-        <Puzzle size={14} className="text-muted-foreground/60 shrink-0" />
-        <span className="text-xs font-bold uppercase tracking-wider">
-          {folder.split(/[/\\]/).pop() || folder}
+    <button
+      type="button"
+      onClick={() => events.execute('SETTINGS', { tab: 'skills' })}
+      className="w-full text-left p-4 rounded-xl border border-border bg-accent/5 transition-all hover:border-border/60 hover:bg-accent/10 cursor-pointer"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Puzzle size={14} className="text-muted-foreground/60 shrink-0" />
+          <span className="text-xs font-bold uppercase tracking-wider">
+            {name}
+          </span>
+        </div>
+        <span className="text-[10px] font-mono text-muted-foreground/40 bg-accent/10 px-1.5 py-0.5 rounded-[4px]">
+          {skillCount}
         </span>
       </div>
       <p className="text-[10px] text-muted-foreground/50 truncate font-mono">
         {folder}
       </p>
-    </div>
+    </button>
   )
 }
 
@@ -815,6 +840,18 @@ const FLIP_STYLES = `
 }
 `
 
+// ── Word colors for flip animation ────────────────────────────────────
+
+const WORD_COLORS = [
+  'text-primary',
+  'text-blue-500',
+  'text-emerald-500',
+  'text-amber-500',
+  'text-violet-500',
+  'text-rose-500',
+  'text-cyan-500',
+]
+
 // ── Animated Word ──────────────────────────────────────────────────────
 
 type FlipDir = 'top' | 'bottom' | 'left' | 'right'
@@ -823,7 +860,7 @@ const FLIP_DIRS: FlipDir[] = ['top', 'bottom', 'left', 'right']
 
 /**
  * A single word that flips to a new random word at random intervals (1-3s).
- * Each flip uses a random direction (top/bottom/left/right).
+ * Each flip uses a random direction and changes the word color.
  * The element reserves space for the longest word in the list.
  */
 function AnimatedWord({
@@ -835,6 +872,7 @@ function AnimatedWord({
 }) {
   const [index, setIndex] = useState(initialIndex)
   const [flipDir, setFlipDir] = useState<FlipDir>('top')
+  const [color, setColor] = useState(WORD_COLORS[0])
   const [animKey, setAnimKey] = useState(0)
 
   useEffect(() => {
@@ -845,12 +883,9 @@ function AnimatedWord({
       const _timer = setTimeout(() => {
         if (cancelled) return
 
-        // Pick random flip direction
         setFlipDir(FLIP_DIRS[Math.floor(Math.random() * FLIP_DIRS.length)])
-        // Restart animation by incrementing key
         setAnimKey((k) => k + 1)
 
-        // Mid-animation (150ms): swap the word for the flip-in phase
         setTimeout(() => {
           if (cancelled) return
           setIndex((prev) => {
@@ -860,9 +895,9 @@ function AnimatedWord({
             } while (next === prev)
             return next
           })
+          setColor(WORD_COLORS[Math.floor(Math.random() * WORD_COLORS.length)])
         }, 150)
 
-        // Schedule the next cycle
         scheduleNext()
       }, delay)
     }
@@ -873,7 +908,6 @@ function AnimatedWord({
     }
   }, [words])
 
-  // Compute the widest word to reserve space
   const minWidth = useMemo(() => {
     const longest = words.reduce((a, b) => (a.length > b.length ? a : b), '')
     return `${longest.length + 1}ch`
@@ -882,7 +916,7 @@ function AnimatedWord({
   return (
     <span
       key={animKey}
-      className="inline-block text-center font-semibold text-primary/90"
+      className={cn('inline-block text-center font-semibold', color)}
       style={{
         minWidth,
         animation: `flip-${flipDir} 0.3s ease-in-out`,
@@ -928,9 +962,7 @@ function AnimatedWelcome() {
     <>
       <style>{FLIP_STYLES}</style>
       <img src={appIcon} alt="Aynite" className="w-12 h-12 mx-auto mb-3" />
-      <h2 className="text-2xl font-bold text-foreground mb-3">
-        Welcome to Aynite
-      </h2>
+      <h2 className="text-2xl font-bold text-foreground mb-3">Aynite</h2>
       <p className="text-lg font-semibold tracking-wide">
         <AnimatedWord words={ACTION_WORDS} initialIndex={0} />
         <span className="text-muted-foreground/40 mx-2">·</span>

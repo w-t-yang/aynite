@@ -946,6 +946,10 @@ export async function handleDev(
         )
       }
 
+      // Refresh views with the latest data before restarting
+      const { broadcastAppEvent } = await import('../ipc-utils')
+      broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'dev-restart' })
+
       await ctx.replyWithMarkdown(
         `✅ *Build complete* — relaunching Aynite with latest changes...\n\n> 💡 If there are UI-related changes, you may need to manually restart the app to see them reflected in the interface.\n\nSee you in a moment! 👋`,
       )
