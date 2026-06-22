@@ -659,6 +659,7 @@ export async function handleHelp(
   )
   lines.push('`/dev` — Start/restart dev server (`npm run dev`)')
   lines.push('`/skills` — List and search skills')
+  lines.push('`/skills-add` — Install a skill from GitHub')
   lines.push('`/skill` — Use a skill')
   lines.push('`/clear` — Archive current session and start a new one')
   lines.push('')
@@ -1052,7 +1053,7 @@ async function addUsedSkill(agentId: string, skillName: string): Promise<void> {
 /**
  * Get the last 5 used skills for an agent.
  */
-async function getUsedSkills(agentId: string): Promise<string[]> {
+async function _getUsedSkills(agentId: string): Promise<string[]> {
   try {
     const agent = await readJson<{
       name?: string
@@ -1067,7 +1068,7 @@ async function getUsedSkills(agentId: string): Promise<string[]> {
 // ─── Command: /skills ───────────────────────────────────────────────────
 
 export async function handleSkills(
-  config: MessengerConfig,
+  _config: MessengerConfig,
   ctx: MessengerContext,
   args: string,
 ) {
@@ -1082,25 +1083,58 @@ export async function handleSkills(
   }
 
   if (!args) {
-    // Show last 5 used skills
-    const used = config.agentId ? await getUsedSkills(config.agentId) : []
-    if (used.length === 0) {
-      await ctx.reply('No skills have been used yet.')
+    // Show skill folders with indices
+    const { getSkillsConfig } = await import('../spells/skills')
+    const config = await getSkillsConfig()
+    const folders = config?.folders || []
+
+    if (folders.length === 0) {
+      await ctx.reply(
+        'No skill folders configured. Use `/skills-add` to install a skill from GitHub.',
+      )
       return
     }
-    const lines = ['*Last 5 used skills:*', '']
-    for (const name of used) {
-      const skill = allSkills.find((s) => s.name === name)
-      const desc = skill?.description
-        ? ` — ${escapeMarkdown(skill.description)}`
-        : ''
-      lines.push(`• \`${escapeMarkdown(name)}\`${desc}`)
+
+    const lines = ['Skill folders:', '']
+    folders.forEach((f: string, i: number) => {
+      lines.push(`${i + 1}. ${f}`)
+    })
+    lines.push('', 'Use `/skills <number>` to list skills in a folder.')
+    await ctx.reply(lines.join('\n'))
+    return
+  }
+
+  // Check if args is a number (folder index)
+  const folderIndex = parseInt(args, 10)
+  if (!Number.isNaN(folderIndex) && String(folderIndex) === args.trim()) {
+    const { getSkillsConfig } = await import('../spells/skills')
+    const skillsConfig = await getSkillsConfig()
+    const folders = skillsConfig?.folders || []
+
+    if (folderIndex < 1 || folderIndex > folders.length) {
+      await ctx.reply(
+        `Invalid folder index. Use \`/skills\` to see available folders (1-${folders.length}).`,
+      )
+      return
     }
-    lines.push('')
-    lines.push(
-      'Use `/skills <query>` to search, or `/skill <name> <message>` to use one.',
+
+    const selectedFolder = folders[folderIndex - 1]
+    const folderSkills = allSkills.filter((s) =>
+      s.path.startsWith(selectedFolder),
     )
-    await ctx.replyWithMarkdown(lines.join('\n'))
+
+    if (folderSkills.length === 0) {
+      await ctx.reply(`No skills found in folder "${selectedFolder}".`)
+      return
+    }
+
+    const names = folderSkills.map((s) => s.name)
+    const lines = [
+      `Skills in folder ${folderIndex}:`,
+      '',
+      ...names.map((n) => `- ${n}`),
+    ]
+    await ctx.reply(lines.join('\n'))
     return
   }
 
@@ -1139,6 +1173,83 @@ export async function handleSkills(
     }
     lines.push('', 'Use /skill <name> <message> to use a skill.')
     await ctx.reply(lines.join('\n'))
+  }
+}
+
+// ─── Command: /skills-add ───────────────────────────────────────────────
+
+export async function handleSkillsAdd(
+  _config: MessengerConfig,
+  ctx: MessengerContext,
+  args: string,
+) {
+  if (!args) {
+    const lines = [
+      'Install a skill from GitHub:',
+      '',
+      '/skills-add <url>',
+      '',
+      'Example: /skills-add https://github.com/user/skill-repo',
+      '',
+      'The repo will be cloned and added to your skills folder list.',
+    ]
+    await ctx.reply(lines.join('\n'))
+    return
+  }
+
+  // Validate URL
+  const url = args.trim()
+  if (
+    !url.startsWith('https://github.com/') &&
+    !url.startsWith('http://github.com/') &&
+    !url.startsWith('git@github.com:')
+  ) {
+    await ctx.reply(
+      'Please provide a valid GitHub repository URL (e.g. https://github.com/user/repo).',
+    )
+    return
+  }
+
+  await ctx.reply('Cloning skill repository...')
+
+  try {
+    const { execSync } = await import('node:child_process')
+    const { homedir } = await import('node:os')
+    const { joinPaths } = await import('../../lib/path')
+    const { getSkillsConfig, saveSkillsConfig } = await import(
+      '../spells/skills'
+    )
+
+    const repoName =
+      url
+        .split('/')
+        .pop()
+        ?.replace(/\.git$/, '') || 'skill'
+    const destDir = joinPaths(homedir(), repoName)
+
+    // Clone the repo
+    execSync(`git clone "${url}" "${destDir}"`, {
+      stdio: 'pipe',
+      timeout: 60000,
+    })
+
+    // Add to skills config
+    const config = await getSkillsConfig()
+    if (!config.folders.includes(destDir)) {
+      config.folders.push(destDir)
+    }
+    await saveSkillsConfig(config)
+
+    const { broadcastAppEvent } = await import('../ipc-utils')
+    broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key: 'skills' })
+
+    await ctx.replyWithMarkdown(
+      `✅ Skill installed to \`${destDir}\`\n\nUse \`/skills *\` to see it in the list.`,
+    )
+  } catch (err: any) {
+    const errorMsg = err?.message || String(err)
+    console.error('[Messenger] /skills-add error:', errorMsg)
+    await ctx.reply(`Failed to install skill: ${errorMsg}`)
   }
 }
 
@@ -1619,6 +1730,9 @@ export async function processIncomingMessage(
     await handleCommit(config, ctx, msg.chatName)
   } else if (lowerCmd === '/dev') {
     await handleDev(config, ctx)
+  } else if (lowerCmd.startsWith('/skills-add')) {
+    const args = msg.textWithoutMention.slice('/skills-add'.length).trim()
+    await handleSkillsAdd(config, ctx, args)
   } else if (lowerCmd.startsWith('/skills')) {
     const args = msg.textWithoutMention.slice('/skills'.length).trim()
     await handleSkills(config, ctx, args)
