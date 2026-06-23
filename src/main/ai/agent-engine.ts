@@ -358,7 +358,19 @@ export async function runAgentSession(
   // ── 5. Merge internal hooks with caller hooks ──────────────────────────
   const merged = mergeHooks(internalHooks, callerHooks)
 
-  // ── 6. Run the loop ────────────────────────────────────────────────────
+  // ── 6. Log session context before the loop ─────────────────────────────
+  const configuredToolNames = enabledTools
+    ? Object.keys(enabledTools).filter((k) => enabledTools[k] !== false)
+    : []
+  const sentToolNames = Object.keys(tools)
+  const modelLabel = config.name || config.model || config.id
+  console.log(
+    `[Agent] session=${session.type}/${session.id} provider=${config.provider}/${modelLabel} ` +
+      `configuredTools=[${configuredToolNames.join(', ')}] ` +
+      `sentTools=[${sentToolNames.join(', ')}]`,
+  )
+
+  // ── 7. Run the loop ────────────────────────────────────────────────────
   return runAgentLoop({
     messages,
     config,

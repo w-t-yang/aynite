@@ -335,13 +335,16 @@ export async function loadBotSessionMetadata(
 // ─── Help: Agent + Agent Info Loading ─────────────────────────────────────
 
 /** Load an agent file from the agents directory by ID. */
-async function loadAgent(
-  agentId: string,
-): Promise<{ name: string; introduction?: string } | null> {
+async function loadAgent(agentId: string): Promise<{
+  name: string
+  introduction?: string
+  tools?: Record<string, boolean>
+} | null> {
   try {
     const agent = await readJson<{
       name: string
       introduction?: string
+      tools?: Record<string, boolean>
     }>(getAgentPath(agentId))
     return agent
   } catch {
@@ -1333,7 +1336,6 @@ export async function handleChatMessage(
       loadMainConfig(),
     ])
 
-    const toolsConfig = mainConfig?.aiTools || {}
     const activeAgentId = config.agentId
     const workspaceFolders = [resolvedProjectFolder]
 
@@ -1443,7 +1445,7 @@ export async function handleChatMessage(
         workspaceName: workspace,
         autoApproveCommands: true,
       },
-      enabledTools: toolsConfig,
+      enabledTools: agentFile?.tools,
       extraTools: {
         get_messages: getMessagesTool,
         notify_user: notifyUserTool,
