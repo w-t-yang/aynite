@@ -159,16 +159,17 @@ describe('aiChat', () => {
       throw new Error('No model configured')
     })
 
-    // aiChat catches the error and logs it, then returns requestId
-    // The error is in the outer try/catch which re-throws
-    await expect(
-      aiChat({
-        messages: [{ role: 'user', content: 'hi', parts: [] }] as any,
-        config: baseConfig as any,
-        workspaceFolders: ['/home/project'],
-        _winId: 1,
-      }),
-    ).rejects.toThrow('No model configured')
+    // getAIModel is now called inside runAgentLoop() (async), so aiChat
+    // returns requestId successfully — errors are emitted on the stream
+    const result = await aiChat({
+      messages: [{ role: 'user', content: 'hi', parts: [] }] as any,
+      config: baseConfig as any,
+      workspaceFolders: ['/home/project'],
+      _winId: 1,
+    })
+
+    expect(result).toHaveProperty('requestId')
+    expect(typeof result.requestId).toBe('string')
   })
 
   it('extracts system message from messages', async () => {

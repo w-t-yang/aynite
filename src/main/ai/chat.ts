@@ -1,6 +1,5 @@
 import path from 'node:path'
-import type { TextStreamPart, UIMessage } from 'ai'
-import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import type { UIMessage } from 'ai'
 import { app } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import {
@@ -18,9 +17,8 @@ import {
 } from '../../lib/path'
 import type { SessionMetadata, SessionType } from '../../lib/types/chat'
 import { sendToWindow } from '../ipc-utils'
+import { runAgentSession } from './agent-engine'
 import type { AIProvider } from './factory'
-import { getAIModel } from './factory'
-import { createTools, getEnabledToolsForSession } from './tools'
 
 /**
  * Maps the unified reasoningEffort setting to each provider's native providerOptions.
@@ -366,141 +364,71 @@ export async function aiChat(params: {
     _winId,
   } = params
   const requestId = Math.random().toString(36).slice(2, 10)
-  const model = getAIModel(config)
+
   try {
-    const toolContext = {
-      workspaceFolders,
-      activeFile,
-      workspaceName,
-      onCommandProgress: (text: string) => {
-        emit({ type: 'command-output', text } as any)
-      },
-    }
-    const cachedTools = createTools(toolContext)
     if (!app.isPackaged) {
       console.log(
         `[AI Chat] Context initialized for ${workspaceName || 'unknown'}`,
       )
     }
 
-    const enabledTools: Record<string, any> = {}
-    const toolSettings = getEnabledToolsForSession(
-      config.enabledTools,
-      sessionType,
-    )
+    const sessionId = requestId
+    const sessionDir = getSessionDir(sessionId, workspaceName || 'Aynite')
 
-    Object.keys(cachedTools).forEach((toolName) => {
-      if (toolSettings[toolName] !== false) {
-        enabledTools[toolName] =
-          cachedTools[toolName as keyof typeof cachedTools]
-      }
-    })
-
-    // Log session start: configured tools, sent tools, and diff
-    if (!app.isPackaged) {
-      const configuredSet = new Set(
-        Object.keys(config.enabledTools || {}).filter(
-          (k) => config.enabledTools?.[k] !== false,
-        ),
-      )
-      const sentSet = new Set(Object.keys(enabledTools))
-      const added: string[] = []
-      const removed: string[] = []
-      for (const t of sentSet) {
-        if (!configuredSet.has(t)) added.push(t)
-      }
-      for (const t of configuredSet) {
-        if (!sentSet.has(t)) removed.push(t)
-      }
-      const diffParts: string[] = [
-        ...added.map((t) => `+${t}`),
-        ...removed.map((t) => `-${t}`),
-      ]
-      console.log(
-        `[AI Chat] [${requestId}] sessionType=${sessionType || 'general'}, ` +
-          `configuredTools=[${[...configuredSet].join(', ')}], ` +
-          `sentTools=[${[...sentSet].join(', ')}], ` +
-          `toolsDiff=[${diffParts.join(', ')}]`,
-      )
-    }
-
-    const emit = (part: TextStreamPart<any>) => {
-      // Send AI chat delta events to the window that initiated the request
+    const emit = (part: any) => {
       if (_winId && _winId > 0) {
         sendToWindow(_winId, AppEvents.AI_CHAT_DELTA, { requestId, part })
       } else {
-        // Legacy fallback: don't send to any specific window
         console.warn('[AI Chat] No _winId provided, AI delta not sent')
       }
     }
 
-    // Extract system message and convert to model messages
-    const systemMessage = messages.find((m) => m.role === 'system')
-    const chatMessages = messages.filter((m) => m.role !== 'system')
-    const modelMessages = await convertToModelMessages(chatMessages, {
-      tools: enabledTools,
-      ignoreIncompleteToolCalls: true,
-    })
-
-    const system = systemMessage
-      ? systemMessage.parts
-          .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-          .map((p) => p.text)
-          .join('\n')
-      : undefined
-
+    // Run the session fire-and-forget (aiChat returns requestId immediately)
     ;(async () => {
       try {
-        const result = streamText({
-          model,
-          system,
-          messages: modelMessages,
-          tools: enabledTools,
-          stopWhen: stepCountIs(1000),
+        await runAgentSession({
+          messages,
+          config,
           providerOptions: getProviderReasoningOptions(config) as any,
+          session: {
+            id: sessionId,
+            type: sessionType || 'general',
+            dir: sessionDir,
+          },
+          toolContext: {
+            workspaceFolders,
+            activeFile,
+            workspaceName,
+          },
+          enabledTools: config.enabledTools,
+          hooks: {
+            'step-start': (e) => emit({ type: 'start', step: e.step }),
+            'text-delta': (e) =>
+              emit({ type: 'text-delta', text: e.text, content: e.text }),
+            'reasoning-delta': (e) =>
+              emit({ type: 'reasoning-delta', text: e.text }),
+            'tool-call': (e) =>
+              emit({
+                type: 'tool-call',
+                toolCallId: e.toolCallId,
+                toolName: e.toolName,
+                args: e.args,
+              }),
+            'tool-result': (e) =>
+              emit({
+                type: 'tool-result',
+                toolCallId: e.toolCallId,
+                toolName: e.toolName,
+                args: e.input,
+                output: e.output,
+              }),
+            'command-output': (e) =>
+              emit({ type: 'command-output', text: e.text }),
+            'step-finish': () => emit({ type: 'finish-step' }),
+            error: (e) => emit({ type: 'error', error: e.error }),
+            finish: () => emit({ type: 'finish', finishReason: 'stop' }),
+          },
         })
-
-        let fullResponseText = ''
-        let reasoningText = ''
-        const fullToolCalls: any[] = []
-
-        for await (const part of result.fullStream) {
-          switch (part.type) {
-            case 'text-delta':
-              fullResponseText += part.text
-              emit(part)
-              break
-            case 'reasoning-delta':
-              reasoningText += part.text
-              emit(part)
-              break
-            case 'tool-input-delta':
-              emit(part)
-              break
-            case 'tool-call':
-              fullToolCalls.push(part)
-              emit(part)
-              break
-            case 'tool-result':
-              emit(part)
-              break
-            case 'finish-step':
-            case 'finish':
-            case 'error':
-            case 'start':
-              emit(part)
-              break
-          }
-        }
-
-        if (!app.isPackaged) {
-          console.log(
-            `[AI Chat] Response [${requestId}]: ` +
-              `text=${fullResponseText.length} chars, ` +
-              `reasoning=${reasoningText.length} chars, ` +
-              `toolCalls=${fullToolCalls.length}`,
-          )
-        }
       } catch (err: any) {
         console.error('[AI Chat Stream Error]', err)
         emit({ type: 'error', error: err.message || String(err) })

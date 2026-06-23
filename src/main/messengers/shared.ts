@@ -23,6 +23,7 @@ import {
   getBotCommitPath,
   getBotCommitsDir,
   getBotSessionArchivePath,
+  getBotSessionDir,
   getBotSessionMessagesPath,
   getBotSessionMetadataPath,
   getMainConfigPath,
@@ -36,12 +37,8 @@ import {
 import type { MessengerConfig } from '../../lib/types/ai'
 import type { SessionMetadata } from '../../lib/types/chat'
 import { createMessage } from '../../lib/types/chat'
-import {
-  createTools,
-  getAIModel,
-  getProviderReasoningOptions,
-  saveSession,
-} from '../ai'
+import { getProviderReasoningOptions } from '../ai'
+import { runAgentSession } from '../ai/agent-engine'
 import { generateCommitMessage } from '../git/commit-gen'
 
 // ─── Abstract Messenger Context ──────────────────────────────────────────
@@ -333,250 +330,6 @@ export async function loadBotSessionMetadata(
 ): Promise<SessionMetadata | null> {
   const path = getBotSessionMetadataPath(messengerId, chatName)
   return readJson<SessionMetadata>(path).catch(() => null)
-}
-
-// ─── Agent Loop ──────────────────────────────────────────────────────────
-
-export async function runMessengerAgent(
-  messages: UIMessage[],
-  workspaceName: string,
-  workspaceFolders: string[],
-  activeFile: string,
-  enabledTools: Record<string, boolean>,
-  onProgress: (text: string) => void,
-  sessionId: string,
-  /** Optional bot session info — if provided, saves use bot paths instead of workspace paths */
-  botSession?: {
-    messengerId: string
-    chatName: string
-    /** Reply function for notify_user tool */
-    reply: (text: string) => Promise<void>
-  },
-  /** Optional callback fired when the AI first decides to use a tool in this turn */
-  onFirstToolCall?: () => void,
-): Promise<UIMessage[]> {
-  const aiConfig = await loadAiConfig()
-  const activeProvider =
-    aiConfig?.providers?.find((p: any) => p.id === aiConfig.activeId) ||
-    aiConfig?.providers?.[0]
-
-  if (!activeProvider) throw new Error('No active AI provider configured')
-
-  console.log(
-    `[Messenger] runMessengerAgent: starting with ${messages.length} messages, provider=${activeProvider?.provider} model=${activeProvider?.model}`,
-  )
-
-  const { streamText, convertToModelMessages, stepCountIs } = await import('ai')
-  const model = getAIModel(activeProvider)
-
-  const systemMessage = messages.find((m) => m.role === 'system')
-  const chatMessages = messages.filter((m) => m.role !== 'system')
-  const modelMessages = await convertToModelMessages(chatMessages, {
-    tools: enabledTools as any,
-    ignoreIncompleteToolCalls: true,
-  })
-
-  const system = systemMessage
-    ? systemMessage.parts
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-        .map((p) => p.text)
-        .join('\n')
-    : undefined
-
-  const toolContext = {
-    workspaceFolders,
-    activeFile,
-    workspaceName,
-    onCommandProgress: (text: string) => onProgress(text),
-    autoApproveCommands: true,
-  }
-  const tools = createTools(toolContext)
-
-  // Add get_messages tool when running in messenger/bot session mode.
-  // This allows the AI to fetch history from the per-chat message logs.
-  if (botSession) {
-    const { createGetMessagesTool } = await import('../ai/tools/get-messages')
-    ;(tools as any).get_messages = createGetMessagesTool(
-      botSession.messengerId,
-      botSession.chatName,
-    )
-    const { createNotifyUserTool } = await import('../ai/tools/notify-user')
-    ;(tools as any).notify_user = createNotifyUserTool({
-      reply: (text: string) => botSession.reply(text),
-      replyWithMarkdown: (text: string) => botSession.reply(text),
-    })
-  }
-
-  console.log(
-    `[Messenger] calling streamText with ${Object.keys(tools).length} tools`,
-  )
-
-  const result = streamText({
-    model,
-    system,
-    messages: modelMessages,
-    tools,
-    stopWhen: stepCountIs(100),
-    providerOptions: getProviderReasoningOptions(activeProvider) as any,
-  })
-
-  const loopMessages: UIMessage[] = []
-  let textAccum = ''
-  let reasoningAccum = ''
-  const allToolCalls = new Map<string, any>()
-  let currentStepToolCalls: any[] = []
-  let stepCount = 0
-  let firstToolCallFired = false
-
-  const flushAssistant = () => {
-    if (textAccum || reasoningAccum || currentStepToolCalls.length > 0) {
-      const parts: any[] = []
-      if (reasoningAccum) {
-        parts.push({ type: 'reasoning', text: reasoningAccum, state: 'done' })
-      }
-      if (textAccum) {
-        parts.push({ type: 'text', text: textAccum, state: 'done' })
-      }
-      for (const tc of currentStepToolCalls) {
-        parts.push({
-          type: 'dynamic-tool',
-          toolCallId: tc.toolCallId,
-          toolName: tc.toolName,
-          state: 'input-available',
-          input: tc.input || tc.args,
-        } as any)
-      }
-      loopMessages.push(createMessage('assistant', parts))
-      textAccum = ''
-      reasoningAccum = ''
-      currentStepToolCalls = []
-    }
-  }
-
-  for await (const part of result.fullStream) {
-    switch (part.type) {
-      case 'start':
-        console.log(`[Messenger] streamText step ${++stepCount} started`)
-        break
-      case 'text-delta':
-        textAccum += part.text
-        break
-      case 'reasoning-delta':
-        reasoningAccum += part.text
-        break
-      case 'tool-call': {
-        // Fire onFirstToolCall callback on first tool use
-        if (!firstToolCallFired) {
-          firstToolCallFired = true
-          onFirstToolCall?.()
-        }
-        console.log(
-          `[Messenger] tool-call: ${part.toolName} (id: ${part.toolCallId})`,
-        )
-        allToolCalls.set(part.toolCallId, part)
-        const idx = currentStepToolCalls.findIndex(
-          (tc) => tc.toolCallId === part.toolCallId,
-        )
-        if (idx !== -1) currentStepToolCalls[idx] = part
-        else currentStepToolCalls.push(part)
-        break
-      }
-      case 'tool-result': {
-        console.log(
-          `[Messenger] tool-result: ${part.toolName} (output: ${String(part.output).slice(0, 100)})`,
-        )
-        flushAssistant()
-        if (loopMessages.length > 0) {
-          const last = loopMessages[loopMessages.length - 1]
-          const parts = [...last.parts]
-          const idx = parts.findIndex(
-            (p: any) =>
-              p.type === 'dynamic-tool' && p.toolCallId === part.toolCallId,
-          )
-          if (idx !== -1) {
-            parts[idx] = {
-              ...parts[idx],
-              state: 'output-available',
-              output: part.output,
-            } as any
-            loopMessages[loopMessages.length - 1] = { ...last, parts }
-          }
-        }
-        break
-      }
-      case 'command-output' as any: {
-        const cmdText = (part as any).text
-        console.log(`[Messenger] command-output: ${cmdText.slice(0, 100)}`)
-        if (cmdText && loopMessages.length > 0) {
-          const last = loopMessages[loopMessages.length - 1]
-          const parts = [...last.parts]
-          for (let i = parts.length - 1; i >= 0; i--) {
-            const p = parts[i] as any
-            if (
-              p.type === 'dynamic-tool' &&
-              p.toolName === 'run_command' &&
-              (p.state === 'input-available' || p.state === 'executing')
-            ) {
-              parts[i] = {
-                ...p,
-                state: 'executing',
-                output: (p.output || '') + cmdText,
-              } as any
-              loopMessages[loopMessages.length - 1] = { ...last, parts }
-              break
-            }
-          }
-        }
-        break
-      }
-      case 'finish-step': {
-        console.log(
-          `[Messenger] finish-step: textAccum=${textAccum.length} chars, toolCalls=${currentStepToolCalls.length}`,
-        )
-        flushAssistant()
-        const incrementalMessages = [...messages, ...loopMessages]
-        if (botSession) {
-          await saveBotSession(
-            botSession.messengerId,
-            botSession.chatName,
-            incrementalMessages,
-          ).catch((err: any) =>
-            console.error('[Messenger] bot incremental save failed:', err),
-          )
-        } else {
-          await saveSession(
-            workspaceName,
-            sessionId,
-            incrementalMessages,
-            undefined,
-          ).catch((err: any) =>
-            console.error('[Messenger] incremental save failed:', err),
-          )
-        }
-        break
-      }
-      case 'error':
-        console.log(`[Messenger] error: ${part.error}`)
-        flushAssistant()
-        throw new Error(String(part.error))
-      case 'finish':
-        console.log(
-          `[Messenger] finish: total steps=${stepCount}, loopMessages=${loopMessages.length}`,
-        )
-        flushAssistant()
-        break
-    }
-  }
-
-  const resultMessages = [...messages, ...loopMessages]
-  const lastAssistant = [...loopMessages]
-    .reverse()
-    .find((m) => m.role === 'assistant')
-  console.log(
-    `[Messenger] agent loop returning ${resultMessages.length} messages, last assistant has ${lastAssistant?.parts?.length || 0} parts`,
-  )
-
-  return resultMessages
 }
 
 // ─── Help: Agent + Agent Info Loading ─────────────────────────────────────
@@ -1662,38 +1415,65 @@ export async function handleChatMessage(
     // No auto-reply — the AI will either reply directly in its text response
     // or use the notify_user tool if it needs time to work.
 
-    const activeFile = '' // Bot doesn't have an active file
-    const finalMessages = await runMessengerAgent(
-      updatedMessages,
-      workspace,
-      workspaceFolders,
-      activeFile,
-      toolsConfig,
-      () => {},
-      sessionId,
-      {
-        messengerId: config.id,
-        chatName: chat,
-        reply: (text: string) => ctx.reply(text),
+    const _activeFile = '' // Bot doesn't have an active file
+
+    // Load messenger-specific tools
+    const { createGetMessagesTool } = await import('../ai/tools/get-messages')
+    const getMessagesTool = createGetMessagesTool(config.id, chat)
+    const { createNotifyUserTool } = await import('../ai/tools/notify-user')
+    const notifyUserTool = createNotifyUserTool({
+      reply: (text: string) => ctx.reply(text),
+      replyWithMarkdown: (text: string) => ctx.reply(text),
+    })
+
+    let firstToolCallFired = false
+
+    const sessionDir = getBotSessionDir(config.id, chat)
+    const result = await runAgentSession({
+      messages: updatedMessages,
+      config: activeProvider,
+      providerOptions: getProviderReasoningOptions(activeProvider) as any,
+      session: {
+        id: sessionId,
+        type: 'messenger',
+        dir: sessionDir,
       },
-      () => {
-        const WORKING_REPLIES = [
-          '🤖 The agent is working on your request. This may take a moment...',
-          '✨ On it! Let me work some magic behind the scenes — hang tight!',
-          "⏳ Processing your request. I'll be right back with the results.",
-          "🔧 Give me a sec — I'm busy tinkering under the hood! Back soon!",
-          '🤖 Agent loop engaged. Running tools & waiting for outputs. Stand by...',
-          '🤖 Working...',
-          "💪 Working on it! Just give me a moment and I'll have an answer for you.",
-          '🎬 The agent is now entering the arena. Spectacular things are happening. Please wait...',
-          '🚀 Processing your request... accessing tools, running commands, gathering results! Be right back!',
-          "🤖 The gears are turning (sometimes literally). I'll be back with your answer shortly!",
-        ]
-        const msg =
-          WORKING_REPLIES[Math.floor(Math.random() * WORKING_REPLIES.length)]
-        ctx.reply(msg).catch(() => {})
+      toolContext: {
+        workspaceFolders,
+        workspaceName: workspace,
+        autoApproveCommands: true,
       },
-    )
+      enabledTools: toolsConfig,
+      extraTools: {
+        get_messages: getMessagesTool,
+        notify_user: notifyUserTool,
+      },
+      hooks: {
+        'tool-call': () => {
+          if (!firstToolCallFired) {
+            firstToolCallFired = true
+            const WORKING_REPLIES = [
+              '🤖 The agent is working on your request. This may take a moment...',
+              '✨ On it! Let me work some magic behind the scenes — hang tight!',
+              "⏳ Processing your request. I'll be right back with the results.",
+              "🔧 Give me a sec — I'm busy tinkering under the hood! Back soon!",
+              '🤖 Agent loop engaged. Running tools & waiting for outputs. Stand by...',
+              '🤖 Working...',
+              "💪 Working on it! Just give me a moment and I'll have an answer for you.",
+              '🎬 The agent is now entering the arena. Spectacular things are happening. Please wait...',
+              '🚀 Processing your request... accessing tools, running commands, gathering results! Be right back!',
+              "🤖 The gears are turning (sometimes literally). I'll be back with your answer shortly!",
+            ]
+            const msg =
+              WORKING_REPLIES[
+                Math.floor(Math.random() * WORKING_REPLIES.length)
+              ]
+            ctx.reply(msg).catch(() => {})
+          }
+        },
+      },
+    })
+    const finalMessages = result.messages
 
     console.log(
       `[Messenger] agent loop finished, total messages: ${finalMessages.length}`,
@@ -1705,6 +1485,7 @@ export async function handleChatMessage(
     const metadata: SessionMetadata = {
       agentName,
       modelName,
+      type: 'messenger',
       createdAt: existingMeta?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
