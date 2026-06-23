@@ -26,7 +26,6 @@ import { file } from '../../bridge/file'
 import { system } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import { Collapsible } from '../../shared/basic/Collapsible'
-import { Input } from '../../shared/basic/Input'
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
 import { MessengerEditModal } from '../../shared/featured/MessengerEditModal'
@@ -45,7 +44,7 @@ interface ToolDef {
   description: string
 }
 
-const ICON_OPTIONS = [
+const _ICON_OPTIONS = [
   { id: 'sparkles', Icon: Sparkles },
   { id: 'bot', Icon: Bot },
   { id: 'brain', Icon: Brain },
@@ -54,82 +53,6 @@ const ICON_OPTIONS = [
   { id: 'zap', Icon: Zap },
   { id: 'star', Icon: Star },
   { id: 'heart', Icon: Heart },
-]
-
-const TOOL_DEFS: ToolDef[] = [
-  {
-    id: 'read_file',
-    name: 'Read File',
-    description: 'Read the contents of a file',
-  },
-  {
-    id: 'write_file',
-    name: 'Write File',
-    description: 'Write content to a file',
-  },
-  {
-    id: 'edit_file',
-    name: 'Edit File',
-    description: 'Perform surgical edits on a file',
-  },
-  {
-    id: 'list_files',
-    name: 'List Files',
-    description: 'List files in a directory',
-  },
-  {
-    id: 'run_command',
-    name: 'Run Command',
-    description: 'Execute shell commands',
-  },
-  {
-    id: 'grep_search',
-    name: 'Grep Search',
-    description: 'Search for regex patterns',
-  },
-  { id: 'read_url', name: 'Read URL', description: 'Fetch content from a URL' },
-  {
-    id: 'glob_search',
-    name: 'Glob Search',
-    description: 'Search files by glob pattern',
-  },
-  {
-    id: 'create_task',
-    name: 'Create Task',
-    description: 'Initialize a task list',
-  },
-  { id: 'update_task', name: 'Update Task', description: 'Update task status' },
-  { id: 'get_tasks', name: 'Get Tasks', description: 'Read current task list' },
-  {
-    id: 'propose_plan',
-    name: 'Propose Plan',
-    description: 'Create an implementation plan',
-  },
-  {
-    id: 'initialize_memory',
-    name: 'Initialize Memory',
-    description: 'Scan project for memory',
-  },
-  {
-    id: 'update_memory',
-    name: 'Update Memory',
-    description: 'Update project memory',
-  },
-  {
-    id: 'read_memory',
-    name: 'Read Memory',
-    description: 'Read project memory',
-  },
-  {
-    id: 'get_file_tree',
-    name: 'Get File Tree',
-    description: 'Get file tree of a directory',
-  },
-  {
-    id: 'get_workspace_info',
-    name: 'Workspace Info',
-    description: 'Get workspace information',
-  },
 ]
 
 // ─── Component ─────────────────────────────────────────────────────────
@@ -142,6 +65,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
   } | null>(null)
   const [messengers, setMessengers] = useState<MessengerConfig[]>([])
   const [loading, setLoading] = useState(true)
+  const [allToolDefs, setAllToolDefs] = useState<ToolDef[]>([])
 
   // Edit modal state
   const [editingMessenger, setEditingMessenger] =
@@ -150,9 +74,10 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
 
   useEffect(() => {
     const load = async () => {
-      const [resAgents, resMessengers] = await Promise.all([
+      const [resAgents, resMessengers, resTools] = await Promise.all([
         config.get('agents'),
         config.get('messengers'),
+        config.get('tools'),
       ])
       const agentsData = resAgents as { activeId: string; list: Agent[] } | null
       if (agentsData) {
@@ -162,6 +87,9 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
       }
       if (Array.isArray(resMessengers)) {
         setMessengers(resMessengers as MessengerConfig[])
+      }
+      if (resTools && (resTools as any).list) {
+        setAllToolDefs((resTools as any).list as ToolDef[])
       }
       setLoading(false)
     }
@@ -183,7 +111,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
     [allAgents],
   )
 
-  const handleNameChange = useCallback(
+  const _handleNameChange = useCallback(
     (value: string) => {
       if (!agent) return
       persist({ ...agent, name: value })
@@ -191,7 +119,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
     [agent, persist],
   )
 
-  const handleIntroductionChange = useCallback(
+  const _handleIntroductionChange = useCallback(
     (value: string) => {
       if (!agent) return
       persist({ ...agent, introduction: value || undefined })
@@ -199,7 +127,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
     [agent, persist],
   )
 
-  const handleIconChange = useCallback(
+  const _handleIconChange = useCallback(
     (icon: string) => {
       if (!agent) return
       persist({ ...agent, icon })
@@ -312,80 +240,6 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
 
   return (
     <SettingsPage title={agent.name} description="">
-      {/* Identity */}
-      <Section title="Identity" description="Agent name and identifier">
-        <div className="space-y-4">
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
-              <label
-                htmlFor="agent-name"
-                className="text-xs font-medium text-muted-foreground mb-1 block"
-              >
-                Name
-              </label>
-              <Input
-                id="agent-name"
-                value={agent.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Agent Name"
-              />
-            </div>
-            <div className="flex-1">
-              <label
-                htmlFor="agent-id"
-                className="text-xs font-medium text-muted-foreground mb-1 block"
-              >
-                ID
-              </label>
-              <Input
-                id="agent-id"
-                value={agent.id}
-                disabled
-                placeholder="Agent ID"
-              />
-            </div>
-          </div>
-          <div>
-            <label
-              htmlFor="agent-introduction"
-              className="text-xs font-medium text-muted-foreground mb-1 block"
-            >
-              Introduction
-            </label>
-            <textarea
-              id="agent-introduction"
-              value={agent.introduction || ''}
-              onChange={(e) => handleIntroductionChange(e.target.value)}
-              placeholder="Describe this agent's role and personality..."
-              className="w-full bg-transparent border border-border/60 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/50 resize-none"
-              rows={3}
-            />
-          </div>
-          <div>
-            <span className="text-xs font-medium text-muted-foreground mb-2 block">
-              Icon
-            </span>
-            <div className="flex items-center gap-2">
-              {ICON_OPTIONS.map(({ id, Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => handleIconChange(id)}
-                  className={cn(
-                    'p-2 rounded-lg border transition-all',
-                    (agent.icon || 'sparkles') === id
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground',
-                  )}
-                >
-                  <Icon size={18} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Section>
-
       {/* Messengers */}
       <Section
         title="Messengers"
@@ -536,7 +390,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
           </Button>
         }
       >
-        <div className="space-y-2">
+        <div className={GRID_2_COL}>
           {(agent.promptFiles || []).length > 0 ? (
             (agent.promptFiles || []).map((filePath) => (
               <div
@@ -562,7 +416,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
               </div>
             ))
           ) : (
-            <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
+            <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg col-span-2">
               No prompt files configured.
             </p>
           )}
@@ -592,31 +446,78 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
         title="Tools"
         description="Toggle which tools this agent can use."
       >
-        <div className={GRID_2_COL}>
-          {TOOL_DEFS.map((tool) => {
-            const agentTools = agent.tools || {}
-            const isEnabled = agentTools[tool.id] !== false
-            return (
-              <div
-                key={tool.id}
-                className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group"
-              >
-                <div className="space-y-1 flex-1 min-w-0 pr-6">
-                  <h4 className="text-sm font-bold uppercase tracking-wider">
-                    {tool.name}
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed line-clamp-2">
-                    {tool.description}
-                  </p>
-                </div>
-                <Switch
-                  checked={isEnabled}
-                  onCheckedChange={() => handleToggleTool(tool.id)}
-                />
+        {allToolDefs.length === 0 ? (
+          <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
+            Loading tools...
+          </p>
+        ) : (
+          <>
+            {/* Enabled tools */}
+            {allToolDefs.filter((t) => agent.tools?.[t.id] !== false).length >
+            0 ? (
+              <div className={GRID_2_COL}>
+                {allToolDefs
+                  .filter((t) => agent.tools?.[t.id] !== false)
+                  .map((tool) => (
+                    <div
+                      key={tool.id}
+                      className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group"
+                    >
+                      <div className="space-y-1 flex-1 min-w-0 pr-6">
+                        <h4 className="text-xs font-medium">{tool.name}</h4>
+                        <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed line-clamp-2">
+                          {tool.description}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={true}
+                        onCheckedChange={() => handleToggleTool(tool.id)}
+                      />
+                    </div>
+                  ))}
               </div>
-            )
-          })}
-        </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
+                No tools enabled. Open "Disabled Tools" below to enable tools.
+              </p>
+            )}
+
+            {/* Disabled tools (collapsed) */}
+            {allToolDefs.filter((t) => agent.tools?.[t.id] === false).length >
+              0 && (
+              <div className="mt-4">
+                <Collapsible
+                  title="Disabled Tools"
+                  icon={null}
+                  colorClass="border-border/30"
+                  defaultExpanded={false}
+                >
+                  <div className={GRID_2_COL}>
+                    {allToolDefs
+                      .filter((t) => agent.tools?.[t.id] === false)
+                      .map((tool) => (
+                        <div
+                          key={tool.id}
+                          className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-accent/5 hover:bg-accent/10 transition-all group opacity-60"
+                        >
+                          <div className="space-y-1 flex-1 min-w-0 pr-6">
+                            <h4 className="text-xs font-medium">{tool.name}</h4>
+                            <p className="text-[11px] text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity leading-relaxed line-clamp-2">
+                              {tool.description}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={false}
+                            onCheckedChange={() => handleToggleTool(tool.id)}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </Collapsible>
+              </div>
+            )}
+          </>
+        )}
       </Section>
 
       {/* ─── Edit Messenger Modal ────────────────────────────────────── */}

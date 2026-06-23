@@ -23,7 +23,7 @@ export function SettingsPage({
   return (
     <div className="flex-1 overflow-auto bg-background custom-scrollbar">
       <div
-        className={cn('w-[800px] mx-auto p-10 space-y-12 shrink-0', className)}
+        className={cn('w-[800px] mx-auto p-10 space-y-8 shrink-0', className)}
       >
         {/* Header */}
         <div className="space-y-4">
