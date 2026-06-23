@@ -658,6 +658,7 @@ export async function handleHelp(
     '`/commit` — Stage all changes, generate commit message, and commit',
   )
   lines.push('`/dev` — Start/restart dev server (`npm run dev`)')
+  lines.push('`/todo` — Save a todo item for the current project')
   lines.push('`/skills` — List and search skills')
   lines.push('`/skills-add` — Install a skill from GitHub')
   lines.push('`/skill` — Use a skill')
@@ -1319,6 +1320,112 @@ export async function handleSkill(
   )
 }
 
+// ─── Command: /todo ─────────────────────────────────────────────────────
+
+/**
+ * Hash a string using SHA-256 and return the first 12 hex characters.
+ */
+async function shortHash(input: string): Promise<string> {
+  const { createHash } = await import('node:crypto')
+  return createHash('sha256').update(input).digest('hex').slice(0, 12)
+}
+
+export async function handleTodo(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  args: string,
+) {
+  // Resolve project folder
+  const root = config.projectFolder
+  if (!root) {
+    await ctx.reply(
+      'No project folder is set. Use `/set-project` to choose one first.',
+    )
+    return
+  }
+
+  const { join } = await import('node:path')
+  const { homedir } = await import('node:os')
+  const folderName =
+    root.split('/').pop() || root.split('\\').pop() || 'project'
+  const projectId = `${await shortHash(root)}-${folderName}`
+  const todosDir = join(homedir(), '.aynite', 'projects', projectId, 'todos')
+
+  if (!args) {
+    // Load all undone todos across all date files
+    const { readdir, readFile } = await import('node:fs/promises')
+    const { exists } = await import('../../lib/path')
+    const undone: { message: string; createdAt: string }[] = []
+
+    if (await exists(todosDir).catch(() => false)) {
+      const files = await readdir(todosDir)
+      for (const file of files.sort()) {
+        if (!file.endsWith('.json')) continue
+        try {
+          const content = JSON.parse(
+            await readFile(join(todosDir, file), 'utf-8'),
+          )
+          if (Array.isArray(content)) {
+            for (const t of content) {
+              if (!t.done) undone.push(t)
+            }
+          }
+        } catch {
+          // skip corrupt files
+        }
+      }
+    }
+
+    const lines = [
+      `Todos (${undone.length} undone)`,
+      '',
+      ...(undone.length > 0
+        ? undone.map((t, i) => `${i + 1}. ${t.message}`)
+        : ['No pending todos.']),
+      '',
+      'Add a new todo:',
+      '/todo <message>',
+    ]
+    await ctx.reply(lines.join('\n'))
+    return
+  }
+
+  try {
+    const { mkdir } = await import('node:fs/promises')
+    const date = new Date().toISOString().split('T')[0]
+    const todosPath = join(todosDir, `${date}.json`)
+
+    await mkdir(todosDir, { recursive: true })
+
+    // Load existing todos for today or start fresh
+    let todos: { message: string; done: boolean; createdAt: string }[] = []
+    try {
+      const { readJson } = await import('../../lib/path')
+      todos = await readJson(todosPath).catch(() => [])
+    } catch {
+      todos = []
+    }
+
+    const todo = {
+      message: args.trim(),
+      done: false,
+      createdAt: new Date().toISOString(),
+    }
+    todos.push(todo)
+
+    const { writeJson } = await import('../../lib/path')
+    await writeJson(todosPath, todos)
+
+    await ctx.replyWithMarkdown(
+      `✅ *Todo saved*\n\n\`${escapeMarkdown(todo.message)}\``,
+    )
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error('[Messenger] /todo error:', errorMsg)
+    await ctx.reply(`Failed to save todo: ${errorMsg}`)
+  }
+}
+
 // ─── Command: /clear ────────────────────────────────────────────────────
 
 export async function handleClear(
@@ -1733,6 +1840,9 @@ export async function processIncomingMessage(
   } else if (lowerCmd.startsWith('/skills-add')) {
     const args = msg.textWithoutMention.slice('/skills-add'.length).trim()
     await handleSkillsAdd(config, ctx, args)
+  } else if (lowerCmd.startsWith('/todo')) {
+    const args = msg.textWithoutMention.slice('/todo'.length).trim()
+    await handleTodo(config, ctx, args)
   } else if (lowerCmd.startsWith('/skills')) {
     const args = msg.textWithoutMention.slice('/skills'.length).trim()
     await handleSkills(config, ctx, args)
