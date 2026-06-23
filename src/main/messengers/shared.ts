@@ -201,6 +201,19 @@ export function truncateMessage(text: string, maxLen = 3500): string {
 }
 
 /**
+ * Estimate token count using the same logic as the AI chat view.
+ * Measures JSON-serialized message payload at ~0.4 tokens/byte.
+ */
+export function estimateSessionTokens(messages: UIMessage[]): number {
+  if (!messages || messages.length === 0) return 0
+  try {
+    return Math.ceil(JSON.stringify(messages).length * 0.4)
+  } catch {
+    return 0
+  }
+}
+
+/**
  * Create a MessengerContext with auto-truncated replies.
  */
 export function createMessengerContext(
@@ -619,6 +632,7 @@ async function listAllProjectFolders(): Promise<string[]> {
 export async function handleHelp(
   config: MessengerConfig,
   ctx: MessengerContext,
+  chatName?: string,
 ) {
   const lines: string[] = []
   lines.push('*Aynite Bot*')
@@ -646,6 +660,19 @@ export async function handleHelp(
     lines.push(
       '*Project:* Not set. Use `/set-project` to set a working project folder.',
     )
+  }
+
+  // Session context size
+  if (chatName) {
+    try {
+      const msgs = await loadBotSessionMessages(config.id, chatName)
+      const tokens = estimateSessionTokens(msgs)
+      lines.push(
+        `*Context:* \`~${(tokens / 1000).toFixed(1)}K tokens\` (${msgs.length} messages)`,
+      )
+    } catch {
+      // silently skip context info
+    }
   }
 
   lines.push('')
@@ -1682,8 +1709,60 @@ export async function handleChatMessage(
       updatedAt: new Date().toISOString(),
     }
 
+    // Save session
     await saveBotSession(config.id, chat, finalMessages, metadata)
     console.log(`[Messenger] bot session saved: ${chat}/session/`)
+
+    // Auto-compact if session exceeds threshold
+    try {
+      const savedThreshold = mainConfig?.autoCompactThreshold
+      const tokenThreshold =
+        typeof savedThreshold === 'number' && savedThreshold >= 200_000
+          ? savedThreshold
+          : 500_000
+      const estimatedTokens = estimateSessionTokens(finalMessages)
+      if (estimatedTokens > tokenThreshold) {
+        console.log(
+          `[Messenger] auto-compacting session (${(estimatedTokens / 1000).toFixed(0)}K tokens, threshold ${(tokenThreshold / 1000).toFixed(0)}K)`,
+        )
+        // Save backup of pre-compacted messages
+        const { getBotSessionCompactPath } = await import('../../lib/path')
+        const { mkdir } = await import('node:fs/promises')
+        const compactBackupPath = getBotSessionCompactPath(
+          config.id,
+          chat,
+          Date.now(),
+        )
+        const compactDir = compactBackupPath.substring(
+          0,
+          compactBackupPath.lastIndexOf('/'),
+        )
+        await mkdir(compactDir, { recursive: true }).catch(() => {})
+        await writeJson(compactBackupPath, finalMessages)
+
+        // Compact: keep system prompt + summary message + last 3 exchanges
+        const systemMsg = finalMessages.find((m) => m.role === 'system')
+        const nonSystem = finalMessages.filter((m) => m.role !== 'system')
+        const summaryMsg = createMessage('assistant', [
+          {
+            type: 'text',
+            text: `Session compacted at ${new Date().toISOString()}. Previous ${nonSystem.length - 6 > 0 ? `${nonSystem.length - 6} messages` : 'messages'} summarized.`,
+          },
+        ])
+        // Keep system + summary + last 6 messages (3 exchanges)
+        const lastMessages = nonSystem.slice(-6)
+        const compacted = systemMsg
+          ? [systemMsg, summaryMsg, ...lastMessages]
+          : [summaryMsg, ...lastMessages]
+
+        await saveBotSession(config.id, chat, compacted, metadata)
+        console.log(
+          `[Messenger] session compacted from ${finalMessages.length} to ${compacted.length} messages`,
+        )
+      }
+    } catch (err) {
+      console.error('[Messenger] auto-compact failed:', err)
+    }
 
     const lastAssistant = [...finalMessages]
       .reverse()
@@ -1826,7 +1905,7 @@ export async function processIncomingMessage(
     lowerCmd === '/help' ||
     lowerCmd === '?'
   ) {
-    await handleHelp(config, ctx)
+    await handleHelp(config, ctx, msg.chatName)
   } else if (lowerCmd.startsWith('/set-project')) {
     const args = msg.textWithoutMention.slice('/set-project'.length).trim()
     await handleSetProject(config, ctx, args)
