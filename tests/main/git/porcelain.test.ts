@@ -6,6 +6,7 @@ import {
   mapCodeToStatus,
   parseNumstat,
   parsePorcelain,
+  parseSplitPorcelain,
 } from '../../../src/main/git/porcelain'
 
 // ─── mapCodeToStatus ────────────────────────────────────────────────────
@@ -303,5 +304,153 @@ describe('parseNumstat', () => {
     const result = parseNumstat(stdout, root)
 
     expect(result).toEqual({})
+  })
+})
+
+// ─── parseSplitPorcelain ────────────────────────────────────────────────
+//
+// Same normalization needed — parseSplitPorcelain uses joinPaths internally.
+// Note: `!!` (ignored) lines are skipped entirely because X='!' is excluded
+// from both staged and unstaged processing.
+
+describe('parseSplitPorcelain', () => {
+  function normalizeKeys(map: Record<string, string>): Record<string, string> {
+    const result: Record<string, string> = {}
+    for (const [key, val] of Object.entries(map)) {
+      result[toUnixPath(key)] = val
+    }
+    return result
+  }
+
+  function normalizeSplit(result: ReturnType<typeof parseSplitPorcelain>) {
+    return {
+      staged: normalizeKeys(result.staged),
+      unstaged: normalizeKeys(result.unstaged),
+    }
+  }
+
+  it('parses a staged-only file (M )', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('M  src/file.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/src/file.ts']).toBe('modified')
+    expect(result.unstaged).toEqual({})
+  })
+
+  it('parses an unstaged-only file ( M)', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain(' M src/file.ts\n', '/repo'),
+    )
+    expect(result.staged).toEqual({})
+    expect(result.unstaged['/repo/src/file.ts']).toBe('modified')
+  })
+
+  it('parses both staged and unstaged (MM)', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('MM src/file.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/src/file.ts']).toBe('modified')
+    expect(result.unstaged['/repo/src/file.ts']).toBe('modified')
+  })
+
+  it('parses untracked files (??)', () => {
+    const result = normalizeSplit(parseSplitPorcelain('?? new.txt\n', '/repo'))
+    expect(result.staged).toEqual({})
+    expect(result.unstaged['/repo/new.txt']).toBe('untracked')
+  })
+
+  it('parses staged added (A )', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('A  src/new.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/src/new.ts']).toBe('added')
+    expect(result.unstaged).toEqual({})
+  })
+
+  it('parses staged deleted (D )', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('D  src/old.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/src/old.ts']).toBe('deleted')
+    expect(result.unstaged).toEqual({})
+  })
+
+  it('handles renames (R  old -> new)', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('R  old.ts -> new.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/new.ts']).toBe('renamed')
+    expect(result.staged).not.toHaveProperty('/repo/old.ts')
+    expect(result.unstaged).toEqual({})
+  })
+
+  it('handles both staged and working tree changes on same file ( M + A )', () => {
+    // Two lines: staging area added, working tree modified separately
+    const output = 'A  src/a.ts\n M src/b.ts\n'
+    const result = normalizeSplit(parseSplitPorcelain(output, '/repo'))
+    expect(result.staged['/repo/src/a.ts']).toBe('added')
+    expect(result.unstaged['/repo/src/b.ts']).toBe('modified')
+  })
+
+  it('handles copied status (C )', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('C  src/copy.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/src/copy.ts']).toBe('renamed')
+  })
+
+  it('handles quoted file paths with spaces', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain(' M "src/my file.ts"\n', '/repo'),
+    )
+    expect(result.unstaged).toHaveProperty('/repo/src/my file.ts')
+  })
+
+  it('normalizes trailing slashes in paths', () => {
+    const result = normalizeSplit(parseSplitPorcelain('?? dir/\n', '/repo'))
+    expect(result.unstaged).toHaveProperty('/repo/dir')
+  })
+
+  it('ignores ignored files (!!) — not added to staged or unstaged', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('!! .DS_Store\n', '/repo'),
+    )
+    expect(result.staged).toEqual({})
+    expect(result.unstaged).toEqual({})
+  })
+
+  it('skips lines shorter than 3 characters', () => {
+    const result = normalizeSplit(parseSplitPorcelain(' M\n', '/repo'))
+    expect(result.staged).toEqual({})
+    expect(result.unstaged).toEqual({})
+  })
+
+  it('returns empty result for empty input', () => {
+    const result = normalizeSplit(parseSplitPorcelain('', '/repo'))
+    expect(result.staged).toEqual({})
+    expect(result.unstaged).toEqual({})
+  })
+
+  it('handles unicode filenames', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain(' M café/file.ts\n', '/repo'),
+    )
+    expect(result.unstaged['/repo/café/file.ts']).toBe('modified')
+  })
+
+  it('handles staged renamed with working tree modification (RM)', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('RM old.ts -> modded.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/modded.ts']).toBe('renamed')
+    expect(result.unstaged['/repo/modded.ts']).toBe('modified')
+  })
+
+  it('handles mixed staged and unstaged deletions (AD)', () => {
+    const result = normalizeSplit(
+      parseSplitPorcelain('AD src/file.ts\n', '/repo'),
+    )
+    expect(result.staged['/repo/src/file.ts']).toBe('added')
+    expect(result.unstaged['/repo/src/file.ts']).toBe('deleted')
   })
 })

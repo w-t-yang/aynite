@@ -396,3 +396,131 @@ describe('run_command tool', () => {
     expect(tools.run_command.inputSchema).toBeDefined()
   })
 })
+
+// ─── getEnabledToolsForSession ──────────────────────────────────────────
+
+import { TOOL_METADATA } from '../../../src/lib/constants/ai'
+import { getEnabledToolsForSession } from '../../../src/main/ai/tools'
+
+// Build expected tool groups for assertions
+const osToolIds = Object.entries(TOOL_METADATA)
+  .filter(([, m]) => m.group === 'os')
+  .map(([id]) => id)
+const webToolIds = Object.entries(TOOL_METADATA)
+  .filter(([, m]) => m.group === 'web')
+  .map(([id]) => id)
+const projectToolIds = Object.entries(TOOL_METADATA)
+  .filter(([, m]) => m.group === 'project')
+  .map(([id]) => id)
+const messengerToolIds = Object.entries(TOOL_METADATA)
+  .filter(([, m]) => m.group === 'messenger')
+  .map(([id]) => id)
+const flowToolIds = Object.entries(TOOL_METADATA)
+  .filter(([, m]) => m.group === 'flow')
+  .map(([id]) => id)
+const userToolIds = [...osToolIds, ...webToolIds, ...projectToolIds]
+const systemToolIds = [...messengerToolIds, ...flowToolIds]
+
+describe('getEnabledToolsForSession', () => {
+  describe('general session type', () => {
+    it('enables all non-system tools when agentTools is undefined', () => {
+      const result = getEnabledToolsForSession(undefined, 'general')
+      for (const id of userToolIds) {
+        expect(result[id]).toBe(true)
+      }
+      for (const id of systemToolIds) {
+        expect(result[id]).toBe(false)
+      }
+    })
+
+    it('enables all non-system tools when agentTools is empty', () => {
+      const result = getEnabledToolsForSession({}, 'general')
+      for (const id of userToolIds) {
+        expect(result[id]).toBe(true)
+      }
+      for (const id of systemToolIds) {
+        expect(result[id]).toBe(false)
+      }
+    })
+
+    it('disables a tool when agent explicitly sets it to false', () => {
+      const result = getEnabledToolsForSession({ read_file: false }, 'general')
+      expect(result.read_file).toBe(false)
+      expect(result.write_file).toBe(true) // other tools unaffected
+    })
+
+    it('keeps system tools disabled even when agent explicitly enables them', () => {
+      const result = getEnabledToolsForSession(
+        { get_messages: true, notify_user: true },
+        'general',
+      )
+      // System tools stay disabled in 'general' regardless of agent config
+      expect(result.get_messages).toBe(false)
+      expect(result.notify_user).toBe(false)
+    })
+  })
+
+  describe('messenger session type', () => {
+    it('force-enables messenger tools', () => {
+      const result = getEnabledToolsForSession(undefined, 'messenger')
+      for (const id of messengerToolIds) {
+        expect(result[id]).toBe(true)
+      }
+      // Flow tools should remain disabled
+      for (const id of flowToolIds) {
+        expect(result[id]).toBe(false)
+      }
+    })
+
+    it('still respects agent disabling non-system tools', () => {
+      const result = getEnabledToolsForSession(
+        { read_file: false },
+        'messenger',
+      )
+      expect(result.read_file).toBe(false)
+      expect(result.get_messages).toBe(true) // messenger tool is force-enabled
+    })
+
+    it('enables all user tools by default', () => {
+      const result = getEnabledToolsForSession(undefined, 'messenger')
+      for (const id of osToolIds) {
+        expect(result[id]).toBe(true)
+      }
+      expect(result.read_url).toBe(true)
+      for (const id of projectToolIds) {
+        expect(result[id]).toBe(true)
+      }
+    })
+  })
+
+  describe('flow session type', () => {
+    it('force-enables flow tools', () => {
+      const result = getEnabledToolsForSession(undefined, 'flow')
+      for (const id of flowToolIds) {
+        expect(result[id]).toBe(true)
+      }
+      // Messenger tools should remain disabled
+      for (const id of messengerToolIds) {
+        expect(result[id]).toBe(false)
+      }
+    })
+
+    it('still respects agent disabling non-system tools', () => {
+      const result = getEnabledToolsForSession({ run_command: false }, 'flow')
+      expect(result.run_command).toBe(false)
+      expect(result.create_steps).toBe(true) // flow tool is force-enabled
+    })
+  })
+
+  describe('default session type', () => {
+    it('defaults to general when no sessionType provided', () => {
+      const result = getEnabledToolsForSession({})
+      for (const id of systemToolIds) {
+        expect(result[id]).toBe(false)
+      }
+      for (const id of userToolIds) {
+        expect(result[id]).toBe(true)
+      }
+    })
+  })
+})

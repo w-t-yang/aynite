@@ -18,6 +18,8 @@ const mockWriteText = vi.hoisted(() => vi.fn())
 const mockEnsureDir = vi.hoisted(() => vi.fn())
 const mockCopy = vi.hoisted(() => vi.fn())
 const mockUnlink = vi.hoisted(() => vi.fn())
+const mockReaddir = vi.hoisted(() => vi.fn())
+const mockRestoreSpell = vi.hoisted(() => vi.fn())
 const mockJoinPaths = vi.hoisted(() =>
   vi.fn((...parts: string[]) => parts.join('/')),
 )
@@ -33,6 +35,7 @@ vi.mock('../../../src/lib/path', () => ({
   ensureDir: (...args: unknown[]) => mockEnsureDir(...args),
   copy: (...args: unknown[]) => mockCopy(...args),
   unlink: (...args: unknown[]) => mockUnlink(...args),
+  readdir: (...args: unknown[]) => mockReaddir(...args),
   joinPaths: (...args: string[]) => mockJoinPaths(...args),
   getAyniteDir: vi.fn(() => '/mock/.aynite'),
   getAyniteConfigDir: vi.fn(() => '/mock/.aynite/config'),
@@ -50,6 +53,7 @@ vi.mock('../../../src/lib/path', () => ({
   getAppearanceConfigPath: vi.fn(() => '/mock/.aynite/config/appearance.json'),
   getAgentsDir: vi.fn(() => '/mock/.aynite/agents'),
   getAgentPath: vi.fn((id: string) => `/mock/.aynite/agents/${id}.json`),
+  getWorkspaceDir: vi.fn((name: string) => `/mock/.aynite/workspaces/${name}`),
   getPlaybookPath: vi.fn(() => '/mock/.aynite/aynite-playbook'),
   getWelcomeMdPath: vi.fn(() => '/mock/.aynite/aynite-playbook/Welcome.md'),
   expandHome: vi.fn((p: string) => p),
@@ -70,15 +74,22 @@ vi.mock('../../../src/lib/path', () => ({
 vi.mock('../../../src/main/ai', () => ({
   getDefaultGlobalPrompts: vi.fn(() => []),
   restoreDefaultPrompts: vi.fn(),
+  initWorkspaceFolders: vi.fn(),
+  ensureDefaultPromptFiles: vi.fn(),
 }))
 
 vi.mock('../../../src/main/theme', () => ({
   initThemes: vi.fn(),
 }))
 
+vi.mock('../../../src/main/migrations', () => ({
+  runMigrations: vi.fn(),
+}))
+
 vi.mock('../../../src/main/spells', () => ({
   restoreSkill: vi.fn(),
   restoreCommand: vi.fn(),
+  restoreSpell: (...args: unknown[]) => mockRestoreSpell(...args),
   getSkillsConfig: vi.fn(() => ({ folders: [] })),
   getCommandsConfig: vi.fn(() => ({ folders: [] })),
   setSpellsNotificationCallback: vi.fn(),
@@ -86,7 +97,11 @@ vi.mock('../../../src/main/spells', () => ({
 }))
 
 import { getIgnorePatterns } from '../../../src/main/config'
-import { loadConfig, saveConfig } from '../../../src/main/config/logic'
+import {
+  initAppFolders,
+  loadConfig,
+  saveConfig,
+} from '../../../src/main/config/logic'
 import { getBundledResourcesPath } from '../../../src/main/spells'
 
 describe('config/logic', () => {
@@ -190,8 +205,74 @@ describe('config/logic', () => {
     })
   })
 
-  // restoreAynitePlaybook describe block removed —
-  // it's a private function in logic.ts, not part of the public API.
+  describe('initAppFolders', () => {
+    beforeEach(() => {
+      // Default: all files already exist, nothing to create
+      mockExists.mockResolvedValue(true)
+      // Mock readJson for workspaces config and migrateAgentsToFiles
+      mockReadJson.mockResolvedValue({ active: 'Aynite', list: ['Aynite'] })
+      // Mock readdir to return empty (no bundled skills to copy, no agent files)
+      mockReaddir.mockResolvedValue([])
+    })
+
+    it('creates default config files when none exist', async () => {
+      // First few exists calls return false → triggers file creation
+      mockExists
+        .mockResolvedValueOnce(false) // ai.json doesn't exist
+        .mockResolvedValueOnce(false) // keybindings.json doesn't exist
+        .mockResolvedValueOnce(false) // config.json doesn't exist
+        .mockResolvedValueOnce(false) // ignore file doesn't exist
+        .mockResolvedValue(true) // everything else exists
+
+      await initAppFolders()
+
+      expect(mockWriteJson).toHaveBeenCalled() // writes default ai, keybindings, config
+      expect(mockWriteText).toHaveBeenCalled() // writes default ignore patterns
+    })
+
+    it('copies bundled skills when bundledSkillsDir exists', async () => {
+      // Use exists implementation to control which paths exist
+      // This avoids fragile mockResolvedValueOnce chains across 20+ exists calls
+      mockExists.mockImplementation(async (path: string) => {
+        // These specific dest paths should NOT exist → triggers copy
+        if (
+          typeof path === 'string' &&
+          (path.includes('python-dev') || path.includes('git-skills'))
+        ) {
+          return false
+        }
+        return true
+      })
+      mockReaddir
+        .mockResolvedValueOnce([]) // migrateAgentsToFiles: no existing agents
+        .mockResolvedValueOnce([
+          // bundledSkillsDir: skills to copy
+          { name: 'python-dev', isFile: () => false },
+          { name: 'git-skills', isFile: () => false },
+        ])
+
+      await initAppFolders()
+
+      // 2 skills copies + 1 bundled views copy = 3 total
+      expect(mockCopy).toHaveBeenCalledTimes(3)
+      expect(mockReaddir).toHaveBeenCalledTimes(2)
+    })
+
+    it('copies bundled views when bundledDir exists', async () => {
+      await initAppFolders()
+
+      // bundledDir exists → copy is called for dist-views
+      expect(mockCopy).toHaveBeenCalled()
+    })
+
+    it('handles bundled views copy error gracefully', async () => {
+      mockCopy.mockRejectedValueOnce(new Error('copy failed'))
+
+      await initAppFolders()
+      // Should not throw — error is caught inside initAppFolders
+      expect(mockCopy).toHaveBeenCalled()
+    })
+  })
 
   describe('loadConfig', () => {
     it('loads and merges config from all sources', async () => {
@@ -300,6 +381,24 @@ describe('config/logic', () => {
       const result = await loadConfig()
       expect(result.ignore).toBeDefined()
       expect((result as any).ignore).not.toBe(['old']) // ignore comes from getIgnorePatterns
+    })
+
+    it('recursively ensures nested keybinding keys via ensureKeys', async () => {
+      // Keybindings with partial nested structure — should trigger recursion
+      mockReadJson
+        .mockResolvedValueOnce({ activeId: 'test', providers: [] })
+        .mockResolvedValueOnce({
+          app: { 'some-key': ['Cmd+K'] },
+          // view missing entirely — ensureKeys recurses into app but not view
+        })
+        .mockResolvedValueOnce({ activeTheme: 'light' })
+      mockExists.mockResolvedValue(false)
+
+      const result = await loadConfig()
+      // The keybindings should have been repaired with defaults for missing keys
+      expect(result.keybindings).toBeDefined()
+      expect(result.keybindings.app).toBeDefined()
+      expect(result.keybindings.app['some-key']).toEqual(['Cmd+K'])
     })
   })
 })
