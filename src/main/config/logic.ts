@@ -100,17 +100,6 @@ async function migrateAgentsToFiles() {
     }
   }
 
-  // Delete any agent files that are NOT Aynite or Assistant
-  const KEEP_AGENTS = new Set(['aynite', 'assistant'])
-  for (const file of existingFiles) {
-    if (!file.isFile() || !file.name.endsWith('.json')) continue
-    const agentId = file.name.replace(/\.json$/, '')
-    if (!KEEP_AGENTS.has(agentId)) {
-      await unlink(getAgentPath(agentId)).catch(() => {})
-      console.log(`[migrateAgentsToFiles] Removed old agent: ${agentId}`)
-    }
-  }
-
   // Clean up old agents field from config.json
   if (mainConfig.agents) {
     const defaultAgentId =

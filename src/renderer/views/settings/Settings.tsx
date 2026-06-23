@@ -6,15 +6,16 @@ import {
   Heart,
   Info,
   Keyboard,
+  Plus,
   Sparkles,
   Star,
   Sun,
   Terminal,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Locale } from '../../../lib/types/ui'
-import { config } from '../../bridge/config'
+import { config, configMutations } from '../../bridge/config'
 import { systemMutations } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
@@ -120,11 +121,95 @@ export function Settings({ locale: localeProp }: SettingsProps) {
   // Restore modal state
   const [showRestoreModal, setShowRestoreModal] = useState(false)
 
+  // Create Agent modal state
+  const [showCreateAgent, setShowCreateAgent] = useState(false)
+  const [newAgentId, setNewAgentId] = useState('')
+  const [newAgentName, setNewAgentName] = useState('')
+  const [newAgentIcon, setNewAgentIcon] = useState('bot')
+  const [newAgentIntro, setNewAgentIntro] = useState('')
+
+  const generateAgentId = useCallback(() => {
+    const nums = Math.floor(Math.random() * 9000) + 1000
+    return `Agent ${nums}`
+  }, [])
+
+  const openCreateAgent = useCallback(() => {
+    let candidate = generateAgentId()
+    // Ensure no duplicate
+    while (agents.some((a) => a.id === candidate)) {
+      candidate = generateAgentId()
+    }
+    setNewAgentId(candidate)
+    setNewAgentName(candidate)
+    setNewAgentIcon('bot')
+    setNewAgentIntro('')
+    setShowCreateAgent(true)
+  }, [agents, generateAgentId])
+
+  const tabChangeRef = useRef<(tab: string) => void>(() => {})
+
+  const isCreateValid =
+    newAgentId.trim().length > 0 &&
+    newAgentName.trim().length > 0 &&
+    !agents.some((a) => a.id === newAgentId.trim())
+
+  const handleCreateAgent = useCallback(async () => {
+    if (!isCreateValid) return
+    // Fetch tool definitions to create with all tools disabled
+    const toolsData = (await config.get('tools')) as
+      | { list?: { id: string }[] }
+      | undefined
+    const allToolIds = toolsData?.list?.map((t) => t.id) || []
+    const disabledTools: Record<string, boolean> = {}
+    for (const id of allToolIds) {
+      disabledTools[id] = false
+    }
+
+    const newAgent: Agent = {
+      id: newAgentId.trim(),
+      name: newAgentName.trim(),
+      icon: newAgentIcon,
+      introduction: newAgentIntro.trim() || undefined,
+      promptFiles: [],
+      tools: disabledTools,
+    }
+    const updatedAgents = sortAgents([...agents, newAgent])
+    await configMutations.set('agents', {
+      activeId: agents.find((a) => a.id === 'aynite')?.id || newAgent.id,
+      list: updatedAgents,
+    } as any)
+    setAgents(updatedAgents)
+    setShowCreateAgent(false)
+    tabChangeRef.current(`agent-${newAgent.id}`)
+  }, [
+    isCreateValid,
+    newAgentId,
+    newAgentName,
+    newAgentIcon,
+    newAgentIntro,
+    agents,
+  ])
+
+  const CREATE_ICON_OPTIONS = [
+    { id: 'sparkles', Icon: Sparkles },
+    { id: 'bot', Icon: Bot },
+    { id: 'brain', Icon: Brain },
+    { id: 'code', Icon: Code },
+    { id: 'compass', Icon: Compass },
+    { id: 'zap', Icon: Zap },
+    { id: 'star', Icon: Star },
+    { id: 'heart', Icon: Heart },
+  ]
+
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab)
     // Update hash so that the current tab is reflected in the URL
     window.history.replaceState(null, '', `#tab=${tab}`)
   }, [])
+
+  useEffect(() => {
+    tabChangeRef.current = handleTabChange
+  }, [handleTabChange])
 
   // ─── Render Tab Content ─────────────────────────────────────────────
 
@@ -242,6 +327,16 @@ export function Settings({ locale: localeProp }: SettingsProps) {
             )
           })}
 
+          {/* Hire New Agent */}
+          <button
+            type="button"
+            onClick={openCreateAgent}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+          >
+            <Plus size={16} className="shrink-0" />
+            <span>Hire New Agent</span>
+          </button>
+
           {/* AI Resources group */}
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 mt-6 mb-2 px-3">
             {t('sidebar.ai')}
@@ -290,6 +385,118 @@ export function Settings({ locale: localeProp }: SettingsProps) {
           </div>
         </div>
       </div>
+
+      {/* Create Agent Modal */}
+      <Modal
+        isOpen={showCreateAgent}
+        onClose={() => setShowCreateAgent(false)}
+        title="Hire New Agent"
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowCreateAgent(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!isCreateValid}
+              onClick={handleCreateAgent}
+            >
+              Hire Agent
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {/* ID + Name */}
+          <div className="flex gap-4">
+            <div className="space-y-1.5 flex-1">
+              <label
+                htmlFor="new-agent-id"
+                className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+              >
+                ID
+              </label>
+              <input
+                id="new-agent-id"
+                type="text"
+                value={newAgentId}
+                onChange={(e) => setNewAgentId(e.target.value)}
+                className="w-full h-9 px-3 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors font-mono"
+                placeholder="Agent ID"
+              />
+              {agents.some(
+                (a) => a.id === newAgentId.trim() && a.id !== '',
+              ) && (
+                <p className="text-[10px] text-destructive">
+                  ID already exists
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label
+                htmlFor="new-agent-name"
+                className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+              >
+                Name
+              </label>
+              <input
+                id="new-agent-name"
+                type="text"
+                value={newAgentName}
+                onChange={(e) => setNewAgentName(e.target.value)}
+                className="w-full h-9 px-3 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors"
+                placeholder="Agent name"
+              />
+            </div>
+          </div>
+
+          {/* Icon */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Icon
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {CREATE_ICON_OPTIONS.map((opt) => {
+                const isSelected = newAgentIcon === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setNewAgentIcon(opt.id)}
+                    className={cn(
+                      'flex items-center justify-center w-9 h-9 rounded-lg border transition-all',
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-border/60 hover:bg-accent/10',
+                    )}
+                    title={opt.id}
+                  >
+                    <opt.Icon size={16} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Introduction */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="new-agent-intro"
+              className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+            >
+              Introduction
+            </label>
+            <textarea
+              id="new-agent-intro"
+              value={newAgentIntro}
+              onChange={(e) => setNewAgentIntro(e.target.value)}
+              className="w-full min-h-[80px] px-3 py-2 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors resize-y"
+              placeholder="Brief introduction of this agent..."
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Global Restore Confirmation */}
       <Modal

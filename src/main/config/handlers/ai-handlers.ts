@@ -64,11 +64,11 @@ async function saveAgent(agent: Agent): Promise<void> {
 /**
  * Delete an agent file from ~/.aynite/agents/.
  */
-// async function deleteAgentFile(agentId: string): Promise<void> {
-//   const { unlink } = await import('node:fs/promises')
-//   const agentPath = getAgentPath(agentId)
-//   await unlink(agentPath).catch(() => {})
-// }
+async function deleteAgentFile(agentId: string): Promise<void> {
+  const { unlink } = await import('node:fs/promises')
+  const agentPath = getAgentPath(agentId)
+  await unlink(agentPath).catch(() => {})
+}
 
 export const aiHandlers: ConfigHandler = (() => ({
   get: async (key: string, _payload: any, winId?: number) => {
@@ -167,6 +167,17 @@ export const aiHandlers: ConfigHandler = (() => ({
           // Clean up old agents field
           delete mainConfig.agents
           await writeJson(getMainConfigPath(), mainConfig)
+
+          // Remove agent files that are no longer in the list
+          const savedIds = new Set(payload.list.map((a: any) => a.id))
+          const allFiles = await readdir(getAgentsDir()).catch(() => [])
+          for (const file of allFiles) {
+            if (!file.isFile() || !file.name.endsWith('.json')) continue
+            const fileId = file.name.replace(/\.json$/, '')
+            if (!savedIds.has(fileId)) {
+              await deleteAgentFile(fileId)
+            }
+          }
         }
 
         return true

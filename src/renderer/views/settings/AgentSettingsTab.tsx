@@ -26,6 +26,7 @@ import { file } from '../../bridge/file'
 import { system } from '../../bridge/system'
 import { Button } from '../../shared/basic/Button'
 import { Collapsible } from '../../shared/basic/Collapsible'
+import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
 import { Switch } from '../../shared/basic/Switch'
 import { MessengerEditModal } from '../../shared/featured/MessengerEditModal'
@@ -71,6 +72,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
   const [editingMessenger, setEditingMessenger] =
     useState<MessengerConfig | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showRetireConfirm, setShowRetireConfirm] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -226,6 +228,19 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
     [messengers],
   )
 
+  const handleRetireAgent = useCallback(async () => {
+    if (!allAgents) return
+    const list = allAgents.list.filter((a) => a.id !== agentId)
+    await configMutations.set('agents', {
+      activeId: allAgents.activeId,
+      list,
+    } as any)
+    setShowRetireConfirm(false)
+    // Navigate back to the about tab
+    window.history.replaceState(null, '', '#tab=about')
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+  }, [agentId, allAgents])
+
   if (loading || !agent) {
     return (
       <SettingsPage title={agent?.name || 'Agent'} description="">
@@ -240,6 +255,97 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
 
   return (
     <SettingsPage title={agent.name} description="">
+      {/* Agent Information */}
+      <Section
+        title="Agent Information"
+        description="Edit the agent name and introduction."
+      >
+        <div className="space-y-4">
+          {/* ID + Name in the same row */}
+          <div className="flex gap-4">
+            <div className="space-y-1.5 flex-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                ID
+              </span>
+              <div className="h-9 px-3 text-sm rounded-[6px] border border-border bg-accent/10 text-muted-foreground flex items-center font-mono">
+                {agent.id}
+              </div>
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label
+                htmlFor="agent-name"
+                className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+              >
+                Name
+              </label>
+              <input
+                id="agent-name"
+                type="text"
+                defaultValue={agent.name}
+                onBlur={(e) => {
+                  const val = e.target.value.trim()
+                  if (val && val !== agent.name) {
+                    _handleNameChange(val)
+                  }
+                }}
+                className="w-full h-9 px-3 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors"
+                placeholder="Agent name"
+              />
+            </div>
+          </div>
+
+          {/* Icon */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Icon
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {_ICON_OPTIONS.map((opt) => {
+                const isSelected = (agent.icon || 'bot') === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => _handleIconChange(opt.id)}
+                    className={cn(
+                      'flex items-center justify-center w-9 h-9 rounded-lg border transition-all',
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-border/60 hover:bg-accent/10',
+                    )}
+                    title={opt.id}
+                  >
+                    <opt.Icon size={16} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Introduction */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="agent-intro"
+              className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+            >
+              Introduction
+            </label>
+            <textarea
+              id="agent-intro"
+              defaultValue={agent.introduction || ''}
+              onBlur={(e) => {
+                const val = e.target.value.trim()
+                if (val !== (agent.introduction || '')) {
+                  _handleIntroductionChange(val)
+                }
+              }}
+              className="w-full min-h-[80px] px-3 py-2 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors resize-y"
+              placeholder="Brief introduction of this agent..."
+            />
+          </div>
+        </div>
+      </Section>
+
       {/* Messengers */}
       <Section
         title="Messengers"
@@ -519,6 +625,66 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
           </>
         )}
       </Section>
+
+      {/* Retire Agent — only for non-Aynite agents */}
+      {agent.id !== 'aynite' && (
+        <Section
+          title="Retire Agent"
+          description="Permanently remove this agent and all its settings."
+        >
+          <div className="flex items-center justify-between p-4 rounded-xl border border-destructive/30 bg-destructive/[0.03]">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                Retire &quot;{agent.name}&quot;
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                This will permanently delete this agent. Messenger bots bound to
+                this agent will be unlinked.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              className="shrink-0 bg-destructive text-destructive-foreground hover:opacity-90"
+              onClick={() => setShowRetireConfirm(true)}
+            >
+              Retire Agent
+            </Button>
+          </div>
+        </Section>
+      )}
+
+      {/* ─── Retire Confirmation Modal ────────────────────────────────── */}
+      <Modal
+        isOpen={showRetireConfirm}
+        onClose={() => setShowRetireConfirm(false)}
+        title="Retire Agent"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowRetireConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-destructive text-destructive-foreground hover:opacity-90"
+              onClick={handleRetireAgent}
+            >
+              Yes, Retire
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-foreground">
+            Are you sure you want to retire{' '}
+            <span className="font-semibold">&quot;{agent.name}&quot;</span>?
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This action cannot be undone. All prompts, tools, and messenger
+            bindings for this agent will be permanently removed.
+          </p>
+        </div>
+      </Modal>
 
       {/* ─── Edit Messenger Modal ────────────────────────────────────── */}
       <MessengerEditModal
