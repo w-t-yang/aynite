@@ -3,34 +3,12 @@ import { useCallback, useEffect, useState } from 'react'
 import type { UpdateStatus } from '../../../lib/types/app'
 import { config } from '../../bridge/config'
 import { updateMutations } from '../../bridge/update'
+import { AppIcon } from '../../shared/basic/AppIcon'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
 import { SettingsPage } from '../../shared/featured/SettingsPage'
 import { useViewEvent } from '../useViewEvents'
-
-const APP_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <circle cx="512" cy="512" r="512" fill="#403A35"/>
-  <g transform="translate(512, 512)">
-    <polygon points="-40,-324 40,-324 -180,320 -260,320" fill="#FFFFFF"/>
-    <polygon points="-40,-324 40,-324 260,320 180,320" fill="#FFFFFF"/>
-    <polygon points="-100,320 100,320 72.67,240 -72.67,240" fill="#FFFFFF"/>
-  </g>
-</svg>`
-
-function AppIcon({ className }: { className?: string }) {
-  return (
-    <div
-      className={className}
-      style={{
-        backgroundImage: `url("data:image/svg+xml;base64,${btoa(APP_LOGO_SVG)}")`,
-        backgroundSize: 'contain',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    />
-  )
-}
 
 interface AboutTabProps {
   onOpenExternal: (url: string) => void
@@ -275,9 +253,7 @@ export function AboutTab({ onOpenExternal, t }: AboutTabProps) {
     <SettingsPage title={t('about.title')} description={t('about.description')}>
       {/* Header: app icon + name + version on one line */}
       <div className="flex flex-col items-center text-center space-y-4 pt-4 mb-8">
-        <div className="w-20 h-20 rounded-2xl bg-sidebar flex items-center justify-center shadow-lg shadow-primary/10 ring-1 ring-border/40 overflow-hidden">
-          <AppIcon className="w-14 h-14" />
-        </div>
+        <AppIcon containerClassName="w-20 h-20" logoSvgClassName="w-14 h-14" />
         <div className="space-y-2 text-center">
           <h3 className="text-4xl font-black tracking-tighter text-foreground">
             Aynite

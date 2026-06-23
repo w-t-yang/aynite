@@ -20,7 +20,6 @@ import {
   Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import appIcon from '../../../../build/icon-64.png'
 import {
   ADD_ITEM_BUTTON,
   GRID_2_COL,
@@ -33,6 +32,7 @@ import { events } from '../../bridge/events'
 import { spells, spellsMutations } from '../../bridge/spells'
 import { homedir } from '../../bridge/utils'
 import { workspace, workspaceMutations } from '../../bridge/workspace'
+import { AppIcon } from '../../shared/basic/AppIcon'
 import { Button } from '../../shared/basic/Button'
 import { Modal } from '../../shared/basic/Modal'
 import { Section } from '../../shared/basic/Section'
@@ -1562,17 +1562,11 @@ function AnimatedWord({
     }
   }, [words])
 
-  const minWidth = useMemo(() => {
-    const longest = words.reduce((a, b) => (a.length > b.length ? a : b), '')
-    return `${longest.length + 1}ch`
-  }, [words])
-
   return (
     <span
       key={animKey}
-      className={cn('inline-block text-center font-semibold', color)}
+      className={cn('inline-block text-center font-semibold w-full', color)}
       style={{
-        minWidth,
         animation: `flip-${flipDir} 0.3s ease-in-out`,
       }}
     >
@@ -1612,17 +1606,32 @@ const BREAK_WORDS = [
 // ── Animated Welcome ───────────────────────────────────────────────────
 
 function AnimatedWelcome() {
+  const fixedSpanClass = 'inline-flex items-center justify-center w-[90px] h-8'
+
   return (
     <>
       <style>{FLIP_STYLES}</style>
-      <img src={appIcon} alt="Aynite" className="w-12 h-12 mx-auto mb-3" />
+      <AppIcon
+        containerClassName="w-16 h-16 mx-auto mb-3"
+        logoSvgClassName="w-11 h-11"
+      />
       <h2 className="text-2xl font-bold text-foreground mb-3">Aynite</h2>
-      <p className="text-lg font-semibold tracking-wide">
-        <AnimatedWord words={ACTION_WORDS} initialIndex={0} />
-        <span className="text-muted-foreground/40 mx-2">·</span>
-        <AnimatedWord words={BREAK_WORDS} initialIndex={0} />
-        <span className="text-muted-foreground/40 mx-2">·</span>
-        <span className="text-muted-foreground/60 font-semibold">Repeat</span>
+      <p className="text-lg font-semibold tracking-wide flex items-center justify-center">
+        <span className={fixedSpanClass}>
+          <AnimatedWord words={ACTION_WORDS} initialIndex={0} />
+        </span>
+        <span className="inline-flex items-center justify-center w-6 h-8 text-muted-foreground/40">
+          ·
+        </span>
+        <span className={fixedSpanClass}>
+          <AnimatedWord words={BREAK_WORDS} initialIndex={0} />
+        </span>
+        <span className="inline-flex items-center justify-center w-6 h-8 text-muted-foreground/40">
+          ·
+        </span>
+        <span className="inline-flex items-center justify-center w-[90px] h-8 text-muted-foreground/60 font-semibold">
+          Repeat
+        </span>
       </p>
     </>
   )
