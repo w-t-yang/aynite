@@ -121,7 +121,7 @@ const TitleBar: React.FC = () => {
     <>
       <div
         className={cn(
-          'h-9 flex items-center bg-sidebar/80 backdrop-blur-md select-none relative z-layout',
+          'drag h-9 flex items-center bg-sidebar/80 backdrop-blur-md select-none relative z-layout',
           isMac && !isFullscreen ? 'pl-[72px]' : '',
         )}
       >
