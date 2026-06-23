@@ -6,6 +6,7 @@ import {
   AppOperationChannel,
   ConfigChannels,
   FileChannels,
+  FlowChannels,
   GitChannels,
   LoggerChannels,
   MessengerChannels,
@@ -210,6 +211,12 @@ const aynite = {
       content,
       contentSnippet,
     }),
+
+  // ── Flows operations ─────────────────────────────────────────────────
+  flowList: () => ipcRenderer.invoke(FlowChannels.LIST),
+  flowCreate: () => ipcRenderer.invoke(FlowChannels.CREATE),
+  flowUpdate: (flowId: string, updates: any) =>
+    ipcRenderer.invoke(FlowChannels.UPDATE, flowId, updates),
 
   // ── Spotify operations ────────────────────────────────────────────────
   spotifyInitAuth: (clientId: string, useProtocol?: boolean) =>

@@ -194,6 +194,11 @@ interface AyniteWindow {
     contentSnippet?: string,
   ) => Promise<string>
 
+  // Flows
+  flowList: () => Promise<any[]>
+  flowCreate: () => Promise<any>
+  flowUpdate: (flowId: string, updates: any) => Promise<any>
+
   // Spotify
   spotifyInitAuth: (
     clientId: string,

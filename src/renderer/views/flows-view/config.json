@@ -6,10 +6,44 @@
   "key_bindings": {},
   "i18n": {
     "en": {
-      "title": "Flows"
+      "title": "Flows",
+      "overview": "Overview",
+      "overviewTitle": "Flows",
+      "overviewDesc": "Create and manage automation workflows. Each flow is a sequence of steps that can be executed to perform complex tasks.",
+      "addFlowBtn": "Add Flow",
+      "recentFlows": "Recent Flows",
+      "flowsGroup": "Flows",
+      "noFlows": "No flows yet",
+      "executionsGroup": "Executions",
+      "noExecutions": "No executions yet",
+      "flowName": "Name",
+      "flowDescription": "Description",
+      "descriptionPlaceholder": "Describe what this flow does...",
+      "steps": "Steps",
+      "addStepBtn": "Add Step",
+      "noSteps": "No steps yet. Click \"Add Step\" to add the first step.",
+      "step": "Step",
+      "stepPlaceholder": "Describe what the AI should do in this step..."
     },
     "zh": {
-      "title": "流程"
+      "title": "流程",
+      "overview": "概览",
+      "overviewTitle": "流程",
+      "overviewDesc": "创建和管理自动化工作流。每个流程由一系列步骤组成，可执行以完成复杂任务。",
+      "addFlowBtn": "添加流程",
+      "recentFlows": "最近流程",
+      "flowsGroup": "流程",
+      "noFlows": "暂无流程",
+      "executionsGroup": "执行",
+      "noExecutions": "暂无执行记录",
+      "flowName": "名称",
+      "flowDescription": "描述",
+      "descriptionPlaceholder": "描述这个流程的作用...",
+      "steps": "步骤",
+      "addStepBtn": "添加步骤",
+      "noSteps": "暂无步骤。点击\"添加步骤\"添加第一个步骤。",
+      "step": "步骤",
+      "stepPlaceholder": "描述 AI 在这一步应该做什么..."
     }
   }
 }

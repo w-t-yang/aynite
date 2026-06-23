@@ -165,6 +165,12 @@ export const ThemeChannels = {
   DELETE: 'aynite:theme-delete',
 } as const
 
+export const FlowChannels = {
+  LIST: 'aynite:flow-list',
+  CREATE: 'aynite:flow-create',
+  UPDATE: 'aynite:flow-update',
+} as const
+
 /**
  * Unified app-level operation execution channel.
  * Renderer sends typed operations here for the main process to execute.

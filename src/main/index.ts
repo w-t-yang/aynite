@@ -5,6 +5,7 @@ import { setupAiIpc } from './ai/index'
 import { setupApprovalListeners } from './approval-queue'
 import { initAppFolders, setupConfigIpc } from './config/index'
 import { setupFileIpc } from './file/index'
+import { setupFlowIpc } from './flows/index'
 import { setupGitIpc } from './git/index'
 import { setupKeybindings } from './keybindings'
 import { reloadMessengers, setupMessengerIpc } from './messengers'
@@ -139,6 +140,7 @@ app.whenReady().then(async () => {
     setupRssIpc()
     setupSpotifyIpc(protocolAvailable)
     setupGitIpc()
+    setupFlowIpc()
   }
 
   app.on('activate', () => {

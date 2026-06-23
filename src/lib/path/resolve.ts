@@ -405,6 +405,28 @@ export function getBotCommitPath(
   return path.join(getBotCommitsDir(messengerId, chatName), `${commitId}.json`)
 }
 
+// ─── Flows Paths ─────────────────────────────────────────────────────────
+
+/** Root flows directory: ~/.aynite/flows/ */
+export function getFlowsDir(): string {
+  return getAynitePath('flows')
+}
+
+/** Per-flow directory: ~/.aynite/flows/<flowId>/ */
+export function getFlowDir(flowId: string): string {
+  return path.join(getFlowsDir(), flowId)
+}
+
+/** Per-flow definition file: ~/.aynite/flows/<flowId>/definition.json */
+export function getFlowDefinitionPath(flowId: string): string {
+  return path.join(getFlowDir(flowId), 'definition.json')
+}
+
+/** Per-flow executions directory: ~/.aynite/flows/<flowId>/executions/ */
+export function getFlowExecutionsDir(flowId: string): string {
+  return path.join(getFlowDir(flowId), 'executions')
+}
+
 export function getSkillsDir() {
   return getAynitePath('skills')
 }
