@@ -59,7 +59,7 @@ const AppContent: React.FC = () => {
   )
 
   return (
-    <div className="h-screen w-screen flex flex-col relative bg-background">
+    <div className="h-screen w-screen flex flex-col relative bg-sidebar">
       <TitleBar />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />

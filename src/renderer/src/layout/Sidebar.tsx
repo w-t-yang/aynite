@@ -39,14 +39,21 @@ const Sidebar: React.FC = () => {
               type="button"
               onClick={() => switchLayout(item.layoutId)}
               className={cn(
-                'w-full flex flex-col items-center gap-1 py-2 px-1 rounded-lg transition-all',
+                'w-full flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg transition-all',
                 isActive
-                  ? 'bg-primary/10 text-primary'
+                  ? 'text-muted-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
               )}
               title={t(`sidebar.${item.id}`)}
             >
-              <Icon size={20} />
+              <div
+                className={cn(
+                  'flex items-center justify-center w-10 h-10 rounded-lg transition-all',
+                  isActive && 'bg-primary/10 text-primary',
+                )}
+              >
+                <Icon size={20} />
+              </div>
               <span className="text-[10px] font-medium leading-tight">
                 {t(`sidebar.${item.id}`)}
               </span>
@@ -66,14 +73,21 @@ const Sidebar: React.FC = () => {
                 type="button"
                 onClick={() => switchLayout(layout.id)}
                 className={cn(
-                  'w-full flex flex-col items-center gap-1 py-2 px-1 rounded-lg transition-all',
+                  'w-full flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg transition-all',
                   isActive
-                    ? 'bg-primary/10 text-primary'
+                    ? 'text-muted-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                 )}
                 title={layout.name}
               >
-                <Layout size={18} />
+                <div
+                  className={cn(
+                    'flex items-center justify-center w-10 h-10 rounded-lg transition-all',
+                    isActive && 'bg-primary/10 text-primary',
+                  )}
+                >
+                  <Layout size={18} />
+                </div>
                 <span className="text-[9px] font-medium leading-tight text-center break-words max-w-[60px]">
                   {layout.name}
                 </span>
@@ -92,14 +106,21 @@ const Sidebar: React.FC = () => {
           type="button"
           onClick={() => switchLayout('sys-settings')}
           className={cn(
-            'w-full flex flex-col items-center gap-1 py-2 px-1 rounded-lg transition-all',
+            'w-full flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg transition-all',
             isSystemActive('sys-settings')
-              ? 'bg-primary/10 text-primary'
+              ? 'text-muted-foreground'
               : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
           )}
           title={t('sidebar.settings')}
         >
-          <Settings size={20} />
+          <div
+            className={cn(
+              'flex items-center justify-center w-10 h-10 rounded-lg transition-all',
+              isSystemActive('sys-settings') && 'bg-primary/10 text-primary',
+            )}
+          >
+            <Settings size={20} />
+          </div>
           <span className="text-[10px] font-medium leading-tight">
             {t('sidebar.settings')}
           </span>

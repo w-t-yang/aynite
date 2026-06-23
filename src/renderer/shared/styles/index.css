@@ -237,7 +237,7 @@
 
 @layer components {
   .tile {
-    @apply bg-tile-bg border border-tile-border flex flex-col relative overflow-hidden m-[1px] rounded-[4px] transition-colors duration-200;
+    @apply bg-tile-bg border border-tile-border flex flex-col relative overflow-hidden m-[1px] rounded-[12px] transition-colors duration-200;
   }
 
   .tile-title {
