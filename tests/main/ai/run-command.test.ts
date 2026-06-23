@@ -30,16 +30,18 @@ beforeEach(() => {
   mockSpawn.mockReset()
 })
 
+type Callback = (...args: any[]) => void
+
 function makeProc(stdout: string, exitCode = 0) {
   return {
     stdout: {
-      on: vi.fn((_e: string, cb: Function) =>
+      on: vi.fn((_e: string, cb: Callback) =>
         setTimeout(() => cb(Buffer.from(stdout)), 0),
       ),
     },
     stderr: { on: vi.fn() },
     stdin: { end: vi.fn(), write: vi.fn() },
-    on: vi.fn((event: string, cb: Function) => {
+    on: vi.fn((event: string, cb: Callback) => {
       if (event === 'close') setTimeout(() => cb(exitCode), 5)
     }),
   }
@@ -68,21 +70,21 @@ describe('createRunCommand', () => {
   })
 
   it('includes stderr in output when present', async () => {
-    let _stderrCb: Function | null = null
+    let _stderrCb: Callback | null = null
     mockSpawn.mockImplementation(() => ({
       stdout: {
-        on: vi.fn((_e: string, cb: Function) =>
+        on: vi.fn((_e: string, cb: Callback) =>
           setTimeout(() => cb(Buffer.from('main')), 0),
         ),
       },
       stderr: {
-        on: vi.fn((_e: string, cb: Function) => {
+        on: vi.fn((_e: string, cb: Callback) => {
           _stderrCb = cb
           setTimeout(() => cb(Buffer.from('warning')), 0)
         }),
       },
       stdin: { end: vi.fn(), write: vi.fn() },
-      on: vi.fn((event: string, cb: Function) => {
+      on: vi.fn((event: string, cb: Callback) => {
         if (event === 'close') setTimeout(() => cb(0), 5)
       }),
     }))

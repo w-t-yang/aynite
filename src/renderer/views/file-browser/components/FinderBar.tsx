@@ -77,7 +77,7 @@ export function FinderBar({
   onViewModeChange,
   onTabSelect,
   onFolderBrowse,
-  onTabClose,
+  onTabClose: _onTabClose,
   onCloseAll,
   onSwitchToTabMode,
   t: tProp,

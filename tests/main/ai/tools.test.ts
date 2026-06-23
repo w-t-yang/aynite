@@ -369,7 +369,7 @@ describe('run_command tool', () => {
       },
     )
     const mockStderrOn = vi.fn()
-    const mockOn = vi.fn((event: string, cb: Function) => {
+    const mockOn = vi.fn((event: string, cb: (...args: any[]) => void) => {
       if (event === 'close') setTimeout(() => cb(0), 10)
       if (event === 'error') {
         /* will not fire */

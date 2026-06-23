@@ -152,8 +152,12 @@ describe('computeBipartiteOrder', () => {
       links: [],
     }
     const ranks = computeBipartiteOrder(graph, 800, 600)
-    expect(ranks.get('left1')).toBeLessThan(ranks.get('right1')!)
-    expect(ranks.get('left2')).toBeLessThan(ranks.get('right1')!)
+    expect(ranks.get('left1') as number).toBeLessThan(
+      ranks.get('right1') as number,
+    )
+    expect(ranks.get('left2') as number).toBeLessThan(
+      ranks.get('right1') as number,
+    )
   })
 
   it('connects nodes on group 0/1 to group 2 via links', () => {
@@ -170,10 +174,10 @@ describe('computeBipartiteOrder', () => {
     }
     const ranks = computeBipartiteOrder(graph, 800, 600)
     // a1 and a2 get ranks 0,1; b1 and b2 get ranks 2,3
-    expect(ranks.get('a1')).toBeLessThan(ranks.get('a2')!)
+    expect(ranks.get('a1') as number).toBeLessThan(ranks.get('a2') as number)
     // Both left nodes have lower rank than right nodes
-    expect(ranks.get('a1')!).toBeLessThan(ranks.get('b1')!)
-    expect(ranks.get('a2')!).toBeLessThan(ranks.get('b1')!)
+    expect(ranks.get('a1') as number).toBeLessThan(ranks.get('b1') as number)
+    expect(ranks.get('a2') as number).toBeLessThan(ranks.get('b1') as number)
   })
 
   it('handles all nodes on left side (no group 2)', () => {
@@ -246,10 +250,10 @@ describe('computeBipartiteOrder', () => {
     const ranks = computeBipartiteOrder(graph, 800, 600)
 
     // After barycenter iterations, connected pairs should maintain relative order
-    expect(ranks.get('a1')).toBeLessThan(ranks.get('a2')!)
-    expect(ranks.get('a2')).toBeLessThan(ranks.get('a3')!)
-    expect(ranks.get('b1')).toBeLessThan(ranks.get('b2')!)
-    expect(ranks.get('b2')).toBeLessThan(ranks.get('b3')!)
+    expect(ranks.get('a1')).toBeLessThan(ranks.get('a2') as number)
+    expect(ranks.get('a2')).toBeLessThan(ranks.get('a3') as number)
+    expect(ranks.get('b1')).toBeLessThan(ranks.get('b2') as number)
+    expect(ranks.get('b2')).toBeLessThan(ranks.get('b3') as number)
   })
 
   it('produces consistent ranks (deterministic output)', () => {
@@ -313,10 +317,10 @@ describe('computeBipartiteOrder', () => {
     // If ranks are a=0,b=1 on left and d=2,c=3 on right, edges don't cross
     // If ranks are a=0,b=1 on left and c=2,d=3 on right, edges DO cross
     // The algorithm should ideally produce non-crossing layout
-    const rankA = ranks.get('a')!
-    const rankB = ranks.get('b')!
-    const rankC = ranks.get('c')!
-    const rankD = ranks.get('d')!
+    const rankA = ranks.get('a') as number
+    const rankB = ranks.get('b') as number
+    const rankC = ranks.get('c') as number
+    const rankD = ranks.get('d') as number
 
     // Left side: a and b (0 and 1, a is first)
     expect(rankA).toBeLessThan(rankB)

@@ -9,7 +9,7 @@ vi.mock('node:child_process', () => {
   const mockSpawnFn = vi.fn(() => ({
     stderr: { on: vi.fn() },
     stdin: { end: vi.fn(), write: vi.fn() },
-    on: vi.fn((event: string, cb: Function) => {
+    on: vi.fn((event: string, cb: (...args: any[]) => void) => {
       if (event === 'close') setTimeout(() => cb(0), 0)
     }),
   }))
@@ -100,10 +100,10 @@ vi.mock('../../../src/main/git/porcelain', () => ({
 }))
 
 // Capture ipcMain.handle calls during module import
-const capturedHandlers: Record<string, Function> = {}
+const capturedHandlers: Record<string, (...args: any[]) => any> = {}
 
 const mockIpcHandle = vi.hoisted(() =>
-  vi.fn((channel: string, handler: Function) => {
+  vi.fn((channel: string, handler: (...args: any[]) => any) => {
     capturedHandlers[channel] = handler
   }),
 )

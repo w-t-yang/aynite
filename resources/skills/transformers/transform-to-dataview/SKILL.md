@@ -50,7 +50,6 @@ dataview-flow            Flow Editor            nodes, edges
 dataview-diagram         Diagram                definition
 dataview-mindmap         MindMap                root
 dataview-stock           Stock Chart            symbol, data | metadata, history
-dataview-canvas          Canvas                 elements, appState
 dataview-theme           Theme Studio           id, colors
 ```
 
@@ -96,7 +95,6 @@ a quick reference you can use in conversation:
 | Processes, workflows, decision trees | **dataview-flow** — node-based flow editor |
 | Visual diagrams (flowchart, sequence, class) | **dataview-diagram** — Mermaid renderer |
 | Hierarchies, outlines, tree structures | **dataview-mindmap** — collapsible mind map |
-| Freeform sketches, wireframes, whiteboards | **dataview-canvas** — Excalidraw canvas |
 | Stock prices, financial OHLC data | **dataview-stock** — candlestick chart |
 | Color schemes, visual themes | **dataview-theme** — color theme editor |
 

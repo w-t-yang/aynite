@@ -25,8 +25,6 @@ const SYSTEM_DIALOG_REGEX = /\b(showMessageBox|showErrorBox)\b/g
 const EXEMPTED_FILES: Record<string, string> = {
   // View pages that consistently use the shared iconBtn() utility for toolbar buttons
   // (iconBtn() appears on a separate line from <button>, so line-level matching misses them)
-  'src/renderer/views/dataview-canvas/DataViewCanvas.tsx':
-    'Toolbar buttons using iconBtn() utility',
   'src/renderer/views/dataview-chart/DataViewChart.tsx':
     'Toolbar buttons using iconBtn() + chart type dropdown with custom styling',
   'src/renderer/views/dataview-diagram/DataViewDiagram.tsx':
