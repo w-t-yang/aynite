@@ -28,11 +28,17 @@ export const DEFAULT_PROVIDER_URLS: Record<string, string> = {
   others: '',
 }
 
+export type ToolGroup = 'os' | 'web' | 'project' | 'messenger' | 'flow'
+
+/** Tool groups that are automatically managed (never shown in agent settings). */
+export const SYSTEM_TOOL_GROUPS: ToolGroup[] = ['messenger', 'flow']
+
 export const TOOL_METADATA: Record<
   string,
   {
     name: string
     description: string
+    group: ToolGroup
     inputSchema: Record<string, unknown>
   }
 > = {
@@ -40,6 +46,7 @@ export const TOOL_METADATA: Record<
     name: 'Read File',
     description:
       'Read the contents of a file. Useful when you need to understand the logic of a specific file or examine its content for debugging.',
+    group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
@@ -52,6 +59,7 @@ export const TOOL_METADATA: Record<
     name: 'Write File',
     description:
       'Write content to a file. Useful when you need to create new files, update existing code, or save generated data.',
+    group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
@@ -65,6 +73,7 @@ export const TOOL_METADATA: Record<
     name: 'Edit File',
     description:
       'Perform a surgical edit on a file by replacing a specific block of code. This is the preferred way to modify existing files as it is faster and more reliable than rewriting the whole file.',
+    group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
@@ -85,6 +94,7 @@ export const TOOL_METADATA: Record<
     name: 'List Files',
     description:
       'List files in a directory. Useful for exploring the project structure and discovering what files are present in a specific folder.',
+    group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
@@ -97,6 +107,7 @@ export const TOOL_METADATA: Record<
     name: 'Run Command',
     description:
       'Execute a shell command. Automatically runs in the project workspace directory - do NOT prefix with `cd`. Use the optional `cwd` parameter only if you need a different directory.',
+    group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
@@ -117,6 +128,7 @@ export const TOOL_METADATA: Record<
     name: 'Grep Search',
     description:
       'Search for a regex pattern in a specific folder within the workspace. Useful for finding all occurrences of a variable, function, or string across multiple files.',
+    group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
@@ -137,6 +149,7 @@ export const TOOL_METADATA: Record<
     name: 'Read URL',
     description:
       'Fetch and read the content of a URL. Useful for gathering information from external documentation, API references, or public websites.',
+    group: 'web',
     inputSchema: {
       type: 'object',
       properties: {
@@ -149,6 +162,7 @@ export const TOOL_METADATA: Record<
     name: 'Glob Search',
     description:
       'Search for files matching a glob pattern across the workspace. Useful for finding files by extension or naming convention (e.g., "**/*.test.ts").',
+    group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
@@ -168,6 +182,7 @@ export const TOOL_METADATA: Record<
     name: 'Create Task',
     description:
       'Initialize a new task list or implementation plan in the workspace artifacts directory. Use this at the start of complex operations to track goals.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {
@@ -188,6 +203,7 @@ export const TOOL_METADATA: Record<
     name: 'Update Task',
     description:
       'Update the status of tasks in the task list. Use this to mark items as completed or add new sub-tasks as you progress.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {
@@ -212,6 +228,7 @@ export const TOOL_METADATA: Record<
     name: 'Get Tasks',
     description:
       'Read the current task list from the workspace artifacts directory.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {
@@ -226,6 +243,7 @@ export const TOOL_METADATA: Record<
     name: 'Propose Plan',
     description:
       'Create a detailed implementation plan in the workspace artifacts directory. This is MANDATORY for complex tasks and must be approved by the user before execution starts.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {
@@ -270,6 +288,7 @@ export const TOOL_METADATA: Record<
     name: 'Initialize Memory',
     description:
       'Scan the project and generate an initial memory.md file in the artifacts directory. This file stores long-term knowledge (overview, structure, rules, and key context) that persists across AI sessions.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -279,6 +298,7 @@ export const TOOL_METADATA: Record<
     name: 'Update Memory',
     description:
       'Update the project memory with new architectural decisions, learned patterns, or important context. Use this to ensure future AI sessions understand the current state of the project.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {
@@ -294,6 +314,7 @@ export const TOOL_METADATA: Record<
     name: 'Read Memory',
     description:
       'Read the project memory (memory.md) to understand architecture, naming conventions, and previous decisions.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -303,6 +324,7 @@ export const TOOL_METADATA: Record<
     name: 'Get File Tree',
     description:
       'Get a recursive directory tree of the workspace. Useful for getting a high-level overview of the project structure and folder hierarchy.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {
@@ -315,6 +337,7 @@ export const TOOL_METADATA: Record<
     name: 'Get Workspace Info',
     description:
       'Get information about the current workspace environment. Useful at the start of a session to understand the project context, available folders, and the file currently being edited.',
+    group: 'project',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -324,6 +347,7 @@ export const TOOL_METADATA: Record<
     name: 'Get Messages',
     description:
       'Fetch recent messages from the chat history. Use this when you need to understand context from earlier conversation, especially in group chats where users discuss topics before asking you to take action (e.g. summarizing notes, creating todos). Only messages from the current channel are accessible. After reading history, you MUST ask the user to confirm whether you understood the context correctly.',
+    group: 'messenger',
     inputSchema: {
       type: 'object',
       properties: {
@@ -338,6 +362,52 @@ export const TOOL_METADATA: Record<
             'Optional ISO date string to fetch messages from a specific date (e.g. "2026-06-20"). If omitted, fetches from today.',
         },
       },
+    },
+  },
+  notify_user: {
+    name: 'Notify User',
+    description:
+      'Send a message to the user in the current chat. Use this when you cannot answer immediately and need time to work (e.g. running commands, researching). Reply directly when you can answer right away; use this tool only to acknowledge requests that require longer processing.',
+    group: 'messenger',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'The message to send to the user',
+        },
+      },
+      required: ['message'],
+    },
+  },
+  create_steps: {
+    name: 'Create Steps',
+    description:
+      'Create a list of steps for executing a flow. Each step contains an instruction for the AI to follow. Steps are executed sequentially.',
+    group: 'flow',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        flowId: {
+          type: 'string',
+          description: 'The ID of the flow to add steps to',
+        },
+        steps: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              userInstruction: {
+                type: 'string',
+                description: 'The instruction for this step',
+              },
+            },
+            required: ['userInstruction'],
+          },
+          description: 'The list of steps to create',
+        },
+      },
+      required: ['flowId', 'steps'],
     },
   },
 }
@@ -571,9 +641,11 @@ export function createDefaultAgents(
 ) {
   const devTools: Record<string, boolean> = {}
   const assistantTools: Record<string, boolean> = {}
-  // Enable all tools for Dev
-  for (const key of Object.keys(TOOL_METADATA)) {
-    devTools[key] = true
+  // Enable all user-configurable tools for Dev (skip system-managed groups)
+  for (const [key, meta] of Object.entries(TOOL_METADATA)) {
+    if (!SYSTEM_TOOL_GROUPS.includes(meta.group)) {
+      devTools[key] = true
+    }
   }
   // Assistant gets read-only + communication tools, no file mutation or system ops
   const assistantAllowedTools = new Set([
@@ -587,8 +659,10 @@ export function createDefaultAgents(
     'read_memory',
     'get_tasks',
   ])
-  for (const key of Object.keys(TOOL_METADATA)) {
-    assistantTools[key] = assistantAllowedTools.has(key)
+  for (const [key, meta] of Object.entries(TOOL_METADATA)) {
+    if (!SYSTEM_TOOL_GROUPS.includes(meta.group)) {
+      assistantTools[key] = assistantAllowedTools.has(key)
+    }
   }
 
   return [

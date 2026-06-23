@@ -15,7 +15,8 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SYSTEM_TOOL_GROUPS } from '../../../lib/constants/ai'
 import {
   ADD_ITEM_BUTTON,
   GRID_2_COL,
@@ -43,6 +44,7 @@ interface ToolDef {
   id: string
   name: string
   description: string
+  group: string
 }
 
 const _ICON_OPTIONS = [
@@ -67,6 +69,13 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
   const [messengers, setMessengers] = useState<MessengerConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [allToolDefs, setAllToolDefs] = useState<ToolDef[]>([])
+
+  // Filter out system-managed tools (messenger, flow) — users don't configure these
+  const visibleToolDefs = useMemo(
+    () =>
+      allToolDefs.filter((t) => !SYSTEM_TOOL_GROUPS.includes(t.group as any)),
+    [allToolDefs],
+  )
 
   // Edit modal state
   const [editingMessenger, setEditingMessenger] =
@@ -552,17 +561,17 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
         title="Tools"
         description="Toggle which tools this agent can use."
       >
-        {allToolDefs.length === 0 ? (
+        {visibleToolDefs.length === 0 ? (
           <p className="text-xs text-muted-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
             Loading tools...
           </p>
         ) : (
           <>
             {/* Enabled tools */}
-            {allToolDefs.filter((t) => agent.tools?.[t.id] !== false).length >
-            0 ? (
+            {visibleToolDefs.filter((t) => agent.tools?.[t.id] !== false)
+              .length > 0 ? (
               <div className={GRID_2_COL}>
-                {allToolDefs
+                {visibleToolDefs
                   .filter((t) => agent.tools?.[t.id] !== false)
                   .map((tool) => (
                     <div
@@ -589,8 +598,8 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
             )}
 
             {/* Disabled tools (collapsed) */}
-            {allToolDefs.filter((t) => agent.tools?.[t.id] === false).length >
-              0 && (
+            {visibleToolDefs.filter((t) => agent.tools?.[t.id] === false)
+              .length > 0 && (
               <div className="mt-4">
                 <Collapsible
                   title="Disabled Tools"
@@ -599,7 +608,7 @@ export function AgentSettingsTab({ agentId }: AgentSettingsTabProps) {
                   defaultExpanded={false}
                 >
                   <div className={GRID_2_COL}>
-                    {allToolDefs
+                    {visibleToolDefs
                       .filter((t) => agent.tools?.[t.id] === false)
                       .map((tool) => (
                         <div

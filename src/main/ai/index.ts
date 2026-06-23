@@ -29,6 +29,7 @@ interface AiChatPayload {
   workspaceFolders: string[]
   activeFile?: string
   workspaceName?: string
+  sessionType?: 'general' | 'messenger' | 'flow'
 }
 
 interface SessionSavePayload {

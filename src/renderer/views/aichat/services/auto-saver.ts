@@ -75,6 +75,7 @@ export function scheduleSave(session: InternalSession): void {
       const metadata: Record<string, unknown> = {
         agentName: activeAgent?.name || 'Chat',
         modelName: activeProvider?.name || activeProvider?.model || 'AI',
+        type: 'general',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }

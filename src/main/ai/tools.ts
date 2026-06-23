@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { jsonSchema } from '@ai-sdk/provider-utils'
-import { TOOL_METADATA } from '../../lib/constants/ai'
+import { SYSTEM_TOOL_GROUPS, TOOL_METADATA } from '../../lib/constants/ai'
 import { ERROR_MESSAGES } from '../../lib/constants/messages'
 import {
   getAyniteDir,
@@ -15,6 +15,51 @@ import { createRunCommand } from './tools/run-command'
 import { createTaskManager } from './tools/task-manager'
 
 export type { ToolContext }
+
+/**
+ * Tool group → list of tool IDs for that group.
+ */
+const TOOLS_BY_GROUP: Record<string, string[]> = {}
+for (const [id, meta] of Object.entries(TOOL_METADATA)) {
+  const group = meta.group
+  if (!TOOLS_BY_GROUP[group]) TOOLS_BY_GROUP[group] = []
+  TOOLS_BY_GROUP[group].push(id)
+}
+
+/**
+ * Given an agent's configured tool enablement map and a session type,
+ * return the final set of tools that should be available.
+ *
+ * - For 'general' sessions: only the agent's explicitly enabled tools.
+ * - For 'messenger' sessions: agent tools + messenger tools (force-enabled).
+ * - For 'flow' sessions: agent tools + flow tools (force-enabled).
+ */
+export function getEnabledToolsForSession(
+  agentTools: Record<string, boolean> | undefined,
+  sessionType: string = 'general',
+): Record<string, boolean> {
+  const result: Record<string, boolean> = {}
+  for (const [toolId, meta] of Object.entries(TOOL_METADATA)) {
+    // System-managed tools (messenger, flow) default to false — they are only
+    // enabled when the session type matches their group.
+    if (SYSTEM_TOOL_GROUPS.includes(meta.group)) {
+      result[toolId] = false
+    } else {
+      result[toolId] = agentTools?.[toolId] !== false
+    }
+  }
+  if (sessionType === 'messenger') {
+    for (const toolId of TOOLS_BY_GROUP.messenger || []) {
+      result[toolId] = true
+    }
+  }
+  if (sessionType === 'flow') {
+    for (const toolId of TOOLS_BY_GROUP.flow || []) {
+      result[toolId] = true
+    }
+  }
+  return result
+}
 
 export function getToolsMetadata() {
   return Object.entries(TOOL_METADATA).map(([id, meta]) => ({
@@ -96,6 +141,15 @@ export function createTools(context: ToolContext) {
       },
     },
 
+    // Placeholder — messenger bots override this with their own implementation
+    notify_user: {
+      description: TOOL_METADATA.notify_user.description,
+      inputSchema: jsonSchema(TOOL_METADATA.notify_user.inputSchema),
+      execute: async ({ message }: { message: string }) => {
+        return `Notification: "${message}" (notify_user is only available in messenger sessions)`
+      },
+    },
+
     get_workspace_info: {
       description: TOOL_METADATA.get_workspace_info.description,
       inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),
@@ -117,6 +171,21 @@ export function createTools(context: ToolContext) {
               : 'Use POSIX shell syntax. Commands run via: <shell> -l -c <command>',
           },
         }
+      },
+    },
+
+    // Placeholder — not yet implemented
+    create_steps: {
+      description: TOOL_METADATA.create_steps.description,
+      inputSchema: jsonSchema(TOOL_METADATA.create_steps.inputSchema),
+      execute: async ({
+        _flowId,
+        _steps,
+      }: {
+        _flowId: string
+        _steps: any[]
+      }) => {
+        return 'Flow step creation not yet implemented.'
       },
     },
   }

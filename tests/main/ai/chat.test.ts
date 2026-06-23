@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 let mockStreamEvents: any[] = []
 
+vi.mock('electron', () => ({
+  app: { isPackaged: true },
+}))
+
 vi.mock('ai', () => ({
   convertToModelMessages: vi.fn(() => Promise.resolve([])),
   stepCountIs: vi.fn(() => vi.fn(() => false)),
@@ -36,6 +40,7 @@ vi.mock('../../../src/main/ai/tools', () => ({
     write_file: { execute: vi.fn() },
   })),
   getToolsMetadata: vi.fn(() => []),
+  getEnabledToolsForSession: vi.fn((agentTools: any) => agentTools || {}),
 }))
 
 const mockAppendText = vi.hoisted(() => vi.fn(() => Promise.resolve()))

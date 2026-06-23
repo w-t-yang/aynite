@@ -1,8 +1,11 @@
 import type { TextStreamPart, UIMessage } from 'ai'
 
+export type SessionType = 'general' | 'messenger' | 'flow'
+
 export interface SessionMetadata {
   agentName: string
   modelName: string
+  type: SessionType
   createdAt: string
   updatedAt: string
   summary?: string

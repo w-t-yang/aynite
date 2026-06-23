@@ -1,11 +1,10 @@
 import path from 'node:path'
 import type { TextStreamPart, UIMessage } from 'ai'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { app } from 'electron'
 import { AppEvents } from '../../lib/constants/app'
 import {
-  appendText,
   getBotsDir,
-  getLogPath,
   getSessionCompactPath,
   getSessionDir,
   getSessionMessagesPath,
@@ -17,11 +16,11 @@ import {
   stat,
   writeJson,
 } from '../../lib/path'
-import type { SessionMetadata } from '../../lib/types/chat'
+import type { SessionMetadata, SessionType } from '../../lib/types/chat'
 import { sendToWindow } from '../ipc-utils'
 import type { AIProvider } from './factory'
 import { getAIModel } from './factory'
-import { createTools } from './tools'
+import { createTools, getEnabledToolsForSession } from './tools'
 
 /**
  * Maps the unified reasoningEffort setting to each provider's native providerOptions.
@@ -354,6 +353,7 @@ export async function aiChat(params: {
   workspaceFolders: string[]
   activeFile?: string
   workspaceName?: string
+  sessionType?: SessionType
   _winId?: number
 }) {
   const {
@@ -362,6 +362,7 @@ export async function aiChat(params: {
     workspaceFolders,
     activeFile,
     workspaceName,
+    sessionType,
     _winId,
   } = params
   const requestId = Math.random().toString(36).slice(2, 10)
@@ -376,14 +377,17 @@ export async function aiChat(params: {
       },
     }
     const cachedTools = createTools(toolContext)
-    // Dev log: context initialized silently (visible in ai-chat.log)
-    appendText(
-      getLogPath(),
-      `[${new Date().toISOString()}] AI Chat: context initialized for ${workspaceName || 'unknown'}\n`,
-    ).catch(() => {})
+    if (!app.isPackaged) {
+      console.log(
+        `[AI Chat] Context initialized for ${workspaceName || 'unknown'}`,
+      )
+    }
 
     const enabledTools: Record<string, any> = {}
-    const toolSettings = config.enabledTools || {}
+    const toolSettings = getEnabledToolsForSession(
+      config.enabledTools,
+      sessionType,
+    )
 
     Object.keys(cachedTools).forEach((toolName) => {
       if (toolSettings[toolName] !== false) {
@@ -391,6 +395,34 @@ export async function aiChat(params: {
           cachedTools[toolName as keyof typeof cachedTools]
       }
     })
+
+    // Log session start: configured tools, sent tools, and diff
+    if (!app.isPackaged) {
+      const configuredSet = new Set(
+        Object.keys(config.enabledTools || {}).filter(
+          (k) => config.enabledTools?.[k] !== false,
+        ),
+      )
+      const sentSet = new Set(Object.keys(enabledTools))
+      const added: string[] = []
+      const removed: string[] = []
+      for (const t of sentSet) {
+        if (!configuredSet.has(t)) added.push(t)
+      }
+      for (const t of configuredSet) {
+        if (!sentSet.has(t)) removed.push(t)
+      }
+      const diffParts: string[] = [
+        ...added.map((t) => `+${t}`),
+        ...removed.map((t) => `-${t}`),
+      ]
+      console.log(
+        `[AI Chat] [${requestId}] sessionType=${sessionType || 'general'}, ` +
+          `configuredTools=[${[...configuredSet].join(', ')}], ` +
+          `sentTools=[${[...sentSet].join(', ')}], ` +
+          `toolsDiff=[${diffParts.join(', ')}]`,
+      )
+    }
 
     const emit = (part: TextStreamPart<any>) => {
       // Send AI chat delta events to the window that initiated the request
@@ -461,14 +493,14 @@ export async function aiChat(params: {
           }
         }
 
-        // Write response summary to dev log instead of console
-        const logPath = getLogPath()
-        const logEntry =
-          `[${new Date().toISOString()}] AI Response [${requestId}]: ` +
-          `text=${fullResponseText.length} chars, ` +
-          `reasoning=${reasoningText.length} chars, ` +
-          `toolCalls=${fullToolCalls.length}\n`
-        await appendText(logPath, logEntry).catch(() => {})
+        if (!app.isPackaged) {
+          console.log(
+            `[AI Chat] Response [${requestId}]: ` +
+              `text=${fullResponseText.length} chars, ` +
+              `reasoning=${reasoningText.length} chars, ` +
+              `toolCalls=${fullToolCalls.length}`,
+          )
+        }
       } catch (err: any) {
         console.error('[AI Chat Stream Error]', err)
         emit({ type: 'error', error: err.message || String(err) })
