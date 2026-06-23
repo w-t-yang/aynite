@@ -6,6 +6,7 @@ import {
   Layout,
   Rss,
   Settings,
+  Workflow,
 } from 'lucide-react'
 import type React from 'react'
 import { useI18n } from '../../shared/i18n/useI18n'
@@ -22,6 +23,7 @@ const LAYOUT_ICONS: Record<string, typeof Layout> = {
 const SYSTEM_ITEMS = [
   { id: 'home', layoutId: 'sys-home', icon: Home },
   { id: 'projects', layoutId: 'sys-projects', icon: FolderOpen },
+  { id: 'flows', layoutId: 'sys-flows', icon: Workflow },
 ] as const
 
 const SIDEBAR_WIDTH = 72

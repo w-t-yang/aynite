@@ -80,6 +80,7 @@ export const translations: Record<string, { en: string; zh: string }> = {
   // Sidebar
   'sidebar.home': { en: 'Home', zh: '首页' },
   'sidebar.projects': { en: 'Projects', zh: '项目' },
+  'sidebar.flows': { en: 'Flows', zh: '流程' },
   'sidebar.settings': { en: 'Settings', zh: '设置' },
 
   // Tile

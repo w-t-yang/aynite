@@ -17,6 +17,7 @@ import {
   Sparkles,
   Star,
   Trash2,
+  Workflow,
   Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -1231,6 +1232,7 @@ const SHORTCUT_PRESETS: ShortcutPreset[] = [
 const SYSTEM_ICON_MAP: Record<string, typeof LayoutIcon> = {
   'sys-home': Home,
   'sys-projects': FolderOpen,
+  'sys-flows': Workflow,
   'sys-settings': Settings,
 }
 
@@ -1240,7 +1242,7 @@ const SYSTEM_ICON_MAP: Record<string, typeof LayoutIcon> = {
 function getOrderedLayouts(
   layouts: LayoutEntry[],
 ): (LayoutEntry & { iconComponent: typeof LayoutIcon })[] {
-  const systemOrder = ['sys-home', 'sys-projects', 'sys-settings']
+  const systemOrder = ['sys-home', 'sys-projects', 'sys-flows', 'sys-settings']
   const systemLayouts: (LayoutEntry & { iconComponent: typeof LayoutIcon })[] =
     []
   const userLayouts: (LayoutEntry & { iconComponent: typeof LayoutIcon })[] = []

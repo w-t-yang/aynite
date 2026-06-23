@@ -44,6 +44,19 @@ export const PROJECTS_LAYOUT: LayoutConfig = {
   },
 }
 
+export const FLOWS_LAYOUT: LayoutConfig = {
+  id: 'sys-flows',
+  name: 'Flows',
+  system: true,
+  fixed: true,
+  layout: {
+    id: 'tile-flows',
+    type: 'leaf',
+    name: 'flows-view',
+    size: 100,
+  },
+}
+
 export const SETTINGS_LAYOUT: LayoutConfig = {
   id: 'sys-settings',
   name: 'Settings',
@@ -60,5 +73,6 @@ export const SETTINGS_LAYOUT: LayoutConfig = {
 export const SYSTEM_LAYOUTS: LayoutConfig[] = [
   HOME_LAYOUT,
   PROJECTS_LAYOUT,
+  FLOWS_LAYOUT,
   SETTINGS_LAYOUT,
 ]

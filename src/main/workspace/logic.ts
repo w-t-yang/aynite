@@ -242,12 +242,13 @@ export async function getWorkspaceState(
   const targetWs = workspaceName || wsConfig.active
   const data = await getWorkspaceData(targetWs)
 
-  // Ensure system layouts are present in all workspaces (data migration for
-  // workspaces created before system layouts existed).
+  // Ensure all system layouts are present (for workspaces created before a
+  // particular system layout existed, e.g. sys-flows).
   if (data.layouts) {
-    const hasSystemLayouts = data.layouts.some((l: any) => l.system === true)
-    if (!hasSystemLayouts) {
-      data.layouts = [...SYSTEM_LAYOUTS, ...data.layouts]
+    const existingIds = new Set(data.layouts.map((l: any) => l.id))
+    const missing = SYSTEM_LAYOUTS.filter((sl) => !existingIds.has(sl.id))
+    if (missing.length > 0) {
+      data.layouts = [...missing, ...data.layouts]
     }
   }
 

@@ -1,0 +1,15 @@
+{
+  "name": "Flows",
+  "description": "Aynite flows view",
+  "author": "Aynite",
+  "aynite-version": "0.1.11",
+  "key_bindings": {},
+  "i18n": {
+    "en": {
+      "title": "Flows"
+    },
+    "zh": {
+      "title": "流程"
+    }
+  }
+}
