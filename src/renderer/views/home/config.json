@@ -23,7 +23,14 @@
       "sessionsDescription": "Your {count} past conversations",
       "sessionsActivity": "Activity",
       "sessionsNoData": "No sessions yet",
-      "sessionSize": "{count} messages"
+      "sessionSize": "{count} messages",
+      "shortcutsSection": "Shortcuts",
+      "shortcutsAdd": "Add Shortcut",
+      "shortcutsNoData": "No shortcuts yet",
+      "shortcutsCoderLiteDesc": "A three-column layout with treeview, file browser, and AI chat — perfect for coding.",
+      "shortcutsAddTitle": "Add Shortcut",
+      "shortcutsAddDesc": "Choose a preset layout to add as a shortcut",
+      "shortcutsAddBtn": "Add to Menu Bar"
     },
     "zh": {
       "title": "首页",
@@ -44,7 +51,14 @@
       "sessionsDescription": "您的 {count} 次历史对话",
       "sessionsActivity": "会话活动",
       "sessionsNoData": "暂无会话",
-      "sessionSize": "{count} 条消息"
+      "sessionSize": "{count} 条消息",
+      "shortcutsSection": "快捷方式",
+      "shortcutsAdd": "添加快捷方式",
+      "shortcutsNoData": "暂无快捷方式",
+      "shortcutsCoderLiteDesc": "三栏布局：树状视图、文件浏览器和 AI 聊天 — 非常适合编码。",
+      "shortcutsAddTitle": "添加快捷方式",
+      "shortcutsAddDesc": "选择一个预设布局添加快捷方式",
+      "shortcutsAddBtn": "添加到菜单栏"
     }
   }
 }

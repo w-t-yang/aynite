@@ -7,7 +7,11 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { LayoutNode, LeafNode } from '../../../lib/constants/types'
+import type {
+  LayoutConfig,
+  LayoutNode,
+  LeafNode,
+} from '../../../lib/constants/types'
 import type { LayoutActions } from '../../../lib/types/ui'
 import { configMutations } from '../../bridge/config'
 import {
@@ -23,7 +27,12 @@ interface LayoutContextType {
   isResizing: boolean
   setActiveTileId: (id: string | null) => void
   switchLayout: (id: string) => void
-  addLayout: (name: string, layout: LayoutNode) => void
+  addLayout: (
+    name: string,
+    layout: LayoutNode,
+    icon?: string,
+    description?: string,
+  ) => void
   removeLayout: (id: string) => void
   updateLayout: (newLayout: LayoutNode) => void
   updateTileView: (nodeId: string, updates: Partial<LeafNode>) => void
@@ -125,16 +134,18 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   )
 
   const addLayout = useCallback(
-    (name: string, layout: LayoutNode) => {
+    (name: string, layout: LayoutNode, icon?: string, description?: string) => {
       setWorkspaceConfig((prev) => {
         if (!prev) return null
-        if (prev.layouts.length >= 9) return prev
+        if (prev.layouts.length >= 10) return prev
         const newLayoutId = Math.random().toString(36).slice(2, 10)
-        const newLayout = { id: newLayoutId, name, layout }
+        const newLayout: LayoutConfig = { id: newLayoutId, name, layout }
+        if (icon) newLayout.icon = icon
+        if (description) newLayout.description = description
         return {
           ...prev,
           layouts: [...prev.layouts, newLayout],
-          activeLayoutId: newLayoutId,
+          activeLayoutId: prev.activeLayoutId,
         }
       })
     },
@@ -266,6 +277,27 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         case 'TOGGLE_LEFT_PANEL':
           console.log('[App] Toggle Left Panel')
           return
+        case 'ADD_LAYOUT':
+          if (
+            payload &&
+            typeof payload === 'object' &&
+            'name' in (payload as any) &&
+            'layout' in (payload as any)
+          ) {
+            const { name, layout, icon, description } = payload as {
+              name: string
+              layout: LayoutNode
+              icon?: string
+              description?: string
+            }
+            addLayout(name, layout, icon, description)
+          }
+          return
+        case 'REMOVE_LAYOUT':
+          if (payload && typeof payload === 'string') {
+            removeLayout(payload)
+          }
+          return
       }
 
       if (!workspaceConfig) return
@@ -287,7 +319,14 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
         setWorkspaceConfig(updateLayoutInConfig(workspaceConfig, newLayoutNode))
       }
     },
-    [workspaceConfig, setWorkspaceConfig, switchLayout, pushNavEntry],
+    [
+      workspaceConfig,
+      setWorkspaceConfig,
+      switchLayout,
+      pushNavEntry,
+      addLayout,
+      removeLayout,
+    ],
   )
 
   const handleResizeStart = useCallback(() => {

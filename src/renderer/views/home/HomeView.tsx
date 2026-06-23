@@ -5,19 +5,27 @@ import {
   Compass,
   Download,
   Folder as FolderIcon,
+  FolderOpen,
+  Headphones,
   Heart,
+  Home,
+  Layout as LayoutIcon,
   MessageCircle,
   Plus,
+  Rss,
+  Settings,
   Sparkles,
   Star,
+  Trash2,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import appIcon from '../../../../build/icon-64.png'
 import {
   ADD_ITEM_BUTTON,
   GRID_2_COL,
 } from '../../../lib/constants/renderer/styles'
+import type { LayoutNode } from '../../../lib/constants/types'
 import type { Agent, MessengerConfig } from '../../../lib/types/ai'
 import { ai } from '../../bridge/ai'
 import { config, configMutations } from '../../bridge/config'
@@ -58,6 +66,14 @@ interface SkillEntry {
   error?: string
 }
 
+interface LayoutEntry {
+  id: string
+  name: string
+  icon?: string
+  description?: string
+  system?: boolean
+}
+
 type DashboardData = {
   agents: { list: Agent[]; activeId: string }
   folders: string[]
@@ -66,6 +82,8 @@ type DashboardData = {
   messengers: MessengerConfig[]
   activityCounts: Record<string, number>
   messengerSessionCount: number
+  layouts: LayoutEntry[]
+  activeLayoutId: string
 }
 
 // ── Activity histogram helpers ─────────────────────────────────────────
@@ -165,6 +183,8 @@ export function HomeView() {
         messengersRaw,
         activityCounts,
         messengerSessionCount,
+        wsConfigs,
+        activeWsId,
       ] = await Promise.all([
         config.get('agents'),
         workspace.folders(),
@@ -174,9 +194,13 @@ export function HomeView() {
         config.get('messengers'),
         ai.getActivityCounts(),
         ai.getMessengerSessionCount(),
+        config.get('workspaces'),
+        config.get('activeWorkspace'),
       ])
       if (cancelled) return
       const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
+      const wsList = (wsConfigs as unknown as any[]) || []
+      const currentWs = wsList.find((w: any) => w.id === activeWsId)
       setData({
         agents: agentsData || { list: [], activeId: '' },
         folders: foldersRaw || [],
@@ -188,6 +212,8 @@ export function HomeView() {
         messengers: (messengersRaw || []) as MessengerConfig[],
         activityCounts: activityCounts || {},
         messengerSessionCount: messengerSessionCount || 0,
+        layouts: (currentWs?.layouts as LayoutEntry[]) || [],
+        activeLayoutId: currentWs?.activeLayoutId || '',
       })
       setLoading(false)
     }
@@ -216,6 +242,8 @@ export function HomeView() {
       messengersRaw,
       activityCounts,
       messengerSessionCount,
+      wsConfigs,
+      activeWsId,
     ] = await Promise.all([
       config.get('agents'),
       workspace.folders(),
@@ -225,8 +253,12 @@ export function HomeView() {
       config.get('messengers'),
       ai.getActivityCounts(),
       ai.getMessengerSessionCount(),
+      config.get('workspaces'),
+      config.get('activeWorkspace'),
     ])
     const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
+    const wsList = (wsConfigs as unknown as any[]) || []
+    const currentWs = wsList.find((w: any) => w.id === activeWsId)
     setData({
       agents: agentsData || { list: [], activeId: '' },
       folders: foldersRaw || [],
@@ -238,6 +270,8 @@ export function HomeView() {
       messengers: (messengersRaw || []) as MessengerConfig[],
       activityCounts: activityCounts || {},
       messengerSessionCount: messengerSessionCount || 0,
+      layouts: (currentWs?.layouts as LayoutEntry[]) || [],
+      activeLayoutId: currentWs?.activeLayoutId || '',
     })
   }, [])
 
@@ -251,6 +285,30 @@ export function HomeView() {
 
   const handleSelectSession = useCallback(async (sessionId: string) => {
     events.execute('OPEN_SESSION', { sessionId })
+  }, [])
+
+  // ── Add Shortcut modal ───────────────────────────────────────────────
+  const [showAddShortcutModal, setShowAddShortcutModal] = useState(false)
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
+  const presetScrollRef = useRef<HTMLDivElement>(null)
+
+  const handleAddShortcut = useCallback(() => {
+    if (!selectedPreset) return
+    const preset = SHORTCUT_PRESETS.find((p) => p.id === selectedPreset)
+    if (!preset) return
+    const layout = preset.getLayout()
+    events.execute('ADD_LAYOUT', {
+      name: preset.name,
+      layout,
+      icon: preset.icon,
+      description: preset.description,
+    })
+    setShowAddShortcutModal(false)
+    setSelectedPreset(null)
+  }, [selectedPreset])
+
+  const handleDeleteLayout = useCallback((id: string) => {
+    events.execute('REMOVE_LAYOUT', id)
   }, [])
 
   // ── Add Skill modal ──────────────────────────────────────────────────
@@ -319,6 +377,8 @@ export function HomeView() {
     messengers,
     activityCounts,
     messengerSessionCount,
+    layouts,
+    activeLayoutId,
   } = data
   const sessions = rawSessions
   const recentSessions = sessions.slice(0, 4)
@@ -461,6 +521,37 @@ export function HomeView() {
             )}
           </Section>
 
+          {/* ── Shortcuts ── */}
+          <Section
+            title={t('shortcutsSection')}
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedPreset(null)
+                  setShowAddShortcutModal(true)
+                }}
+                className={ADD_ITEM_BUTTON}
+              >
+                <Plus size={14} /> {t('shortcutsAdd')}
+              </Button>
+            }
+          >
+            {layouts.length > 0 ? (
+              <ShortcutRow
+                layouts={layouts}
+                activeLayoutId={activeLayoutId}
+                onSelect={(id) => events.execute('SWITCH_LAYOUT', id)}
+                onDelete={handleDeleteLayout}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground/50 italic">
+                {t('shortcutsNoData')}
+              </p>
+            )}
+          </Section>
+
           {/* ── Add Skill Modal ── */}
           {showAddSkillModal && !showGitHubInput && (
             <Modal
@@ -506,6 +597,110 @@ export function HomeView() {
                     </div>
                   </div>
                 </button>
+              </div>
+            </Modal>
+          )}
+
+          {/* ── Add Shortcut Modal ── */}
+          {showAddShortcutModal && (
+            <Modal
+              isOpen
+              onClose={() => {
+                setShowAddShortcutModal(false)
+                setSelectedPreset(null)
+              }}
+              title={t('shortcutsAddTitle')}
+              size="md"
+            >
+              <div className="space-y-4 py-2">
+                <p className="text-sm text-muted-foreground">
+                  {t('shortcutsAddDesc')}
+                </p>
+
+                {/* Preset list — scrollable row */}
+                <div className="relative">
+                  <div
+                    ref={presetScrollRef}
+                    className="flex gap-3 overflow-x-auto no-scrollbar pb-1"
+                  >
+                    {SHORTCUT_PRESETS.map((preset) => {
+                      const PresetIcon =
+                        SHORTCUT_ICON_MAP[preset.icon] || LayoutIcon
+                      const isSelected = selectedPreset === preset.id
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() =>
+                            setSelectedPreset(isSelected ? null : preset.id)
+                          }
+                          className={cn(
+                            'flex flex-col items-center gap-2 py-3 px-4 rounded-xl border transition-all shrink-0',
+                            isSelected
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-border/60 hover:bg-accent/5',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'flex items-center justify-center w-12 h-12 rounded-lg transition-all',
+                              isSelected
+                                ? 'bg-primary/10 text-primary'
+                                : 'bg-accent/10 text-muted-foreground',
+                            )}
+                          >
+                            <PresetIcon size={24} />
+                          </div>
+                          <span className="text-xs font-medium text-foreground whitespace-nowrap">
+                            {preset.name}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedPreset && (
+                  <div className="rounded-lg bg-accent/5 border border-border p-3">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {SHORTCUT_PRESETS.find((p) => p.id === selectedPreset)
+                        ?.description || ''}
+                    </p>
+                  </div>
+                )}
+
+                {/* Limit reached message */}
+                {layouts.length >= 10 && (
+                  <div className="rounded-lg bg-warning/10 border border-warning/30 p-3">
+                    <p className="text-xs text-foreground leading-relaxed">
+                      You've reached the maximum of 10 shortcuts. Delete an
+                      existing shortcut before adding a new one.
+                    </p>
+                  </div>
+                )}
+
+                {/* Add button */}
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowAddShortcutModal(false)
+                      setSelectedPreset(null)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    disabled={!selectedPreset || layouts.length >= 10}
+                    onClick={handleAddShortcut}
+                  >
+                    {t('shortcutsAddBtn')}
+                  </Button>
+                </div>
               </div>
             </Modal>
           )}
@@ -958,6 +1153,300 @@ function ActivityHistogram({
     </div>
   )
 }
+
+// ── Shortcut Presets ──────────────────────────────────────────────────
+
+interface ShortcutPreset {
+  id: string
+  name: string
+  description: string
+  icon: string
+  getLayout: () => LayoutNode
+}
+
+const SHORTCUT_PRESETS: ShortcutPreset[] = [
+  {
+    id: 'coder-lite',
+    name: 'Coder Lite',
+    description:
+      'A three-column layout with treeview, file browser, and AI chat — perfect for coding.',
+    icon: 'code',
+    getLayout: () => {
+      const uid = () => Math.random().toString(36).slice(2, 10)
+      return {
+        id: `vibe-${uid()}`,
+        type: 'split',
+        direction: 'horizontal',
+        size: 100,
+        children: [
+          { id: `leaf-${uid()}`, type: 'leaf', name: 'treeview', size: 20 },
+          {
+            id: `leaf-${uid()}`,
+            type: 'leaf',
+            name: 'file-browser',
+            size: 50,
+          },
+          { id: `leaf-${uid()}`, type: 'leaf', name: 'aichat', size: 30 },
+        ],
+      }
+    },
+  },
+  {
+    id: 'reader',
+    name: 'Reader',
+    description:
+      'A single-tile RSS reader view — keep up with your favorite feeds.',
+    icon: 'rss',
+    getLayout: () => {
+      const uid = () => Math.random().toString(36).slice(2, 10)
+      return {
+        id: `leaf-${uid()}`,
+        type: 'leaf',
+        size: 100,
+        name: 'rss',
+      }
+    },
+  },
+  {
+    id: 'spotify',
+    name: 'Spotify',
+    description:
+      'An experimental integration for exploring possibilities for music discovery.',
+    icon: 'spotify',
+    getLayout: () => {
+      const uid = () => Math.random().toString(36).slice(2, 10)
+      return {
+        id: `leaf-${uid()}`,
+        type: 'leaf',
+        size: 100,
+        name: 'spotify',
+      }
+    },
+  },
+]
+
+// ── Shared Layout Helpers ─────────────────────────────────────────────
+// Default icons for system layouts (matching the sidebar icon map).
+
+const SYSTEM_ICON_MAP: Record<string, typeof LayoutIcon> = {
+  'sys-home': Home,
+  'sys-projects': FolderOpen,
+  'sys-settings': Settings,
+}
+
+// Ordered list matching the sidebar order: system items first (home, projects),
+// then user-created layouts. Each entry includes the resolved icon component.
+
+function getOrderedLayouts(
+  layouts: LayoutEntry[],
+): (LayoutEntry & { iconComponent: typeof LayoutIcon })[] {
+  const systemOrder = ['sys-home', 'sys-projects', 'sys-settings']
+  const systemLayouts: (LayoutEntry & { iconComponent: typeof LayoutIcon })[] =
+    []
+  const userLayouts: (LayoutEntry & { iconComponent: typeof LayoutIcon })[] = []
+
+  for (const layout of layouts) {
+    // Resolve icon: use system icon for known system layouts, otherwise use layout.icon
+    const comp =
+      layout.system && SYSTEM_ICON_MAP[layout.id]
+        ? SYSTEM_ICON_MAP[layout.id]
+        : layout.icon
+          ? SHORTCUT_ICON_MAP[layout.icon] || LayoutIcon
+          : LayoutIcon
+    const entry = { ...layout, iconComponent: comp }
+    if (layout.system && systemOrder.includes(layout.id)) {
+      systemLayouts.push(entry)
+    } else {
+      userLayouts.push(entry)
+    }
+  }
+
+  // Sort system layouts by sidebar order
+  systemLayouts.sort(
+    (a, b) => systemOrder.indexOf(a.id) - systemOrder.indexOf(b.id),
+  )
+  // Sort user layouts by name
+  userLayouts.sort((a, b) => a.name.localeCompare(b.name))
+
+  return [...systemLayouts, ...userLayouts]
+}
+
+// ── Shortcut Row ──────────────────────────────────────────────────────
+
+function ShortcutRow({
+  layouts,
+  activeLayoutId,
+  onSelect,
+  onDelete,
+}: {
+  layouts: LayoutEntry[]
+  activeLayoutId: string
+  onSelect: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    updateScrollState()
+    el.addEventListener('scroll', updateScrollState)
+    const ro = new ResizeObserver(updateScrollState)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', updateScrollState)
+      ro.disconnect()
+    }
+  }, [updateScrollState])
+
+  const scrollBy = (dir: 'left' | 'right') => {
+    const el = scrollRef.current
+    if (!el) return
+    const amount = 120
+    el.scrollBy({
+      left: dir === 'left' ? -amount : amount,
+      behavior: 'smooth',
+    })
+  }
+
+  return (
+    <div className="relative">
+      {/* Left arrow */}
+      {canScrollLeft && (
+        <button
+          type="button"
+          onClick={() => scrollBy('left')}
+          className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-sidebar border border-border shadow-sm text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Scroll left"
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            role="img"
+            aria-label="Scroll left"
+          >
+            <path d="M6 2L3 5L6 8" />
+          </svg>
+        </button>
+      )}
+
+      {/* Scrollable row */}
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto no-scrollbar py-1"
+      >
+        {getOrderedLayouts(layouts).map((layout) => (
+          <ShortcutItem
+            key={layout.id}
+            layout={layout}
+            iconComponent={layout.iconComponent}
+            isActive={layout.id === activeLayoutId}
+            onSelect={onSelect}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+
+      {/* Right arrow */}
+      {canScrollRight && (
+        <button
+          type="button"
+          onClick={() => scrollBy('right')}
+          className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-sidebar border border-border shadow-sm text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Scroll right"
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            role="img"
+            aria-label="Scroll right"
+          >
+            <path d="M4 2L7 5L4 8" />
+          </svg>
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Shortcut Item ──────────────────────────────────────────────────────
+
+const SHORTCUT_ICON_MAP: Record<string, typeof LayoutIcon> = {
+  code: Code,
+  rss: Rss,
+  spotify: Headphones,
+}
+
+function ShortcutItem({
+  layout,
+  iconComponent,
+  onSelect,
+  onDelete,
+}: {
+  layout: LayoutEntry
+  iconComponent: typeof LayoutIcon
+  isActive: boolean
+  onSelect: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const Icon = iconComponent
+
+  return (
+    <div className="relative shrink-0 group">
+      <button
+        type="button"
+        onClick={() => onSelect(layout.id)}
+        className={cn(
+          'flex flex-col items-center gap-1.5 py-2 px-1 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-accent/10',
+        )}
+        title={layout.description || layout.name}
+      >
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent/10">
+          <Icon size={18} />
+        </div>
+        <span className="text-[9px] font-medium leading-tight text-center break-words max-w-[60px] text-muted-foreground">
+          {layout.name}
+        </span>
+      </button>
+
+      {/* Delete button — shown on group hover for non-system layouts */}
+      {!layout.system && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(layout.id)
+          }}
+          className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm hover:opacity-80 transition-opacity opacity-0 group-hover:opacity-100"
+          title="Remove shortcut"
+        >
+          <Trash2 size={10} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Activity Histogram helpers ────────────────────────────────────────
 
 const MONTH_NAMES = [
   'Jan',

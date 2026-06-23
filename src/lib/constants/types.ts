@@ -29,6 +29,10 @@ export interface LayoutConfig {
   id: string
   name: string
   layout: LayoutNode
+  /** Icon identifier for sidebar display */
+  icon?: string
+  /** Description shown when selecting a layout preset */
+  description?: string
   /** System layouts (Home, Projects, Settings) cannot be modified or removed */
   system?: boolean
   /** Fixed layouts prevent tile add/delete operations but allow resizing */

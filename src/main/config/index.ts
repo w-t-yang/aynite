@@ -62,6 +62,7 @@ export function setupConfigIpc() {
           ConfigKey.SKILLS,
           ConfigKey.COMMANDS,
           ConfigKey.TOOLS,
+          ConfigKey.WORKSPACE,
         ].includes(key as ConfigKey)
       ) {
         broadcastAppEvent(AppEvents.CONFIG_CHANGED, { key })

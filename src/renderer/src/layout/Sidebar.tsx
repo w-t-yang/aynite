@@ -1,8 +1,23 @@
-import { FolderOpen, Home, Layout, Settings } from 'lucide-react'
+import {
+  Code,
+  FolderOpen,
+  Headphones,
+  Home,
+  Layout,
+  Rss,
+  Settings,
+} from 'lucide-react'
 import type React from 'react'
 import { useI18n } from '../../shared/i18n/useI18n'
 import { cn } from '../../shared/lib/utils'
 import { useApp } from '../AppContext'
+
+const LAYOUT_ICONS: Record<string, typeof Layout> = {
+  code: Code,
+  layout: Layout,
+  rss: Rss,
+  spotify: Headphones,
+}
 
 const SYSTEM_ITEMS = [
   { id: 'home', layoutId: 'sys-home', icon: Home },
@@ -25,11 +40,14 @@ const Sidebar: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col bg-sidebar/80 backdrop-blur-md select-none shrink-0"
-      style={{ width: SIDEBAR_WIDTH }}
+      className="flex flex-col bg-sidebar/80 backdrop-blur-md select-none shrink-0 font-['Inter',ui-sans-serif,system-ui,sans-serif]"
+      style={{ width: SIDEBAR_WIDTH, fontSize: '14px' }}
     >
       {/* System items: Home, Projects */}
-      <div className="flex flex-col items-center gap-1 pt-3 px-2">
+      <div
+        className="flex flex-col items-center pt-[12px] px-[8px]"
+        style={{ gap: '4px' }}
+      >
         {SYSTEM_ITEMS.map((item) => {
           const Icon = item.icon
           const isActive = isSystemActive(item.layoutId)
@@ -39,22 +57,26 @@ const Sidebar: React.FC = () => {
               type="button"
               onClick={() => switchLayout(item.layoutId)}
               className={cn(
-                'w-full flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg transition-all',
+                'w-full flex flex-col items-center px-[4px] rounded-lg transition-all',
                 isActive
                   ? 'text-muted-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
               )}
+              style={{ gap: '4px', paddingTop: '6px', paddingBottom: '6px' }}
               title={t(`sidebar.${item.id}`)}
             >
               <div
                 className={cn(
-                  'flex items-center justify-center w-10 h-10 rounded-lg transition-all',
+                  'flex items-center justify-center w-[40px] h-[40px] rounded-lg transition-all',
                   isActive && 'bg-primary/10 text-primary',
                 )}
               >
                 <Icon size={20} />
               </div>
-              <span className="text-[10px] font-medium leading-tight">
+              <span
+                className="font-medium leading-tight text-center"
+                style={{ fontSize: '10px' }}
+              >
                 {t(`sidebar.${item.id}`)}
               </span>
             </button>
@@ -64,31 +86,41 @@ const Sidebar: React.FC = () => {
 
       {/* User Layouts */}
       {userLayouts.length > 0 && (
-        <div className="flex flex-col items-center gap-1 mt-2 px-2">
+        <div
+          className="flex flex-col items-center px-[8px]"
+          style={{ gap: '4px', marginTop: '8px' }}
+        >
           {userLayouts.map((layout: any) => {
             const isActive = workspaceConfig?.activeLayoutId === layout.id
+            const Icon = layout.icon
+              ? LAYOUT_ICONS[layout.icon] || Layout
+              : Layout
             return (
               <button
                 key={layout.id}
                 type="button"
                 onClick={() => switchLayout(layout.id)}
                 className={cn(
-                  'w-full flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg transition-all',
+                  'w-full flex flex-col items-center px-[4px] rounded-lg transition-all',
                   isActive
                     ? 'text-muted-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                 )}
-                title={layout.name}
+                style={{ gap: '4px', paddingTop: '6px', paddingBottom: '6px' }}
+                title={layout.description || layout.name}
               >
                 <div
                   className={cn(
-                    'flex items-center justify-center w-10 h-10 rounded-lg transition-all',
+                    'flex items-center justify-center w-[40px] h-[40px] rounded-lg transition-all',
                     isActive && 'bg-primary/10 text-primary',
                   )}
                 >
-                  <Layout size={18} />
+                  <Icon size={18} />
                 </div>
-                <span className="text-[9px] font-medium leading-tight text-center break-words max-w-[60px]">
+                <span
+                  className="font-medium leading-tight text-center break-words"
+                  style={{ fontSize: '9px', maxWidth: '60px' }}
+                >
                   {layout.name}
                 </span>
               </button>
@@ -101,27 +133,31 @@ const Sidebar: React.FC = () => {
       <div className="flex-1" />
 
       {/* Bottom item: Settings */}
-      <div className="flex flex-col items-center px-2 pb-3">
+      <div className="flex flex-col items-center px-[8px] pb-[12px]">
         <button
           type="button"
           onClick={() => switchLayout('sys-settings')}
           className={cn(
-            'w-full flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg transition-all',
+            'w-full flex flex-col items-center px-[4px] rounded-lg transition-all',
             isSystemActive('sys-settings')
               ? 'text-muted-foreground'
               : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
           )}
+          style={{ gap: '4px', paddingTop: '6px', paddingBottom: '6px' }}
           title={t('sidebar.settings')}
         >
           <div
             className={cn(
-              'flex items-center justify-center w-10 h-10 rounded-lg transition-all',
+              'flex items-center justify-center w-[40px] h-[40px] rounded-lg transition-all',
               isSystemActive('sys-settings') && 'bg-primary/10 text-primary',
             )}
           >
             <Settings size={20} />
           </div>
-          <span className="text-[10px] font-medium leading-tight">
+          <span
+            className="font-medium leading-tight text-center"
+            style={{ fontSize: '10px' }}
+          >
             {t('sidebar.settings')}
           </span>
         </button>
