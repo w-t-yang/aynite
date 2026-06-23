@@ -76,6 +76,8 @@ const aynite = {
   restorePrompts: () => ipcRenderer.invoke(AiChannels.PROMPT_RESTORE),
   listSessions: () => ipcRenderer.invoke(AiChannels.SESSION_LIST),
   getActivityCounts: () => ipcRenderer.invoke(AiChannels.GET_ACTIVITY_COUNTS),
+  getMessengerSessionCount: () =>
+    ipcRenderer.invoke(AiChannels.GET_MESSENGER_SESSION_COUNT),
   saveSession: (sessionId: string, messages: any[], metadata?: any) =>
     ipcRenderer.invoke(AiChannels.SESSION_SAVE, {
       sessionId,

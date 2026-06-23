@@ -52,6 +52,7 @@ export const AiChannels = {
   PROMPT_PICK_FILE: 'aynite:ai-prompt-pick-file',
   ARTIFACTS_STATUS: 'aynite:ai-artifacts-status',
   GET_ACTIVITY_COUNTS: 'aynite:ai-get-activity-counts',
+  GET_MESSENGER_SESSION_COUNT: 'aynite:ai-get-messenger-session-count',
 } as const
 
 export const AiEventChannels = {

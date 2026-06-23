@@ -234,6 +234,57 @@ export async function listSessions(workspace: string) {
 }
 
 /**
+ * Count total messenger bot sessions across all bots, including
+ * current sessions, archived sessions, and compacted backups.
+ */
+export async function getMessengerSessionCount(): Promise<number> {
+  let count = 0
+  const botsDir = getBotsDir()
+  const messengerDirs = await readdir(botsDir).catch(() => [])
+  for (const messengerEntry of messengerDirs) {
+    if (!messengerEntry.isDirectory()) continue
+    const messengerId = messengerEntry.name
+    const chatDirs = await readdir(path.join(botsDir, messengerId)).catch(
+      () => [],
+    )
+    for (const chatEntry of chatDirs) {
+      if (!chatEntry.isDirectory()) continue
+      const chatName = chatEntry.name
+      if (chatName === 'commits') continue
+      const sessionDir = path.join(botsDir, messengerId, chatName, 'session')
+      const files = await readdir(sessionDir).catch(() => [])
+      for (const f of files) {
+        const name = f.name ?? f
+        if (name === 'metadata.json' || name === 'archive') continue
+        // Count messages.json, compacted-*.json, and archive/*.json
+        if (name === 'messages.json') {
+          count++
+          continue
+        }
+        if (
+          typeof name === 'string' &&
+          name.startsWith('compacted-') &&
+          name.endsWith('.json')
+        ) {
+          count++
+          continue
+        }
+        // Check archive directory
+        if (name === 'archive') {
+          const archiveDir = path.join(sessionDir, 'archive')
+          const archiveFiles = await readdir(archiveDir).catch(() => [])
+          count += archiveFiles.filter((af) => {
+            const an = af.name ?? af
+            return typeof an === 'string' && an.endsWith('.json')
+          }).length
+        }
+      }
+    }
+  }
+  return count
+}
+
+/**
  * Aggregate per-date message counts from all workspaces' AI sessions
  * and all messenger bot chat logs.
  *

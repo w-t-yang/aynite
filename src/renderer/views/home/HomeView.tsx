@@ -65,6 +65,7 @@ type DashboardData = {
   sessions: SessionEntry[]
   messengers: MessengerConfig[]
   activityCounts: Record<string, number>
+  messengerSessionCount: number
 }
 
 // ── Activity histogram helpers ─────────────────────────────────────────
@@ -163,6 +164,7 @@ export function HomeView() {
         sessionsRaw,
         messengersRaw,
         activityCounts,
+        messengerSessionCount,
       ] = await Promise.all([
         config.get('agents'),
         workspace.folders(),
@@ -171,6 +173,7 @@ export function HomeView() {
         ai.listSessions(),
         config.get('messengers'),
         ai.getActivityCounts(),
+        ai.getMessengerSessionCount(),
       ])
       if (cancelled) return
       const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
@@ -184,6 +187,7 @@ export function HomeView() {
         sessions: (sessionsRaw || []) as SessionEntry[],
         messengers: (messengersRaw || []) as MessengerConfig[],
         activityCounts: activityCounts || {},
+        messengerSessionCount: messengerSessionCount || 0,
       })
       setLoading(false)
     }
@@ -211,6 +215,7 @@ export function HomeView() {
       sessionsRaw,
       messengersRaw,
       activityCounts,
+      messengerSessionCount,
     ] = await Promise.all([
       config.get('agents'),
       workspace.folders(),
@@ -219,6 +224,7 @@ export function HomeView() {
       ai.listSessions(),
       config.get('messengers'),
       ai.getActivityCounts(),
+      ai.getMessengerSessionCount(),
     ])
     const agentsData = agentsRaw as { activeId: string; list: Agent[] } | null
     setData({
@@ -231,6 +237,7 @@ export function HomeView() {
       sessions: (sessionsRaw || []) as SessionEntry[],
       messengers: (messengersRaw || []) as MessengerConfig[],
       activityCounts: activityCounts || {},
+      messengerSessionCount: messengerSessionCount || 0,
     })
   }, [])
 
@@ -311,6 +318,7 @@ export function HomeView() {
     sessions: rawSessions,
     messengers,
     activityCounts,
+    messengerSessionCount,
   } = data
   const sessions = rawSessions
   const recentSessions = sessions.slice(0, 4)
@@ -324,6 +332,9 @@ export function HomeView() {
           <div className="text-center pt-4 pb-2">
             <AnimatedWelcome />
           </div>
+
+          {/* ── Activity Histogram ── */}
+          <ActivityHistogram activityCounts={activityCounts} />
 
           {/* ── Agents ── */}
           <Section title={t('agentsSection')} className="space-y-3">
@@ -349,11 +360,10 @@ export function HomeView() {
           {/* ── Recent Sessions ── */}
           <Section
             title={t('sessionsSection')}
-            description={`You have worked with Aynite through ${sessions.length} sessions`}
+            description={`You have worked with Aynite through ${sessions.length} desktop sessions and ${messengerSessionCount} messenger sessions`}
           >
             {sessions.length > 0 ? (
               <div className="space-y-6">
-                <ActivityHistogram activityCounts={activityCounts} />
                 <div className={GRID_2_COL}>
                   {recentSessions.map((s) => (
                     <SessionCard
@@ -827,7 +837,7 @@ function ActivityHistogram({
       <div className="flex items-center gap-2 mb-4">
         <div className="size-2 rounded-full bg-primary/60" />
         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-          Message Activity
+          Aynite Activity
         </span>
       </div>
 

@@ -44,6 +44,8 @@ export const ai = (() => ({
 
   getActivityCounts: (): Promise<Record<string, number>> =>
     getAynite().getActivityCounts(),
+  getMessengerSessionCount: (): Promise<number> =>
+    getAynite().getMessengerSessionCount(),
 
   loadSession: (sessionId: string, date?: string): Promise<any> =>
     getAynite().loadSession(sessionId, date),

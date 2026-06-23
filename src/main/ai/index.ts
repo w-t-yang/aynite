@@ -153,6 +153,11 @@ export function setupAiIpc() {
     return await getCombinedActivityCounts()
   })
 
+  ipcMain.handle(AiChannels.GET_MESSENGER_SESSION_COUNT, async () => {
+    const { getMessengerSessionCount } = await import('./chat')
+    return await getMessengerSessionCount()
+  })
+
   ipcMain.handle(AiChannels.ARTIFACTS_STATUS, async (event) => {
     const winId = getWinIdFromSender(event.sender)
     const workspaceName = await getWindowWorkspace(winId)
