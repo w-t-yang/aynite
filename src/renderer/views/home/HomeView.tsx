@@ -1,21 +1,28 @@
 import {
+  Book,
   Bot as BotIcon,
   Brain,
+  Camera,
   Code,
   Compass,
   Download,
+  FileText,
   Folder as FolderIcon,
   FolderOpen,
+  Globe,
   Headphones,
   Heart,
   Home,
+  Image,
   Layout as LayoutIcon,
   MessageCircle,
+  Music,
   Plus,
   Rss,
   Settings,
   Sparkles,
   Star,
+  Terminal,
   Trash2,
   Workflow,
   Zap,
@@ -291,10 +298,34 @@ export function HomeView() {
   // ── Add Shortcut modal ───────────────────────────────────────────────
   const [showAddShortcutModal, setShowAddShortcutModal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
+  const [customName, setCustomName] = useState('')
+  const [customIcon, setCustomIcon] = useState<string | null>(null)
   const presetScrollRef = useRef<HTMLDivElement>(null)
 
   const handleAddShortcut = useCallback(() => {
     if (!selectedPreset) return
+
+    if (selectedPreset === 'custom') {
+      if (!customName.trim() || !customIcon) return
+      const uid = () => Math.random().toString(36).slice(2, 10)
+      const layout = {
+        id: `leaf-${uid()}`,
+        type: 'leaf' as const,
+        size: 100,
+        // No name — creates an empty tile that doesn't load any view
+      }
+      events.execute('ADD_LAYOUT', {
+        name: customName.trim(),
+        layout,
+        icon: customIcon,
+      })
+      setShowAddShortcutModal(false)
+      setSelectedPreset(null)
+      setCustomName('')
+      setCustomIcon(null)
+      return
+    }
+
     const preset = SHORTCUT_PRESETS.find((p) => p.id === selectedPreset)
     if (!preset) return
     const layout = preset.getLayout()
@@ -306,7 +337,7 @@ export function HomeView() {
     })
     setShowAddShortcutModal(false)
     setSelectedPreset(null)
-  }, [selectedPreset])
+  }, [selectedPreset, customName, customIcon])
 
   const handleDeleteLayout = useCallback((id: string) => {
     events.execute('REMOVE_LAYOUT', id)
@@ -531,6 +562,8 @@ export function HomeView() {
                 size="sm"
                 onClick={() => {
                   setSelectedPreset(null)
+                  setCustomName('')
+                  setCustomIcon(null)
                   setShowAddShortcutModal(true)
                 }}
                 className={ADD_ITEM_BUTTON}
@@ -609,6 +642,8 @@ export function HomeView() {
               onClose={() => {
                 setShowAddShortcutModal(false)
                 setSelectedPreset(null)
+                setCustomName('')
+                setCustomIcon(null)
               }}
               title={t('shortcutsAddTitle')}
               size="md"
@@ -662,12 +697,63 @@ export function HomeView() {
                 </div>
 
                 {/* Description */}
-                {selectedPreset && (
+                {selectedPreset && selectedPreset !== 'custom' && (
                   <div className="rounded-lg bg-accent/5 border border-border p-3">
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {SHORTCUT_PRESETS.find((p) => p.id === selectedPreset)
                         ?.description || ''}
                     </p>
+                  </div>
+                )}
+
+                {/* Custom: name input + icon selector */}
+                {selectedPreset === 'custom' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label
+                        htmlFor="custom-shortcut-name"
+                        className="text-xs font-medium text-foreground/70 block mb-1.5"
+                      >
+                        Name
+                      </label>
+                      <input
+                        id="custom-shortcut-name"
+                        type="text"
+                        value={customName}
+                        onChange={(e) => setCustomName(e.target.value)}
+                        placeholder="My Shortcut"
+                        className="w-full h-9 px-3 text-sm rounded-[6px] border border-border bg-background text-foreground outline-none focus:border-foreground/40 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-foreground/70 block mb-1.5">
+                        Icon
+                      </span>
+                      <div className="grid grid-cols-10 gap-1.5">
+                        {CUSTOM_ICONS.map((ci) => {
+                          const CiIcon = ci.icon
+                          const isSelected = customIcon === ci.id
+                          return (
+                            <button
+                              key={ci.id}
+                              type="button"
+                              onClick={() =>
+                                setCustomIcon(isSelected ? null : ci.id)
+                              }
+                              className={cn(
+                                'flex items-center justify-center w-10 h-10 rounded-lg border transition-all',
+                                isSelected
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-border hover:border-border/60 hover:bg-accent/5 text-muted-foreground',
+                              )}
+                              title={ci.id}
+                            >
+                              <CiIcon size={18} />
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -689,6 +775,8 @@ export function HomeView() {
                     onClick={() => {
                       setShowAddShortcutModal(false)
                       setSelectedPreset(null)
+                      setCustomName('')
+                      setCustomIcon(null)
                     }}
                   >
                     Cancel
@@ -696,7 +784,12 @@ export function HomeView() {
                   <Button
                     variant="primary"
                     className="flex-1"
-                    disabled={!selectedPreset || layouts.length >= 10}
+                    disabled={
+                      !selectedPreset ||
+                      layouts.length >= 10 ||
+                      (selectedPreset === 'custom' &&
+                        (!customName.trim() || !customIcon))
+                    }
                     onClick={handleAddShortcut}
                   >
                     {t('shortcutsAddBtn')}
@@ -1224,6 +1317,42 @@ const SHORTCUT_PRESETS: ShortcutPreset[] = [
       }
     },
   },
+  {
+    id: 'custom',
+    name: 'Custom',
+    description:
+      'Create a shortcut with your own name and icon. Opens an empty tile that you can customize.',
+    icon: 'layout',
+    getLayout: () => {
+      // Custom is handled separately — this is a placeholder.
+      return { id: '', type: 'leaf', size: 100 }
+    },
+  },
+]
+
+// ── Available icons for the Custom shortcut ────────────────────────────
+
+const CUSTOM_ICONS = [
+  { id: 'layout', icon: LayoutIcon },
+  { id: 'code', icon: Code },
+  { id: 'compass', icon: Compass },
+  { id: 'star', icon: Star },
+  { id: 'heart', icon: Heart },
+  { id: 'home', icon: Home },
+  { id: 'book', icon: Book },
+  { id: 'globe', icon: Globe },
+  { id: 'image', icon: Image },
+  { id: 'music', icon: Music },
+  { id: 'camera', icon: Camera },
+  { id: 'file-text', icon: FileText },
+  { id: 'terminal', icon: Terminal },
+  { id: 'message-circle', icon: MessageCircle },
+  { id: 'headphones', icon: Headphones },
+  { id: 'settings', icon: Settings },
+  { id: 'sparkles', icon: Sparkles },
+  { id: 'workflow', icon: Workflow },
+  { id: 'zap', icon: Zap },
+  { id: 'download', icon: Download },
 ]
 
 // ── Shared Layout Helpers ─────────────────────────────────────────────
@@ -1396,6 +1525,25 @@ const SHORTCUT_ICON_MAP: Record<string, typeof LayoutIcon> = {
   code: Code,
   rss: Rss,
   spotify: Headphones,
+  layout: LayoutIcon,
+  compass: Compass,
+  star: Star,
+  heart: Heart,
+  home: Home,
+  book: Book,
+  globe: Globe,
+  image: Image,
+  music: Music,
+  camera: Camera,
+  'file-text': FileText,
+  terminal: Terminal,
+  'message-circle': MessageCircle,
+  headphones: Headphones,
+  settings: Settings,
+  sparkles: Sparkles,
+  workflow: Workflow,
+  zap: Zap,
+  download: Download,
 }
 
 function ShortcutItem({

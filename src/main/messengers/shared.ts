@@ -445,6 +445,7 @@ export async function handleHelp(
   lines.push('`/skills` — List and search skills')
   lines.push('`/skills-add` — Install a skill from GitHub')
   lines.push('`/skill` — Use a skill')
+  lines.push('`/next` — Show suggested next steps')
   lines.push('`/clear` — Archive current session and start a new one')
   lines.push('')
   lines.push('Send any other message to chat with the AI agent.')
@@ -1209,6 +1210,29 @@ export async function handleTodo(
   }
 }
 
+// ─── Command: /next ─────────────────────────────────────────────────────
+
+export async function handleNext(
+  _config: MessengerConfig,
+  ctx: MessengerContext,
+  _chatName?: string,
+) {
+  const lines: string[] = []
+  lines.push('*Next Steps*')
+  lines.push('')
+  lines.push('Here are some things you can try:')
+  lines.push('')
+  lines.push('1. Ask me about your codebase')
+  lines.push('2. Make changes and use `/commit` to commit them')
+  lines.push('3. Use `/dev` to start the dev server')
+  lines.push('4. Use `/todo` to save a task')
+  lines.push('5. Use `/clear` to start a fresh session')
+  lines.push('')
+  lines.push("Or just send me any question and I'll help!")
+
+  await ctx.replyWithMarkdown(lines.join('\n'))
+}
+
 // ─── Command: /clear ────────────────────────────────────────────────────
 
 export async function handleClear(
@@ -1718,6 +1742,8 @@ export async function processIncomingMessage(
       msg.senderLabel,
       groupContextLines,
     )
+  } else if (lowerCmd === '/next') {
+    await handleNext(config, ctx, msg.chatName)
   } else if (lowerCmd === '/clear') {
     await handleClear(config, ctx, msg.chatName)
   } else {
