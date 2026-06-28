@@ -1704,7 +1704,14 @@ export async function processIncomingMessage(
   }
 
   // ── 7. Command routing (using text without mention) ────────────────────
-  const lowerCmd = msg.textWithoutMention.toLowerCase()
+  // Normalize fullwidth Unicode characters (e.g. ／？ → /?)
+  // Some mobile keyboards output fullwidth characters instead of ASCII.
+  const normalized = msg.textWithoutMention
+    .toLowerCase()
+    .replace(/[\uFF01-\uFF5E]/g, (ch) =>
+      String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
+    )
+  const lowerCmd = normalized
 
   if (
     lowerCmd === '/?' ||
