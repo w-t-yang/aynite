@@ -79,7 +79,7 @@ export async function runAgentLoop(
     hooks,
   } = options
 
-  const model = getAIModel(config)
+  const model = await getAIModel(config)
 
   // ── Extract system message ─────────────────────────────────────────────
   const systemMessage = messages.find((m) => m.role === 'system')

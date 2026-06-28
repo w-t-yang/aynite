@@ -69,7 +69,8 @@ export function setupAiIpc() {
       })
     } else if (
       (provider === 'openai' || provider === 'anthropic') &&
-      !params.config.apiKey
+      !params.config.apiKey &&
+      typeof params.config.apiKey !== 'object'
     ) {
       sendOperationToWindow(winId, AppOperation.SHOW_NOTIFICATION, {
         type: 'error',

@@ -155,9 +155,7 @@ describe('aiChat', () => {
   })
 
   it('handles getAIModel failure gracefully', async () => {
-    mockGetAIModel.mockImplementation(() => {
-      throw new Error('No model configured')
-    })
+    mockGetAIModel.mockRejectedValue(new Error('No model configured'))
 
     // getAIModel is now called inside runAgentLoop() (async), so aiChat
     // returns requestId successfully — errors are emitted on the stream

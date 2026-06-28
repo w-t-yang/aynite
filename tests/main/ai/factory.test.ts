@@ -28,8 +28,8 @@ vi.mock('ai-sdk-ollama', () => ({
 import { getAIModel } from '../../../src/main/ai/factory'
 
 describe('getAIModel', () => {
-  it('creates OpenAI model', () => {
-    const model = getAIModel({
+  it('creates OpenAI model', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'openai',
       apiKey: 'sk-test',
@@ -40,8 +40,8 @@ describe('getAIModel', () => {
     expect(model.modelId).toBe('openai-gpt')
   })
 
-  it('creates Anthropic model', () => {
-    const model = getAIModel({
+  it('creates Anthropic model', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'anthropic',
       apiKey: 'sk-ant-test',
@@ -51,8 +51,8 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('creates Google/Gemini model', () => {
-    const model = getAIModel({
+  it('creates Google/Gemini model', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'gemini',
       apiKey: 'gsk-test',
@@ -62,8 +62,8 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('creates DeepSeek model', () => {
-    const model = getAIModel({
+  it('creates DeepSeek model', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'deepseek',
       apiKey: 'ds-test',
@@ -73,8 +73,8 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('creates Ollama model with default URL', () => {
-    const model = getAIModel({
+  it('creates Ollama model with default URL', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'ollama',
       model: 'llama3',
@@ -83,8 +83,8 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('creates Ollama model with custom URL', () => {
-    const model = getAIModel({
+  it('creates Ollama model with custom URL', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'ollama',
       baseUrl: 'http://192.168.1.100:11434',
@@ -94,8 +94,8 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('creates openai-compatible model', () => {
-    const model = getAIModel({
+  it('creates openai-compatible model', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'openai-compatible',
       apiKey: 'sk-test',
@@ -106,8 +106,8 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('creates others model with anthropic compatibility', () => {
-    const model = getAIModel({
+  it('creates others model with anthropic compatibility', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'others',
       apiKey: 'sk-test',
@@ -119,8 +119,8 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('creates others model with google compatibility', () => {
-    const model = getAIModel({
+  it('creates others model with google compatibility', async () => {
+    const model = await getAIModel({
       id: 'test',
       provider: 'others',
       apiKey: 'sk-test',
@@ -132,13 +132,13 @@ describe('getAIModel', () => {
     expect(model).toBeDefined()
   })
 
-  it('throws for unsupported provider', () => {
-    expect(() =>
+  it('throws for unsupported provider', async () => {
+    await expect(
       getAIModel({
         id: 'test',
         provider: 'unsupported-provider',
         model: 'test',
       } as any),
-    ).toThrow('Unsupported AI provider')
+    ).rejects.toThrow('Unsupported AI provider')
   })
 })

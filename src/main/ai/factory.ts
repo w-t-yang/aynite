@@ -7,12 +7,14 @@ import { createOllama } from 'ai-sdk-ollama'
 
 import { DISABLED_REASONING_OPTIONS } from '../../lib/constants/ai'
 import type { AIProvider } from '../../lib/types/ai'
+import { resolveApiKey } from './key-resolver'
 
 export type { AIProvider }
 export { DISABLED_REASONING_OPTIONS }
 
-export function getAIModel(config: AIProvider): LanguageModel {
-  const { provider, apiKey, baseUrl, model, compatibility } = config
+export async function getAIModel(config: AIProvider): Promise<LanguageModel> {
+  const { provider, baseUrl, model, compatibility } = config
+  const apiKey = await resolveApiKey(config.apiKey)
 
   switch (provider.toLowerCase()) {
     case 'openai':

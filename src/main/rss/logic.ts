@@ -551,7 +551,7 @@ export async function summarizeArticle(
   if (!activeProvider) throw new Error('No active AI provider configured')
 
   // 4. Generate summary via AI (reasoning disabled — unnecessary for summarization)
-  const model = getAIModel(activeProvider)
+  const model = await getAIModel(activeProvider)
   const { text: summary } = await generateText({
     model,
     messages: [

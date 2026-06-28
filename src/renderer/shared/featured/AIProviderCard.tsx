@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DESCRIPTION_TEXT } from '../../../lib/constants/renderer/styles'
+import type { DynamicApiKeyConfig } from '../../../lib/types/ai'
 import { Input } from '../basic/Input'
 import type { AIProvider } from '../lib/types'
 import {
@@ -8,6 +9,13 @@ import {
   EditableCardHeader,
 } from './EditableCard'
 import { SelectionMenu } from './SelectionMenu'
+
+/** Determine if the API key config is dynamic (vs static string) */
+function isDynamicKey(key: unknown): key is DynamicApiKeyConfig {
+  return (
+    typeof key === 'object' && key !== null && (key as any).type === 'dynamic'
+  )
+}
 
 interface AIProviderCardProps {
   provider: AIProvider
@@ -25,6 +33,36 @@ export function AIProviderCard({
   onDelete,
 }: AIProviderCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  // Derive current API key mode from the provider config
+  const keyMode = useMemo(() => {
+    if (isDynamicKey(provider.apiKey)) return 'dynamic' as const
+    return 'static' as const
+  }, [provider.apiKey])
+
+  const dynamicConfig = isDynamicKey(provider.apiKey)
+    ? (provider.apiKey as DynamicApiKeyConfig)
+    : null
+
+  const handleKeyModeChange = (mode: string) => {
+    if (mode === 'dynamic') {
+      onUpdate(provider.id, 'apiKey', {
+        type: 'dynamic',
+        script: '',
+        ttl: 60,
+      } satisfies DynamicApiKeyConfig)
+    } else {
+      onUpdate(provider.id, 'apiKey', '')
+    }
+  }
+
+  const handleDynamicUpdate = (field: string, value: any) => {
+    const current = dynamicConfig || { type: 'dynamic', script: '', ttl: 60 }
+    onUpdate(provider.id, 'apiKey', {
+      ...current,
+      [field]: field === 'ttl' ? Number(value) : value,
+    })
+  }
 
   return (
     <>
@@ -74,16 +112,52 @@ export function AIProviderCard({
           />
 
           {provider.provider !== 'ollama' && (
-            <div className="col-span-2">
-              <Input
-                label="API Key"
-                type="password"
-                value={provider.apiKey || ''}
-                onChange={(e) =>
-                  onUpdate(provider.id, 'apiKey', e.target.value)
-                }
-                placeholder="sk-..."
+            <div className="col-span-2 space-y-3">
+              <SelectionMenu
+                label="API Key Type"
+                activeId={keyMode}
+                onSelect={handleKeyModeChange}
+                items={[
+                  { id: 'static', label: 'Static (Enter Key)' },
+                  { id: 'dynamic', label: 'Dynamic (Run Script)' },
+                ]}
               />
+
+              {keyMode === 'static' ? (
+                <Input
+                  label="API Key"
+                  type="password"
+                  value={
+                    typeof provider.apiKey === 'string' ? provider.apiKey : ''
+                  }
+                  onChange={(e) =>
+                    onUpdate(provider.id, 'apiKey', e.target.value)
+                  }
+                  placeholder="sk-..."
+                />
+              ) : (
+                <div className="space-y-3">
+                  <Input
+                    label="Script (one-liner)"
+                    value={dynamicConfig?.script || ''}
+                    onChange={(e) =>
+                      handleDynamicUpdate('script', e.target.value)
+                    }
+                    placeholder='echo "$MY_API_KEY"'
+                  />
+                  <Input
+                    label="TTL (seconds)"
+                    type="number"
+                    value={dynamicConfig?.ttl ?? 60}
+                    onChange={(e) => handleDynamicUpdate('ttl', e.target.value)}
+                    placeholder="60"
+                  />
+                  <p className="text-[11px] text-muted-foreground/50 leading-relaxed">
+                    The script is executed before each API request. The result
+                    is cached for the TTL duration (refreshed before expiry).
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

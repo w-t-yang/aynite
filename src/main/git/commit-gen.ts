@@ -96,7 +96,7 @@ export async function generateCommitMessage(
 
     let model
     try {
-      model = getAIModel(activeProvider)
+      model = await getAIModel(activeProvider)
     } catch (modelErr: unknown) {
       const msg =
         modelErr instanceof Error ? modelErr.message : String(modelErr)

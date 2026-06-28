@@ -3,11 +3,24 @@ export interface PromptDefinition {
   filename: string
 }
 
+/**
+ * Configuration for a dynamic API key that is resolved at runtime
+ * by executing a one-liner script.
+ */
+export interface DynamicApiKeyConfig {
+  type: 'dynamic'
+  /** Shell one-liner that outputs the API key to stdout (e.g. "echo $MY_KEY") */
+  script: string
+  /** Time-to-live in seconds. Defaults to 60. Refreshed when >80% consumed. */
+  ttl?: number
+}
+
 export interface AIProvider {
   id: string
   name: string
   provider: 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'others'
-  apiKey?: string
+  /** Static API key string, or a DynamicApiKeyConfig for runtime resolution */
+  apiKey?: string | DynamicApiKeyConfig
   baseUrl?: string
   model: string
   compatibility?: 'openai' | 'anthropic' | 'google'
