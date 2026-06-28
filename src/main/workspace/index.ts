@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { AppEvents, AppOperation } from '../../lib/constants/app'
 import { WorkspaceChannels } from '../../lib/constants/ipc-channels'
 import { exists, getAbsolutePath, readdir } from '../../lib/path'
-import { getIgnorePatterns } from '../config'
+import { getIgnorePatterns, isFileIgnored } from '../config'
 import { gitService } from '../git/index'
 import {
   broadcastAppEvent,
@@ -159,7 +159,7 @@ export function setupWorkspaceIpc(): void {
     async function scan(dir: string) {
       const entries = await readdir(dir)
       for (const file of entries) {
-        if (ignorePatterns.includes(file.name)) continue
+        if (isFileIgnored(file.name, ignorePatterns)) continue
         const res = getAbsolutePath(file.name, dir)
         if (file.isDirectory()) {
           await scan(res)

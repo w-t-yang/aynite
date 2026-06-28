@@ -41,9 +41,13 @@ vi.mock('../../../src/lib/path', () => ({
   joinPaths: (...args: unknown[]) => mockJoinPaths(...args),
 }))
 
-vi.mock('../../../src/main/config', () => ({
-  getIgnorePatterns: (...args: unknown[]) => mockGetIgnorePatterns(...args),
-}))
+vi.mock('../../../src/main/config', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../../../src/main/config')>()
+  return {
+    getIgnorePatterns: (...args: unknown[]) => mockGetIgnorePatterns(...args),
+    isFileIgnored: mod.isFileIgnored,
+  }
+})
 
 const mockBroadcastAppEvent = vi.hoisted(() => vi.fn())
 const mockSendToWindow = vi.hoisted(() => vi.fn())
@@ -95,7 +99,6 @@ vi.mock('electron', () => ({
   },
 }))
 
-// Extract FileChannels constants for assertions
 import { FileChannels } from '../../../src/lib/constants/ipc-channels'
 
 beforeEach(() => {
@@ -134,6 +137,23 @@ describe('LIST handler', () => {
       dirent('.DS_Store', false),
     ])
     mockGetIgnorePatterns.mockResolvedValue(['node_modules', '.DS_Store'])
+
+    const handler = getHandler(FileChannels.LIST)
+    const result = await handler(null, '/some/path')
+
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('index.ts')
+  })
+
+  it('filters files by prefix match', async () => {
+    mockReaddir.mockResolvedValue([
+      dirent('index.ts', false),
+      dirent('build', true),
+      dirent('build-output', true),
+      dirent('dist', true),
+      dirent('dist-assets', true),
+    ])
+    mockGetIgnorePatterns.mockResolvedValue(['build', 'dist'])
 
     const handler = getHandler(FileChannels.LIST)
     const result = await handler(null, '/some/path')

@@ -19,7 +19,7 @@ import {
   stat,
   writeText,
 } from '../../lib/path'
-import { getIgnorePatterns } from '../config'
+import { getIgnorePatterns, isFileIgnored } from '../config'
 import { gitService } from '../git/index'
 import {
   broadcastAppEvent,
@@ -73,7 +73,7 @@ export function setupFileIpc() {
         .filter(
           (file) =>
             !Array.isArray(ignorePatterns) ||
-            !ignorePatterns.includes(file.name),
+            !isFileIgnored(file.name, ignorePatterns),
         )
         .map((file) => ({
           name: file.name,

@@ -148,6 +148,17 @@ export async function initAppFolders() {
     'target',
     'vendor',
     'venv',
+    'build',
+    'dist',
+    '.next',
+    'out',
+    '__pycache__',
+    '.cache',
+    'coverage',
+    '.env',
+    '.git',
+    '*.pyc',
+    '*.log',
   ].join('\n')
   if (!(await exists(getAIConfigPath()))) {
     await writeJson(getAIConfigPath(), aiDefault)
