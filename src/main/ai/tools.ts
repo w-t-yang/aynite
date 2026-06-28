@@ -105,13 +105,13 @@ export function createTools(context: ToolContext) {
   const workspaceFolders = readWorkspaceFolders(context)
   const spellFolders = readSpellFolders()
   const domains = [...workspaceFolders, getAyniteDir(), ...spellFolders]
-  const workspaceName = getWorkspaceName(context)
+  const sessionDir = context.sessionDir || ''
 
   return {
     ...createFileOps(domains, workspaceFolders),
     ...createRunCommand(workspaceFolders, context),
-    ...createTaskManager(workspaceName, domains),
-    ...createMemoryManager(workspaceName, domains),
+    ...createTaskManager(sessionDir, domains),
+    ...createMemoryManager(sessionDir, domains),
 
     read_url: {
       description: TOOL_METADATA.read_url.description,
@@ -159,7 +159,7 @@ export function createTools(context: ToolContext) {
           workspaceFolders,
           configDir: getAyniteDir(),
           activeFile: context.activeFile || null,
-          workspaceName,
+          workspaceName: context.workspaceName || 'Aynite',
           shell: {
             platform: process.platform,
             shell: shellConfig.shell,

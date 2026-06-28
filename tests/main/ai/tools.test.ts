@@ -79,6 +79,7 @@ function makeContext(overrides = {}) {
     workspaceName: 'Dev',
     activeFile: '/home/project/src/main.ts',
     onCommandProgress: vi.fn(),
+    sessionDir: '/mock/.aynite/workspaces/Dev/sessions/test-123',
     ...overrides,
   }
 }
@@ -276,7 +277,7 @@ describe('memory tools', () => {
       const result = await tools.read_memory.execute({})
 
       expect(result).toBe(
-        'No project memory found. You can create one manually or ask the user to set it up.',
+        'No session memory found. Use `update_memory` to record decisions and context.',
       )
     })
   })
@@ -307,6 +308,19 @@ describe('memory tools', () => {
       })
 
       expect(result).toContain('memory.md')
+    })
+
+    it('handles write error gracefully', async () => {
+      mockSecureReadText.mockResolvedValue('# Session Memory\n\nExisting.')
+      mockWriteText.mockRejectedValue(new Error('Disk full'))
+
+      const tools = createTools(makeContext())
+      const result = await tools.update_memory.execute({
+        update: 'New info.',
+      })
+
+      expect(result).toContain('Error updating memory')
+      expect(result).toContain('Disk full')
     })
   })
 })

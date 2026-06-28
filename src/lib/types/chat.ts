@@ -9,6 +9,10 @@ export interface SessionMetadata {
   createdAt: string
   updatedAt: string
   summary?: string
+  /** Filename of the current task list (e.g. "tasks-1719567890.md") */
+  currentTaskFile?: string
+  /** Filename of the current plan (e.g. "plan-1719567890.md") */
+  currentPlanFile?: string
 }
 
 /**

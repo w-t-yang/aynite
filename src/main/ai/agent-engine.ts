@@ -311,7 +311,9 @@ export async function runAgentSession(
   } = options
 
   // ── 1. Create base tools from context ──────────────────────────────────
-  const baseTools = createTools(toolContext)
+  // Inject session directory into tool context so task/plan/memory tools
+  // can store their files alongside messages.json and metadata.json.
+  const baseTools = createTools({ ...toolContext, sessionDir: session.dir })
 
   // ── 2. Filter tools by agent settings + session type ───────────────────
   const toolSettings = getEnabledToolsForSession(enabledTools, session.type)

@@ -1,32 +1,30 @@
 /**
- * Memory management tools: read and update project memory.
+ * Memory management tools: read and update session memory.
  *
- * Operates on memory.md in the workspace artifacts directory.
+ * Operates on memory.md in the session directory
+ * (next to messages.json and metadata.json).
  */
 
 import { jsonSchema } from '@ai-sdk/provider-utils'
 import { TOOL_METADATA } from '../../../lib/constants/ai'
-import {
-  getWorkspaceMemoryPath,
-  secureReadText,
-  writeText,
-} from '../../../lib/path'
+import { secureReadText, writeText } from '../../../lib/path'
 
-export function createMemoryManager(workspaceName: string, domains: string[]) {
+export function createMemoryManager(sessionDir: string, domains: string[]) {
+  const memoryPath = `${sessionDir}/memory.md`
+
   return {
     update_memory: {
       description: TOOL_METADATA.update_memory.description,
       inputSchema: jsonSchema(TOOL_METADATA.update_memory.inputSchema),
       execute: async ({ update }: { update: string }) => {
-        const memoryPath = getWorkspaceMemoryPath(workspaceName)
         try {
           const current = await secureReadText(memoryPath, domains)
           const content = current.startsWith('Error')
-            ? `# Project Memory\n\n${update}`
+            ? `# Session Memory\n\n${update}`
             : `${current}\n\n### Update (${new Date().toLocaleDateString()})\n${update}`
 
           await writeText(memoryPath, content)
-          return `Project memory updated at ${memoryPath}`
+          return `Session memory updated at ${memoryPath}`
         } catch (e) {
           return `Error updating memory: ${e instanceof Error ? e.message : String(e)}`
         }
@@ -36,10 +34,9 @@ export function createMemoryManager(workspaceName: string, domains: string[]) {
       description: TOOL_METADATA.read_memory.description,
       inputSchema: jsonSchema(TOOL_METADATA.read_memory.inputSchema),
       execute: async () => {
-        const memoryPath = getWorkspaceMemoryPath(workspaceName)
         const content = await secureReadText(memoryPath, domains)
         if (content.startsWith('Error')) {
-          return 'No project memory found. You can create one manually or ask the user to set it up.'
+          return 'No session memory found. Use `update_memory` to record decisions and context.'
         }
         return content
       },

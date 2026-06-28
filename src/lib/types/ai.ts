@@ -42,6 +42,8 @@ export interface ToolContext {
   activeFile?: string
   /** The workspace name this AI chat session belongs to */
   workspaceName?: string
+  /** Directory where the session stores messages.json and metadata.json */
+  sessionDir?: string
   /** Callback to stream real-time command output during run_command tool execution */
   onCommandProgress?: (text: string) => void
   /** If true, command execution is auto-approved without renderer approval dialog */
