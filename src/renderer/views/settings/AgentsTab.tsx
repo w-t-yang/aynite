@@ -26,7 +26,6 @@ const ALL_TOOL_IDS = [
   'update_task',
   'get_tasks',
   'propose_plan',
-  'initialize_memory',
   'update_memory',
   'read_memory',
   'get_file_tree',
@@ -87,11 +86,6 @@ const TOOL_DEFS: ToolDef[] = [
     id: 'propose_plan',
     name: 'Propose Plan',
     description: 'Create an implementation plan',
-  },
-  {
-    id: 'initialize_memory',
-    name: 'Initialize Memory',
-    description: 'Scan project for memory',
   },
   {
     id: 'update_memory',

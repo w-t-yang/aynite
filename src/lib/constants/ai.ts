@@ -284,16 +284,6 @@ export const TOOL_METADATA: Record<
       ],
     },
   },
-  initialize_memory: {
-    name: 'Initialize Memory',
-    description:
-      'Scan the project and generate an initial memory.md file in the artifacts directory. This file stores long-term knowledge (overview, structure, rules, and key context) that persists across AI sessions.',
-    group: 'project',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-  },
   update_memory: {
     name: 'Update Memory',
     description:
@@ -468,7 +458,6 @@ The user can mention files or directories in the chat:
 For any complex task, you MUST follow a structured planning-first workflow:
 1. **Investigate**: Use \`glob_search\`, \`read_file\`, and \`grep_search\` to understand the codebase. 
    - **MANDATORY**: Call \`read_memory\` FIRST to understand project conventions.
-   - If \`read_memory\` returns that no memory exists, suggest to the user that you should call \`initialize_memory\` to create it.
 2. **Plan**: Use \`propose_plan\` to create a detailed \`implementation_plan.md\` in the artifacts directory.
    - **MANDATORY**: Your plan must include a step at the very end to call \`update_memory\` with any new architectural changes or patterns learned during the task.
 3. **Approve**: Wait for the user to explicitly approve the plan before proceeding.

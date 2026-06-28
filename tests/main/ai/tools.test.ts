@@ -259,39 +259,6 @@ describe('createTools', () => {
 // ─── memory-manager tools ──────────────────────────────────────────────
 
 describe('memory tools', () => {
-  describe('initialize_memory', () => {
-    it('creates memory file with project info', async () => {
-      mockSecureReadText
-        .mockResolvedValueOnce(
-          JSON.stringify({
-            name: 'test-project',
-            version: '1.0.0',
-            dependencies: { react: '^18' },
-          }),
-        )
-        .mockResolvedValueOnce('# Test Project\n\nA test project.')
-      mockSecureGetFileTree.mockResolvedValue('📄 src/\n  📄 index.ts')
-      mockWriteText.mockResolvedValue(undefined)
-
-      const tools = createTools(makeContext())
-      const result = await tools.initialize_memory.execute({})
-
-      expect(result).toContain('memory.md')
-      expect(mockWriteText).toHaveBeenCalled()
-    })
-
-    it('handles missing package.json gracefully', async () => {
-      mockSecureReadText.mockResolvedValue('Error: access denied')
-      mockSecureReadText.mockResolvedValueOnce('')
-      mockSecureGetFileTree.mockResolvedValue('📄 src/')
-
-      const tools = createTools(makeContext())
-      const result = await tools.initialize_memory.execute({})
-
-      expect(result).toContain('memory.md')
-    })
-  })
-
   describe('read_memory', () => {
     it('returns memory content when it exists', async () => {
       mockSecureReadText.mockResolvedValue('# Project Memory\n\nSome notes.')
@@ -309,7 +276,7 @@ describe('memory tools', () => {
       const result = await tools.read_memory.execute({})
 
       expect(result).toBe(
-        'No project memory found. You can initialize it using "initialize_memory".',
+        'No project memory found. You can create one manually or ask the user to set it up.',
       )
     })
   })
