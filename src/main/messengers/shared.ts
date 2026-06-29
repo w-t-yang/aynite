@@ -406,7 +406,7 @@ export async function handleHelp(
       lines.push('*Agent:* Not found')
     }
   } else {
-    lines.push('*Agent:* Not bound. Use `/set-agent` to bind an agent.')
+    lines.push('*Agent:* Not bound. Use `/set agent` to bind an agent.')
   }
 
   // Project folder
@@ -414,7 +414,7 @@ export async function handleHelp(
     lines.push(`*Project:* \`${escapeMarkdown(config.projectFolder)}\``)
   } else {
     lines.push(
-      '*Project:* Not set. Use `/set-project` to set a working project folder.',
+      '*Project:* Not set. Use `/set project` to set a working project folder.',
     )
   }
 
@@ -435,16 +435,15 @@ export async function handleHelp(
   lines.push('---')
   lines.push('*Commands:*')
   lines.push('`/help`, `/?`, `/h` — Show this message')
-  lines.push('`/set-project` — Set working project folder')
-  lines.push('`/set-agent` — Set bound agent')
+  lines.push(
+    '`/set` — Configure project folder or agent (`/set project`, `/set agent`)',
+  )
   lines.push(
     '`/commit` — Stage all changes, generate commit message, and commit',
   )
   lines.push('`/dev` — Start/restart dev server (`npm run dev`)')
   lines.push('`/todo` — Save a todo item for the current project')
-  lines.push('`/skills` — List and search skills')
-  lines.push('`/skills-add` — Install a skill from GitHub')
-  lines.push('`/skill` — Use a skill')
+  lines.push('`/skills` — List, search, add, or use skills')
   lines.push('`/next` — Show suggested next steps')
   lines.push('`/clear` — Archive current session and start a new one')
   lines.push('')
@@ -561,7 +560,52 @@ export async function handleSetAgent(
   }
 }
 
-// ─── Assistant Default Project Folder ───────────────────────────────────
+// ─── Command: /set (replaces /set-project and /set-agent) ──────────────
+
+export async function handleSet(
+  config: MessengerConfig,
+  ctx: MessengerContext,
+  args: string,
+) {
+  const trimmed = args.trim()
+
+  // /set alone — show available subcommands
+  if (!trimmed) {
+    const lines = [
+      '*Usage:* `/set <subcommand> [options]`',
+      '',
+      'Available subcommands:',
+      '',
+      '`/set project` — Set working project folder',
+      '  Use `/set project` to list available folders, or `/set project <index>` to select one.',
+      '',
+      '`/set agent` — Set bound agent',
+      '  Use `/set agent` to list available agents, or `/set agent <index>` to select one.',
+      '',
+      'Example: `/set project 2`',
+    ]
+    await ctx.replyWithMarkdown(lines.join('\n'))
+    return
+  }
+
+  // Parse subcommand and optional index
+  const spaceIdx = trimmed.indexOf(' ')
+  const sub =
+    spaceIdx > 0
+      ? trimmed.slice(0, spaceIdx).toLowerCase()
+      : trimmed.toLowerCase()
+  const subArgs = spaceIdx > 0 ? trimmed.slice(spaceIdx + 1).trim() : ''
+
+  if (sub === 'project') {
+    await handleSetProject(config, ctx, subArgs)
+  } else if (sub === 'agent') {
+    await handleSetAgent(config, ctx, subArgs)
+  } else {
+    await ctx.replyWithMarkdown(
+      `Unknown subcommand: \`${escapeMarkdown(sub)}\`\n\nUse \`/set\` to see available subcommands.`,
+    )
+  }
+}
 
 const ASSISTANT_PROJECT_DIR = join(homedir(), '.aynite', 'assistant')
 
@@ -593,7 +637,7 @@ export async function handleCommit(
         root = await ensureAssistantProjectDir()
       } else {
         await ctx.reply(
-          'No project folder is set. Use `/set-project` to choose one first.',
+          'No project folder is set. Use `/set project` to choose one first.',
         )
         return
       }
@@ -702,7 +746,7 @@ export async function handleDev(
       root = await ensureAssistantProjectDir()
     } else {
       await ctx.reply(
-        'No project folder is set. Use `/set-project` to choose one first.',
+        'No project folder is set. Use `/set project` to choose one first.',
       )
       return
     }
@@ -853,7 +897,7 @@ async function _getUsedSkills(agentId: string): Promise<string[]> {
 // ─── Command: /skills ───────────────────────────────────────────────────
 
 export async function handleSkills(
-  _config: MessengerConfig,
+  config: MessengerConfig,
   ctx: MessengerContext,
   args: string,
 ) {
@@ -867,15 +911,17 @@ export async function handleSkills(
     return
   }
 
-  if (!args) {
+  const trimmed = args.trim()
+
+  if (!trimmed) {
     // Show skill folders with indices
     const { getSkillsConfig } = await import('../spells/skills')
-    const config = await getSkillsConfig()
-    const folders = config?.folders || []
+    const skillsConfig = await getSkillsConfig()
+    const folders = skillsConfig?.folders || []
 
     if (folders.length === 0) {
       await ctx.reply(
-        'No skill folders configured. Use `/skills-add` to install a skill from GitHub.',
+        'No skill folders configured. Use `/skills add` to install a skill from GitHub.',
       )
       return
     }
@@ -884,14 +930,62 @@ export async function handleSkills(
     folders.forEach((f: string, i: number) => {
       lines.push(`${i + 1}. ${f}`)
     })
-    lines.push('', 'Use `/skills <number>` to list skills in a folder.')
+    lines.push('', 'Commands:')
+    lines.push('`/skills <number>` — List skills in a folder')
+    lines.push('`/skills search <query>` — Search skills')
+    lines.push('`/skills add <url>` — Install a skill from GitHub')
+    lines.push('`/skills use <name>` — Use a skill')
+    lines.push('`/skills *` — List all skills')
     await ctx.reply(lines.join('\n'))
     return
   }
 
+  // Parse subcommands: add, use, search
+  const spaceIdx = trimmed.indexOf(' ')
+  const firstWord =
+    spaceIdx > 0
+      ? trimmed.slice(0, spaceIdx).toLowerCase()
+      : trimmed.toLowerCase()
+
+  if (firstWord === 'add') {
+    const url = spaceIdx > 0 ? trimmed.slice(spaceIdx + 1).trim() : ''
+    if (!url) {
+      await ctx.reply(
+        'Usage: `/skills add <url>` — Install a skill from GitHub.\n\nExample: `/skills add https://github.com/user/skill-repo`',
+      )
+      return
+    }
+    await handleSkillsAdd(config, ctx, url)
+    return
+  }
+
+  if (firstWord === 'use') {
+    const skillArgs = spaceIdx > 0 ? trimmed.slice(spaceIdx + 1).trim() : ''
+    if (!skillArgs) {
+      await ctx.reply(
+        'Usage: `/skills use <name>` — Activate a skill.\n\nUse `/skills` to list available skills.',
+      )
+      return
+    }
+    await handleSkill(config, ctx, skillArgs)
+    return
+  }
+
+  if (firstWord === 'search') {
+    const query = spaceIdx > 0 ? trimmed.slice(spaceIdx + 1).trim() : ''
+    if (!query) {
+      await ctx.reply(
+        'Usage: `/skills search <query>` — Search for a skill by name or description.',
+      )
+      return
+    }
+    await searchAndListSkills(ctx, allSkills, query)
+    return
+  }
+
   // Check if args is a number (folder index)
-  const folderIndex = parseInt(args, 10)
-  if (!Number.isNaN(folderIndex) && String(folderIndex) === args.trim()) {
+  const folderIndex = parseInt(firstWord, 10)
+  if (!Number.isNaN(folderIndex) && String(folderIndex) === firstWord) {
     const { getSkillsConfig } = await import('../spells/skills')
     const skillsConfig = await getSkillsConfig()
     const folders = skillsConfig?.folders || []
@@ -923,25 +1017,33 @@ export async function handleSkills(
     return
   }
 
-  // Search by query — `*` lists all skills
+  // `*` lists all skills; anything else is a direct search query
+  await searchAndListSkills(ctx, allSkills, firstWord === '*' ? '*' : trimmed)
+}
+
+/** Shared helper: search skills and display results. */
+async function searchAndListSkills(
+  ctx: MessengerContext,
+  allSkills: any[],
+  query: string,
+) {
   const matches =
-    args === '*'
+    query === '*'
       ? allSkills
       : allSkills.filter(
           (s) =>
-            s.name.toLowerCase().includes(args.toLowerCase()) ||
-            s.description.toLowerCase().includes(args.toLowerCase()),
+            s.name.toLowerCase().includes(query.toLowerCase()) ||
+            s.description?.toLowerCase().includes(query.toLowerCase()),
         )
 
   if (matches.length === 0) {
-    await ctx.reply(`No skills found matching "${args}".`)
+    await ctx.reply(`No skills found matching "${escapeMarkdown(query)}".`)
     return
   }
 
-  // Just skill names, no descriptions (easier to read on mobile)
   const names = matches.map((s) => s.name)
 
-  if (args === '*') {
+  if (query === '*') {
     const lines = ['Available skills:', '', ...names.map((n) => `- ${n}`)]
     if (matches.length > 10) {
       lines.push('', `... and ${matches.length - 10} more`)
@@ -949,14 +1051,14 @@ export async function handleSkills(
     await ctx.reply(lines.join('\n'))
   } else {
     const lines = [
-      `Skills matching "${args}":`,
+      `Skills matching "${escapeMarkdown(query)}":`,
       '',
       ...names.slice(0, 10).map((n) => `- ${n}`),
     ]
     if (matches.length > 10) {
       lines.push('', `... and ${matches.length - 10} more`)
     }
-    lines.push('', 'Use /skill <name> <message> to use a skill.')
+    lines.push('', 'Use `/skills use <name>` to use a skill.')
     await ctx.reply(lines.join('\n'))
   }
 }
@@ -1123,7 +1225,7 @@ export async function handleTodo(
   const root = config.projectFolder
   if (!root) {
     await ctx.reply(
-      'No project folder is set. Use `/set-project` to choose one first.',
+      'No project folder is set. Use `/set project` to choose one first.',
     )
     return
   }
@@ -1318,7 +1420,7 @@ export async function handleChatMessage(
 
     if (!config.agentId) {
       await ctx.reply(
-        'No agent is bound to this bot. Use `/set-agent` to choose an agent, then try again.',
+        'No agent is bound to this bot. Use `/set agent` to choose an agent, then try again.',
       )
       return
     }
@@ -1334,7 +1436,7 @@ export async function handleChatMessage(
         )
       } else {
         await ctx.reply(
-          'No project folder is set for this bot. Use `/set-project` to choose one, then try again.',
+          'No project folder is set for this bot. Use `/set project` to choose one, then try again.',
         )
         return
       }
@@ -1720,35 +1822,32 @@ export async function processIncomingMessage(
     lowerCmd === '?'
   ) {
     await handleHelp(config, ctx, msg.chatName)
+  } else if (lowerCmd === '/set' || lowerCmd.startsWith('/set ')) {
+    const args = msg.textWithoutMention.slice('/set'.length).trim()
+    await handleSet(config, ctx, args)
   } else if (lowerCmd.startsWith('/set-project')) {
+    // Backward compat: /set-project is now /set project
     const args = msg.textWithoutMention.slice('/set-project'.length).trim()
-    await handleSetProject(config, ctx, args)
+    await handleSet(config, ctx, `project ${args}`)
   } else if (lowerCmd.startsWith('/set-agent')) {
+    // Backward compat: /set-agent is now /set agent
     const args = msg.textWithoutMention.slice('/set-agent'.length).trim()
-    await handleSetAgent(config, ctx, args)
+    await handleSet(config, ctx, `agent ${args}`)
   } else if (lowerCmd === '/commit') {
     await handleCommit(config, ctx, msg.chatName)
   } else if (lowerCmd === '/dev') {
     await handleDev(config, ctx)
-  } else if (lowerCmd.startsWith('/skills-add')) {
-    const args = msg.textWithoutMention.slice('/skills-add'.length).trim()
-    await handleSkillsAdd(config, ctx, args)
+  } else if (lowerCmd.startsWith('/skills')) {
+    // /skills and /skills-add are both handled by handleSkills now
+    const args = msg.textWithoutMention.slice('/skills'.length).trim()
+    // If it starts with -add (e.g., /skills-add), convert to add subcommand
+    const normalizedArgs = lowerCmd.startsWith('/skills-add')
+      ? `add ${args}`
+      : args
+    await handleSkills(config, ctx, normalizedArgs)
   } else if (lowerCmd.startsWith('/todo')) {
     const args = msg.textWithoutMention.slice('/todo'.length).trim()
     await handleTodo(config, ctx, args)
-  } else if (lowerCmd.startsWith('/skills')) {
-    const args = msg.textWithoutMention.slice('/skills'.length).trim()
-    await handleSkills(config, ctx, args)
-  } else if (lowerCmd === '/skill' || lowerCmd.startsWith('/skill ')) {
-    const args = msg.textWithoutMention.slice('/skill'.length).trim()
-    await handleSkill(
-      config,
-      ctx,
-      args,
-      msg.chatName,
-      msg.senderLabel,
-      groupContextLines,
-    )
   } else if (lowerCmd === '/next') {
     await handleNext(config, ctx, msg.chatName)
   } else if (lowerCmd === '/clear') {
