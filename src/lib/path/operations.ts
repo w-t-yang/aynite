@@ -141,12 +141,23 @@ export async function secureReadText(
     return ERROR_MESSAGES.ACCESS_DENIED(filePath)
   }
   try {
+    // Check if file exists first — avoids misleading "not a text file" error
+    // when the file simply doesn't exist (checkIsTextFile would throw on open
+    // and return false). Uses the async stat (which is mockable in tests)
+    // instead of existsSync.
+    const fileStat = await stat(filePath).catch((e: unknown) => {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (msg.includes('ENOENT')) {
+        throw new Error(`File not found: "${filePath}"`)
+      }
+      throw e
+    })
+
     const isText = await checkIsTextFile(filePath)
     if (!isText) {
       return ERROR_MESSAGES.FILE_NOT_TEXT(filePath)
     }
 
-    const fileStat = await stat(filePath)
     if (fileStat.size > MAX_READ_SIZE) {
       return ERROR_MESSAGES.FILE_TOO_LARGE(filePath, fileStat.size)
     }
@@ -154,6 +165,10 @@ export async function secureReadText(
     return await readText(filePath)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e)
+    // If we threw our own "File not found" message, return it directly
+    if (message.startsWith('File not found:')) {
+      return message
+    }
     return ERROR_MESSAGES.FILE_READ_ERROR(message)
   }
 }

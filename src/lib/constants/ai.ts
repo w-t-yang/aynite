@@ -45,12 +45,16 @@ export const TOOL_METADATA: Record<
   read_file: {
     name: 'Read File',
     description:
-      'Read the contents of a file. Useful when you need to understand the logic of a specific file or examine its content for debugging.',
+      'Read the contents of a file. The path must be an absolute path (starting with /). Useful when you need to understand the logic of a specific file or examine its content for debugging.',
     group: 'os',
     inputSchema: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Absolute path to the file' },
+        path: {
+          type: 'string',
+          description:
+            'Absolute path to the file (must be a full path starting with /, e.g. /Users/name/project/src/index.ts)',
+        },
       },
       required: ['path'],
     },
@@ -326,7 +330,7 @@ export const TOOL_METADATA: Record<
   get_workspace_info: {
     name: 'Get Workspace Info',
     description:
-      'Get information about the current workspace environment. Useful at the start of a session to understand the project context, available folders, and the file currently being edited.',
+      'Get information about the current workspace environment including workspace folders, the active project folder (the user-selected subfolder within the workspace), config directory, active file, workspace name, and shell configuration. Useful at the start of a session to understand the project context.',
     group: 'project',
     inputSchema: {
       type: 'object',

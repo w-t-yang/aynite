@@ -9,6 +9,7 @@ import {
 } from '../../lib/path'
 import type { ToolContext } from '../../lib/types/ai'
 import { getShellConfig } from '../system'
+import { getWorkspaceState } from '../workspace'
 import { createFileOps } from './tools/file-ops'
 import { createMemoryManager } from './tools/memory-manager'
 import { createRunCommand } from './tools/run-command'
@@ -155,11 +156,21 @@ export function createTools(context: ToolContext) {
       inputSchema: jsonSchema(TOOL_METADATA.get_workspace_info.inputSchema),
       execute: async () => {
         const shellConfig = getShellConfig()
+        // Read active project folder from workspace state
+        const workspaceName = context.workspaceName || 'Aynite'
+        let activeProjectFolder: string | null = null
+        try {
+          const state = await getWorkspaceState(workspaceName)
+          activeProjectFolder = state.activeProjectFolder || null
+        } catch {
+          // Workspace state may not be available
+        }
         return {
           workspaceFolders,
+          activeProjectFolder,
           configDir: getAyniteDir(),
           activeFile: context.activeFile || null,
-          workspaceName: context.workspaceName || 'Aynite',
+          workspaceName,
           shell: {
             platform: process.platform,
             shell: shellConfig.shell,
