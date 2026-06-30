@@ -253,6 +253,7 @@ export async function sendMessage(
     baseUrl: activeProvider?.baseUrl || '',
     model: activeProvider?.model || '',
     compatibility: activeProvider?.compatibility,
+    reasoningEffort: activeProvider?.reasoningEffort,
     enabledTools,
     agentPromptFiles: activeAgent?.promptFiles || [],
   }

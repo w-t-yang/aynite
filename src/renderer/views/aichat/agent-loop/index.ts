@@ -73,6 +73,7 @@ export async function runAgentLoop(
           apiKey: config.apiKey,
           model: config.model,
           compatibility: config.compatibility,
+          reasoningEffort: config.reasoningEffort,
           enabledTools: config.enabledTools,
         },
         workspaceFolders,
