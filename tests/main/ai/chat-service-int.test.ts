@@ -134,11 +134,13 @@ describe('chat-service integration', () => {
       },
     ]
 
-    await saveSession('testws', 'session-list-test', messages as any)
+    // Session IDs must be numeric strings (timestamps) to pass the
+    // non-numeric ID filter in listSessions.
+    await saveSession('testws', '1782818600001', messages as any)
     const sessions = await listSessions('testws')
 
     expect(sessions.length).toBeGreaterThanOrEqual(1)
-    const found = sessions.find((s: any) => s.id === 'session-list-test')
+    const found = sessions.find((s: any) => s.id === '1782818600001')
     expect(found).toBeDefined()
     expect(found.messageCount).toBe(1)
   })
@@ -182,12 +184,13 @@ describe('chat-service integration', () => {
       },
     ]
 
-    await saveSession('testws', 'session-a', msg1 as any)
-    await saveSession('testws', 'session-b', msg2 as any)
+    // Session IDs must be numeric strings to pass the non-numeric ID filter.
+    await saveSession('testws', '1782818600001', msg1 as any)
+    await saveSession('testws', '1782818600002', msg2 as any)
 
     const sessions = await listSessions('testws')
     expect(sessions.length).toBe(2)
     const ids = sessions.map((s: any) => s.id).sort()
-    expect(ids).toEqual(['session-a', 'session-b'])
+    expect(ids).toEqual(['1782818600001', '1782818600002'])
   })
 })

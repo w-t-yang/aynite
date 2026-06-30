@@ -1,6 +1,11 @@
 import { SYSTEM_LAYOUTS } from '../../lib/constants/layout'
-import type { LayoutConfig, WorkspaceConfig } from '../../lib/constants/types'
+import type {
+  LayoutConfig,
+  MainConfig,
+  WorkspaceConfig,
+} from '../../lib/constants/types'
 import {
+  getMainConfigPath,
   getPathSep,
   getWorkspaceDataPath,
   getWorkspacesConfigPath,
@@ -43,13 +48,16 @@ function defaultLayout(name: string): LayoutConfig {
   }
 }
 
-function defaultWorkspaceConfig(name: string): WorkspaceConfig {
+function defaultWorkspaceConfig(
+  name: string,
+  defaultAgentId = 'aynite',
+): WorkspaceConfig {
   const layout = defaultLayout(name)
   return {
     id: name,
     layouts: [...SYSTEM_LAYOUTS, layout],
     activeLayoutId: layout.id,
-    activeAgentId: 'aynite',
+    activeAgentId: defaultAgentId,
     activeSessionId: null,
     folders: [],
     files: [],
@@ -60,7 +68,7 @@ async function getWorkspaceData(name: string): Promise<WorkspaceConfig> {
   const workspacePath = getWorkspaceDataPath(name)
   return await readJson<WorkspaceConfig>(
     workspacePath,
-    defaultWorkspaceConfig(name),
+    defaultWorkspaceConfig(name, 'aynite'),
   )
 }
 
@@ -78,9 +86,15 @@ export async function createWorkspace(
   wsConfig.list.push(name)
   wsConfig.active = name
 
+  // Use the user's default agent preference from config.json
+  const mainConfig = await readJson<MainConfig>(getMainConfigPath(), {}).catch(
+    () => ({}) as MainConfig,
+  )
+  const defaultAgentId = mainConfig.defaultAgentId || 'aynite'
+
   const newWorkspacePath = getWorkspaceDataPath(name)
   const workspaceConfig = {
-    ...defaultWorkspaceConfig(name),
+    ...defaultWorkspaceConfig(name, defaultAgentId),
     ...config,
     id: name,
   }

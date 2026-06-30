@@ -453,6 +453,7 @@ export async function sendMessage(
         return () => unregisterStreamHandler(requestId)
       },
       workspaceName,
+      sessionId,
     )
     updateStateAndSave(session, { messages: resultHistory })
   } catch (e: unknown) {

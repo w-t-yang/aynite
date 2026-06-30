@@ -84,7 +84,20 @@ export async function runAgentLoop(
   // ── Extract system message ─────────────────────────────────────────────
   const systemMessage = messages.find((m) => m.role === 'system')
   const chatMessages = messages.filter((m) => m.role !== 'system')
-  const modelMessages = await convertToModelMessages(chatMessages, {
+
+  // ── Strip custom part types before SDK conversion ────────────────────────
+  // The AI SDK's convertToModelMessages does not understand our custom
+  // "dynamic-tool" part type (which is used for streaming tool state on the
+  // renderer side). Removing them is safe — they are renderer-only UI state
+  // and have no effect on model responses. The SDK's ignoreIncompleteToolCalls
+  // option handles any remaining incomplete tool-call parts.
+  const strippedMessages = chatMessages.map((msg) => {
+    if (msg.role !== 'assistant') return msg
+    const parts = msg.parts.filter((p: any) => p.type !== 'dynamic-tool')
+    return { ...msg, parts }
+  })
+
+  const modelMessages = await convertToModelMessages(strippedMessages, {
     tools: tools as any,
     ignoreIncompleteToolCalls: true,
   })

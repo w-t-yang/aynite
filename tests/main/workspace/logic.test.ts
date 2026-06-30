@@ -5,6 +5,7 @@ const mockWriteJson = vi.hoisted(() => vi.fn())
 const mockReaddir = vi.hoisted(() => vi.fn())
 
 vi.mock('../../../src/lib/path', () => ({
+  getMainConfigPath: () => '/mock/.aynite/config/config.json',
   getWorkspacesConfigPath: () => '/mock/.aynite/config/workspaces.json',
   getWorkspaceDataPath: (name: string) =>
     `/mock/.aynite/workspaces/${name}/config.json`,

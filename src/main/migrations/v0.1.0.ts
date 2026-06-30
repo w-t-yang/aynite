@@ -11,6 +11,7 @@ import { DEFAULT_WORKSPACE_CONFIG } from '../../lib/constants/workspace'
 import {
   ensureDir,
   exists,
+  getMainConfigPath,
   getPlaybookPath,
   getWorkspaceDataPath,
   getWorkspaceDir,
@@ -89,9 +90,22 @@ export async function migrate(): Promise<void> {
   const ayniteWsPath = getWorkspaceDataPath(NEW_DEFAULT_WORKSPACE)
   await ensureDir(getWorkspaceDir(NEW_DEFAULT_WORKSPACE))
   await initWorkspaceFolders(NEW_DEFAULT_WORKSPACE)
+
+  // Use the user's default agent preference from config.json if available
+  const mainConfigPath = getMainConfigPath()
+  const mainConfig = await readJson<Record<string, unknown>>(
+    mainConfigPath,
+    {},
+  ).catch(() => ({}) as Record<string, unknown>)
+  const defaultAgentId =
+    typeof mainConfig.defaultAgentId === 'string'
+      ? mainConfig.defaultAgentId
+      : 'aynite'
+
   await writeJson(ayniteWsPath, {
     ...DEFAULT_WORKSPACE_CONFIG,
     id: NEW_DEFAULT_WORKSPACE,
+    activeAgentId: defaultAgentId,
     folders: [...allFolders],
   })
 

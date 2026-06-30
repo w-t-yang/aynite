@@ -172,6 +172,10 @@ export async function listSessions(workspace: string) {
 
     // Safety: skip entries that look like old-style backup IDs
     if (/-\d{13}$/.test(sessionId)) continue
+    // Skip entries with non-numeric names (e.g. random 8-char IDs from
+    // an old bug where Math.random().toString(36).slice(2, 10) was used
+    // as sessionId instead of Date.now().toString()).
+    if (!/^\d+$/.test(sessionId)) continue
 
     const messagesPath = getSessionMessagesPath(sessionId, workspace)
     const metaPath = getSessionMetadataFilePath(sessionId, workspace)
@@ -346,6 +350,7 @@ export async function getCombinedActivityCounts(): Promise<
 }
 
 export async function aiChat(params: {
+  sessionId?: string
   messages: UIMessage[]
   config: AIProvider & { enabledTools?: Record<string, boolean> }
   workspaceFolders: string[]
@@ -355,6 +360,7 @@ export async function aiChat(params: {
   _winId?: number
 }) {
   const {
+    sessionId: paramSessionId,
     messages,
     config,
     workspaceFolders,
@@ -372,7 +378,8 @@ export async function aiChat(params: {
       )
     }
 
-    const sessionId = requestId
+    // Use the sessionId from the renderer if provided, otherwise create one
+    const sessionId = paramSessionId || Date.now().toString()
     const sessionDir = getSessionDir(sessionId, workspaceName || 'Aynite')
 
     const emit = (part: any) => {

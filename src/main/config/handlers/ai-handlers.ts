@@ -85,18 +85,31 @@ export const aiHandlers: ConfigHandler = (() => ({
             : (await getWorkspacesList()).active
         const workspaceState = await getWorkspaceState(workspaceName)
 
-        // Read agents from individual files
         const agentList = await readAllAgents()
 
-        // Fallback active ID: workspace > config default
-        const defaultAgentId =
-          mainConfig.defaultAgentId || mainConfig.agents?.activeId || 'aynite'
-        const activeId = workspaceState.activeAgentId || defaultAgentId
-
-        return {
-          activeId,
-          list: agentList,
+        // Use workspace state if explicitly set (i.e., the user has switched
+        // agents in this workspace). Otherwise fall back to config.json's
+        // defaultAgentId, which may differ from the old hardcoded 'aynite'.
+        let activeId = workspaceState.activeAgentId
+        if (
+          activeId === 'aynite' &&
+          mainConfig.defaultAgentId &&
+          mainConfig.defaultAgentId !== 'aynite'
+        ) {
+          // Workspace still has the old hardcoded default: use config.json's
+          // global default instead. Also auto-heal the workspace config on
+          // disk so subsequent reads don't need this fallback logic.
+          activeId = mainConfig.defaultAgentId
+          saveWorkspaceState(workspaceName, {
+            activeAgentId: activeId,
+          }).catch(() => {})
         }
+
+        if (!activeId) {
+          activeId = mainConfig.defaultAgentId || 'aynite'
+        }
+
+        return { activeId, list: agentList }
       }
       case 'prompts': {
         const config = await loadConfig()
@@ -112,7 +125,6 @@ export const aiHandlers: ConfigHandler = (() => ({
         const dataPath = getAIConfigPath()
         const existing = await readJson<Record<string, unknown>>(dataPath, {})
         await writeJson(dataPath, { ...existing, ...payload })
-        // Track AI provider configuration changes
         if (payload?.activeId || payload?.providers) {
           const existingAny = existing as any
           const payloadProviders = Array.isArray(payload?.providers)
@@ -131,7 +143,7 @@ export const aiHandlers: ConfigHandler = (() => ({
         return true
       }
       case 'agents': {
-        // Update active agent ID in workspace state
+        // Update workspace state with active agent
         if (payload?.activeId) {
           const workspaceName =
             winId && winId > 0
@@ -142,7 +154,16 @@ export const aiHandlers: ConfigHandler = (() => ({
           })
         }
 
-        // Save individual agent files when a list is provided
+        // Update defaultAgentId in config.json
+        const mainConfig: MainConfig =
+          (await readJson<MainConfig>(getMainConfigPath())) || {}
+        if (payload?.activeId) {
+          mainConfig.defaultAgentId = payload.activeId
+        }
+        delete mainConfig.agents
+        await writeJson(getMainConfigPath(), mainConfig)
+
+        // Save individual agent files when a full list is provided
         if (payload?.list && Array.isArray(payload.list)) {
           await ensureDir(getAgentsDir())
           for (const agent of payload.list) {
@@ -157,16 +178,6 @@ export const aiHandlers: ConfigHandler = (() => ({
               })
             }
           }
-
-          // Update config.json with defaultAgentId
-          const mainConfig: MainConfig =
-            (await readJson<MainConfig>(getMainConfigPath())) || {}
-          if (payload.activeId) {
-            mainConfig.defaultAgentId = payload.activeId
-          }
-          // Clean up old agents field
-          delete mainConfig.agents
-          await writeJson(getMainConfigPath(), mainConfig)
 
           // Remove agent files that are no longer in the list
           const savedIds = new Set(payload.list.map((a: any) => a.id))

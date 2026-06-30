@@ -103,6 +103,7 @@ export async function compactContext(
     const result = await new Promise<string>((resolve, reject) => {
       aiMutations
         .chat({
+          sessionId: '',
           messages: summaryMessages,
           config: {
             id: 'temp',

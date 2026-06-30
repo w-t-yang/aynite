@@ -156,19 +156,20 @@ describe('listSessions', () => {
   })
 
   it('lists sessions from directories', async () => {
-    // readdir on sessions dir returns session folders
+    // Session IDs must be numeric strings to pass the non-numeric ID
+    // filter in listSessions (which skips IDs from an old Math.random() bug).
     mockReaddir.mockResolvedValue([
-      dirent('session-1', true),
-      dirent('session-2', true),
+      dirent('1782818600001', true),
+      dirent('1782818600002', true),
     ])
 
-    // session-1: messages.json read, metadata.json read, stat on messages.json
+    // 1782818600001: messages.json read, metadata.json read, stat on messages.json
     mockReadJson.mockResolvedValueOnce([
       { role: 'user', parts: [{ text: 'Hello world' }] },
     ])
     mockReadJson.mockRejectedValueOnce(new Error('ENOENT')) // no metadata
     mockStat.mockResolvedValueOnce({ mtime: new Date('2026-06-15T10:00:00Z') })
-    // session-2
+    // 1782818600002
     mockReadJson.mockResolvedValueOnce([
       { role: 'user', parts: [{ text: 'Second chat' }] },
     ])
@@ -177,14 +178,14 @@ describe('listSessions', () => {
 
     const result = await listSessions('Dev')
     expect(result).toHaveLength(2)
-    expect(result[0].id).toBe('session-2')
+    expect(result[0].id).toBe('1782818600002')
     expect(result[0].preview).toBe('Second chat')
-    expect(result[1].id).toBe('session-1')
+    expect(result[1].id).toBe('1782818600001')
     expect(result[1].preview).toBe('Hello world')
   })
 
   it('uses metadata for title when available', async () => {
-    mockReaddir.mockResolvedValue([dirent('session-1', true)])
+    mockReaddir.mockResolvedValue([dirent('1782818600001', true)])
 
     mockReadJson.mockResolvedValueOnce([
       { role: 'user', parts: [{ text: 'Hi' }] },
@@ -200,7 +201,10 @@ describe('listSessions', () => {
   })
 
   it('sorts by lastModified descending', async () => {
-    mockReaddir.mockResolvedValue([dirent('a', true), dirent('b', true)])
+    mockReaddir.mockResolvedValue([
+      dirent('1782818600001', true),
+      dirent('1782818600002', true),
+    ])
 
     // Session 'a'
     mockReadJson.mockResolvedValueOnce([

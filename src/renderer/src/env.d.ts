@@ -36,11 +36,13 @@ interface CommandEntry {
 }
 
 interface AiChatPayload {
+  sessionId?: string
   messages: any[]
   config: any
   workspaceFolders: string[]
   activeFile?: string
   workspaceName?: string
+  sessionType?: 'general' | 'messenger' | 'flow'
 }
 
 interface DirectCommandPayload {

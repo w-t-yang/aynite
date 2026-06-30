@@ -13,6 +13,7 @@ function getAynite() {
 }
 
 interface AiChatPayload {
+  sessionId: string
   messages: any[]
   config: any
   workspaceFolders: string[]

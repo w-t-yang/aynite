@@ -222,6 +222,18 @@ export function useAIChat() {
 
   const switchAgent = useCallback(async (agentId: string) => {
     await configMutations.set('agents', { activeId: agentId } as any)
+    // Immediately update local state so the Header reflects the change
+    // without waiting for the config-changed event relay.
+    setSettings((prev) => {
+      if (!prev.agents) return prev
+      return {
+        ...prev,
+        agents: {
+          activeId: agentId,
+          list: prev.agents.list || [],
+        },
+      }
+    })
   }, [])
 
   const switchProvider = useCallback(

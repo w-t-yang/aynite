@@ -18,6 +18,7 @@ export async function runAgentLoop(
     handler: (part: any) => void,
   ) => () => void,
   workspaceName?: string,
+  sessionId?: string,
 ): Promise<UIMessage[]> {
   const loopMessages: UIMessage[] = []
   let reasoningAccum = ''
@@ -63,6 +64,7 @@ export async function runAgentLoop(
     aiMutations
       .chat({
         messages: [...messages, ...loopMessages],
+        sessionId: sessionId || '',
         config: {
           id: 'temp',
           name: 'Temp',

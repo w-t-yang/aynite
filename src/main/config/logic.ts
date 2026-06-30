@@ -195,9 +195,16 @@ export async function initAppFolders() {
     console.log('[Init] Creating Aynite workspace...')
     await ensureDir(getWorkspaceDir(NEW_DEFAULT_WORKSPACE))
     await initWorkspaceFolders(NEW_DEFAULT_WORKSPACE)
+
+    // Read the main config to get the user's default agent preference.
+    // migrateAgentsToFiles() above ensures config.json has defaultAgentId set.
+    const mainCfg = await readJson<MainConfig>(getMainConfigPath(), {})
+    const defaultAgentId = mainCfg.defaultAgentId || AGENT_IDS.AYNITE
+
     await writeJson(ayniteWsPath, {
       ...DEFAULT_WORKSPACE_CONFIG,
       id: NEW_DEFAULT_WORKSPACE,
+      activeAgentId: defaultAgentId,
     })
     // Fresh install: set as active workspace
     wsConfig.active = NEW_DEFAULT_WORKSPACE

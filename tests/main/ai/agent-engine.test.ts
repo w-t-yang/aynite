@@ -4,8 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 let mockStreamEvents: any[] = []
 
+// hoisted so we can reference it in both the mock factory and test assertions
+const mockConvertToModelMessages = vi.hoisted(() =>
+  vi.fn(() => Promise.resolve([])),
+)
+
 vi.mock('ai', () => ({
-  convertToModelMessages: vi.fn(() => Promise.resolve([])),
+  convertToModelMessages: mockConvertToModelMessages,
   stepCountIs: vi.fn(() => vi.fn(() => false)),
   streamText: vi.fn(() => ({
     fullStream: (async function* () {
@@ -392,6 +397,158 @@ describe('runAgentLoop', () => {
     expect(stepStartHook).toHaveBeenCalledTimes(2)
     expect(stepStartHook).toHaveBeenNthCalledWith(1, { step: 1 })
     expect(stepStartHook).toHaveBeenNthCalledWith(2, { step: 2 })
+  })
+
+  // ── dynamic-tool stripping ──────────────────────────────────────────────
+
+  it('strips dynamic-tool parts from assistant messages before convertToModelMessages', async () => {
+    mockStreamEvents = [{ type: 'finish' }]
+
+    await runAgentLoop({
+      messages: [
+        {
+          role: 'assistant',
+          content: '',
+          parts: [
+            { type: 'text', text: 'Let me check' },
+            {
+              type: 'dynamic-tool',
+              toolCallId: 'dt-1',
+              toolName: 'read_file',
+              state: 'output-available',
+              output: 'ok',
+            },
+          ],
+        } as UIMessage,
+      ],
+      config: baseConfig,
+      tools: {},
+    })
+
+    const converted = mockConvertToModelMessages.mock.calls[0][0]
+    expect(converted).toHaveLength(1)
+    const msg = converted[0]
+    expect(msg.role).toBe('assistant')
+    // dynamic-tool should be stripped; text part should remain
+    const partTypes = msg.parts.map((p: any) => p.type)
+    expect(partTypes).not.toContain('dynamic-tool')
+    expect(partTypes).toContain('text')
+    expect(partTypes).toEqual(['text'])
+  })
+
+  it('does not strip dynamic-tool parts from non-assistant messages', async () => {
+    mockStreamEvents = [{ type: 'finish' }]
+
+    await runAgentLoop({
+      messages: [
+        {
+          role: 'user',
+          content: '',
+          parts: [
+            { type: 'text', text: 'hello' },
+            // user messages shouldn't normally have dynamic-tool, but if they do we leave them
+            {
+              type: 'dynamic-tool',
+              toolCallId: 'dt-1',
+              toolName: 'read_file',
+              state: 'output-available',
+              output: 'ok',
+            },
+          ],
+        } as UIMessage,
+        {
+          role: 'tool',
+          content: '',
+          parts: [
+            {
+              type: 'tool-result',
+              toolCallId: 'tr-1',
+              toolName: 'read_file',
+              result: 'data',
+            },
+          ],
+        } as UIMessage,
+      ],
+      config: baseConfig,
+      tools: {},
+    })
+
+    const converted = mockConvertToModelMessages.mock.calls[0][0]
+    // user message retains its dynamic-tool part (it's irrelevant but harmless)
+    const userMsg = converted.find((m: any) => m.role === 'user')
+    expect(userMsg).toBeDefined()
+    expect(
+      userMsg.parts.find((p: any) => p.type === 'dynamic-tool'),
+    ).toBeDefined()
+    // tool message passes through unchanged
+    const toolMsg = converted.find((m: any) => m.role === 'tool')
+    expect(toolMsg).toBeDefined()
+  })
+
+  it('passes assistant messages without dynamic-tool parts through unchanged', async () => {
+    mockStreamEvents = [{ type: 'finish' }]
+
+    // Use a realistic message structure the SDK would produce
+    await runAgentLoop({
+      messages: [
+        {
+          role: 'assistant',
+          content: '',
+          parts: [
+            { type: 'text', text: 'Hello' },
+            { type: 'reasoning', text: 'thinking...' },
+          ],
+        } as UIMessage,
+      ],
+      config: baseConfig,
+      tools: {},
+    })
+
+    const converted = mockConvertToModelMessages.mock.calls[0][0]
+    expect(converted).toHaveLength(1)
+    const msg = converted[0]
+    expect(msg.role).toBe('assistant')
+    expect(msg.parts).toHaveLength(2)
+    // parts should be identical to input since there's nothing to strip
+    const partTypes = msg.parts.map((p: any) => p.type)
+    expect(partTypes).toEqual(['text', 'reasoning'])
+  })
+
+  it('strips only dynamic-tool parts, preserving all other part types', async () => {
+    mockStreamEvents = [{ type: 'finish' }]
+
+    await runAgentLoop({
+      messages: [
+        {
+          role: 'assistant',
+          content: '',
+          parts: [
+            { type: 'reasoning', text: 'step 1' },
+            {
+              type: 'dynamic-tool',
+              toolCallId: 'dt-1',
+              toolName: 'read_file',
+              state: 'input-available',
+            },
+            { type: 'text', text: 'Result:' },
+            {
+              type: 'dynamic-tool',
+              toolCallId: 'dt-2',
+              toolName: 'write_file',
+              state: 'output-available',
+              output: 'done',
+            },
+          ],
+        } as UIMessage,
+      ],
+      config: baseConfig,
+      tools: {},
+    })
+
+    const converted = mockConvertToModelMessages.mock.calls[0][0]
+    const partTypes = converted[0].parts.map((p: any) => p.type)
+    expect(partTypes).toEqual(['reasoning', 'text'])
+    expect(partTypes).not.toContain('dynamic-tool')
   })
 })
 
