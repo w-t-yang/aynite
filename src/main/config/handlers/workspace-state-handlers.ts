@@ -56,6 +56,10 @@ export const workspaceStateHandlers: ConfigHandler = (() => ({
         const state = await getWorkspaceState(workspaceName)
         return state.activeSessionId || null
       }
+      case 'activeProjectFolder': {
+        const state = await getWorkspaceState(workspaceName)
+        return state.activeProjectFolder || null
+      }
       default:
         return null
     }
@@ -110,6 +114,12 @@ export const workspaceStateHandlers: ConfigHandler = (() => ({
         if (winId && winId > 0) {
           sendToWindow(winId, AppEvents.WORKSPACE_UPDATED, { id: tileId })
         }
+        return true
+      }
+      case 'activeProjectFolder': {
+        await saveWorkspaceState(workspaceName, {
+          activeProjectFolder: payload as string,
+        })
         return true
       }
       case 'session-delete': {

@@ -12,11 +12,14 @@
         "switchModel": "Switch Model",
         "newSession": "New Session",
         "loadSession": "Load Session",
-        "copySession": "Copy Session"
+        "copySession": "Copy Session",
+        "reasoningEffort": "Reasoning Effort",
+        "autoApprove": "Auto-approve"
       },
       "input": {
         "placeholder": "Type a message or use / for skills...",
         "artifacts": "Artifacts",
+        "projectFolder": "Project Folder",
         "contextTokens": "Context tokens",
         "send": "Send message (Ctrl+Enter)",
         "stop": "Stop (Esc)"
@@ -73,11 +76,14 @@
         "switchModel": "切换模型",
         "newSession": "新建会话",
         "loadSession": "加载会话",
-        "copySession": "复制会话"
+        "copySession": "复制会话",
+        "reasoningEffort": "推理强度",
+        "autoApprove": "自动批准"
       },
       "input": {
         "placeholder": "输入消息或使用 / 查看技能...",
         "artifacts": "项目文件",
+        "projectFolder": "项目目录",
         "contextTokens": "上下文令牌数",
         "send": "发送消息 (Ctrl+Enter)",
         "stop": "停止 (Esc)"

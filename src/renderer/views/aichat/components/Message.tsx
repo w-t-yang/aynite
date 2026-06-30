@@ -412,8 +412,9 @@ function UserMessage({
 
   return (
     <div className="group/user relative mb-3">
-      <div className="bg-foreground/[0.03] border border-border/5 rounded-xl py-3 px-4 mx-4 transition-all">
-        <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
+      <div className="relative bg-primary/[0.02] border border-primary/15 rounded-xl py-3 px-4 mx-4 transition-all shadow-sm shadow-primary/5 overflow-hidden">
+        <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary/30" />
+        <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight pl-2">
           {formatMentions(text)}
         </div>
         <div className="flex items-center justify-end gap-1 mt-1">

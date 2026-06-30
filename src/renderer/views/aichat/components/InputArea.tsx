@@ -1,16 +1,17 @@
 import {
   AlertCircle,
-  Brain,
-  ClipboardList,
-  FileCode,
+  Folder,
+  FolderOpen,
   Gauge,
   Layers,
+  ShieldCheck,
   X,
 } from 'lucide-react'
 import { forwardRef, useEffect, useState } from 'react'
 import { configMutations } from '../../../bridge/config'
 import { Button } from '../../../shared/basic/Button'
 import { Input } from '../../../shared/basic/Input'
+import { Switch } from '../../../shared/basic/Switch'
 import { SelectionMenu } from '../../../shared/featured/SelectionMenu'
 import { cn } from '../../../shared/lib/utils'
 import { useAppOperation } from '../../ViewContext'
@@ -26,6 +27,8 @@ interface InputAreaProps {
   autoCompactThreshold: number
   onAutoCompactThresholdChange: (value: number) => void
   workspaceFolders: string[]
+  activeProjectFolder: string | null
+  onSetActiveProjectFolder: (folder: string) => void
   getAllFiles: () => Promise<any>
   getAvailableSkills: () => Promise<any>
   getAvailableCommands: () => Promise<any>
@@ -39,8 +42,19 @@ interface InputAreaProps {
     plan: { exists: boolean; path: string }
   } | null
   tokenCount: number
+  reasoningEffort: string
+  onSetReasoningEffort: (effort: string) => void
+  autoApprove: boolean
+  onSetAutoApprove: (enabled: boolean) => void
   t?: (key: string) => string
 }
+
+const REASONING_ITEMS = [
+  { id: 'off', label: 'Off (Fastest)', icon: <Gauge size={12} /> },
+  { id: 'low', label: 'Low', icon: <Gauge size={12} /> },
+  { id: 'medium', label: 'Medium', icon: <Gauge size={12} /> },
+  { id: 'high', label: 'High (Deep Thinking)', icon: <Gauge size={12} /> },
+]
 
 export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
   (
@@ -54,6 +68,8 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       autoCompactThreshold,
       onAutoCompactThresholdChange,
       workspaceFolders,
+      activeProjectFolder,
+      onSetActiveProjectFolder,
       getAllFiles,
       getAvailableSkills,
       getAvailableCommands,
@@ -61,6 +77,10 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
       setError,
       artifactStatus,
       tokenCount,
+      reasoningEffort,
+      onSetReasoningEffort,
+      autoApprove,
+      onSetAutoApprove,
       t = (key: string) => key,
     },
     ref,
@@ -89,37 +109,24 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
     const MAX_THRESHOLD = 800_000
     const STEP = 100_000
 
-    const artifactItems = [
-      {
-        id: artifactStatus?.memory?.path || 'memory',
-        label: artifactStatus?.memory?.exists ? 'memory.md' : 'Not initialized',
-        subtitle: 'Project Memory',
-        icon: <Brain size={14} />,
-        disabled: !artifactStatus?.memory?.exists,
-      },
-      {
-        id: artifactStatus?.plan?.path || 'plan',
-        label: artifactStatus?.plan?.exists
-          ? 'implementation_plan.md'
-          : 'Not proposed',
-        subtitle: 'Implementation Plan',
-        icon: <FileCode size={14} />,
-        disabled: !artifactStatus?.plan?.exists,
-      },
-      {
-        id: artifactStatus?.task?.path || 'task',
-        label: artifactStatus?.task?.exists ? 'task.md' : 'Not created',
-        subtitle: 'Task List',
-        icon: <ClipboardList size={14} />,
-        disabled: !artifactStatus?.task?.exists,
-      },
-    ]
-
-    const onSelectArtifact = (path: string) => {
-      if (path?.includes('/')) {
-        configMutations.set('activeFile', path)
+    // Build project folder items from workspace folders
+    const projectFolderItems = workspaceFolders.map((folder) => {
+      const folderName = folder.split(/[/\\]/).pop() || folder
+      const isActive = folder === activeProjectFolder
+      return {
+        id: folder,
+        label: folderName,
+        subtitle: folder,
+        icon: isActive ? <FolderOpen size={14} /> : <Folder size={14} />,
+        isActive,
       }
-    }
+    })
+
+    const activeFolderName = activeProjectFolder
+      ? activeProjectFolder.split(/[/\\]/).pop() || activeProjectFolder
+      : workspaceFolders.length > 0
+        ? workspaceFolders[0].split(/[/\\]/).pop() || workspaceFolders[0]
+        : 'No folders'
 
     const formatNumber = (num: number) => {
       if (num >= 1000000000) return `${(num / 1000000000).toFixed(1)}B`
@@ -133,20 +140,78 @@ export const InputArea = forwardRef<ChatInputHandle, InputAreaProps>(
         <div className="max-w-[900px] mx-auto relative group pointer-events-auto">
           <div className="flex items-center justify-between px-2 mb-2 animate-in fade-in slide-in-from-bottom-1 duration-500">
             <div className="flex items-center gap-2">
+              {projectFolderItems.length > 0 && (
+                <SelectionMenu
+                  items={projectFolderItems}
+                  activeId={activeProjectFolder || ''}
+                  onSelect={(folder) => {
+                    onSetActiveProjectFolder(folder)
+                    configMutations
+                      .set('activeProjectFolder', folder)
+                      .catch(() => {})
+                  }}
+                  side="top"
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      className="mt-[8px] text-muted-foreground/40 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[9px] hover:bg-transparent flex items-center gap-1.5"
+                    >
+                      <Layers size={13} />
+                      {activeFolderName}
+                    </Button>
+                  }
+                  title={t('input.projectFolder')}
+                />
+              )}
+              <span className="text-muted-foreground/15 font-normal select-none text-[9px]">
+                /
+              </span>
               <SelectionMenu
-                items={artifactItems}
-                onSelect={onSelectArtifact}
+                items={REASONING_ITEMS}
+                activeId={reasoningEffort}
+                onSelect={onSetReasoningEffort}
                 side="top"
                 trigger={
                   <Button
                     variant="ghost"
-                    className="text-muted-foreground/30 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[9px] hover:bg-transparent flex items-center gap-1.5"
+                    className="mt-[8px] text-muted-foreground/40 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[9px] hover:bg-transparent flex items-center gap-1.5"
                   >
-                    <Layers size={13} />
-                    {t('input.artifacts')}
+                    <Gauge size={13} />
+                    {reasoningEffort === 'off'
+                      ? 'No Reasoning'
+                      : reasoningEffort}
                   </Button>
                 }
-                title={t('input.artifacts')}
+                title={t('header.reasoningEffort')}
+              />
+              <span className="text-muted-foreground/15 font-normal select-none text-[9px]">
+                /
+              </span>
+              <SelectionMenu
+                items={[]}
+                onSelect={() => {}}
+                side="top"
+                trigger={
+                  <Button
+                    variant="ghost"
+                    className="mt-[8px] text-muted-foreground/40 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[9px] hover:bg-transparent flex items-center gap-1.5"
+                  >
+                    <ShieldCheck size={13} />
+                    Auto Approve: {autoApprove ? 'On' : 'Off'}
+                  </Button>
+                }
+                title={t('header.autoApprove')}
+                footer={
+                  <div className="px-3 py-2.5 flex items-center justify-between gap-3 min-w-[180px]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
+                      Auto Approve: {autoApprove ? 'On' : 'Off'}
+                    </span>
+                    <Switch
+                      checked={autoApprove}
+                      onCheckedChange={onSetAutoApprove}
+                    />
+                  </div>
+                }
               />
             </div>
 

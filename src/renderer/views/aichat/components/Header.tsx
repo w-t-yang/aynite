@@ -49,40 +49,38 @@ export function Header({
 
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-border/10 bg-background/40 backdrop-blur-md z-layout relative">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest">
-          <SelectionMenu
-            items={agentItems}
-            activeId={settings.agents?.activeId}
-            onSelect={onSwitchAgent}
-            trigger={
-              <Button
-                variant="ghost"
-                className="hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[12px] hover:bg-transparent"
-              >
-                {agentName}
-              </Button>
-            }
-            title={t('header.switchAgent')}
-          />
-          <span className="text-muted-foreground/20 font-normal select-none">
-            /
-          </span>
-          <SelectionMenu
-            items={providerItems}
-            activeId={settings.ai?.activeId}
-            onSelect={onSwitchProvider}
-            trigger={
-              <Button
-                variant="ghost"
-                className="text-muted-foreground/60 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[12px] hover:bg-transparent"
-              >
-                {modelName}
-              </Button>
-            }
-            title={t('header.switchModel')}
-          />
-        </div>
+      <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest">
+        <SelectionMenu
+          items={agentItems}
+          activeId={settings.agents?.activeId}
+          onSelect={onSwitchAgent}
+          trigger={
+            <Button
+              variant="ghost"
+              className="hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[12px] hover:bg-transparent"
+            >
+              {agentName}
+            </Button>
+          }
+          title={t('header.switchAgent')}
+        />
+        <span className="text-muted-foreground/20 font-normal select-none">
+          /
+        </span>
+        <SelectionMenu
+          items={providerItems}
+          activeId={settings.ai?.activeId}
+          onSelect={onSwitchProvider}
+          trigger={
+            <Button
+              variant="ghost"
+              className="text-muted-foreground/60 hover:text-primary transition-colors focus:outline-none p-0 h-auto font-bold uppercase tracking-widest text-[12px] hover:bg-transparent"
+            >
+              {modelName}
+            </Button>
+          }
+          title={t('header.switchModel')}
+        />
       </div>
 
       <div className="flex items-center gap-1">

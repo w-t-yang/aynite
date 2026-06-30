@@ -30,6 +30,7 @@ export type ConfigSchema = {
   'playbook-path': string
   telemetry: { enabled: boolean; clientId?: string }
   autoCompactThreshold: number
+  activeProjectFolder: string
   messengers: import('./ai').MessengerConfig[]
 }
 

@@ -45,6 +45,7 @@ registry.register(
     'activeSessionId',
     'tile-data',
     'session-delete',
+    'activeProjectFolder',
   ],
   workspaceStateHandlers,
 )

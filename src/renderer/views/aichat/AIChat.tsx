@@ -51,6 +51,12 @@ export function AIChat() {
     activeSessionId,
     autoCompactThreshold,
     setAutoCompactThreshold,
+    reasoningEffort,
+    setReasoningEffort,
+    autoApprove,
+    setAutoApproveForSession,
+    activeProjectFolder,
+    setActiveProjectFolder,
   } = useAIChat()
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -173,6 +179,8 @@ export function AIChat() {
                         `autoApprove:${activeSessionId}`,
                         'true',
                       )
+                      // Sync the Header switch immediately
+                      setAutoApproveForSession(true)
                     }
                   }}
                 />
@@ -203,6 +211,8 @@ export function AIChat() {
           <InputArea
             ref={inputRef}
             workspaceFolders={workspaceFolders}
+            activeProjectFolder={activeProjectFolder}
+            onSetActiveProjectFolder={setActiveProjectFolder}
             loading={loading}
             compacting={compacting}
             onSend={sendMessage}
@@ -218,6 +228,10 @@ export function AIChat() {
             setError={setError}
             artifactStatus={artifactStatus}
             tokenCount={tokenCount}
+            reasoningEffort={reasoningEffort}
+            onSetReasoningEffort={setReasoningEffort}
+            autoApprove={autoApprove}
+            onSetAutoApprove={setAutoApproveForSession}
             t={t}
           />
         </div>

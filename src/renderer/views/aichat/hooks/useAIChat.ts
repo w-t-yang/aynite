@@ -37,6 +37,54 @@ export function useAIChat() {
     plan: { exists: boolean; path: string }
   } | null>(null)
 
+  // ── Reasoning effort ──
+  const [reasoningEffort, setReasoningEffortState] = useState<string>('off')
+
+  const setReasoningEffort = useCallback(async (effort: string) => {
+    setReasoningEffortState(effort)
+    const aiConfig = await config.get('ai')
+    if (aiConfig?.providers && aiConfig.activeId) {
+      const updatedProviders = aiConfig.providers.map((p: any) => {
+        if (p.id === aiConfig.activeId) {
+          return { ...p, reasoningEffort: effort }
+        }
+        return p
+      })
+      await configMutations.set('ai', {
+        ...aiConfig,
+        providers: updatedProviders,
+      })
+    }
+  }, [])
+
+  // ── Auto-approve per session ──
+  const [autoApprove, setAutoApprove] = useState(false)
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+
+  const setAutoApproveForSession = useCallback(
+    (enabled: boolean) => {
+      setAutoApprove(enabled)
+      if (activeSessionId) {
+        if (enabled) {
+          localStorage.setItem(`autoApprove:${activeSessionId}`, 'true')
+        } else {
+          localStorage.removeItem(`autoApprove:${activeSessionId}`)
+        }
+      }
+    },
+    [activeSessionId],
+  )
+
+  // ── Active project folder ──
+  const [activeProjectFolder, setActiveProjectFolderState] = useState<
+    string | null
+  >(null)
+
+  const setActiveProjectFolder = useCallback(async (folder: string) => {
+    setActiveProjectFolderState(folder)
+    await configMutations.set('activeProjectFolder', folder)
+  }, [])
+
   // ── Auto-compact threshold ──
   const [autoCompactThreshold, setAutoCompactThresholdState] =
     useState<number>(500_000)
@@ -52,8 +100,6 @@ export function useAIChat() {
   }, [])
 
   // ── Session tracking ──
-  // Which sessionId is this component currently showing
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   // State from ChatService (subscribed)
   const [sessionState, setSessionState] = useState<SessionState>({
     sessionId: null,
@@ -84,6 +130,11 @@ export function useAIChat() {
       const id = await config.get('activeSessionId')
       if (id) {
         setActiveSessionId(id)
+        // Load auto-approve state from localStorage
+        const stored = localStorage.getItem(`autoApprove:${id}`)
+        if (stored === 'true') {
+          setAutoApprove(true)
+        }
         await ChatService.loadSessionById(id)
       }
       // Load threshold from main config (config.json)
@@ -91,9 +142,22 @@ export function useAIChat() {
       if (typeof savedThreshold === 'number' && savedThreshold >= 200_000) {
         setAutoCompactThresholdState(savedThreshold)
       }
+      // Load active project folder
+      const savedFolder = await config.get('activeProjectFolder')
+      if (savedFolder) {
+        setActiveProjectFolderState(savedFolder)
+      }
     }
     loadInitial()
   }, [])
+
+  // ── Sync auto-approve when session ID changes ──
+  useEffect(() => {
+    if (activeSessionId) {
+      const stored = localStorage.getItem(`autoApprove:${activeSessionId}`)
+      setAutoApprove(stored === 'true')
+    }
+  }, [activeSessionId])
 
   // ── Load settings & workspace ──
   const loadSettings = useCallback(async () => {
@@ -111,6 +175,13 @@ export function useAIChat() {
         aiTools: (resTools as any)?.active || prev.aiTools,
         prompts: (resPrompts as SettingsState['prompts']) || prev.prompts,
       }))
+      // Sync reasoning effort from active provider
+      if (resAI?.providers && resAI.activeId) {
+        const active = resAI.providers.find((p: any) => p.id === resAI.activeId)
+        if (active?.reasoningEffort) {
+          setReasoningEffortState(active.reasoningEffort)
+        }
+      }
     } catch (_e) {}
   }, [])
 
@@ -151,21 +222,12 @@ export function useAIChat() {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      // Step 1: Use the local session ID directly. This tile is showing this
-      // session — the message MUST go here. Config is NOT used for routing;
-      // it's only read for the initial load (see loadInitial).
-      //
-      // In multi-tile mode, each tile has its own activeSessionId, so they
-      // are completely independent.
       let sid = activeSessionId
 
-      // Step 2: If no session is loaded (e.g., cleared by new chat), create one.
       if (!sid) {
         sid = await ChatService.createNewSession()
       }
 
-      // Step 3: Persist this session ID for the next app start (fire-and-forget).
-      // In multi-tile, this would save to the tile's data instead of global config.
       configMutations.set('activeSessionId', sid).catch(() => {})
 
       setActiveSessionId(sid)
@@ -179,11 +241,6 @@ export function useAIChat() {
       ChatService.clearChat(activeSessionId)
     }
     setActiveSessionId(null)
-    // NOTE: No config write here. This is a tile-local operation.
-    // In multi-tile mode, clearing one tile's session should not affect
-    // other tiles (which would react to the global ACTIVE_SESSION_CHANGED event).
-    // The session ID in config will be overwritten when the user sends their
-    // first message in the new session (see sendMessage's fire-and-forget write).
   }, [activeSessionId])
 
   const compactContext = useCallback(async () => {
@@ -222,8 +279,6 @@ export function useAIChat() {
 
   const switchAgent = useCallback(async (agentId: string) => {
     await configMutations.set('agents', { activeId: agentId } as any)
-    // Immediately update local state so the Header reflects the change
-    // without waiting for the config-changed event relay.
     setSettings((prev) => {
       if (!prev.agents) return prev
       return {
@@ -240,6 +295,16 @@ export function useAIChat() {
     async (providerId: string) => {
       await configMutations.set('ai', { activeId: providerId } as any)
       loadArtifactStatus()
+      // Sync reasoning effort for the new provider
+      const aiConfig = await config.get('ai')
+      if (aiConfig?.providers) {
+        const active = aiConfig.providers.find((p: any) => p.id === providerId)
+        if (active?.reasoningEffort) {
+          setReasoningEffortState(active.reasoningEffort)
+        } else {
+          setReasoningEffortState('off')
+        }
+      }
     },
     [loadArtifactStatus],
   )
@@ -247,7 +312,6 @@ export function useAIChat() {
   // ── Derived state ──
 
   const abortRef = useRef<{ abort: () => void } | null>(null)
-  // Provide actual abort functionality
   abortRef.current = activeSessionId
     ? { abort: () => ChatService.abortMessage(activeSessionId) }
     : null
@@ -285,6 +349,18 @@ export function useAIChat() {
 
     // Session ID
     activeSessionId,
+
+    // Reasoning effort
+    reasoningEffort,
+    setReasoningEffort,
+
+    // Auto-approve
+    autoApprove,
+    setAutoApproveForSession,
+
+    // Active project folder
+    activeProjectFolder,
+    setActiveProjectFolder,
 
     // Artifact status
     artifactStatus,
