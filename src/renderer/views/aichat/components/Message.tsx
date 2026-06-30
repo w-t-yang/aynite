@@ -15,6 +15,7 @@ import remarkGfm from 'remark-gfm'
 import { PROTOCOL } from '../../../../lib/constants/app'
 import { Button } from '../../../shared/basic/Button'
 import { Collapsible } from '../../../shared/basic/Collapsible'
+import { Modal } from '../../../shared/basic/Modal'
 import { cn } from '../../../shared/lib/utils'
 import { isErrorMessage } from '../utils/message'
 
@@ -34,6 +35,24 @@ function formatTime(createdAt?: string): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * Extract the last meaningful segment from a path-like string.
+ * For file paths returns the filename, for URLs returns the hostname.
+ */
+function summarizePath(path: string): string {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    try {
+      const url = new URL(path)
+      return url.hostname + url.pathname.replace(/\/$/, '')
+    } catch {
+      return path
+    }
+  }
+  const parts = path.split('/')
+  return parts[parts.length - 1] || path
 }
 
 // ─── Sub-renderers ───────────────────────────────────────────────────
@@ -235,6 +254,18 @@ const ToolPartRenderer = memo(({ part }: { part: any }) => {
       cmd = cmd.replace(/^cd\s+\S+(\s*[;&|]{1,2}\s*)?/, '').trim()
     }
 
+    // For file/URL related tools, show just the filename or hostname
+    if (cmd) {
+      const isFileTool =
+        toolName.includes('file') ||
+        toolName.includes('write') ||
+        toolName.includes('glob')
+      const isUrlTool = toolName.includes('url')
+      if (isFileTool || isUrlTool) {
+        cmd = summarizePath(cmd)
+      }
+    }
+
     if (cmd) return `${formattedName}  │  ${cmd}`
 
     return formattedName
@@ -316,12 +347,15 @@ function SystemMessage({ msg }: { msg: UIMessage }) {
 
 function UserMessage({
   msg,
+  onCopy,
   onRevert,
 }: {
   msg: UIMessage
+  onCopy: (t: string) => void
   onRevert: () => void
 }) {
   const { id } = msg
+  const [showConfirm, setShowConfirm] = useState(false)
   const parts = msg.parts as any[]
   const text =
     parts && parts.length > 0 ? parts.map((p) => p.text || '').join('') : ''
@@ -378,29 +412,63 @@ function UserMessage({
 
   return (
     <div className="group/user relative mb-3">
-      <div className="bg-foreground/[0.03] border border-border/5 rounded-xl py-3 px-4 mx-4 group-hover/user:bg-foreground/[0.05] transition-all">
+      <div className="bg-foreground/[0.03] border border-border/5 rounded-xl py-3 px-4 mx-4 transition-all">
         <div className="text-foreground/90 text-[15px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
           {formatMentions(text)}
         </div>
-        {(msg as any).createdAt && (
-          <div className="text-right mt-1">
-            <span className="text-[10px] text-muted-foreground/40 font-medium select-none">
-              {formatTime((msg as any).createdAt)}
-            </span>
-          </div>
-        )}
-        <div className="absolute bottom-1 right-8 opacity-0 group-hover/user:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end gap-1 mt-1">
           <Button
             variant="ghost"
             size="sm"
-            onClick={onRevert}
+            onClick={() => setShowConfirm(true)}
             title="Revert to here"
             className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
           >
             <RotateCcw size={14} />
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onCopy(text)}
+            title="Copy message"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
+          >
+            <Clipboard size={14} />
+          </Button>
+          {(msg as any).createdAt && (
+            <span className="text-[10px] text-muted-foreground/40 font-medium select-none">
+              {formatTime((msg as any).createdAt)}
+            </span>
+          )}
         </div>
       </div>
+      <Modal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        title="Revert Conversation?"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowConfirm(false)
+                onRevert()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Revert
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to revert the conversation to this message? This
+          will delete all subsequent messages.
+        </p>
+      </Modal>
     </div>
   )
 }
@@ -420,6 +488,7 @@ function AssistantMessage({
   onOpenFile: (p: string) => void
   onRevert: () => void
 }) {
+  const [showConfirm, setShowConfirm] = useState(false)
   const parts = msg.parts as any[]
   const fullText =
     parts.length > 0
@@ -430,13 +499,6 @@ function AssistantMessage({
       : ''
 
   const hasNoParts = parts.length === 0
-  const hasToolParts = parts.some(
-    (p) =>
-      p.type === 'dynamic-tool' ||
-      p.type === 'tool-call' ||
-      p.type === 'tool-result' ||
-      (p.type as string).startsWith('tool-'),
-  )
   const hasVisibleParts = parts.some((p) => {
     if (p.type === 'text' || p.type === 'reasoning') return true
     if (
@@ -479,13 +541,53 @@ function AssistantMessage({
           switch (part.type) {
             case 'text':
               return (
-                <MarkdownRenderer
+                <div
                   // biome-ignore lint/suspicious/noArrayIndexKey: stable
                   key={`text-${msg.id}-${i}`}
-                  content={part.text}
-                  isStreaming={isPartStreaming}
-                  onOpenFile={onOpenFile}
-                />
+                  className="space-y-1"
+                >
+                  <MarkdownRenderer
+                    content={part.text}
+                    isStreaming={isPartStreaming}
+                    onOpenFile={onOpenFile}
+                  />
+                  {!isStreaming &&
+                    (() => {
+                      const textParts = parts.filter(
+                        (p: any) => p.type === 'text',
+                      )
+                      const isLastText =
+                        textParts.indexOf(part) === textParts.length - 1
+                      if (!isLastText) return null
+                      return (
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowConfirm(true)}
+                            title="Revert to here"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
+                          >
+                            <RotateCcw size={14} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onCopy(fullText)}
+                            title="Copy response"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
+                          >
+                            <Clipboard size={14} />
+                          </Button>
+                          {(msg as any).createdAt && (
+                            <span className="text-[10px] text-muted-foreground/40 font-medium select-none">
+                              {formatTime((msg as any).createdAt)}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
+                </div>
               )
             case 'reasoning':
               return (
@@ -533,38 +635,33 @@ function AssistantMessage({
         })}
       </div>
 
-      {(msg as any).createdAt && (
-        <div className="text-right px-6 pb-1 -mt-2">
-          <span className="text-[10px] text-muted-foreground/40 font-medium select-none">
-            {formatTime((msg as any).createdAt)}
-          </span>
-        </div>
-      )}
-
-      {!isStreaming && !hasToolParts && (
-        <div className="absolute bottom-1 right-8 flex gap-1 opacity-0 group-hover/assistant:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onRevert}
-            title="Revert to here"
-            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
-          >
-            <RotateCcw size={14} />
-          </Button>
-          {fullText && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCopy(fullText)}
-              title="Copy response"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground bg-background/50 backdrop-blur-sm border border-border/10 rounded-md"
-            >
-              <Clipboard size={14} />
+      <Modal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        title="Revert Conversation?"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowConfirm(false)}>
+              Cancel
             </Button>
-          )}
-        </div>
-      )}
+            <Button
+              onClick={() => {
+                setShowConfirm(false)
+                onRevert()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Revert
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to revert the conversation to this message? This
+          will delete all subsequent messages.
+        </p>
+      </Modal>
     </div>
   )
 }
@@ -596,7 +693,7 @@ export const MessageItem = memo(
       case 'system':
         return <SystemMessage msg={msg} />
       case 'user':
-        return <UserMessage msg={msg} onRevert={onRevert} />
+        return <UserMessage msg={msg} onCopy={onCopy} onRevert={onRevert} />
       case 'assistant':
         return (
           <AssistantMessage

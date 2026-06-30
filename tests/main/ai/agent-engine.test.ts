@@ -436,6 +436,181 @@ describe('runAgentLoop', () => {
     expect(partTypes).toEqual(['text'])
   })
 
+  // ── tool-call args from SDK's `input` field ──────────────────────────────
+
+  it('passes tool-call args from tc.input (SDK v6) to the hook', async () => {
+    // SDK v6 `fullStream` yields `tool-call` parts with `input` for args
+    // NOT `args`. This test verifies the hook receives args from tc.input.
+    // If someone reverts to `args: tc.args`, this test fails because
+    // tc.args is undefined in SDK v6.
+    const toolCallHook = vi.fn()
+    mockStreamEvents = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-1',
+        toolName: 'read_file',
+        input: { path: '/home/test/file.ts' },
+      },
+      { type: 'finish' },
+    ]
+
+    await runAgentLoop({
+      messages: [],
+      config: baseConfig,
+      tools: { read_file: { execute: vi.fn() } },
+      hooks: { 'tool-call': toolCallHook },
+    })
+
+    expect(toolCallHook).toHaveBeenCalledWith({
+      toolCallId: 'call-1',
+      toolName: 'read_file',
+      args: { path: '/home/test/file.ts' },
+    })
+  })
+
+  it('passes tool-call args with no path — obj with other keys still works', async () => {
+    const toolCallHook = vi.fn()
+    mockStreamEvents = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-2',
+        toolName: 'run_command',
+        input: { command: 'ls -la' },
+      },
+      { type: 'finish' },
+    ]
+
+    await runAgentLoop({
+      messages: [],
+      config: baseConfig,
+      tools: { run_command: { execute: vi.fn() } },
+      hooks: { 'tool-call': toolCallHook },
+    })
+
+    expect(toolCallHook).toHaveBeenCalledWith({
+      toolCallId: 'call-2',
+      toolName: 'run_command',
+      args: { command: 'ls -la' },
+    })
+  })
+
+  it('creates dynamic-tool part with input field from tc.input', async () => {
+    // The flushAssistant creates dynamic-tool parts with `input: tc.input || tc.args`.
+    // This test verifies the args data survives into the result messages
+    // so the renderer's ToolPartRenderer can extract file paths.
+    mockStreamEvents = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-3',
+        toolName: 'read_file',
+        input: { path: '/home/project/src/main.ts' },
+      },
+      { type: 'finish' },
+    ]
+
+    const result = await runAgentLoop({
+      messages: [],
+      config: baseConfig,
+      tools: { read_file: { execute: vi.fn() } },
+    })
+
+    const assistantMsg = result.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    const dynTool = (assistantMsg as any)?.parts?.find(
+      (p: any) => p.type === 'dynamic-tool' && p.toolName === 'read_file',
+    )
+    expect(dynTool).toBeDefined()
+    expect(dynTool.input).toEqual({ path: '/home/project/src/main.ts' })
+  })
+
+  it('creates dynamic-tool part with input for run_command tool', async () => {
+    mockStreamEvents = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-4',
+        toolName: 'run_command',
+        input: { command: 'npm test' },
+      },
+      { type: 'finish' },
+    ]
+
+    const result = await runAgentLoop({
+      messages: [],
+      config: baseConfig,
+      tools: { run_command: { execute: vi.fn() } },
+    })
+
+    const assistantMsg = result.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    const dynTool = (assistantMsg as any)?.parts?.find(
+      (p: any) => p.type === 'dynamic-tool' && p.toolName === 'run_command',
+    )
+    expect(dynTool).toBeDefined()
+    expect(dynTool.input).toEqual({ command: 'npm test' })
+  })
+
+  it('creates dynamic-tool part with input for glob_search tool', async () => {
+    mockStreamEvents = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-5',
+        toolName: 'glob_search',
+        input: { pattern: 'src/**/*.ts' },
+      },
+      { type: 'finish' },
+    ]
+
+    const result = await runAgentLoop({
+      messages: [],
+      config: baseConfig,
+      tools: { glob_search: { execute: vi.fn() } },
+    })
+
+    const assistantMsg = result.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    const dynTool = (assistantMsg as any)?.parts?.find(
+      (p: any) => p.type === 'dynamic-tool' && p.toolName === 'glob_search',
+    )
+    expect(dynTool).toBeDefined()
+    expect(dynTool.input).toEqual({ pattern: 'src/**/*.ts' })
+  })
+
+  it('dynamic-tool part input is undefined when tc.input and tc.args are both missing', async () => {
+    // Edge case: neither input nor args — should not crash, input is undefined
+    const toolCallHook = vi.fn()
+    mockStreamEvents = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-6',
+        toolName: 'read_file',
+        // no input, no args
+      } as any,
+      { type: 'finish' },
+    ]
+
+    const result = await runAgentLoop({
+      messages: [],
+      config: baseConfig,
+      tools: { read_file: { execute: vi.fn() } },
+      hooks: { 'tool-call': toolCallHook },
+    })
+
+    // Hook still fired with args=undefined
+    expect(toolCallHook).toHaveBeenCalledWith({
+      toolCallId: 'call-6',
+      toolName: 'read_file',
+      args: undefined,
+    })
+
+    // dynamic-tool part has undefined input — renderer handles gracefully
+    const assistantMsg = result.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    const dynTool = (assistantMsg as any)?.parts?.find(
+      (p: any) => p.type === 'dynamic-tool' && p.toolName === 'read_file',
+    )
+    expect(dynTool.input).toBeUndefined()
+  })
+
   it('does not strip dynamic-tool parts from non-assistant messages', async () => {
     mockStreamEvents = [{ type: 'finish' }]
 

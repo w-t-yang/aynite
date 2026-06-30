@@ -419,7 +419,7 @@ export async function aiChat(params: {
                 type: 'tool-call',
                 toolCallId: e.toolCallId,
                 toolName: e.toolName,
-                args: e.args,
+                input: e.args,
               }),
             'tool-result': (e) =>
               emit({

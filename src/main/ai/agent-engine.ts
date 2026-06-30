@@ -181,7 +181,7 @@ export async function runAgentLoop(
         hooks?.['tool-call']?.({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
-          args: tc.args,
+          args: tc.input,
         })
         break
       }

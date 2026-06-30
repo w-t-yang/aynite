@@ -40,9 +40,9 @@ export function Collapsible({
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="flex-1 flex items-center justify-between"
+          className="flex-1 flex items-center justify-between min-w-0"
         >
-          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight min-w-0">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight min-w-0 flex-1">
             {Icon && (
               <Icon
                 size={compact ? 10 : 12}
