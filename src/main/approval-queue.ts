@@ -3,7 +3,7 @@
  *
  * Manages the approval request lifecycle: queuing, sending to renderer,
  * and processing responses. Only one approval UI is shown at a time.
- * Imports sendAppEvent from ipc-utils for renderer communication.
+ * Uses broadcastAppEvent to reach all windows.
  */
 
 import { ipcMain } from 'electron'
@@ -12,7 +12,7 @@ import {
   AiEventChannels,
   AppOperationChannel,
 } from '../lib/constants/ipc-channels'
-import { sendAppEvent, sendAppOperation } from './ipc-utils'
+import { broadcastAppEvent, sendAppOperation } from './ipc-utils'
 
 // ─── Module-level state ───────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ function processApprovalQueue() {
   if (!next) return
 
   pendingApprovals.set(next.id, next.resolve)
-  sendAppEvent(AppEvents.AI_APPROVAL_REQUEST, {
+  broadcastAppEvent(AppEvents.AI_APPROVAL_REQUEST, {
     id: next.id,
     ...next.data,
   })
